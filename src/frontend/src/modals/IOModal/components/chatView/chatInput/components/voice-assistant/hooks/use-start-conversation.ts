@@ -7,18 +7,22 @@ export const useStartConversation = (
   startRecording: () => void,
   handleWebSocketMessage: (event: MessageEvent) => void,
   stopRecording: () => void,
-  sessionId: string,
+  currentSessionId: string,
 ) => {
+  const currentHost = window.location.hostname;
+  const currentPort = window.location.port;
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId}`;
+
   try {
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
-      return; // Don't create new connection if one is already trying to connect
+      return;
     }
 
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.close(); // Close existing connection before creating new one
+      wsRef.current.close();
     }
 
-    const url = `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}/${sessionId}`;
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
     );
