@@ -22,7 +22,6 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from fastapi.middleware.gzip import GZipMiddleware
 
 from langflow.api import health_check_router, log_router, router, router_v2
 from langflow.initial_setup.setup import (
@@ -172,12 +171,6 @@ def create_app():
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     app.add_middleware(
         ContentSizeLimitMiddleware,
-    )
-    
-    app.add_middleware(
-        GZipMiddleware,
-        minimum_size=1024,
-        compresslevel=6 
     )
 
     setup_sentry(app)
