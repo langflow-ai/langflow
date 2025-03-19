@@ -27,7 +27,7 @@ class SlackConversationsHistoryComponent(Component):
         MessageTextInput(
             name="cursor",
             display_name="Cursor",
-            info="Paginate through collections of data by setting the cursor parameter to a next_cursor attribute returned by a previous request's response_metadata.",
+            info="Paginate through requests. Usually set with the next_cursor attribute from a previous request's response_metadata.",
             advanced=True,
             value="",
         ),
@@ -41,7 +41,7 @@ class SlackConversationsHistoryComponent(Component):
         BoolInput(
             name="inclusive",
             display_name="Inclusive",
-            info="Include messages with oldest or latest timestamps in results. Ignored unless either timestamp is specified.",
+            info="Include messages with oldest or latest timestamps in results.",
             advanced=True,
             value=False,
         ),
@@ -78,8 +78,7 @@ class SlackConversationsHistoryComponent(Component):
     ]
 
     def fetch_messages(self) -> list[dict]:
-        """Retrive messages using [conversations.history](https://api.slack.com/methods/conversations.history) from Slack API.
-        """
+        """Retrive messages using conversations.history API from Slack."""
         url = "https://slack.com/api/conversations.history"
 
         headers = {
@@ -97,29 +96,27 @@ class SlackConversationsHistoryComponent(Component):
             "limit": self.limit,
         }
 
-        http_response = requests.request("POST", url, json=payload, headers=headers)
+        http_response = requests.request(
+            "POST", url, json=payload, headers=headers, timeout=60
+        )
         json_response = http_response.json()
 
         if not json_response.get("ok"):
-            error_message = json_response.get("error")
-            raise ValueError(f"Slack Error: {error_message}")
+            error_message = f"Slack Error: {json_response.get('error')}"
+            raise ValueError(error_message)
 
         return json_response
 
     def build_slack_response(self) -> Data:
-        """Build the output object containing the Slack API response.
-        """
-        data = Data(
+        """Build the output object containing the Slack API response."""
+        return Data(
             data=self.fetch_messages(),
             text_key="messages",
             default_value="No content available",
         )
 
-        return data
-
     def build_messages(self) -> DataFrame:
-        """Build the output object containing messages returned from the Slack API.
-        """
+        """Build the output object containing messages returned from the Slack API."""
         data = [
             Data(data=message, text_key="text")
             for message in self.response.value.messages
