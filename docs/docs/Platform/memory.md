@@ -3,7 +3,7 @@ title: Memory
 slug: /platform-memory
 ---
 
-The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database that can be found at `langflow/src/backend/base/langflow/langflow.db`.
+The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database located at `langflow/src/backend/base/langflow/langflow.db`.
 
 ## Configure external memory
 

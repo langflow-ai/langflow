@@ -3,7 +3,7 @@ title: Logging
 slug: /platform-logging
 ---
 
-Langflow uses the `logaru` library for logging.
+Langflow uses the `loguru` library for logging.
 
 The default `log_level` is `ERROR`. Other options are `DEBUG`, `INFO`, `WARNING`, and `CRITICAL`.
 
