@@ -39,7 +39,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         "Patch Calendar": "GOOGLECALENDAR_PATCH_CALENDAR",
         "Fetch Google Calendar": "GOOGLECALENDAR_GET_CALENDAR",
         "Delete Event": "GOOGLECALENDAR_DELETE_EVENT",
-        "Duplicate Calendar": "GOOGLECALENDAR_DUPLICATE_CALENDAR"
+        "Duplicate Calendar": "GOOGLECALENDAR_DUPLICATE_CALENDAR",
     }
 
     _actions_data: dict = {
@@ -748,7 +748,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
 
         try:
             action_key = self._display_to_enum_map.get(self.action)
-            
+
             enum_name = getattr(Action, action_key)
             params = {}
             if action_key in self._actions_data:
@@ -792,7 +792,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
                 build_config[field]["value"] = ""
 
         action_key = self._display_to_enum_map.get(field_value)
-        
+
         if action_key in self._actions_data:
             for field in self._actions_data[action_key]["parameters"]:
                 build_config[field]["show"] = True

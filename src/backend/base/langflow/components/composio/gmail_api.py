@@ -218,7 +218,7 @@ class GmailAPIComponent(LCToolComponent):
             info="Token for retrieving the next page of results",
             show=False,
         ),
-         StrInput(
+        StrInput(
             name="label_ids",
             display_name="Label Ids",
             is_list=True,
