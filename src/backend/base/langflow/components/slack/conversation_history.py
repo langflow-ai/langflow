@@ -78,8 +78,7 @@ class SlackConversationsHistoryComponent(Component):
     ]
 
     def fetch_messages(self) -> list[dict]:
-        """Retrive messages using [conversations.history](https://api.slack.com/methods/conversations.history) from Slack API.
-        """
+        """Retrive messages using [conversations.history](https://api.slack.com/methods/conversations.history) from Slack API."""
         url = "https://slack.com/api/conversations.history"
 
         headers = {
@@ -107,8 +106,7 @@ class SlackConversationsHistoryComponent(Component):
         return json_response
 
     def build_slack_response(self) -> Data:
-        """Build the output object containing the Slack API response.
-        """
+        """Build the output object containing the Slack API response."""
         data = Data(
             data=self.fetch_messages(),
             text_key="messages",
@@ -118,11 +116,7 @@ class SlackConversationsHistoryComponent(Component):
         return data
 
     def build_messages(self) -> DataFrame:
-        """Build the output object containing messages returned from the Slack API.
-        """
-        data = [
-            Data(data=message, text_key="text")
-            for message in self.response.value.messages
-        ]
+        """Build the output object containing messages returned from the Slack API."""
+        data = [Data(data=message, text_key="text") for message in self.response.value.messages]
 
         return DataFrame(data)
