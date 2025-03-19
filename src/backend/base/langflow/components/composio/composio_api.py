@@ -5,8 +5,6 @@ from typing import Any
 from composio import Action, App
 
 # Third-party imports
-from composio.client.collections import AppAuthScheme
-from composio.client.exceptions import NoItemsFound
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
 
@@ -75,82 +73,6 @@ class ComposioAPIComponent(LCToolComponent):
         Output(name="tools", display_name="Tools", method="build_tool"),
     ]
 
-    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:
-        """Handle authentication based on the auth scheme.
-
-        Args:
-            entity (Any): The entity instance.
-            app (str): The app name.
-            auth_scheme (AppAuthScheme): The auth scheme details.
-
-        Returns:
-            str: The authentication status or URL.
-        """
-        auth_mode = auth_scheme.auth_mode
-
-        try:
-            # First check if already connected
-            entity.get_connection(app=app)
-        except NoItemsFound:
-            # If not connected, handle new connection based on auth mode
-            if auth_mode == "API_KEY":
-                if hasattr(self, "app_credentials") and self.app_credentials:
-                    try:
-                        entity.initiate_connection(
-                            app_name=app,
-                            auth_mode="API_KEY",
-                            auth_config={"api_key": self.app_credentials},
-                            use_composio_auth=False,
-                            force_new_integration=True,
-                        )
-                    except Exception as e:  # noqa: BLE001
-                        self.log(f"Error connecting with API Key: {e}")
-                        return "Invalid API Key"
-                    else:
-                        return f"{app} CONNECTED"
-                return "Enter API Key"
-
-            if (
-                auth_mode == "BASIC"
-                and hasattr(self, "username")
-                and hasattr(self, "app_credentials")
-                and self.username
-                and self.app_credentials
-            ):
-                try:
-                    entity.initiate_connection(
-                        app_name=app,
-                        auth_mode="BASIC",
-                        auth_config={"username": self.username, "password": self.app_credentials},
-                        use_composio_auth=False,
-                        force_new_integration=True,
-                    )
-                except Exception as e:  # noqa: BLE001
-                    self.log(f"Error connecting with Basic Auth: {e}")
-                    return "Invalid credentials"
-                else:
-                    return f"{app} CONNECTED"
-            elif auth_mode == "BASIC":
-                return "Enter Username and Password"
-
-            if auth_mode == "OAUTH2":
-                try:
-                    return self._initiate_default_connection(entity, app)
-                except Exception as e:  # noqa: BLE001
-                    self.log(f"Error initiating OAuth2: {e}")
-                    return "OAuth2 initialization failed"
-
-            return "Unsupported auth mode"
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error checking connection status: {e}")
-            return f"Error: {e!s}"
-        else:
-            return f"{app} CONNECTED"
-
-    def _initiate_default_connection(self, entity: Any, app: str) -> str:
-        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
-        return connection.redirectUrl
-
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         # If the list of tools is not available, always update it
         if field_name == "api_key":
@@ -158,14 +80,10 @@ class ComposioAPIComponent(LCToolComponent):
             toolset = ComposioToolSet(api_key=self.api_key)
 
             # Get the entity (e.g., "default" for your user)
-            entity = toolset.get_entity(id="default")
+            entity = toolset.get_entity(self.entity_id)
 
             # Get all available apps
             all_apps = entity.client.apps.get()
-
-            # Build a hardcoded list of most common apps for now
-            # TODO: Add more
-            relevant_apps = ["github", "jira", "slack", "asana", "trello", "airtable"]
 
             # Build an object with name, icon, link
             build_config["tool_name"]["options"] = [
@@ -175,7 +93,6 @@ class ComposioAPIComponent(LCToolComponent):
                     "link": "",
                 }
                 for app in sorted(all_apps, key=lambda x: x.name)
-                if app.name in relevant_apps
             ]
 
         # Handle the click of the Tool Name connect button
@@ -184,7 +101,7 @@ class ComposioAPIComponent(LCToolComponent):
             toolset = ComposioToolSet(api_key=self.api_key)
 
             # Get the entity (e.g., "default" for your user)
-            entity = toolset.get_entity(id="default")
+            entity = toolset.get_entity(id=self.entity_id)
 
             # Initiate a GitHub connection and get the redirect URL
             connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))
@@ -211,6 +128,7 @@ class ComposioAPIComponent(LCToolComponent):
             authenticated_actions = sorted([
                 action for action in all_actions
                 if action.app.lower() in [app.appName.lower() for app in connected_apps]
+                and action.app.lower() == self.tool_name.lower()
             ], key=lambda x: x.name)
 
             # Return the list of action names
@@ -230,7 +148,7 @@ class ComposioAPIComponent(LCToolComponent):
             Sequence[Tool]: List of configured Composio tools.
         """
         composio_toolset = self._build_wrapper()
-        return composio_toolset.get_tools(actions=self.action_names)
+        return composio_toolset.get_tools(actions=self.actions)
 
     def _build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper.
