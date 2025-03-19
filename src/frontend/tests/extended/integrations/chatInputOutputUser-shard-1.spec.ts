@@ -90,6 +90,8 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
+    await page.getByTestId("fit_view").click();
+
     // Fill URL input
     await page
       .getByTestId("inputlist_str_urls_0")
