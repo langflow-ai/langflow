@@ -7,23 +7,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutputComponent",
-            "id": "StructuredOutputComponent-Kqbq4",
+            "id": "StructuredOutputComponent-HNJw1",
             "name": "structured_output",
-            "output_types": ["Data"]
+            "output_types": [
+              "Data"
+            ]
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-7XOFR",
-            "inputTypes": ["Data"],
+            "id": "ParseData-7nw3f",
+            "inputTypes": [
+              "Data"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutputComponent-Kqbq4{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-7XOFR{œfieldNameœ:œdataœ,œidœ:œParseData-7XOFRœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutputComponent-HNJw1{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-HNJw1œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-7nw3f{œfieldNameœ:œdataœ,œidœ:œParseData-7nw3fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutputComponent-Kqbq4",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputComponentœ, œidœ: œStructuredOutputComponent-Kqbq4œ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-7XOFR",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-7XOFRœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutputComponent-HNJw1",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputComponentœ, œidœ: œStructuredOutputComponent-HNJw1œ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-7nw3f",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-7nw3fœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -31,23 +35,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-tMLRq",
+            "id": "ChatInput-hLHl2",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-dcKuR",
-            "inputTypes": ["Message"],
+            "id": "Agent-ZlvTd",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-tMLRq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tMLRqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dcKuR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-hLHl2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hLHl2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-ZlvTd{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ZlvTdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-tMLRq",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tMLRqœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-dcKuR",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-dcKuRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-hLHl2",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-hLHl2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-ZlvTd",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ZlvTdœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,23 +63,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-dcKuR",
+            "id": "Agent-ZlvTd",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutputComponent-Kqbq4",
-            "inputTypes": ["Message"],
+            "id": "StructuredOutputComponent-HNJw1",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-dcKuR{œdataTypeœ:œAgentœ,œidœ:œAgent-dcKuRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-ZlvTd{œdataTypeœ:œAgentœ,œidœ:œAgent-ZlvTdœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-HNJw1{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-HNJw1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-dcKuR",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-dcKuRœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutputComponent-Kqbq4",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-Kqbq4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-ZlvTd",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ZlvTdœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutputComponent-HNJw1",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-HNJw1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -79,22 +91,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-cGK9T",
+            "id": "TavilySearchComponent-Fl2MN",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-dcKuR",
-            "inputTypes": ["Tool"],
+            "id": "Agent-ZlvTd",
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-cGK9T{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cGK9Tœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dcKuR{œfieldNameœ:œtoolsœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-cGK9T",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-cGK9Tœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-dcKuR",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-dcKuRœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-TavilySearchComponent-Fl2MN{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-Fl2MNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ZlvTd{œfieldNameœ:œtoolsœ,œidœ:œAgent-ZlvTdœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "TavilySearchComponent-Fl2MN",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-Fl2MNœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-ZlvTd",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ZlvTdœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -102,43 +119,57 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-prL67",
+            "id": "OpenAIModel-GOv57",
             "name": "model_output",
-            "output_types": ["LanguageModel"]
+            "output_types": [
+              "LanguageModel"
+            ]
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutputComponent-Kqbq4",
-            "inputTypes": ["LanguageModel"],
+            "id": "StructuredOutputComponent-HNJw1",
+            "inputTypes": [
+              "LanguageModel"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-prL67{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-prL67œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-prL67",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-prL67œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutputComponent-Kqbq4",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-Kqbq4œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIModel-GOv57{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-GOv57œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-HNJw1{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-HNJw1œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-GOv57",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-GOv57œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutputComponent-HNJw1",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-HNJw1œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-7XOFR",
+            "id": "ParseData-7nw3f",
             "name": "text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JrLxU",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "id": "ChatOutput-F8JI7",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ParseData-7XOFR{œdataTypeœ:œParseDataœ,œidœ:œParseData-7XOFRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JrLxU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JrLxUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParseData-7XOFR",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-7XOFRœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-JrLxU",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JrLxUœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-7nw3f{œdataTypeœ:œParseDataœ,œidœ:œParseData-7nw3fœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-F8JI7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F8JI7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-7nw3f",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-7nw3fœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-F8JI7",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-F8JI7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -146,9 +177,11 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-tMLRq",
+          "id": "ChatInput-hLHl2",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -182,7 +215,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -195,7 +230,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -214,7 +251,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -316,7 +355,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -331,7 +373,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -350,7 +394,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -385,7 +431,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -404,10 +452,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-tMLRq",
+        "id": "ChatInput-hLHl2",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 472.38251755471583,
@@ -425,9 +473,11 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-JrLxU",
+          "id": "ChatOutput-F8JI7",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -461,7 +511,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -474,7 +526,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -494,7 +548,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -550,7 +606,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -570,7 +628,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -591,7 +653,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -607,7 +672,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -627,7 +694,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -663,7 +732,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -684,10 +755,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-JrLxU",
+        "id": "ChatOutput-F8JI7",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2518.282039019285,
@@ -697,13 +768,13 @@
           "x": 2518.282039019285,
           "y": 855.3686932779933
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-IHTZn",
+          "id": "note-EQ8do",
           "node": {
             "description": "The StructuredOutputComponent, when utilized with our company information schema, performs the following functions:\n\n1. Accepts an input query regarding a company.\n2. Employs a Language Model (LLM) to analyze the query.\n3. Instructs the LLM to generate a structured response adhering to the predefined schema:\n   - Domain\n   - LinkedIn URL\n   - Cheapest Plan\n   - Has Free Trial\n   - Has Enterprise Plan\n   - Has API\n   - Market\n   - Pricing Tiers\n   - Key Features\n   - Target Industries\n\n4. Validates the LLM output against this schema.\n5. Returns a Data object containing the company information structured according to the schema.\n\nIn essence, this component transforms a free-text query about a company into a structured, consistent dataset, facilitating subsequent analysis and application of the information.",
             "display_name": "",
@@ -716,14 +787,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-IHTZn",
+        "id": "note-EQ8do",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
-          "x": 2089.5869930853464,
-          "y": 311.41660832449514
+          "x": 2130.958950603199,
+          "y": 421.74182837210094
         },
         "positionAbsolute": {
           "x": 2089.5869930853464,
@@ -740,7 +811,7 @@
       },
       {
         "data": {
-          "id": "note-oro5s",
+          "id": "note-4z8Ww",
           "node": {
             "description": "PURPOSE:\nConverts unstructured company research into standardized JSON format\n\nKEY FUNCTIONS:\n- Extracts specific business data points\n- Validates and formats information\n- Ensures data consistency\n\nINPUT:\n- Raw company research data\n\nOUTPUT:\nStructured JSON with:\n- Domain information\n- Social links\n- Pricing details\n- Feature availability\n- Market classification\n- Product features\n- Industry focus\n\nRULES:\n1. Uses strict boolean values\n2. Standardizes pricing formats\n3. Validates market categories\n4. Handles missing data consistently",
             "display_name": "",
@@ -753,14 +824,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-oro5s",
+        "id": "note-4z8Ww",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
-          "x": 1237.6627823432912,
-          "y": 111.53860932079613
+          "x": 1284.9450195065508,
+          "y": 158.82084648405578
         },
         "positionAbsolute": {
           "x": 1237.6627823432912,
@@ -777,7 +848,7 @@
       },
       {
         "data": {
-          "id": "note-b5iUI",
+          "id": "note-NTyrO",
           "node": {
             "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Instructions\n\n1. Enter Company Name\n   - In the Chat Input node, type the name of the company you want to research\n   - Example inputs: \"Salesforce.com\", \"Shopify\", \"Zoom Video Communications\"\n\n2. Initiate Research\n   - The Agent will use the Tavily AI Search tool to gather information\n   - It will focus on key areas like pricing, features, and market positioning\n\n3. Review Structured Output\n   - The flow will generate a structured JSON output with standardized fields\n   - This includes domain, LinkedIn URL, pricing details, and key features\n\n4. Examine Formatted Results\n   - The Parse Data component will convert the JSON into a readable format\n   - You'll see a comprehensive company profile with organized sections\n\n5. Analyze and Use Data\n   - Use the generated information for sales prospecting, competitive analysis, or market research\n   - The structured format allows for easy comparison between different companies\n\nRemember: Always verify critical information from official sources before making business decisions! 🔍💼",
             "display_name": "",
@@ -790,14 +861,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-b5iUI",
+        "id": "note-NTyrO",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
-          "x": 244.92297036777086,
-          "y": 340.99805740871204
+          "x": 465.57341046298257,
+          "y": 459.2036503168611
         },
         "positionAbsolute": {
           "x": 244.92297036777086,
@@ -816,9 +887,11 @@
         "data": {
           "description": "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information or creating consistent outputs.",
           "display_name": "Structured Output",
-          "id": "StructuredOutputComponent-Kqbq4",
+          "id": "StructuredOutputComponent-HNJw1",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -846,7 +919,9 @@
                 "method": "build_structured_output",
                 "name": "structured_output",
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -877,7 +952,9 @@
                 "display_name": "Input message",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -897,7 +974,9 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "The language model to use to generate the structured output.",
-                "input_types": ["LanguageModel"],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1068,10 +1147,10 @@
         },
         "dragging": false,
         "height": 541,
-        "id": "StructuredOutputComponent-Kqbq4",
+        "id": "StructuredOutputComponent-HNJw1",
         "measured": {
           "height": 541,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1716.7237308033855,
@@ -1087,9 +1166,11 @@
       },
       {
         "data": {
-          "id": "ParseData-7XOFR",
+          "id": "ParseData-7nw3f",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "helpers",
             "conditional_paths": [],
@@ -1098,7 +1179,11 @@
             "display_name": "Parse Data",
             "documentation": "",
             "edited": false,
-            "field_order": ["data", "template", "sep"],
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
             "frozen": false,
             "icon": "message-square",
             "key": "ParseData",
@@ -1117,7 +1202,9 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1128,7 +1215,9 @@
                 "name": "data_list",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1159,7 +1248,9 @@
                 "display_name": "Data",
                 "dynamic": false,
                 "info": "The data to convert to text.",
-                "input_types": ["Data"],
+                "input_types": [
+                  "Data"
+                ],
                 "list": true,
                 "name": "data",
                 "placeholder": "",
@@ -1194,7 +1285,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1214,10 +1307,10 @@
         },
         "dragging": false,
         "height": 302,
-        "id": "ParseData-7XOFR",
+        "id": "ParseData-7nw3f",
         "measured": {
           "height": 302,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2139.05558520377,
@@ -1235,9 +1328,11 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-dcKuR",
+          "id": "Agent-ZlvTd",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1288,7 +1383,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1317,7 +1414,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1368,7 +1467,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1419,7 +1520,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1511,7 +1614,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "name": "memory",
                 "placeholder": "",
@@ -1605,7 +1710,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1639,7 +1747,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1655,7 +1767,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1675,7 +1789,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1695,7 +1811,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1732,7 +1850,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1771,7 +1891,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1805,10 +1927,10 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-dcKuR",
+        "id": "Agent-ZlvTd",
         "measured": {
           "height": 650,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1287.5681517817056,
@@ -1820,7 +1942,7 @@
       },
       {
         "data": {
-          "id": "note-7JQqd",
+          "id": "note-p1p0l",
           "node": {
             "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
             "display_name": "",
@@ -1833,14 +1955,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-7JQqd",
+        "id": "note-p1p0l",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
-          "x": 878.7898510090017,
-          "y": 640.2524241641511
+          "x": 872.8795713635943,
+          "y": 628.4318648733362
         },
         "positionAbsolute": {
           "x": 921.6062384772317,
@@ -1854,9 +1976,12 @@
         "data": {
           "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
           "display_name": "Tavily AI Search",
-          "id": "TavilySearchComponent-cGK9T",
+          "id": "TavilySearchComponent-Fl2MN",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1888,10 +2013,13 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1904,7 +2032,9 @@
                 "display_name": "Tavily API Key",
                 "dynamic": false,
                 "info": "Your Tavily API Key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1993,7 +2123,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query you want to execute with Tavily.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2017,7 +2149,10 @@
                 "dynamic": false,
                 "info": "The depth of the search.",
                 "name": "search_depth",
-                "options": ["basic", "advanced"],
+                "options": [
+                  "basic",
+                  "advanced"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2037,7 +2172,12 @@
                 "dynamic": false,
                 "info": "The time range back from the current date to include in the search results.",
                 "name": "time_range",
-                "options": ["day", "week", "month", "year"],
+                "options": [
+                  "day",
+                  "week",
+                  "month",
+                  "year"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2072,13 +2212,17 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
@@ -2088,9 +2232,10 @@
                       "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
@@ -2100,9 +2245,10 @@
                       "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
@@ -2112,7 +2258,20 @@
                       "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -2126,12 +2285,16 @@
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
                     "name": "TavilySearchComponent-fetch_content",
-                    "tags": ["TavilySearchComponent-fetch_content"]
+                    "tags": [
+                      "TavilySearchComponent-fetch_content"
+                    ]
                   },
                   {
                     "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
                     "name": "TavilySearchComponent-fetch_content_text",
-                    "tags": ["TavilySearchComponent-fetch_content_text"]
+                    "tags": [
+                      "TavilySearchComponent-fetch_content_text"
+                    ]
                   }
                 ]
               },
@@ -2144,7 +2307,10 @@
                 "dynamic": false,
                 "info": "The category of the search.",
                 "name": "topic",
-                "options": ["general", "news"],
+                "options": [
+                  "general",
+                  "news"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2162,23 +2328,26 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-cGK9T",
+        "id": "TavilySearchComponent-Fl2MN",
         "measured": {
-          "height": 489,
-          "width": 360
+          "height": 437,
+          "width": 320
         },
         "position": {
           "x": 875.7686789989679,
           "y": 798.478848045035
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "OpenAIModel-prL67",
+          "id": "OpenAIModel-GOv57",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -2217,7 +2386,9 @@
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2226,10 +2397,14 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": ["api_key"],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2243,7 +2418,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -2278,7 +2455,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2460,7 +2639,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2529,32 +2710,33 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-prL67",
+        "id": "OpenAIModel-GOv57",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 525,
+          "width": 320
         },
         "position": {
           "x": 1718.9581068990763,
-          "y": 1081.137733422722
+          "y": 1035.8255894745982
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -49.933183848022736,
-      "y": 46.49268690110034,
-      "zoom": 0.4973930841732965
+      "x": -58.50231656538608,
+      "y": 29.06216478820238,
+      "zoom": 0.5075901953862927
     }
   },
   "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
   "endpoint_name": null,
-  "gradient": "1",
-  "icon": "PieChart",
-  "id": "153a05e5-86bd-4de8-b159-2cb4f9f94de5",
+  "id": "8944aed3-aa86-4c50-b725-5a4a3973ba5a",
   "is_component": false,
-  "last_tested_version": "1.1.1",
+  "last_tested_version": "1.2.0",
   "name": "Market Research",
-  "tags": ["assistants", "agents"]
+  "tags": [
+    "assistants",
+    "agents"
+  ]
 }
