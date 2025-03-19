@@ -25,9 +25,9 @@
         "id": "xy-edge__SearchComponent-x6LSs{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-x6LSsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uVdQJ{œfieldNameœ:œtoolsœ,œidœ:œAgent-uVdQJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SearchComponent-x6LSs",
-        "sourceHandle": "{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-x6LSsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-x6LSsœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-uVdQJ",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-uVdQJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uVdQJœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__ChatInput-AJeqr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AJeqrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-uVdQJ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-uVdQJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-AJeqr",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AJeqrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-AJeqrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-uVdQJ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-uVdQJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-uVdQJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "xy-edge__URL-uqJt8{œdataTypeœ:œURLœ,œidœ:œURL-uqJt8œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-XdRAi{œfieldNameœ:œtoolsœ,œidœ:œAgent-XdRAiœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-uqJt8",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-uqJt8œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-uqJt8œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-XdRAi",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-XdRAiœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-XdRAiœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "xy-edge__Agent-uVdQJ{œdataTypeœ:œAgentœ,œidœ:œAgent-uVdQJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-XdRAi{œfieldNameœ:œinput_valueœ,œidœ:œAgent-XdRAiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-uVdQJ",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-uVdQJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-uVdQJœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-XdRAi",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-XdRAiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-XdRAiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "xy-edge__CalculatorComponent-nykGf{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-nykGfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ZvLnB{œfieldNameœ:œtoolsœ,œidœ:œAgent-ZvLnBœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-nykGf",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-nykGfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-nykGfœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-ZvLnB",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-ZvLnBœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ZvLnBœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -165,9 +165,9 @@
         "id": "xy-edge__Agent-XdRAi{œdataTypeœ:œAgentœ,œidœ:œAgent-XdRAiœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-ZvLnB{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ZvLnBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-XdRAi",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-XdRAiœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-XdRAiœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-ZvLnB",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ZvLnBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ZvLnBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "xy-edge__Agent-ZvLnB{œdataTypeœ:œAgentœ,œidœ:œAgent-ZvLnBœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HHJAW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HHJAWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-ZvLnB",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-ZvLnBœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ZvLnBœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-HHJAW",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HHJAWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HHJAWœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
