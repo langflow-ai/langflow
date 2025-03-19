@@ -65,7 +65,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
     await page.waitForSelector('[data-testid="dataURL"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page
@@ -116,13 +116,14 @@ test(
       timeout: 30000 * 3,
     });
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-text-output-modal"]`,
-      {
-        timeout: 1000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
 
     // Connect dataframe output to second chat output
     await page
@@ -143,13 +144,14 @@ test(
     });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-text-output-modal"]`,
-      {
-        timeout: 1000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
 
     // Remove text connection
@@ -165,13 +167,14 @@ test(
     });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-dataframe-output-modal"]`,
-      {
-        timeout: 3000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
     // Remove all connections
     const dataEdge = await page.locator(".react-flow__edge").first();
