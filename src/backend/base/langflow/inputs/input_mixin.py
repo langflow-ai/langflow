@@ -218,6 +218,7 @@ class ConnectionMixin(BaseModel):
     options: list[dict[str, Any]] = Field(default_factory=list)
     """List of dictionaries with metadata for each option."""
 
+
 class TabMixin(BaseModel):
     """Mixin for tab input fields that allows a maximum of 3 values, each with a maximum of 20 characters."""
 

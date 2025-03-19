@@ -466,7 +466,6 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
-
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a connection input field.
 
@@ -489,6 +488,7 @@ class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, T
     """
 
     field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
+
 
 class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a tab input field.
