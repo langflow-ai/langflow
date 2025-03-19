@@ -41,6 +41,7 @@ module.exports = {
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
         "Concepts/concepts-file-management",
+        "Concepts/concepts-voice-mode",
       ],
     },
     {
