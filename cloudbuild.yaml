@@ -64,7 +64,7 @@ steps:
   # Step 6: Push the backend image with network tools with specific SHA tag
   - name: "gcr.io/cloud-builders/docker"
     id: PushBackendImageNetworkTools
-    args: ["push", "${_IMAGE_BACKEND-network-tools}:${SHORT_SHA}"]
+    args: ["push", "${_IMAGE_BACKEND}-network-tools:${SHORT_SHA}"]
 images:
     - "${_IMAGE_FRONTEND}:${SHORT_SHA}"
     - "${_IMAGE_FRONTEND}:latest"
