@@ -93,10 +93,10 @@ const MicrophoneSelect = ({
         <SelectContent className="max-h-[200px]">
           <SelectGroup>
             {microphones?.map((device) => (
-              <SelectItem key={device.deviceId} value={device.deviceId}>
+              <SelectItem key={device?.deviceId} value={device?.deviceId}>
                 <div className="max-w-[220px] truncate text-left">
-                  {device.label ||
-                    `Microphone ${device.deviceId.slice(0, 5)}...`}
+                  {device?.label ||
+                    `Microphone ${device?.deviceId?.slice(0, 5)}...`}
                 </div>
               </SelectItem>
             ))}

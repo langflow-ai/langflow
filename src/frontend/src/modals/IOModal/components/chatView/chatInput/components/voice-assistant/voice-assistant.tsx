@@ -343,11 +343,21 @@ export function VoiceAssistant({
 
   const handleToggleRecording = () => {
     if (isRecording) {
-      microphoneRef.current?.disconnect();
+      if (microphoneRef.current && microphoneRef.current.mediaStream) {
+        microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+        });
+      }
       setBarHeights(Array(30).fill(20));
       setIsRecording(false);
     } else {
-      startRecording();
+      if (microphoneRef.current && microphoneRef.current.mediaStream) {
+        microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
+          track.enabled = true;
+        });
+      } else {
+        startRecording();
+      }
       setIsRecording(true);
     }
   };
