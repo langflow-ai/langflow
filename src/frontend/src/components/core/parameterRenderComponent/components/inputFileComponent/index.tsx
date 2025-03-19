@@ -46,10 +46,10 @@ export default function InputFileComponent({
     if (fileTypes === undefined) return true;
 
     // Extract the file extension
-    const fileExtension = fileName.split('.').pop();
+    const fileExtension = fileName.split(".").pop();
 
     // Check if the extracted extension is in the list of accepted file types
-    return fileTypes.includes(fileExtension || '');
+    return fileTypes.includes(fileExtension || "");
   }
 
   const { mutateAsync, isPending } = usePostUploadFile();
