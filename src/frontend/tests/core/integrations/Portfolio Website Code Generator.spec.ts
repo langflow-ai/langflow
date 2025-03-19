@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -46,15 +46,7 @@ withEventDeliveryModes(
       .first()
       .fill(process.env.ANTHROPIC_API_KEY ?? "");
 
-    const filePath = path.join(__dirname, "../../assets/test_file.txt");
-    await page.getByTestId("button_upload_file").click();
-
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("button_upload_file").click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(filePath);
-
-    await page.waitForTimeout(2000);
+    await uploadFile(page, "test_file.txt");
 
     await page.getByTestId("playground-btn-flow-io").click();
 

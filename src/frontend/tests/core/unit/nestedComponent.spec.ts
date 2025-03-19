@@ -3,7 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "NestedComponent",
+  "user should be able to use nested component",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -14,6 +14,16 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("alter metadata");
+
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+    await page.getByTestId("sidebar-options-trigger").click();
+
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="processingAlter Metadata"]', {
       timeout: 3000,

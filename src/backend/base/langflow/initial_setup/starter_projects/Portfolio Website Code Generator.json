@@ -2297,7 +2297,7 @@
               "path": {
                 "_input_type": "FileInput",
                 "advanced": false,
-                "display_name": "Path",
+                "display_name": "Files",
                 "dynamic": false,
                 "fileTypes": [
                   "txt",
@@ -2326,7 +2326,7 @@
                 ],
                 "file_path": "",
                 "info": "Supported file extensions: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
-                "list": false,
+                "list": true,
                 "list_add_label": "Add More",
                 "name": "path",
                 "placeholder": "",
