@@ -1,4 +1,3 @@
-import { GooglecalendarIcon } from "../icons/Googlecalendar";
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -285,6 +284,8 @@ import { GitBookIcon } from "../icons/GitBook";
 import { GitLoaderIcon } from "../icons/GitLoader";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
+import { GooglecalendarIcon } from "../icons/Googlecalendar";
+import { GooglesheetsIcon } from "../icons/Googlesheets";
 import {
   GradientInfinity,
   GradientSave,
@@ -560,7 +561,12 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "Googlecalendar", name: "googlecalendar", icon: "Googlecalendar" },
+  { display_name: "Googlesheets", name: "googlesheets", icon: "Googlesheets" },
+  {
+    display_name: "Googlecalendar",
+    name: "googlecalendar",
+    icon: "Googlecalendar",
+  },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
@@ -647,6 +653,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Googlesheets: GooglesheetsIcon,
   Googlecalendar: GooglecalendarIcon,
   Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
