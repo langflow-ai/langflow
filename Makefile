@@ -367,6 +367,13 @@ docker_build_backend_multiarch: docker_buildx_setup ## build backend image for m
 		-f ${DOCKERFILE_BACKEND_ONLY} .
 	@echo "$(GREEN)Backend multi-architecture image built.$(NC)"
 
+docker_build_backend_multiarch_tools: docker_buildx_setup ## build backend image for multiple architectures
+	@echo "Building backend image for platforms: $(PLATFORMS)"
+	@docker buildx build --target network-tools --platform $(PLATFORMS) \
+		-t langflow_backend:${VERSION} \
+		-f ${DOCKERFILE_BACKEND_ONLY} .
+	@echo "$(GREEN)Backend multi-architecture image built.$(NC)"
+
 # ARM-specific builds (with --load for local use)
 docker_build_arm: ## build images specifically for ARM architecture
 	@echo "Building ARM-specific images..."

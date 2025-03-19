@@ -55,6 +55,30 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --extra postgresql
 
 ################################
+# NETWORK-TOOLS
+# Build stage for network troubleshooting
+################################
+FROM ${PYTHON_IMAGE} AS network-tools
+
+WORKDIR /app
+
+# Install network troubleshooting tools
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install --no-install-recommends -y \
+    curl=7.88.1-10+deb12u12 \
+    dnsutils=1:9.18.33-1~deb12u2 \
+    iperf=2.1.8+dfsg-1 \
+    iputils-ping=3:20221126-1+deb12u1 \
+    net-tools=2.10-0.1 \
+    netcat-openbsd=1.219-1 \
+    nmap=7.93+dfsg1-1 \
+    tcpdump=4.99.3-1 \
+    traceroute=1:2.1.2-1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
