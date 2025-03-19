@@ -7,23 +7,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-QrQyl",
+            "id": "AgentQL-NY5vW",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-DlbOP",
-            "inputTypes": ["Tool"],
+            "id": "Agent-QRVSc",
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-QrQyl{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-QrQylœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-DlbOP{œfieldNameœ:œtoolsœ,œidœ:œAgent-DlbOPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-NY5vW{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-NY5vWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-QRVSc{œfieldNameœ:œtoolsœ,œidœ:œAgent-QRVScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-QrQyl",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-QrQylœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-DlbOP",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-DlbOPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-NY5vW",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-NY5vWœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-QRVSc",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-QRVScœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -31,52 +35,63 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-rZZHB",
+            "id": "ChatInput-tFY2s",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-DlbOP",
-            "inputTypes": ["Message"],
+            "id": "Agent-QRVSc",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-rZZHB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rZZHBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-DlbOP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-DlbOPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-tFY2s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFY2sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-QRVSc{œfieldNameœ:œinput_valueœ,œidœ:œAgent-QRVScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-rZZHB",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rZZHBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-DlbOP",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-DlbOPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-tFY2s",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tFY2sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-QRVSc",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-QRVScœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-DlbOP",
+            "id": "Agent-QRVSc",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-tCBqx",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "id": "ChatOutput-qeYkD",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "other"
           }
         },
-        "id": "xy-edge__Agent-DlbOP{œdataTypeœ:œAgentœ,œidœ:œAgent-DlbOPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tCBqx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tCBqxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-QRVSc{œdataTypeœ:œAgentœ,œidœ:œAgent-QRVScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-qeYkD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qeYkDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-DlbOP",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-DlbOPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-tCBqx",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tCBqxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-QRVSc",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-QRVScœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-qeYkD",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-qeYkDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-8QugF",
+          "id": "note-cvbuP",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -88,7 +103,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-8QugF",
+        "id": "note-cvbuP",
         "measured": {
           "height": 324,
           "width": 324
@@ -102,7 +117,7 @@
       },
       {
         "data": {
-          "id": "note-KBJMn",
+          "id": "note-lfFOf",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -115,7 +130,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-KBJMn",
+        "id": "note-lfFOf",
         "measured": {
           "height": 346,
           "width": 324
@@ -131,9 +146,11 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-QrQyl",
+          "id": "AgentQL-NY5vW",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -167,10 +184,13 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -183,8 +203,10 @@
                 "display_name": "API Key",
                 "dynamic": false,
                 "info": "Your AgentQL API key from dev.agentql.com",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -275,7 +297,10 @@
                 "dynamic": false,
                 "info": "'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.",
                 "name": "mode",
-                "options": ["fast", "standard"],
+                "options": [
+                  "fast",
+                  "standard"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -293,7 +318,9 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -316,7 +343,9 @@
                 "display_name": "AgentQL Query",
                 "dynamic": false,
                 "info": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -375,7 +404,10 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
@@ -432,19 +464,6 @@
                       "name": "status",
                       "sortable": true,
                       "type": "boolean"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
                     }
                   ]
                 },
@@ -459,7 +478,9 @@
                     "description": "build_output(api_key: Message, url: Message) - Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
                     "name": "AgentQL-build_output",
                     "status": true,
-                    "tags": ["AgentQL-build_output"]
+                    "tags": [
+                      "AgentQL-build_output"
+                    ]
                   }
                 ]
               },
@@ -469,7 +490,9 @@
                 "display_name": "URL",
                 "dynamic": false,
                 "info": "The URL of the public web page you want to extract data from.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -515,7 +538,7 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-QrQyl",
+        "id": "AgentQL-NY5vW",
         "measured": {
           "height": 602,
           "width": 320
@@ -529,9 +552,11 @@
       },
       {
         "data": {
-          "id": "ChatInput-rZZHB",
+          "id": "ChatInput-tFY2s",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -568,7 +593,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -582,7 +609,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -603,7 +632,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -711,7 +742,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -728,7 +762,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -749,7 +785,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -788,7 +826,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -810,7 +850,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-rZZHB",
+        "id": "ChatInput-tFY2s",
         "measured": {
           "height": 66,
           "width": 192
@@ -824,9 +864,11 @@
       },
       {
         "data": {
-          "id": "ChatOutput-tCBqx",
+          "id": "ChatOutput-qeYkD",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -861,7 +903,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -874,7 +918,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -895,7 +941,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -952,7 +1000,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -973,7 +1023,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -994,7 +1048,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1011,7 +1068,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1032,7 +1091,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1071,7 +1132,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1093,7 +1156,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-tCBqx",
+        "id": "ChatOutput-qeYkD",
         "measured": {
           "height": 66,
           "width": 192
@@ -1107,9 +1170,11 @@
       },
       {
         "data": {
-          "id": "Agent-DlbOP",
+          "id": "Agent-QRVSc",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1160,7 +1225,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1191,7 +1258,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1273,7 +1342,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1326,7 +1397,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1425,7 +1498,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1530,7 +1605,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1568,7 +1646,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1585,7 +1667,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1606,7 +1690,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1627,7 +1713,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1677,7 +1765,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1717,7 +1807,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1754,7 +1846,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-DlbOP",
+        "id": "Agent-QRVSc",
         "measured": {
           "height": 624,
           "width": 320
@@ -1768,7 +1860,7 @@
       },
       {
         "data": {
-          "id": "note-0zajW",
+          "id": "note-IV9Ka",
           "node": {
             "description": "# News Aggregator\n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\nThe **Agent** component populates the **Agent QL** component's **URL** and **Query** fields, and returns a structured response to your question.",
             "display_name": "",
@@ -1780,7 +1872,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-0zajW",
+        "id": "note-IV9Ka",
         "measured": {
           "height": 604,
           "width": 325
@@ -1795,15 +1887,18 @@
     ],
     "viewport": {
       "x": -117.84864069491266,
-      "y": 80.81149435068329,
+      "y": 81.66532371797462,
       "zoom": 0.8538293672913081
     }
   },
   "description": "Extracts data and information from webpages.",
   "endpoint_name": null,
-  "id": "f2015209-2422-432c-b5c2-61e8edf988aa",
+  "id": "668ff2ee-3592-47f6-a144-a3eea2150e6a",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "News Aggregator",
-  "tags": ["web-scraping", "agents"]
+  "tags": [
+    "web-scraping",
+    "agents"
+  ]
 }
