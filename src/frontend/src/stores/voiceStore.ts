@@ -22,13 +22,12 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   openaiVoices: [
     { name: "alloy", value: "alloy" },
     { name: "ash", value: "ash" },
+    { name: "ballad", value: "ballad" },
     { name: "coral", value: "coral" },
     { name: "echo", value: "echo" },
-    { name: "fable", value: "fable" },
-    { name: "onyx", value: "onyx" },
-    { name: "nova", value: "nova" },
     { name: "sage", value: "sage" },
     { name: "shimmer", value: "shimmer" },
+    { name: "verse", value: "verse" },
   ],
   setOpenaiVoices: (
     openaiVoices: {
