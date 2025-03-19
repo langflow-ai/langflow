@@ -791,7 +791,7 @@
           "x": 4349.229697347143,
           "y": 620.5490494265098
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 360
       },
@@ -3041,7 +3041,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
+                "value": "You are a knowledgeable Local Expert with extensive information about the selected city, its attractions, and customs. Your goal is to provide the BEST insights about the city. Compile an in-depth guide for travelers, including key attractions, local customs, special events, and daily activity recommendations. Focus on hidden gems and local hotspots. Your final output should be a comprehensive city guide, rich in cultural insights and practical tips."
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -3738,7 +3738,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
+                "value": "You are an Amazing Travel Concierge, a specialist in travel planning and logistics with decades of experience. Your goal is to create the most amazing travel itineraries with budget and packing suggestions for the city. Expand the city guide into a full 7-day travel itinerary with detailed per-day plans. Include weather forecasts, places to eat, packing suggestions, and a budget breakdown. Suggest actual places to visit, hotels to stay, and restaurants to go to. Your final output should be a complete expanded travel plan, formatted as markdown, encompassing a daily schedule, anticipated weather conditions, recommended clothing and items to pack, and a detailed budget."
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -3870,9 +3870,9 @@
       }
     ],
     "viewport": {
-      "x": -824.3224565805292,
-      "y": 11.48281642202869,
-      "zoom": 0.48615013791635153
+      "x": -473.30523608095336,
+      "y": 108.76117467654905,
+      "zoom": 0.41164535038506667
     }
   },
   "description": "Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.",
