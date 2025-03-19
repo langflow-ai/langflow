@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ScrapeGraphSearchApi-bLGp9{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-bLGp9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-F0B6L{œfieldNameœ:œtoolsœ,œidœ:œAgent-F0B6Lœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ScrapeGraphSearchApi-bLGp9",
-        "sourceHandle": "{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-bLGp9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-bLGp9œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-F0B6L",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-F0B6Lœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-F0B6Lœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-04UDQ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-04UDQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-F0B6L{œfieldNameœ:œinput_valueœ,œidœ:œAgent-F0B6Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-04UDQ",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-04UDQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-04UDQœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-F0B6L",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-F0B6Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-F0B6Lœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Agent-F0B6L{œdataTypeœ:œAgentœ,œidœ:œAgent-F0B6Lœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-bZGEh{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bZGEhœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-F0B6L",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-F0B6Lœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-F0B6Lœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-bZGEh",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bZGEhœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-bZGEhœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
