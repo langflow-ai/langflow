@@ -42,9 +42,9 @@ const LanguageSelect = ({
         <SelectContent className="max-h-[200px]">
           <SelectGroup>
             {allLanguages.map((lang) => (
-              <SelectItem key={lang.value} value={lang.value}>
+              <SelectItem key={lang?.value} value={lang?.value}>
                 <div className="max-w-[220px] truncate text-left">
-                  {lang.name}
+                  {lang?.name}
                 </div>
               </SelectItem>
             ))}
