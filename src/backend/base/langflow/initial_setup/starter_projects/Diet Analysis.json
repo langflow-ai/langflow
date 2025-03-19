@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-Enwwh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Enwwhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-20MWu{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-Enwwh",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Enwwhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Enwwhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "NovitaModel-20MWu",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-20MWuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Prompt-YubZ1{œdataTypeœ:œPromptœ,œidœ:œPrompt-YubZ1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-20MWu{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-YubZ1",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-YubZ1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-YubZ1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "NovitaModel-20MWu",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-20MWuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-NovitaModel-20MWu{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-20MWuœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-N3tYJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N3tYJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "NovitaModel-20MWu",
-        "sourceHandle": "{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-20MWuœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-20MWuœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-N3tYJ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N3tYJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N3tYJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -567,10 +567,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -583,10 +581,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -730,21 +726,14 @@
                 "info": "",
                 "name": "model_name",
                 "options": [
-                  "deepseek/deepseek-r1-turbo",
-                  "deepseek/deepseek-v3-turbo",
-                  "qwen/qwq-32b",
-                  "meta-llama/llama-3.1-8b-instruct",
                   "deepseek/deepseek-r1",
                   "deepseek/deepseek_v3",
-                  "meta-llama/llama-3.1-70b-instruct",
                   "meta-llama/llama-3.3-70b-instruct",
+                  "meta-llama/llama-3.1-8b-instruct",
+                  "meta-llama/llama-3.1-70b-instruct",
                   "mistralai/mistral-nemo",
-                  "deepseek/deepseek-r1-distill-qwen-14b",
-                  "deepseek/deepseek-r1-distill-qwen-32b",
-                  "deepseek/deepseek-r1-distill-llama-70b",
                   "Sao10K/L3-8B-Stheno-v3.2",
                   "gryphe/mythomax-l2-13b",
-                  "deepseek/deepseek-r1-distill-llama-8b",
                   "qwen/qwen-2.5-72b-instruct",
                   "meta-llama/llama-3-8b-instruct",
                   "microsoft/wizardlm-2-8x22b",
@@ -759,6 +748,7 @@
                   "nousresearch/nous-hermes-llama2-13b",
                   "teknium/openhermes-2.5-mistral-7b",
                   "sophosympatheia/midnight-rose-70b",
+                  "meta-llama/llama-3.1-8b-instruct-max",
                   "sao10k/l3-8b-lunaris",
                   "qwen/qwen-2-vl-72b-instruct",
                   "meta-llama/llama-3.2-1b-instruct",
@@ -766,7 +756,8 @@
                   "meta-llama/llama-3.2-3b-instruct",
                   "meta-llama/llama-3.1-8b-instruct-bf16",
                   "sao10k/l31-70b-euryale-v2.2",
-                  "qwen/qwen-2-7b-instruct"
+                  "qwen/qwen-2-7b-instruct",
+                  "qwen/qwen-2-72b-instruct"
                 ],
                 "options_metadata": [],
                 "placeholder": "",

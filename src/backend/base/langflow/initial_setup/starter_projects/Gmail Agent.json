@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-auIvg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-auIvgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-gCLrf{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-auIvg",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-auIvgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-auIvgœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-gCLrf",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-gCLrfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-Agent-gCLrf{œdataTypeœ:œAgentœ,œidœ:œAgent-gCLrfœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8WiQm{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8WiQmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-gCLrf",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-gCLrfœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-gCLrfœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-8WiQm",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8WiQmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8WiQmœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-ComposioAPI-Tdreq{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-Tdreqœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-gCLrf{œfieldNameœ:œtoolsœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ComposioAPI-Tdreq",
-        "sourceHandle": "{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-Tdreqœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-Tdreqœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-gCLrf",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-gCLrfœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [

@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AgentQL-NY5vW{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-NY5vWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-QRVSc{œfieldNameœ:œtoolsœ,œidœ:œAgent-QRVScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-NY5vW",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-NY5vWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-NY5vWœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-QRVSc",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-QRVScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-QRVScœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-tFY2s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFY2sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-QRVSc{œfieldNameœ:œinput_valueœ,œidœ:œAgent-QRVScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-tFY2s",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFY2sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tFY2sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-QRVSc",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-QRVScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-QRVScœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Agent-QRVSc{œdataTypeœ:œAgentœ,œidœ:œAgent-QRVScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-qeYkD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qeYkDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-QRVSc",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-QRVScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-QRVScœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-qeYkD",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qeYkDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-qeYkDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [

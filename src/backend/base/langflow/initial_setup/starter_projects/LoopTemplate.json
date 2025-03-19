@@ -25,9 +25,9 @@
         "id": "reactflow__edge-LoopComponent-Ayr6F{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-4kg7C{œfieldNameœ:œdataœ,œidœ:œParseData-4kg7Cœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-Ayr6F",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ayr6Fœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-4kg7C",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-4kg7Cœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-4kg7Cœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ParseData-4kg7C{œdataTypeœ:œParseDataœ,œidœ:œParseData-4kg7Cœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-EIKEJ{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-EIKEJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseData-4kg7C",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-4kg7Cœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-4kg7Cœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-EIKEJ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-EIKEJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-EIKEJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-AnthropicModel-EIKEJ{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-EIKEJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-XJar4{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-XJar4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "AnthropicModel-EIKEJ",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-EIKEJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-EIKEJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "MessagetoData-XJar4",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-XJar4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-XJar4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-MessagetoData-XJar4{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-XJar4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-Ayr6F{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "MessagetoData-XJar4",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-XJar4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-XJar4œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-Ayr6F",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ayr6Fœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "reactflow__edge-LoopComponent-Ayr6F{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-jfscS{œfieldNameœ:œdataœ,œidœ:œParseData-jfscSœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-Ayr6F",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ayr6Fœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-jfscS",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-jfscSœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-jfscSœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-ParseData-jfscS{œdataTypeœ:œParseDataœ,œidœ:œParseData-jfscSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-B66b2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-B66b2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseData-jfscS",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-jfscSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-jfscSœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-B66b2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-B66b2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-B66b2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "reactflow__edge-ChatInput-2VCkW{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2VCkWœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-qDXvl{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-qDXvlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-2VCkW",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2VCkWœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-2VCkWœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-qDXvl",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-qDXvlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-qDXvlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -223,9 +223,9 @@
         "id": "reactflow__edge-ArXivComponent-qDXvl{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-qDXvlœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-Ayr6F{œfieldNameœ:œdataœ,œidœ:œLoopComponent-Ayr6Fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-qDXvl",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-qDXvlœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-qDXvlœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-Ayr6F",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-Ayr6Fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-Ayr6Fœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -713,10 +713,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -729,10 +727,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],

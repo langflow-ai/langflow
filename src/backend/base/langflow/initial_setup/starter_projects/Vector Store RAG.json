@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ParseData-Pc764{œdataTypeœ:œParseDataœ,œidœ:œParseData-Pc764œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-T1JLQ{œfieldNameœ:œcontextœ,œidœ:œPrompt-T1JLQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseData-Pc764",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-Pc764œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-Pc764œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-T1JLQ",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-T1JLQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-T1JLQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-ChatInput-5reba{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5rebaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-T1JLQ{œfieldNameœ:œquestionœ,œidœ:œPrompt-T1JLQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-5reba",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5rebaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5rebaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-T1JLQ",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-T1JLQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-T1JLQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-File-IwyQk{œdataTypeœ:œFileœ,œidœ:œFile-IwyQkœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-EixdW{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-EixdWœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-IwyQk",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-IwyQkœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-IwyQkœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "SplitText-EixdW",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-EixdWœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-EixdWœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-Prompt-T1JLQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-T1JLQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-e49kI{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-e49kIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-T1JLQ",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-T1JLQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-T1JLQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-e49kI",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-e49kIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-e49kIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-OpenAIModel-e49kI{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-e49kIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-aQXd2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-aQXd2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-e49kI",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-e49kIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-e49kIœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-aQXd2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-aQXd2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-aQXd2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -170,9 +170,9 @@
         "id": "reactflow__edge-OpenAIEmbeddings-fftff{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-fftffœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-JF2lS{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-JF2lSœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIEmbeddings-fftff",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-fftffœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-fftffœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDB-JF2lS",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-JF2lSœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-JF2lSœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -199,9 +199,9 @@
         "id": "reactflow__edge-SplitText-EixdW{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-EixdWœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-JF2lS{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-JF2lSœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-EixdW",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-EixdWœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-EixdWœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
         "target": "AstraDB-JF2lS",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-JF2lSœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-JF2lSœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -227,9 +227,9 @@
         "id": "reactflow__edge-OpenAIEmbeddings-t4aMI{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-t4aMIœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-8CuoQ{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-8CuoQœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIEmbeddings-t4aMI",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-t4aMIœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-t4aMIœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDB-8CuoQ",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-8CuoQœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-8CuoQœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -255,9 +255,9 @@
         "id": "reactflow__edge-ChatInput-5reba{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5rebaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-8CuoQ{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-8CuoQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-5reba",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5rebaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5rebaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-8CuoQ",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-8CuoQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-8CuoQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -283,9 +283,9 @@
         "id": "reactflow__edge-AstraDB-8CuoQ{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-8CuoQœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-Pc764{œfieldNameœ:œdataœ,œidœ:œParseData-Pc764œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AstraDB-8CuoQ",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-8CuoQœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-8CuoQœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-Pc764",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-Pc764œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-Pc764œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
