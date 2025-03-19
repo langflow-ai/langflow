@@ -297,12 +297,14 @@ Your JSON data is posted to the **Chat Output** component, which indicates that 
 
 ### Inputs
 
-| Name | Type   | Description                                    |
-| ---- | ------ | ---------------------------------------------- |
-| data | String | JSON payload for testing the webhook component |
+| Name | Display Name | Description |
+|------|--------------|-------------|
+| data | Payload | Receives a payload from external systems through HTTP POST requests. |
+| curl | cURL | The cURL command template for making requests to this webhook. |
+| endpoint | Endpoint | The endpoint URL where this webhook receives requests. |
 
 ### Outputs
 
-| Name        | Type | Description                           |
-| ----------- | ---- | ------------------------------------- |
-| output_data | Data | Processed data from the webhook input |
+| Name | Display Name | Description |
+|------|--------------|-------------|
+| output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
