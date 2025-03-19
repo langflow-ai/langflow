@@ -589,6 +589,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  { display_name: "Slack", name: "slack", icon: "SlackDirectoryLoader" },
 ];
 
 export const categoryIcons = {
