@@ -115,6 +115,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents:
+            collection.drop()  # Drop collection to override the vector store
             return MongoDBAtlasVectorSearch.from_documents(
                 documents=documents,
                 embedding=self.embedding,
