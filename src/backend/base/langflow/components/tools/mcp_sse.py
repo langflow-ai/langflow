@@ -3,11 +3,11 @@ import asyncio
 from contextlib import AsyncExitStack
 
 import httpx
+from langchain_core.tools import StructuredTool
 from mcp import ClientSession, types
 from mcp.client.sse import sse_client
 
-from langflow.base.mcp.util import create_tool_coroutine, create_tool_func
-from langflow.components.tools.mcp_stdio import create_input_schema_from_json_schema
+from langflow.base.mcp.util import create_input_schema_from_json_schema, create_tool_coroutine, create_tool_func
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
@@ -32,6 +32,17 @@ class MCPSseClient:
                 return response.headers.get("Location")  # Return the redirect URL
         return url  # Return the original URL if no redirect
 
+    async def _connect_with_timeout(
+        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
+    ):
+        """Connect to the SSE server with timeout."""
+        sse_transport = await self.exit_stack.enter_async_context(
+            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+        )
+        self.sse, self.write = sse_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
+        await self.session.initialize()
+
     async def connect_to_server(
         self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
     ):
@@ -51,18 +62,7 @@ class MCPSseClient:
         except asyncio.TimeoutError as err:
             error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
             raise TimeoutError(error_message) from err
-        else:  # Only executed if no TimeoutError
-            return response.tools
-
-    async def _connect_with_timeout(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
-    ):
-        sse_transport = await self.exit_stack.enter_async_context(
-            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-        )
-        self.sse, self.write = sse_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
-        await self.session.initialize()
+        return response.tools
 
 
 class MCPSse(Component):
@@ -98,12 +98,12 @@ class MCPSse(Component):
         for tool in self.tools:
             args_schema = create_input_schema_from_json_schema(tool.inputSchema)
             tool_list.append(
-                Tool(
+                StructuredTool(
                     name=tool.name,  # maybe format this
                     description=tool.description,
                     args_schema=args_schema,
-                    coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
                     func=create_tool_func(tool.name, self.client.session),
+                    coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
                 )
             )
 

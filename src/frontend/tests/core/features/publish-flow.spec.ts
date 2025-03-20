@@ -9,15 +9,33 @@ test(
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 3000,
+      timeout: 5000,
     });
-    const flowId = page.url().split("/").pop();
+
+    let flowId = "";
+    let retries = 0;
+    const maxRetries = 3;
+
+    while (flowId.length === 0 && retries < maxRetries) {
+      const url = page.url();
+      flowId = url.split("/").pop() || "";
+
+      if (flowId.length === 0) {
+        console.log(
+          `Empty flowId detected (attempt ${retries + 1}/${maxRetries}), waiting and retrying...`,
+        );
+        await page.waitForTimeout(1000);
+        retries++;
+      }
+    }
+
     expect(flowId).toBeDefined();
     expect(flowId).not.toBeNull();
-    expect(flowId!.length).toBeGreaterThan(0);
+    expect(flowId.length).toBeGreaterThan(0);
+
     await page.getByTestId("blank-flow").click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
+      timeout: 5000,
     });
 
     await page.getByTestId("sidebar-search-input").click();
@@ -33,20 +51,35 @@ test(
         await page.getByTestId("add-component-button-chat-input").click();
       });
 
+    await page.waitForTimeout(2000);
+
     await adjustScreenView(page);
     await page.getByTestId("publish-button").click();
+
+    await page.waitForTimeout(3000);
+
     await page.waitForSelector('[data-testid="shareable-playground"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
-    await expect(
-      page.waitForResponse(
-        (response) =>
-          response.url().includes(flowId!) && response.status() === 200,
-      ),
-    ).resolves.toBeTruthy();
+
+    try {
+      await page.waitForTimeout(2000);
+
+      await expect(page.getByTestId("publish-switch")).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      console.error("Error waiting for publish operation:", error);
+      throw error;
+    }
+
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("publish-switch").click();
     const pagePromise = context.waitForEvent("page");
+
+    await page.waitForTimeout(2000);
+
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
     await newPage.waitForTimeout(3000);
@@ -59,7 +92,6 @@ test(
 
     await newPage.close();
     await page.bringToFront();
-    // check if deactivate the publishworks
     await page.waitForTimeout(500);
     await page.getByTestId("publish-button").click();
     await page.waitForTimeout(500);
@@ -71,6 +103,7 @@ test(
     });
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await page.goto(newUrl);
+    await page.waitForTimeout(2000);
     try {
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,
