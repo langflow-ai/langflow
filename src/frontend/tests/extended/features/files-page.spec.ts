@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
 
@@ -10,6 +11,18 @@ test(
   { tag: ["@release", "@files", "@development"] },
   async ({ page }) => {
     await awaitBootstrapTest(page, { skipModal: true });
+
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
 
     // Click on the files button
     await page.getByText("My Files").first().click();
@@ -44,6 +57,18 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
 
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+
     await page.getByText("My Files").first().click();
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
@@ -74,6 +99,18 @@ test(
     const fileName = generateRandomFilename();
 
     await awaitBootstrapTest(page, { skipModal: true });
+
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
 
     await page.getByText("My Files").first().click();
 
@@ -130,6 +167,18 @@ test(
     const fileContents = testFiles.map((file) => fs.readFileSync(file));
 
     await awaitBootstrapTest(page, { skipModal: true });
+
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
 
     await page.getByText("My Files").first().click();
     const fileChooserPromise = page.waitForEvent("filechooser");
@@ -190,6 +239,18 @@ test(
     const fileContents = testFiles.map((file) => fs.readFileSync(file));
 
     await awaitBootstrapTest(page, { skipModal: true });
+
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
 
     await page.getByText("My Files").first().click();
     const fileChooserPromise = page.waitForEvent("filechooser");

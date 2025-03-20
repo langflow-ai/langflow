@@ -33,6 +33,8 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
+    await page.getByTestId("fit_view").click();
+
     await initialGPTsetup(page);
 
     if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
@@ -110,6 +112,8 @@ withEventDeliveryModes(
         .locator('[data-testid="dropdown_str_database_name"]')
         .nth(0)
         .count();
+
+      console.log("databaseDropdownCount - 0", databaseDropdownCount);
     }
 
     await page.waitForTimeout(2000);
@@ -140,6 +144,8 @@ withEventDeliveryModes(
       langflowCount = await page
         .locator('[data-testid="langflow-0-option"]')
         .count();
+
+      console.log("langflowCount - 0", langflowCount);
     }
 
     await page.locator('[data-testid="langflow-0-option"]').nth(0).waitFor({
@@ -234,16 +240,13 @@ withEventDeliveryModes(
       langflowCount = await page
         .locator('[data-testid="langflow-0-option"]')
         .count();
+
+      console.log("langflowCount - 1", langflowCount);
     }
 
     await page.getByTestId("langflow-0-option").nth(0).click();
 
     await page.waitForTimeout(2000);
-
-    const dropdowncount = await page
-      .locator('[data-testid="dropdown_str_collection_name"]')
-      .nth(1)
-      .count();
 
     await page
       .locator('[data-testid="dropdown_str_collection_name"]')

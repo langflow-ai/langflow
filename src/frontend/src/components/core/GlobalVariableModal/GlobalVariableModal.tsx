@@ -11,6 +11,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -51,6 +52,7 @@ export default function GlobalVariableModal({
   const { mutate: updateVariable } = usePatchGlobalVariables();
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
+  useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
   useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
@@ -61,6 +63,8 @@ export default function GlobalVariableModal({
       setAvailableFields(
         sortByName(fields.concat(initialData?.default_fields ?? [])),
       );
+    } else {
+      setAvailableFields(["System", "System Message", "System Prompt"]);
     }
   }, [globalVariables, componentFields, initialData]);
 

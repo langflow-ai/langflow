@@ -18,9 +18,10 @@ import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
-  const { isFetched: typesLoaded } = useGetTypes({
+  useGetTypes({
     enabled: Object.keys(types).length <= 0,
   });
+
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
