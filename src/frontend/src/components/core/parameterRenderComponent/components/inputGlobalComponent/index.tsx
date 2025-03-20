@@ -77,7 +77,18 @@ export default function InputGlobalComponent({
       options={globalVariables?.map((variable) => variable.name) ?? []}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
-      optionsButton={<GeneralGlobalVariableModal />}
+      optionsButton={
+        <GlobalVariableModal referenceField={display_name} disabled={disabled}>
+          <CommandItem value="doNotFilter-addNewVariable">
+            <ForwardedIconComponent
+              name="Plus"
+              className={cn("mr-2 h-4 w-4 text-primary")}
+              aria-hidden="true"
+            />
+            <span>Add New Variable</span>
+          </CommandItem>
+        </GlobalVariableModal>
+      }
       optionButton={(option) => (
         <GeneralDeleteConfirmationModal
           option={option}
