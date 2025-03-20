@@ -38,16 +38,14 @@ See the [Opik documentation](https://www.comet.com/docs/opik/tracing/sdk_configu
 
 1. Start Langflow in the same terminal or environment where you set the environment variables:
 
-    ```bash
-    python -m langflow run
-    ```
+```bash
+uv run langflow run
+```
 
-2. In Langflow, open and existing project, and then run a flow.
+2. In Langflow, open an existing project, and then run a flow.
 
-## View tracing data in Opik
 
-Langflow automatically collects and sends tracing data about the flow execution to Opik.
-You can view the collected data in your Opik project dashboard.
+3. Navigate to your Opik project dashboard and view the collected tracing data.
 
 ## Disable the Opik integration
 
