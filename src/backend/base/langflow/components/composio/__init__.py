@@ -7,7 +7,7 @@ from .googlesheets_api import GooglesheetsAPIComponent
 
 __all__ = [
     "ComposioAPIComponent",
-    "GithubAPIComponent",
+    "GitHubAPIComponent",
     "GmailAPIComponent",
     "GooglecalendarAPIComponent",
     "GooglemeetAPIComponent",
