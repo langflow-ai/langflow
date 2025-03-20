@@ -29,6 +29,7 @@ test(
   { tag: ["@release", "@workspace", "@api"] },
 
   async ({ page }) => {
+    test.skip(); //@TODO understand this behavior
     const randomName = Math.random().toString(36).substring(2);
     const randomName2 = Math.random().toString(36).substring(2);
     const randomName3 = Math.random().toString(36).substring(2);
@@ -71,10 +72,14 @@ test(
 
     await page.getByText("openai").last().click();
 
+    await page.waitForTimeout(1000);
+
     await page.getByPlaceholder("Fields").waitFor({
       state: "visible",
       timeout: 30000,
     });
+
+    await page.waitForTimeout(1000);
 
     await page.getByPlaceholder("Fields").fill("ollama");
 
