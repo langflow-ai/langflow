@@ -11,6 +11,7 @@ type MarkdownFieldProps = {
   isEmpty: boolean;
   chatMessage: string;
   editedFlag: React.ReactNode;
+  isAudioMessage?: boolean;
 };
 
 // Function to replace <think> tags with a placeholder before markdown processing
@@ -26,6 +27,7 @@ export const MarkdownField = ({
   isEmpty,
   chatMessage,
   editedFlag,
+  isAudioMessage,
 }: MarkdownFieldProps) => {
   // Process the chat message to handle <think> tags
   const processedChatMessage = preprocessChatMessage(chatMessage);

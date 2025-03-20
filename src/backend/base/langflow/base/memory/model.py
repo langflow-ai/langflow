@@ -30,6 +30,7 @@ class LCChatMemoryComponent(Component):
                 raise ValueError(msg)
 
     def build_base_memory(self) -> BaseChatMemory:
+        """Builds the base memory."""
         return ConversationBufferMemory(chat_memory=self.build_message_history())
 
     @abstractmethod

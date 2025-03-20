@@ -16,15 +16,13 @@ export const useGetTypes: useQueryFunctionType<undefined> = (options) => {
         `${getURL("ALL")}?force_refresh=true`,
       );
       const data = response?.data;
+      console.log("[Types] Got types data:", data);
       setTypes(data);
       return data;
-    } catch {
-      (error) => {
-        console.error("An error has occurred while fetching types.");
-        console.log(error);
-        setLoading(false);
-        throw error;
-      };
+    } catch (error) {
+      console.error("[Types] Error fetching types:", error);
+      setLoading(false);
+      throw error;
     }
   };
 

@@ -1,20 +1,26 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
+import { cn } from "@/utils/utils";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
-import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import useFlowStore from "../../../../stores/flowStore";
-import { ChatMessageType } from "../../../../types/chat";
-import { chatViewProps } from "../../../../types/components";
-import FlowRunningSqueleton from "../flow-running-squeleton";
-import ChatInput from "./chatInput/chat-input";
-import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
-import { useFileHandler } from "./chatInput/hooks/use-file-handler";
-import ChatMessage from "./chatMessage/chat-message";
+import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import useFlowStore from "../../../../../stores/flowStore";
+import { ChatMessageType } from "../../../../../types/chat";
+import { chatViewProps } from "../../../../../types/components";
+import FlowRunningSqueleton from "../../flow-running-squeleton";
+import ChatInput from "../chatInput/chat-input";
+import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
+import { useFileHandler } from "../chatInput/hooks/use-file-handler";
+import ChatMessage from "../chatMessage/chat-message";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -157,6 +163,7 @@ export default function ChatView({
   };
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
+  const soundDetected = useVoiceStore((state) => state.soundDetected);
 
   return (
     <div
@@ -182,27 +189,29 @@ export default function ChatView({
               ))}
             </>
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center">
-              <div className="flex flex-col items-center justify-center gap-4 p-8">
-                <LangflowLogo
-                  title="Langflow logo"
-                  className="h-10 w-10 scale-[1.5]"
-                />
-                <div className="flex flex-col items-center justify-center">
-                  <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                    New chat
-                  </h3>
-                  <p
-                    className="text-lg text-muted-foreground"
-                    data-testid="new-chat-text"
-                  >
-                    <TextEffectPerChar>
-                      Test your flow with a chat prompt
-                    </TextEffectPerChar>
-                  </p>
+            <>
+              <div className="flex h-full w-full flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-4 p-8">
+                  <LangflowLogo
+                    title="Langflow logo"
+                    className="h-10 w-10 scale-[1.5]"
+                  />
+                  <div className="flex flex-col items-center justify-center">
+                    <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                      New chat
+                    </h3>
+                    <p
+                      className="text-lg text-muted-foreground"
+                      data-testid="new-chat-text"
+                    >
+                      <TextEffectPerChar>
+                        Test your flow with a chat prompt
+                      </TextEffectPerChar>
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           ))}
         <div
           className={
@@ -217,6 +226,7 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </div>
+
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           playgroundPage={!!playgroundPage}

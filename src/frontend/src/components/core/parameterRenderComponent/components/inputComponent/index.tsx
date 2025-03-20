@@ -40,6 +40,8 @@ export default function InputComponent({
   nodeStyle,
   isToolMode,
   popoverWidth,
+  commandWidth,
+  blockAddNewGlobalVariable = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -151,54 +153,57 @@ export default function InputComponent({
               optionsPlaceholder={optionsPlaceholder}
               nodeStyle={nodeStyle}
               popoverWidth={popoverWidth}
+              commandWidth={commandWidth}
+              blockAddNewGlobalVariable={blockAddNewGlobalVariable}
             />
           )}
         </>
       )}
 
-      {(setSelectedOption || setSelectedOptions) && (
-        <span
-          className={cn(
-            password && selectedOption === "" ? "right-8" : "right-0",
-            "absolute inset-y-0 flex items-center pr-2.5",
-            disabled && "cursor-not-allowed opacity-50",
-          )}
-        >
-          <button
-            disabled={disabled}
-            onClick={(e) => {
-              if (disabled) return;
-              setShowOptions(!showOptions);
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+      {(setSelectedOption || setSelectedOptions) &&
+        !blockAddNewGlobalVariable && (
+          <span
             className={cn(
-              onChange && setSelectedOption && selectedOption !== ""
-                ? "text-accent-emerald-foreground"
-                : "text-placeholder-foreground",
-              !disabled && "hover:text-foreground",
+              password && selectedOption === "" ? "right-8" : "right-0",
+              "absolute inset-y-0 flex items-center pr-2.5",
+              disabled && "cursor-not-allowed opacity-50",
             )}
           >
-            <ForwardedIconComponent
-              name={
-                getIconName(
-                  disabled!,
-                  selectedOption!,
-                  optionsIcon,
-                  nodeStyle!,
-                  isToolMode!,
-                ) || "ChevronsUpDown"
-              }
+            <button
+              disabled={disabled}
+              onClick={(e) => {
+                if (disabled) return;
+                setShowOptions(!showOptions);
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               className={cn(
-                disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
-                "icon-size",
+                onChange && setSelectedOption && selectedOption !== ""
+                  ? "text-accent-emerald-foreground"
+                  : "text-placeholder-foreground",
+                !disabled && "hover:text-foreground",
               )}
-              strokeWidth={ICON_STROKE_WIDTH}
-              aria-hidden="true"
-            />
-          </button>
-        </span>
-      )}
+            >
+              <ForwardedIconComponent
+                name={
+                  getIconName(
+                    disabled!,
+                    selectedOption!,
+                    optionsIcon,
+                    nodeStyle!,
+                    isToolMode!,
+                  ) || "ChevronsUpDown"
+                }
+                className={cn(
+                  disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
+                  "icon-size",
+                )}
+                strokeWidth={ICON_STROKE_WIDTH}
+                aria-hidden="true"
+              />
+            </button>
+          </span>
+        )}
 
       {password && (!setSelectedOption || selectedOption === "") && (
         <button
