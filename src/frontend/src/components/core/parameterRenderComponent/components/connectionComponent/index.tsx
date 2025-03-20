@@ -68,7 +68,6 @@ const ConnectionComponent = ({
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
     setLink("loading");
-    setSelectedItem([item]);
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 
