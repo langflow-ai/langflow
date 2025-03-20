@@ -34,7 +34,7 @@ test(
 
 test(
   "should interact with global variables",
-  { tag: ["@release", "@workspace", "@api", "@development"] },
+  { tag: ["@release", "@workspace", "@api"] },
 
   async ({ page }) => {
     const randomName = Math.random().toString(36).substring(2);

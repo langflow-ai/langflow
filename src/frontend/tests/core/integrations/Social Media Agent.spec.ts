@@ -55,7 +55,7 @@ function getRandomSocialMediaQuery(): string {
 
 withEventDeliveryModes(
   "Social Media Agent",
-  { tag: ["@release", "@starter-projects", "@development"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.APIFY_API_TOKEN,

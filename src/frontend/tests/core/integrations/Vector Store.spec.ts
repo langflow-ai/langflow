@@ -3,13 +3,12 @@ import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 // Add this line to declare Node.js global variables
 declare const process: any;
 declare const __dirname: string;
 
-withEventDeliveryModes(
+test(
   "Vector Store RAG",
   { tag: ["@release", "@starter-projects", "@development"] },
   async ({ page }) => {
@@ -310,5 +309,4 @@ withEventDeliveryModes(
     });
     await page.getByTestId("input-chat-playground").last().isVisible();
   },
-  { timeout: 60000 },
 );

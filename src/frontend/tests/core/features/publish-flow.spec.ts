@@ -4,7 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to publish a flow",
-  { tag: ["@release", "@workspace", "@api", "@development"] },
+  { tag: ["@release", "@workspace", "@api"] },
   async ({ page, context }) => {
     await awaitBootstrapTest(page);
 
