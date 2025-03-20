@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 test.beforeAll(async () => {
-  console.log("Starting tests in 7 seconds...");
   await new Promise((resolve) => setTimeout(resolve, 7000));
 });
 
