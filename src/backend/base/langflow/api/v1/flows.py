@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -31,6 +31,7 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
+from langflow.utils.compression import compress_response
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -538,7 +539,10 @@ async def read_basic_examples(
             return []
 
         # Get all flows in the starter folder
-        return (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+        flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+        
+        # Return compressed response using our utility function
+        return compress_response(flows)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
