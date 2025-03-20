@@ -104,14 +104,14 @@ class GooglemeetAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id",
-            display_name="Conferencerecord Id",
+            display_name="Conference Record Id",
             info="The unique identifier for the conference record.",
             show=False,
             required=True,
         ),
         MessageTextInput(
             name="GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id",
-            display_name="Conferencerecord Id",
+            display_name="Conference Record Id",
             info="The unique identifier for the conference record.",
             show=False,
             required=True,
