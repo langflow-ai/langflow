@@ -125,11 +125,15 @@ class ComposioAPIComponent(LCToolComponent):
 
             # Get the list of actions available
             all_actions = list(Action.all())
-            authenticated_actions = sorted([
-                action for action in all_actions
-                if action.app.lower() in [app.appName.lower() for app in connected_apps]
-                and action.app.lower() == self.tool_name.lower()
-            ], key=lambda x: x.name)
+            authenticated_actions = sorted(
+                [
+                    action
+                    for action in all_actions
+                    if action.app.lower() in [app.appName.lower() for app in connected_apps]
+                    and action.app.lower() == self.tool_name.lower()
+                ],
+                key=lambda x: x.name,
+            )
 
             # Return the list of action names
             build_config["actions"]["options"] = [
