@@ -168,7 +168,7 @@ class GooglesheetsAPIComponent(LCToolComponent):
         ),
         BoolInput(
             name="GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
-            display_name="Includevaluesinresponse",
+            display_name="Include Values in Response",
             info="If set to True, the response will include the updated values from the spreadsheet",
             show=False,
             value=False,
