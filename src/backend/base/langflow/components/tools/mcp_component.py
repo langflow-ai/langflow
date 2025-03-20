@@ -162,7 +162,7 @@ class MCPTools(Component):
                         name=tool.name,
                         description=tool.description,
                         args_schema=args_schema,
-                        func=create_tool_func(tool.name, args_schema),
+                        func=create_tool_func(tool.name, args_schema, self.stdio_client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, self.stdio_client.session),
                     )
                 )
@@ -172,7 +172,7 @@ class MCPTools(Component):
                         name=tool.name,
                         description=tool.description,
                         args_schema=args_schema,
-                        func=create_tool_func(tool.name, self.sse_client.session),
+                        func=create_tool_func(tool.name, args_schema, self.sse_client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, self.sse_client.session),
                     )
                 )
