@@ -21,11 +21,13 @@ For example, to deploy the `mistral-nemo-12b-instruct` NIM, follow the instructi
 
 ## Use the NVIDIA NIM in a flow
 
-To connect the NIM you've deployed with Langflow, add the **NVIDIA on WSL2** model component to a flow.
+To connect the NIM you've deployed with Langflow, add the **NVIDIA** model component to a flow.
 
 1. Create a [basic prompting flow](/get-started-quickstart).
-2. Replace the **OpenAI** model component with the **NVIDIA on WSL** component.
-3. In the **NVIDIA on WSL** component's **Model Name** field, select the deployed NIM model.
-4. Open the **Playground** and chat with your **NIM** model.
+2. Replace the **OpenAI** model component with the **NVIDIA** component.
+3. In the **NVIDIA** component's **Base URL** field, add the URL your NIM is accessible at. If you followed the above instructions, it will be `http://0.0.0.0:8000/v1`.
+4. In the **NVIDIA** component's **NVIDIA API Key** field, add your NVIDIA API Key. 
+5. Select a model from the **Model Name** dropdown.
+6. Open the **Playground** and chat with your **NIM** model.
 
 
