@@ -104,6 +104,7 @@ const ListSelectionComponent = ({
           },
         ]);
         onClose();
+        setSearch("");
       }
     },
     [type, selectedList, setSelectedList, onClose],
