@@ -98,7 +98,7 @@ withEventDeliveryModes(
         .nth(0)
         .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(10000);
 
       await page
         .locator('[data-testid="dropdown_str_database_name"]')
@@ -112,15 +112,13 @@ withEventDeliveryModes(
         .locator('[data-testid="dropdown_str_database_name"]')
         .nth(0)
         .count();
-
-      console.log("databaseDropdownCount - 0", databaseDropdownCount);
     }
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     await page.getByTestId("dropdown_str_database_name").nth(0).click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     let langflowCount = await page
       .locator('[data-testid="langflow-0-option"]')
@@ -137,8 +135,6 @@ withEventDeliveryModes(
       langflowCount = await page
         .locator('[data-testid="langflow-0-option"]')
         .count();
-
-      console.log("langflowCount - 0", langflowCount);
     }
 
     await page.locator('[data-testid="langflow-0-option"]').nth(0).waitFor({
@@ -156,7 +152,7 @@ withEventDeliveryModes(
         state: "visible",
       });
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     await page.getByTestId("dropdown_str_collection_name").nth(0).click();
 
@@ -191,7 +187,7 @@ withEventDeliveryModes(
         .nth(0)
         .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(10000);
 
       await page
         .locator('[data-testid="dropdown_str_database_name"]')
@@ -209,7 +205,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("dropdown_str_database_name").nth(1).click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     langflowCount = await page
       .locator('[data-testid="langflow-0-option"]')
@@ -233,13 +229,11 @@ withEventDeliveryModes(
       langflowCount = await page
         .locator('[data-testid="langflow-0-option"]')
         .count();
-
-      console.log("langflowCount - 1", langflowCount);
     }
 
     await page.getByTestId("langflow-0-option").nth(0).click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     await page
       .locator('[data-testid="dropdown_str_collection_name"]')
@@ -251,7 +245,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("dropdown_str_collection_name").nth(1).click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     await page.locator('[data-testid="fe_tests-0-option"]').nth(0).waitFor({
       timeout: 15000,
