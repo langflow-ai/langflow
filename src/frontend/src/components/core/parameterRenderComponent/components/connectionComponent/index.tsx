@@ -4,13 +4,13 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
 import { APIClassType } from "@/types/api";
 import { cn } from "@/utils/utils";
 import { memo, useEffect, useRef, useState } from "react";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
+// Type definitions for component props
 type ConnectionComponentProps = {
   tooltip?: string;
   name: string;
@@ -35,51 +35,46 @@ const ConnectionComponent = ({
   connectionLink = "",
   ...baseInputProps
 }: InputProps<any, ConnectionComponentProps>) => {
-  const { value, handleOnNewValue, nodeClass, nodeId } = baseInputProps;
+  // Destructure base props
+  const {
+    value,
+    handleOnNewValue,
+    handleNodeClass,
+    nodeClass,
+    nodeId,
+    placeholder,
+  } = baseInputProps;
 
+  // Store access
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
+  // State management
   const [isAuthenticated, setIsAuthenticated] = useState(
     connectionLink === "validated",
   );
   const [link, setLink] = useState("");
   const [isPolling, setIsPolling] = useState(false);
-  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
-  const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
-  const nodes = useFlowStore((state) => state.nodes);
-  const setNode = useFlowStore((state) => state.setNode);
-  const { placeholder } = baseInputProps;
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
 
-  const setNodeClass = (newNode: APIClassType) => {
-    const targetNode = nodes.find((node) => node.id === nodeId);
-    if (!targetNode) return;
+  // Refs for polling management
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-    targetNode.data.node = newNode;
-    setNode(nodeId, targetNode);
-  };
-
+  // API hooks
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
     nodeId: nodeId,
     node: nodeClass,
   });
 
+  // Effects
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-
     if (link === "loading") {
-      timeoutId = setTimeout(() => {
-        setLink("");
-      }, 5000);
+      timeoutId = setTimeout(() => setLink(""), 5000);
     }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
+    return () => timeoutId && clearTimeout(timeoutId);
   }, [link]);
 
   useEffect(() => {
@@ -89,37 +84,42 @@ const ConnectionComponent = ({
     }
   }, [connectionLink]);
 
+  // Cleanup effect for polling
+  useEffect(() => {
+    return () => {
+      if (pollingInterval.current) clearInterval(pollingInterval.current);
+      if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
+    };
+  }, []);
+
+  // Event handlers
   const handleConnectionButtonClick = () => {
     if (selectedItem?.length === 0) return;
-
     window.open(link, "_blank");
 
-    // Start polling
+    // Initialize polling
     setIsPolling(true);
     let attempts = 0;
-    const maxAttempts = 5; // 35 seconds / 7 seconds = 5 attempts
+    const maxAttempts = 5;
 
-    // Clear any existing intervals/timeouts
+    // Clear existing timers
     if (pollingInterval.current) clearInterval(pollingInterval.current);
     if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
 
     // Set up polling interval
     pollingInterval.current = setInterval(() => {
       attempts++;
-
-      // Call mutateTemplate
       mutateTemplate(
         { validate: selectedItem[0]?.name || "" },
         nodeClass,
-        setNodeClass,
+        handleNodeClass,
         postTemplateValue,
-        setErrorData,
+        () => {},
         name,
         () => {},
         nodeClass.tool_mode,
       );
 
-      // Check if connection is validated
       if (connectionLink === "validated" || link === "validated") {
         if (pollingInterval.current) clearInterval(pollingInterval.current);
         setIsPolling(false);
@@ -127,27 +127,18 @@ const ConnectionComponent = ({
         return;
       }
 
-      // Stop polling after max attempts
       if (attempts >= maxAttempts) {
         if (pollingInterval.current) clearInterval(pollingInterval.current);
         setIsPolling(false);
       }
     }, 7000);
 
-    // Set timeout to stop polling after 30 seconds
+    // Set timeout to stop polling
     pollingTimeout.current = setTimeout(() => {
       if (pollingInterval.current) clearInterval(pollingInterval.current);
       setIsPolling(false);
     }, 35000);
   };
-
-  // Cleanup intervals and timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
-      if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
-    };
-  }, []);
 
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
@@ -156,15 +147,14 @@ const ConnectionComponent = ({
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 
-  const handleOpenListSelectionDialog = () => {
-    setOpen(true);
-  };
-
+  const handleOpenListSelectionDialog = () => setOpen(true);
   const handleCloseListSelectionDialog = () => setOpen(false);
 
+  // Render component
   return (
     <div className="flex w-full flex-col gap-2">
       <div className="flex w-full flex-row items-center gap-2">
+        {/* Selection Button */}
         <Button
           variant="primary"
           size="xs"
@@ -189,6 +179,7 @@ const ConnectionComponent = ({
           </div>
         </Button>
 
+        {/* Connection Button */}
         {!isAuthenticated && (
           <Button
             size="icon"
@@ -215,12 +206,15 @@ const ConnectionComponent = ({
         )}
       </div>
 
+      {/* Helper Text */}
       {helperText && (
         <HelperTextComponent
           helperText={helperText}
           helperMetadata={helperMetadata}
         />
       )}
+
+      {/* List Selection Dialog */}
       <ListSelectionComponent
         open={open}
         onSelection={handleSelection}
