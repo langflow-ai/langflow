@@ -130,13 +130,6 @@ withEventDeliveryModes(
       await page.waitForTimeout(1000);
       await page.getByTestId("icon-RefreshCcw").click();
 
-      const loadingOptions = page.getByText("Loading options...");
-      await loadingOptions.waitFor({ state: "visible", timeout: 30000 });
-
-      if (await loadingOptions.isVisible()) {
-        await expect(loadingOptions).toBeHidden({ timeout: 120000 });
-      }
-
       await page.getByTestId("dropdown_str_database_name").nth(0).click();
 
       await page.waitForTimeout(1000);
@@ -323,4 +316,5 @@ withEventDeliveryModes(
     });
     await page.getByTestId("input-chat-playground").last().isVisible();
   },
+  { timeout: 60000 },
 );

@@ -15,13 +15,14 @@ export function withEventDeliveryModes(
   title: string,
   config: TestConfig,
   testFn: TestFunction,
+  { timeout = 10000 }: { timeout?: number } = {},
 ) {
   const eventDeliveryModes = ["streaming", "polling"] as const;
 
   for (const [index, eventDelivery] of eventDeliveryModes.entries()) {
     test(`${title} - ${eventDelivery}`, config, async ({ page }) => {
       if (index === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 15000));
+        await new Promise((resolve) => setTimeout(resolve, timeout));
       }
 
       // Intercept the config request and modify the event_delivery setting
