@@ -1,3 +1,4 @@
+import { GithubIcon } from "../icons/Github";
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -562,6 +563,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Github", name: "github", icon: "Github" },
   { display_name: "Googlemeet", name: "googlemeet", icon: "Googlemeet" },
   { display_name: "Googlesheets", name: "googlesheets", icon: "Googlesheets" },
   {
@@ -655,6 +657,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Github: GithubIcon,
   Googlemeet: GooglemeetIcon,
   Googlesheets: GooglesheetsIcon,
   Googlecalendar: GooglecalendarIcon,
