@@ -61,7 +61,12 @@ class OpikTracer(BaseTracer):
             from opik import Opik
             from opik.api_objects.trace import TraceData
 
-            self._client = Opik(project_name=self._project_name)
+            self._client = Opik(project_name=self._project_name, _show_misconfiguration_message=False)
+
+            missing_configuration, _ = self._client._config.get_misconfiguration_detection_results()
+
+            if missing_configuration:
+                return False
 
             if not self._check_opik_auth(self._client):
                 return False
