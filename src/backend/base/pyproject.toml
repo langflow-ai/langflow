@@ -83,6 +83,7 @@ dependencies = [
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    "elevenlabs>=1.54.0",
 ]
 
 [dependency-groups]
