@@ -312,7 +312,7 @@ class AstraDBToolComponent(LCToolComponent):
                         **filters.get(filter_key, {}),
                         filter_setting["operator"]: value.split(",") if isinstance(value, str) else value,
                     }
-                elif filter_setting["is_date"] == True: #noqa: E712
+                elif filter_setting["is_date"] == True:  # noqa: E712
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: parse(value)}
                 else:
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
