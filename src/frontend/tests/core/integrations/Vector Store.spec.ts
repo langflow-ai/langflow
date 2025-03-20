@@ -77,7 +77,6 @@ withEventDeliveryModes(
       .nth(0)
       .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
-    // Wait for the first dropdown to appear and be visible
     await page
       .locator('[data-testid="dropdown_str_database_name"]')
       .nth(0)
@@ -85,6 +84,33 @@ withEventDeliveryModes(
         timeout: 15000,
         state: "visible",
       });
+
+    let databaseDropdownCount = await page
+      .locator('[data-testid="dropdown_str_database_name"]')
+      .nth(0)
+      .count();
+
+    while (databaseDropdownCount === 0) {
+      await page
+        .getByTestId("popover-anchor-input-token")
+        .nth(0)
+        .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
+
+      await page.waitForTimeout(2000);
+
+      await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(0)
+        .waitFor({
+          timeout: 15000,
+          state: "visible",
+        });
+
+      databaseDropdownCount = await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(0)
+        .count();
+    }
 
     await page.waitForTimeout(2000);
 
@@ -147,7 +173,6 @@ withEventDeliveryModes(
       .nth(1)
       .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
-    // Wait for the first dropdown to appear and be visible
     await page
       .locator('[data-testid="dropdown_str_database_name"]')
       .nth(1)
@@ -155,6 +180,33 @@ withEventDeliveryModes(
         timeout: 15000,
         state: "visible",
       });
+
+    databaseDropdownCount = await page
+      .locator('[data-testid="dropdown_str_database_name"]')
+      .nth(0)
+      .count();
+
+    while (databaseDropdownCount === 0) {
+      await page
+        .getByTestId("popover-anchor-input-token")
+        .nth(0)
+        .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
+
+      await page.waitForTimeout(2000);
+
+      await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(1)
+        .waitFor({
+          timeout: 15000,
+          state: "visible",
+        });
+
+      databaseDropdownCount = await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(0)
+        .count();
+    }
 
     await page.getByTestId("dropdown_str_database_name").nth(1).click();
 

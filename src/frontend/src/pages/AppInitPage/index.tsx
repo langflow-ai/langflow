@@ -27,6 +27,7 @@ export function AppInitPage() {
   useGetGlobalVariables({ enabled: isFetched });
   useGetTagsQuery({ enabled: isFetched });
   useGetFoldersQuery({ enabled: isFetched });
+  useGetTypes({ enabled: isFetched });
   const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery();
 
   useEffect(() => {
