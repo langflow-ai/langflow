@@ -11,3 +11,4 @@ export const ENABLE_DATASTAX_LANGFLOW = false;
 export const ENABLE_FILE_MANAGEMENT = true;
 export const ENABLE_PUBLISH = true;
 export const ENABLE_WIDGET = true;
+export const ENABLE_VOICE_ASSISTANT = true;
