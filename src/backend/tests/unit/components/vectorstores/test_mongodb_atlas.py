@@ -12,8 +12,7 @@ from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
 @pytest.mark.skipif(
-    not os.environ.get("MONGODB_ATLAS_URI"),
-    reason="Environment variable MONGODB_ATLAS_URI is not defined.",
+    not os.environ.get("MONGODB_ATLAS_URI"), reason="Environment variable MONGODB_ATLAS_URI is not defined."
 )
 class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
@@ -37,21 +36,9 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self) -> list[VersionComponentMapping]:
         """Return the file names mapping for different versions."""
         return [
-            {
-                "version": "1.0.19",
-                "module": "vectorstores",
-                "file_name": "MongoDBAtlasVector",
-            },
-            {
-                "version": "1.1.0",
-                "module": "vectorstores",
-                "file_name": "mongodb_atlas",
-            },
-            {
-                "version": "1.1.1",
-                "module": "vectorstores",
-                "file_name": "mongodb_atlas",
-            },
+            {"version": "1.0.19", "module": "vectorstores", "file_name": "MongoDBAtlasVector"},
+            {"version": "1.1.0", "module": "vectorstores", "file_name": "mongodb_atlas"},
+            {"version": "1.1.1", "module": "vectorstores", "file_name": "mongodb_atlas"},
         ]
 
     def __create_search_index(self, vector_store: MongoDBAtlasVectorSearch, default_kwargs: dict[str, Any]) -> None:
@@ -74,9 +61,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
                 type="vectorSearch",
             )
 
-            vector_store._collection.create_search_index(
-                index_definition,
-            )
+            vector_store._collection.create_search_index(index_definition)
 
             # Wait for index to be ready
             import time
@@ -93,11 +78,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             if "AlreadyExists" not in str(e):
                 raise
 
-    def test_create_db(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
-    ) -> None:
+    def test_create_db(self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]) -> None:
         """Test creating a MongoDB Atlas vector store."""
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
@@ -107,9 +88,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         assert vector_store._index_name == default_kwargs["index_name"]
 
     def test_create_collection_with_data(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
+        self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test creating a collection with data."""
         test_texts = ["test data 1", "test data 2", "something completely different"]
@@ -124,9 +103,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         assert collection.count_documents({}) == len(test_texts)
 
     def test_similarity_search(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
+        self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test the similarity search functionality."""
         # Create test data with distinct topics
@@ -176,9 +153,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         assert all("text" in result.data for result in results)
 
     def test_mtls_configuration(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
+        self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test mTLS configuration handling."""
         # Test with invalid mTLS configuration
@@ -190,9 +165,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             component.build_vector_store()
 
     def test_empty_search_query(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
+        self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test search with empty query."""
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
@@ -204,25 +177,13 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         assert len(results) == 0
 
     def test_metadata_handling(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
+        self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test handling of document metadata."""
         # Create test data with metadata
         test_data = [
-            Data(
-                data={
-                    "text": "Document 1",
-                    "metadata": {"category": "test", "priority": 1},
-                }
-            ),
-            Data(
-                data={
-                    "text": "Document 2",
-                    "metadata": {"category": "test", "priority": 2},
-                }
-            ),
+            Data(data={"text": "Document 1", "metadata": {"category": "test", "priority": 1}}),
+            Data(data={"text": "Document 2", "metadata": {"category": "test", "priority": 2}}),
         ]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["collection_name"] = "test_collection_metadata"
@@ -244,9 +205,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             assert isinstance(result.data["metadata"]["priority"], int)
 
     def test_error_handling(
-        self,
-        component_class: type[MongoVectorStoreComponent],
-        default_kwargs: dict[str, Any],
+        self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test error handling for invalid configurations."""
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)

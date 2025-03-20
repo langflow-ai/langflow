@@ -3,10 +3,7 @@ import tempfile
 import certifi
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 
-from langflow.base.vectorstores.model import (
-    LCVectorStoreComponent,
-    check_cached_vector_store,
-)
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
@@ -19,18 +16,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     icon = "MongoDB"
 
     inputs = [
-        SecretStrInput(
-            name="mongodb_atlas_cluster_uri",
-            display_name="MongoDB Atlas Cluster URI",
-            required=True,
-        ),
-        BoolInput(
-            name="enable_mtls",
-            display_name="Enable mTLS",
-            value=False,
-            advanced=True,
-            required=True,
-        ),
+        SecretStrInput(name="mongodb_atlas_cluster_uri", display_name="MongoDB Atlas Cluster URI", required=True),
+        BoolInput(name="enable_mtls", display_name="Enable mTLS", value=False, advanced=True, required=True),
         SecretStrInput(
             name="mongodb_atlas_client_cert",
             display_name="MongoDB Atlas Combined Client Certificate",
@@ -111,10 +98,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         if documents:
             collection.drop()  # Drop collection to override the vector store
             return MongoDBAtlasVectorSearch.from_documents(
-                documents=documents,
-                embedding=self.embedding,
-                collection=collection,
-                index_name=self.index_name,
+                documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
             )
         return MongoDBAtlasVectorSearch(
             embedding=self.embedding,
