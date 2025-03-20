@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Response
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -242,7 +242,7 @@ async def read_flows(
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
                 return compress_response(flow_headers)
-            
+
             # Compress the full flows response
             return compress_response(flows)
 
@@ -544,7 +544,7 @@ async def read_basic_examples(
 
         # Get all flows in the starter folder
         flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
-        
+
         # Return compressed response using our utility function
         return compress_response(flows)
 
