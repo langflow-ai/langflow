@@ -66,14 +66,18 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
+    conntrack=1:1.4.7-1+b2 \
     curl=7.88.1-10+deb12u12 \
     dnsutils=1:9.18.33-1~deb12u2 \
     iperf=2.1.8+dfsg-1 \
+    iproute2=6.1.0-3 \
+    iptables=1.8.9-2 \
     iputils-ping=3:20221126-1+deb12u1 \
     net-tools=2.10-0.1 \
     netcat-openbsd=1.219-1 \
     nmap=7.93+dfsg1-1 \
     tcpdump=4.99.3-1 \
+    telnet=0.17+2.4-2+deb12u1 \
     traceroute=1:2.1.2-1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
