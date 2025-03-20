@@ -29,7 +29,7 @@ class SlackAPIComponent(LCToolComponent):
 
     _display_to_enum_map = {
         # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
-        "List Users ": "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
+        "List Users": "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
         "List Conversations": "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
         "Update Slack Chat Message Attributes": "SLACK_UPDATES_A_SLACK_MESSAGE",
         "Post Message To Channel": "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
@@ -50,7 +50,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION": {
-            "display_name": "List Users ",
+            "display_name": "List Users",
             "parameters": [
                 "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-limit",
                 "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-cursor",
@@ -648,6 +648,9 @@ class SlackAPIComponent(LCToolComponent):
 
                     if field in self._bool_variables:
                         value = bool(value)
+                    
+                    if param_name == "as_user":
+                        value = True
 
                     params[param_name] = value
 
