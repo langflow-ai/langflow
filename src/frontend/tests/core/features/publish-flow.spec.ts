@@ -4,7 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to publish a flow",
-  { tag: ["@release", "@workspace", "@api"] },
+  { tag: ["@release", "@workspace", "@api", "@development"] },
   async ({ page, context }) => {
     test.skip(); //@TODO understand this behavior
 

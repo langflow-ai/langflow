@@ -26,7 +26,7 @@ test(
 
 test(
   "should interact with global variables",
-  { tag: ["@release", "@workspace", "@api"] },
+  { tag: ["@release", "@workspace", "@api", "@development"] },
 
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior

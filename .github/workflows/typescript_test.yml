@@ -126,6 +126,11 @@ jobs:
                 TAGS+=("@database")
                 echo "Added database suite"
               fi
+              if [[ "${{ steps.filter.outputs.development }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["development"]')
+                TAGS+=("@development")
+                echo "Added development suite"
+              fi
 
               # Create grep pattern if we have tags
               if [ ${#TAGS[@]} -gt 0 ]; then
@@ -150,6 +155,9 @@ jobs:
               fi
               if echo "$SUITES" | jq -e 'contains(["database"])' > /dev/null; then
                 TAGS+=("@database")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["development"])' > /dev/null; then
+                TAGS+=("@development")
               fi
 
               if [ ${#TAGS[@]} -gt 0 ]; then

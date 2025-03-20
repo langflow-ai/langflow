@@ -7,7 +7,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Simple Agent",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-projects", "@development"] },
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior
     test.skip(

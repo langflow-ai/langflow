@@ -8,7 +8,7 @@ import { generateRandomFilename } from "../../utils/generate-filename";
 
 test(
   "should navigate to files page and show empty state",
-  { tag: ["@release", "@files"] },
+  { tag: ["@release", "@files", "@development"] },
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior
 
@@ -44,7 +44,7 @@ test(
 
 test(
   "should upload file using upload button",
-  { tag: ["@release", "@files"] },
+  { tag: ["@release", "@files", "@development"] },
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior
 
@@ -83,7 +83,7 @@ test(
 
 test(
   "should upload file using drag and drop",
-  { tag: ["@release", "@files"] },
+  { tag: ["@release", "@files", "@development"] },
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior
 
@@ -133,7 +133,7 @@ test(
 
 test(
   "should upload multiple files with different types",
-  { tag: ["@release", "@files"] },
+  { tag: ["@release", "@files", "@development"] },
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior
 
@@ -199,7 +199,7 @@ test(
 
 test(
   "should search uploaded files",
-  { tag: ["@release", "@files"] },
+  { tag: ["@release", "@files", "@development"] },
   async ({ page }) => {
     test.skip(); //@TODO understand this behavior
 
