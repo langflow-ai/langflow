@@ -395,8 +395,8 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-eventType",
-            display_name="EventType",
-            info="Type of the event, immutable post-creation. Currently, only 'default' and 'workingLocation' can be created.",  # noqa: E501
+            display_name="Event Type",
+            info="Type of the event, immutable post-creation. Currently, only 'default'",  # noqa: E501
             show=False,
             value="default",
         ),
@@ -408,13 +408,13 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         BoolInput(
             name="GOOGLECALENDAR_CREATE_EVENT-guestsCanSeeOtherGuests",
-            display_name="Guestscanseeotherguests",
+            display_name="Guests Can See Other Guests",
             info="Whether attendees other than the organizer can see who the event's attendees are.",
             show=False,
         ),
         BoolInput(
             name="GOOGLECALENDAR_CREATE_EVENT-guestsCanInviteOthers",
-            display_name="Guestscaninviteothers",
+            display_name="Guests Can Invite Others",
             info="Whether attendees other than the organizer can invite others to the event.",
             show=False,
         ),
@@ -432,14 +432,14 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-transparency",
-            display_name="EventTransparency",
+            display_name="Event Transparency",
             info="'opaque' (busy) or 'transparent' (available).",
             show=False,
             value="opaque",
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-visibility",
-            display_name="EventVisibility",
+            display_name="Event Visibility",
             info="Event visibility: 'default', 'public', 'private', or 'confidential'.",
             show=False,
             value="default",
@@ -576,7 +576,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_QUICK_ADD-send_updates",
-            display_name="SendUpdates",
+            display_name="Send Updates",
             info="Guests who should receive notifications about the creation of the new event.",
             show=False,
             value="none",
@@ -602,7 +602,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_PATCH_CALENDAR-summary",
-            display_name="Summary",
+            display_name="Title/Summary",
             info="Title of the calendar. This field is required and cannot be left blank as per the Google Calendar API requirements.",  # noqa: E501
             show=False,
             required=True,
@@ -641,13 +641,13 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         BoolInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-guestsCanSeeOtherGuests",
-            display_name="Guestscanseeotherguests",
+            display_name="Guests Can See Other Guests",
             info="Whether attendees other than the organizer can see who the event's attendees are.",
             show=False,
         ),
         BoolInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-guestsCanInviteOthers",
-            display_name="Guestscaninviteothers",
+            display_name="Guests Can Invite Others",
             info="Whether attendees other than the organizer can invite others to the event.",
             show=False,
         ),
@@ -665,14 +665,14 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-transparency",
-            display_name="EventTransparency",
+            display_name="Event Transparency",
             info="'opaque' (busy) or 'transparent' (available).",
             show=False,
             value="opaque",
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-visibility",
-            display_name="EventVisibility",
+            display_name="Event Visibility",
             info="Event visibility: 'default', 'public', 'private', or 'confidential'.",
             show=False,
             value="default",
@@ -765,7 +765,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
                     param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
-                    if value is None or value == "":
+                    if value is None or value == "" or value == []:
                         continue
 
                     if field in self._bool_variables:
@@ -795,8 +795,10 @@ class GooglecalendarAPIComponent(LCToolComponent):
         for field in all_fields:
             build_config[field]["show"] = False
 
-            if field in self._bool_variables or field in self._list_variables:
+            if field in self._bool_variables:
                 build_config[field]["value"] = False
+            elif field in self._list_variables:
+                build_config[field]["value"] = []
             else:
                 build_config[field]["value"] = ""
 
