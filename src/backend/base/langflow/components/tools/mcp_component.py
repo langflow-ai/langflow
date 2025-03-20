@@ -15,7 +15,7 @@ from langflow.base.mcp.util import (
 )
 from langflow.custom import Component
 from langflow.field_typing import Tool
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.io import MessageTextInput, Output, TabInput
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
@@ -94,17 +94,17 @@ class MCPTools(Component):
 
     display_name = "MCP Tools"
     description = (
-        "Connects to an MCP server over stdio or SSE and exposes its tools as langflow tools to be used by an Agent."
+        "Connects to an MCP server over Stdio or SSE and exposes its tools as Langflow tools to be used by an Agent."
     )
-    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "code"
     name = "MCPTools"
 
     inputs = [
-        DropdownInput(
+        TabInput(
             name="mode",
             display_name="Mode",
             options=["Stdio", "SSE"],
+            value="Stdio",
             info="Select the connection mode",
             real_time_refresh=True,
         ),
@@ -113,7 +113,6 @@ class MCPTools(Component):
             display_name="MCP Command",
             info="Command for MCP stdio connection",
             value="uvx mcp-sse-shim@latest",
-            tool_mode=True,
             show=True,  # Shown when mode is Stdio
         ),
         MessageTextInput(
@@ -121,7 +120,6 @@ class MCPTools(Component):
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
             value="http://localhost:7860/api/v1/mcp/sse",
-            tool_mode=True,
             show=False,  # Shown when mode is SSE
         ),
     ]
