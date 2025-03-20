@@ -50,7 +50,6 @@ class GridGainChatMemory(LCChatMemoryComponent):
         ),
     ]
 
-
     def build_message_history(self) -> Memory:
         """Build and return a GridGain chat message history instance."""
         try:
@@ -66,7 +65,7 @@ class GridGainChatMemory(LCChatMemoryComponent):
         if self.client_type.lower() == "pygridgain":
             client = pygridgain.Client()
         else:
-            msg ="Invalid client_type. Must be 'pygridgain'."
+            msg = "Invalid client_type. Must be 'pygridgain'."
             raise ValueError(msg)
 
         # Connect to the GridGain server

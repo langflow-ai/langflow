@@ -32,7 +32,7 @@ class TestGridGainChatMemoryReal:
             port="10800",
             cache_name=test_cache_name,
             session_id="test_session_1",
-            client_type="pygridgain"
+            client_type="pygridgain",
         )
 
         # Act
@@ -56,7 +56,7 @@ class TestGridGainChatMemoryReal:
                 port="10800",
                 cache_name=test_cache_name,
                 session_id=session_id,
-                client_type="pygridgain"
+                client_type="pygridgain",
             )
             memories.append(component.build_message_history())
 
@@ -73,7 +73,7 @@ class TestGridGainChatMemoryReal:
             port="10800",
             cache_name=test_cache_name,
             session_id="persistence_test",
-            client_type="pygridgain"
+            client_type="pygridgain",
         )
         memory = component.build_message_history()
 
@@ -82,7 +82,7 @@ class TestGridGainChatMemoryReal:
             ("human", "Hello, how are you?"),
             ("ai", "I'm doing well, thank you!"),
             ("human", "What's the weather like?"),
-            ("ai", "I don't have access to current weather information.")
+            ("ai", "I don't have access to current weather information."),
         ]
 
         for role, content in test_messages:
@@ -109,7 +109,7 @@ class TestGridGainChatMemoryReal:
             port="10800",
             cache_name=cache1_name,
             session_id="isolation_test",
-            client_type="pygridgain"
+            client_type="pygridgain",
         )
 
         component2 = GridGainChatMemory(
@@ -117,7 +117,7 @@ class TestGridGainChatMemoryReal:
             port="10800",
             cache_name=cache2_name,
             session_id="isolation_test",
-            client_type="pygridgain"
+            client_type="pygridgain",
         )
 
         # Act
@@ -144,7 +144,7 @@ class TestGridGainChatMemoryReal:
             port="12345",
             cache_name="test_cache",
             session_id="error_test",
-            client_type="pygridgain"
+            client_type="pygridgain",
         )
 
         # Act & Assert
@@ -160,7 +160,7 @@ class TestGridGainChatMemoryReal:
             port="10800",
             cache_name=test_cache_name,
             session_id="large_message_test",
-            client_type="pygridgain"
+            client_type="pygridgain",
         )
         memory = component.build_message_history()
 
@@ -186,7 +186,7 @@ class TestGridGainChatMemoryReal:
                     port="10800",
                     cache_name=test_cache_name,
                     session_id=session_id,
-                    client_type="pygridgain"
+                    client_type="pygridgain",
                 )
                 memory = component.build_message_history()
                 memory.add_user_message(message)
@@ -196,20 +196,13 @@ class TestGridGainChatMemoryReal:
                 raise
 
         # Arrange
-        sessions = [
-            ("concurrent_1", "Message 1"),
-            ("concurrent_2", "Message 2"),
-            ("concurrent_3", "Message 3")
-        ]
+        sessions = [("concurrent_1", "Message 1"), ("concurrent_2", "Message 2"), ("concurrent_3", "Message 3")]
         results = queue.Queue()
         threads = []
 
         # Act
         for session_id, message in sessions:
-            thread = threading.Thread(
-                target=run_session,
-                args=(session_id, message, results)
-            )
+            thread = threading.Thread(target=run_session, args=(session_id, message, results))
             threads.append(thread)
             thread.start()
 

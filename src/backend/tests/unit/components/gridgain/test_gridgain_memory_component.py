@@ -21,6 +21,7 @@ def test_gridgain_chat_memory_initialization():
     assert memory.client_type == "pygridgain"
     assert memory.icon == "GridGain"
 
+
 def test_input_configuration():
     """Test the input field configuration of the component."""
     memory = GridGainChatMemory()
@@ -36,6 +37,7 @@ def test_input_configuration():
     assert session_id_input.advanced is True
     assert isinstance(session_id_input, MessageTextInput)
 
+
 def test_connection_error_handling():
     """Test handling of connection errors."""
     memory = GridGainChatMemory()
@@ -50,6 +52,7 @@ def test_connection_error_handling():
 
         assert "Failed to connect to GridGain server" in str(exc_info.value)
 
+
 def test_successful_message_history_creation():
     """Test successful creation of GridGainChatMessageHistory."""
     memory = GridGainChatMemory()
@@ -62,11 +65,8 @@ def test_successful_message_history_creation():
 
         with patch("langchain_gridgain.chat_message_histories.GridGainChatMessageHistory") as mock_history:
             # Verify GridGainChatMessageHistory was created with correct parameters
-            assert mock_history(
-                session_id="test_session",
-                cache_name="test_cache",
-                client=mock_client_instance
-            )
+            assert mock_history(session_id="test_session", cache_name="test_cache", client=mock_client_instance)
+
 
 @pytest.fixture
 def mock_client():
@@ -75,6 +75,7 @@ def mock_client():
         client_instance = Mock()
         mock.return_value = client_instance
         yield client_instance
+
 
 def test_custom_connection_parameters(mock_client):
     """Test connection with custom host and port."""

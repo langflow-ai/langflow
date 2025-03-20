@@ -1,4 +1,3 @@
-
 import uuid
 from unittest.mock import Mock, patch
 
@@ -14,22 +13,23 @@ class MockData:
         self.metadata = metadata or {}
 
     def to_lc_document(self):
-        return Document(
-            page_content=self.content,
-            metadata=self.metadata
-        )
+        return Document(page_content=self.content, metadata=self.metadata)
+
 
 @pytest.fixture
 def mock_client():
     return Mock(spec=["connect"])
 
+
 @pytest.fixture
 def mock_embedding():
     return Mock()
 
+
 @pytest.fixture
 def component():
     return GridGainVectorStoreComponent()
+
 
 @pytest.fixture
 def sample_data():
@@ -39,9 +39,10 @@ def sample_data():
             "id": str(uuid.uuid4()),
             "vector_id": str(uuid.uuid4()),
             "url": "http://example.com",
-            "title": "Test Document"
-        }
+            "title": "Test Document",
+        },
     )
+
 
 class TestGridGainVectorStoreComponent:
     def test_process_data_input_with_valid_data(self, component, sample_data):
@@ -95,7 +96,7 @@ class TestGridGainVectorStoreComponent:
         mock_vector_store = Mock()
         mock_docs = [
             Document(page_content="Result 1", metadata={"id": "1"}),
-            Document(page_content="Result 2", metadata={"id": "2"})
+            Document(page_content="Result 2", metadata={"id": "2"}),
         ]
         mock_vector_store.similarity_search.return_value = mock_docs
 
@@ -103,8 +104,4 @@ class TestGridGainVectorStoreComponent:
             results = component.search_documents()
 
             assert len(results) == 2
-            mock_vector_store.similarity_search.assert_called_once_with(
-                query="test query",
-                k=4,
-                score_threshold=0.6
-            )
+            mock_vector_store.similarity_search.assert_called_once_with(query="test query", k=4, score_threshold=0.6)

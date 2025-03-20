@@ -22,7 +22,7 @@ from langflow.schema import Data
 
 class GridGainVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "GridGain"
-    description: str = "GridGain Vector Store with data ingestion and search capabilities"
+    description: str = "GridGain Vector Store with search capabilities"
     documentation: str = "https://www.gridgain.com/docs/latest/index"
     name = "GridGain"
     icon = "GridGain"
@@ -32,23 +32,17 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
             name="cache_name",
             display_name="Cache Name",
             info="Name of the GridGain cache where vectors will be stored. Will be created if it doesn't exist.",
-            required=True),
-        StrInput(
-            name="host",
-            display_name="Host",
-            info="GridGain server hostname or IP address",
-            required=True),
-        IntInput(
-            name="port",
-            display_name="Port",
-            info="GridGain server port number (default: 10800)",
-            required=True),
+            required=True,
+        ),
+        StrInput(name="host", display_name="Host", info="GridGain server hostname or IP address", required=True),
+        IntInput(name="port", display_name="Port", info="GridGain server port number (default: 10800)", required=True),
         FloatInput(
             name="score_threshold",
             display_name="Score Threshold",
             info="Minimum similarity score (0-1) for returned results (default: 0.6)",
             required=True,
-            value=0.6),
+            value=0.6,
+        ),
         HandleInput(
             name="embedding",
             display_name="Embedding",
@@ -91,12 +85,14 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
 
             # Ensure required metadata fields with proper formatting
             doc_id = str(doc.metadata.get("id", uuid.uuid4()))
-            doc.metadata.update({
-                "id": doc_id,
-                "vector_id": str(doc.metadata.get("vector_id", doc_id)),
-                "url": str(doc.metadata.get("url", "")),
-                "title": str(doc.metadata.get("title", ""))
-            })
+            doc.metadata.update(
+                {
+                    "id": doc_id,
+                    "vector_id": str(doc.metadata.get("vector_id", doc_id)),
+                    "url": str(doc.metadata.get("url", "")),
+                    "title": str(doc.metadata.get("title", "")),
+                }
+            )
         except Exception as e:
             logger.error(f"Error processing data input: {e}")
             raise
@@ -150,11 +146,7 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
             logger.info(f"Connected to GridGain at {self.host}:{self.port}")
 
             # Initialize vector store
-            vector_store = GridGainVectorStore(
-                cache_name=self.cache_name,
-                embedding=self.embedding,
-                client=client
-            )
+            vector_store = GridGainVectorStore(cache_name=self.cache_name, embedding=self.embedding, client=client)
 
             # Add documents from ingest_data
             self._add_documents_to_vector_store(vector_store)
@@ -184,9 +176,7 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
                 return []
 
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
-                score_threshold=self.score_threshold
+                query=self.search_query, k=self.number_of_results, score_threshold=self.score_threshold
             )
 
             data = docs_to_data(docs)

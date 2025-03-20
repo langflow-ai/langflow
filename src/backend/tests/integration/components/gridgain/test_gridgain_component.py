@@ -46,7 +46,6 @@ class TestGridGainVectorStore(unittest.TestCase):
         """Helper function to count entries in the GridGain cache."""
         return sum(1 for _ in cache.scan())
 
-
     def create_test_data(self):
         """Create test Data objects for ingest_data testing."""
         test_data = []
@@ -57,8 +56,8 @@ class TestGridGainVectorStore(unittest.TestCase):
                     "id": i,
                     "title": f"Integration Test {i}",
                     "url": f"http://test{i}.com",
-                    "vector_id": f"v{i}"
-                }
+                    "vector_id": f"v{i}",
+                },
             )
             test_data.append(data)
         return test_data
@@ -66,20 +65,23 @@ class TestGridGainVectorStore(unittest.TestCase):
     def test_1_connection(self):
         """Test real GridGain connection."""
         from pygridgain import Client
+
         client = Client()
         client.connect(self.host, self.port)
-        assert(client.connect())
+        assert client.connect()
 
         # Verify we can interact with the cache
         cache = client.get_or_create_cache(self.cache_name)
-        assert(cache)
+        assert cache
 
     def test_2_build_vector_store(self):
         """Test actual vector store creation and initialization."""
         vector_store = self.component.build_vector_store()
         assert vector_store is not None
-        assert vector_store.cache_name == self.cache_name, f"Expected cache name {self.cache_name}, \
+        assert vector_store.cache_name == self.cache_name, (
+            f"Expected cache name {self.cache_name}, \
             but got {vector_store.cache_name}"
+        )
 
         # Verify the cache exists in GridGain
         cache_names = self.client.get_cache_names()
@@ -101,7 +103,6 @@ class TestGridGainVectorStore(unittest.TestCase):
         cache_size = self.count_cache_entries(cache)
         assert cache_size == 3, f"Expected 3 entries, found {cache_size}"
 
-
     def test4_search_documents(self):
         """Test searching documents within the vector store."""
         # Ingest test data first
@@ -119,14 +120,8 @@ class TestGridGainVectorStore(unittest.TestCase):
         """Test search with different score thresholds."""
         # Ingest test data before searching
         test_data = [
-            Document(
-                page_content="Specific technical content about GridGain caches",
-                metadata={"id": "1"}
-            ),
-            Document(
-                page_content="Completely unrelated content about Gridgain",
-                metadata={"id": "2"}
-            )
+            Document(page_content="Specific technical content about GridGain caches", metadata={"id": "1"}),
+            Document(page_content="Completely unrelated content about Gridgain", metadata={"id": "2"}),
         ]
 
         vector_store = self.component.build_vector_store()
@@ -142,8 +137,7 @@ class TestGridGainVectorStore(unittest.TestCase):
         low_threshold_results = self.component.search_documents(query)
 
         # Lower threshold should return more results
-        assert (len(low_threshold_results)>=len(high_threshold_results)), \
-            "Lower threshold should return more results."
+        assert len(low_threshold_results) >= len(high_threshold_results), "Lower threshold should return more results."
 
     def tearDown(self):
         """Clean up after each test."""
@@ -152,6 +146,7 @@ class TestGridGainVectorStore(unittest.TestCase):
             if cache:
                 cache.clear()
             self.client.close()
+
 
 if __name__ == "__main__":
     unittest.main()
