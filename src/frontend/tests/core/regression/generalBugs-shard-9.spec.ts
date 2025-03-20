@@ -130,20 +130,21 @@ AI:
 
     await page.waitForSelector("text=AI", { timeout: 30000 });
 
-    const textLocator = page.locator("text=AI");
-    await textLocator.nth(6).waitFor({ timeout: 30000 });
-    await expect(textLocator.nth(1)).toBeVisible();
-
-    await page.waitForSelector("[data-testid='button-send']", {
-      timeout: 3000 * 3,
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 100000,
     });
 
-    const memoryResponseText = await page
-      .locator(".form-modal-chat-text")
-      .nth(1)
-      .allTextContents();
+    // Wait for the first chat message element to be available
+    const firstChatMessage = page.getByTestId("div-chat-message").nth(0);
+    await firstChatMessage.waitFor({ state: "visible", timeout: 10000 });
 
-    expect(memoryResponseText[0].includes("pizza")).toBeTruthy();
-    expect(memoryResponseText[0].includes("blue")).toBeTruthy();
+    // Get the text from the second message (the response to the question about car color and food)
+    const secondChatMessage = page.getByTestId("div-chat-message").nth(1);
+    await secondChatMessage.waitFor({ state: "visible", timeout: 10000 });
+    const memoryResponseText = await secondChatMessage.textContent();
+
+    expect(memoryResponseText).not.toBeNull();
+    expect(memoryResponseText?.includes("pizza")).toBeTruthy();
+    expect(memoryResponseText?.includes("blue")).toBeTruthy();
   },
 );
