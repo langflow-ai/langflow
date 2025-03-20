@@ -12,9 +12,9 @@ from langflow.inputs import (
     DropdownInput,
     LinkInput,
     MessageTextInput,
+    NestedDictInput,
     SecretStrInput,
     StrInput,
-    NestedDictInput
 )
 from langflow.io import Output
 from langflow.schema.message import Message

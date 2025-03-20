@@ -119,13 +119,13 @@ class GooglemeetAPIComponent(LCToolComponent):
         MessageTextInput(
             name="GOOGLEMEET_CREATE_MEET-access_type",
             display_name="Access Type",
-            info="The type of access to the Google Meet space. Values include: 'OPEN','TRUSTED','RESTRICTED','ACCESS_TYPE_UNSPECIFIED'",
+            info="The type of access to the Google Meet space. Values include: 'OPEN','TRUSTED','RESTRICTED','ACCESS_TYPE_UNSPECIFIED'",  # noqa: E501
             show=False,
         ),
         MessageTextInput(
             name="GOOGLEMEET_CREATE_MEET-entry_point_access",
             display_name="Entry Point Access",
-            info="The entry point for the Google Meet space. Values include: 'ENTRY_POINT_ACCESS_UNSPECIFIED', 'ALL', 'CREATOR_APP_ONLY'",
+            info="The entry point for the Google Meet space. Values include: 'ENTRY_POINT_ACCESS_UNSPECIFIED', 'ALL', 'CREATOR_APP_ONLY'",  # noqa: E501
             show=False,
         ),
         MessageTextInput(

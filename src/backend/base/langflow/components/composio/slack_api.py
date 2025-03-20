@@ -648,7 +648,7 @@ class SlackAPIComponent(LCToolComponent):
 
                     if field in self._bool_variables:
                         value = bool(value)
-                    
+
                     if param_name == "as_user":
                         value = True
 

@@ -396,7 +396,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-eventType",
             display_name="Event Type",
-            info="Type of the event, immutable post-creation. Currently, only 'default'",  # noqa: E501
+            info="Type of the event, immutable post-creation. Currently, only 'default'",
             show=False,
             value="default",
         ),
@@ -765,7 +765,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
                     param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
-                    if value is None or value == "" or value == []:
+                    if value is None or value in ("", []):
                         continue
 
                     if field in self._bool_variables:
