@@ -205,6 +205,7 @@ class GooglemeetAPIComponent(LCToolComponent):
 
         for field in all_fields:
             build_config[field]["show"] = False
+            build_config[field]["value"] = ""
 
         action_key = self._display_to_enum_map.get(field_value)
 
