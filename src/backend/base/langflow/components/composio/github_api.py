@@ -229,6 +229,7 @@ class GitHubAPIComponent(LCToolComponent):
             display_name="Milestone",
             info="Milestone",
             show=False,
+            advanced=True,
         ),
         StrInput(
             name="GITHUB_CREATE_AN_ISSUE-labels",
@@ -243,6 +244,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="Logins for Users to assign to this issue. _NOTE: Only users with push access can set assignees for new issues. Assignees are silently dropped otherwise._ ",  # noqa: E501
             show=False,
             is_list=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_PULL_REQUESTS-owner",
@@ -283,12 +285,14 @@ class GitHubAPIComponent(LCToolComponent):
             info="What to sort results by. `popularity` will sort by the number of comments. `long-running` will sort by date created and will limit the results to pull requests that have been open for more than a month and have had activity within the past month. ",  # noqa: E501
             show=False,
             value="created",
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_PULL_REQUESTS-direction",
             display_name="DirectionEnm",
             info="The direction of the sort. Default: `desc` when sort is `created` or sort is not specified, otherwise `asc`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_PULL_REQUESTS-per_page",
@@ -296,6 +300,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The number of results per page (max 100)",
             show=False,
             value=1,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_PULL_REQUESTS-page",
@@ -303,6 +308,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The page number of the results to fetch",
             show=False,
             value=1,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_CREATE_A_PULL_REQUEST-owner",
@@ -361,12 +367,14 @@ class GitHubAPIComponent(LCToolComponent):
             display_name="Draft",
             info="Indicates whether the pull request is a draft",
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_CREATE_A_PULL_REQUEST-issue",
             display_name="Issue",
             info="An issue in the repository to convert to a pull request. The issue title, body, and comments will become the title, body, and comments on the new pull request. Required unless `title` is specified. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-owner",
@@ -387,6 +395,7 @@ class GitHubAPIComponent(LCToolComponent):
             display_name="Milestone",
             info="If an `integer` is passed, it should refer to a milestone by its `number` field. If the string `*` is passed, issues with any milestone are accepted. If the string `none` is passed, issues without milestones are returned. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-state",
@@ -412,12 +421,14 @@ class GitHubAPIComponent(LCToolComponent):
             display_name="Mentioned",
             info="A user that's mentioned in the issue.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-labels",
             display_name="Labels",
             info="A list of comma separated label names. Example: `bug,ui,@high`",
             show=False,
+            is_list=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-sort",
@@ -425,6 +436,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="What to sort results by",
             show=False,
             value="created",
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-direction",
@@ -432,12 +444,14 @@ class GitHubAPIComponent(LCToolComponent):
             info="The direction to sort the results by",
             show=False,
             value="desc",
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-since",
             display_name="Since",
             info="Only show results that were last updated after the given time. This is a timestamp in ISO 8601 (https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-per_page",
@@ -445,6 +459,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The number of results per page (max 100)",
             show=False,
             value=1,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-page",
@@ -452,6 +467,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The page number of the results to fetch",
             show=False,
             value=1,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_BRANCHES-owner",
@@ -479,6 +495,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The number of results per page (max 100)",
             show=False,
             value=30,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_BRANCHES-page",
@@ -486,6 +503,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The page number of the results to fetch",
             show=False,
             value=1,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-owner",
@@ -565,12 +583,14 @@ class GitHubAPIComponent(LCToolComponent):
             display_name="Since",
             info="Only show results that were last updated after the given time. This is a timestamp in ISO 8601 (https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_COMMITS-until",
             display_name="Until",
             info="Only commits before this date will be returned. This is a timestamp in ISO 8601 (https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_COMMITS-per_page",
@@ -578,6 +598,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The number of results per page (max 100)",
             show=False,
             value=1,
+            advanced=True,
         ),
         IntInput(
             name="GITHUB_LIST_COMMITS-page",
@@ -585,6 +606,7 @@ class GitHubAPIComponent(LCToolComponent):
             info="The page number of the results to fetch",
             show=False,
             value=1,
+            advanced=True,
         ),
     ]
 

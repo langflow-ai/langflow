@@ -172,6 +172,7 @@ class GooglesheetsAPIComponent(LCToolComponent):
             info="If set to True, the response will include the updated values from the spreadsheet",
             show=False,
             value=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-spreadsheet_id",

@@ -260,6 +260,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             display_name="Page Token",
             info="Token specifying which result page to return.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_LIST_CALENDARS-show_deleted",
@@ -267,6 +268,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="Whether to include deleted calendar list entries in the result.",
             show=False,
             value=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_LIST_CALENDARS-show_hidden",
@@ -274,12 +276,14 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="Whether to show hidden entries.",
             show=False,
             value=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_LIST_CALENDARS-sync_token",
             display_name="Sync Token",
             info="Token obtained from the nextSyncToken field returned on the last page of results from the previous list request.",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_EVENT-calendar_id",
@@ -312,6 +316,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             display_name="Show Deleted",
             info="Whether to include deleted events (with status equals 'cancelled') in the result.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_FIND_EVENT-single_events",
@@ -319,6 +324,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="Whether to expand recurring events into instances and only return single one-off events and instances of recurring events, but not the underlying recurring events themselves.",  # noqa: E501
             show=False,
             value=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_EVENT-timeMax",
@@ -337,6 +343,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             display_name="Updated Min",
             info="Lower bound for an event's last modification time to filter by. Accepts multiple formats:, 1. ISO format with timezone (e.g., 2024-12-06T13:00:00Z), 2. Comma-separated format (e.g., 2024,12,06,13,00,00), 3. Simple datetime format (e.g., 2024-12-06 13:00:00)",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         StrInput(
             name="GOOGLECALENDAR_FIND_EVENT-event_types",
@@ -345,16 +352,18 @@ class GooglecalendarAPIComponent(LCToolComponent):
             show=False,
             value=["default", "outOfOffice", "focusTime", "workingLocation"],
             is_list=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_EVENT-page_token",
             display_name="Page Token",
             info="Token specifying which result page to return. Optional.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_DUPLICATE_CALENDAR-summary",
-            display_name="Summary",
+            display_name="Summary/Title",
             info="Title of the calendar to be duplicated.",
             show=False,
             value="",
@@ -411,18 +420,21 @@ class GooglecalendarAPIComponent(LCToolComponent):
             display_name="Guests Can See Other Guests",
             info="Whether attendees other than the organizer can see who the event's attendees are.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_CREATE_EVENT-guestsCanInviteOthers",
             display_name="Guests Can Invite Others",
             info="Whether attendees other than the organizer can invite others to the event.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-location",
             display_name="Location",
             info="Geographic location of the event as free-form text.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-summary",
@@ -436,6 +448,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="'opaque' (busy) or 'transparent' (available).",
             show=False,
             value="opaque",
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-visibility",
@@ -443,6 +456,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="Event visibility: 'default', 'public', 'private', or 'confidential'.",
             show=False,
             value="default",
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-timezone",
@@ -456,6 +470,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="List of RRULE, EXRULE, RDATE, EXDATE lines for recurring events.",
             show=False,
             is_list=True,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_CREATE_EVENT-guests_can_modify",
@@ -463,6 +478,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="If True, guests can modify the event.",
             show=False,
             value=False,
+            advanced=True,
         ),
         StrInput(
             name="GOOGLECALENDAR_CREATE_EVENT-attendees",
@@ -504,6 +520,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="The ID of the Google Calendar. `primary` for interacting with the primary calendar.",
             show=False,
             value="primary",
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_DELETE_EVENT-calendar_id",
@@ -644,18 +661,21 @@ class GooglecalendarAPIComponent(LCToolComponent):
             display_name="Guests Can See Other Guests",
             info="Whether attendees other than the organizer can see who the event's attendees are.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-guestsCanInviteOthers",
             display_name="Guests Can Invite Others",
             info="Whether attendees other than the organizer can invite others to the event.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-location",
             display_name="Location",
             info="Geographic location of the event as free-form text.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-summary",
@@ -669,6 +689,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="'opaque' (busy) or 'transparent' (available).",
             show=False,
             value="opaque",
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-visibility",
@@ -676,6 +697,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="Event visibility: 'default', 'public', 'private', or 'confidential'.",
             show=False,
             value="default",
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-timezone",
@@ -696,6 +718,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             info="If True, guests can modify the event.",
             show=False,
             value=False,
+            advanced=True,
         ),
         StrInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-attendees",

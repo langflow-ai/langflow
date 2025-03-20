@@ -230,7 +230,7 @@ class SlackAPIComponent(LCToolComponent):
         MessageTextInput(
             name="SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-cursor",
             display_name="Cursor",
-            info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first `page` of the collection. See [pagination](https://slack.dev) for more detail. ",  # noqa: E501
+            info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first `page` of the collection",  # noqa: E501
             show=False,
         ),
         BoolInput(
@@ -242,68 +242,77 @@ class SlackAPIComponent(LCToolComponent):
         BoolInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-as_user",
             display_name="As User",
-            info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false. See [authorship](https://slack.dev) below. ",  # noqa: E501
+            info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-attachments",
             display_name="Attachments",
             info="A JSON-based array of structured attachments, presented as a URL-encoded string. ",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-blocks",
             display_name="Blocks",
             info="A JSON-based array of structured blocks, presented as a URL-encoded string. ",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-channel",
             display_name="Channel",
-            info="Channel, private group, or IM channel to send message to. Can be an encoded ID, or a name. See [below](https://slack.dev) for more details. ",  # noqa: E501
+            info="Channel, private group, or IM channel to send message to. Can be an encoded ID, or a name ",
             show=False,
             required=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-icon_emoji",
             display_name="Icon Emoji",
-            info="Emoji to use as the icon for this message. Overrides `icon_url`. Must be used in conjunction with `as_user` set to `false`, otherwise ignored. See [authorship](https://slack.dev) below. ",  # noqa: E501
+            info="Emoji to use as the icon for this message. Overrides `icon_url`. Must be used in conjunction with `as_user` set to `false`, otherwise ignored",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-icon_url",
             display_name="Icon Url",
-            info="URL to an image to use as the icon for this message. Must be used in conjunction with `as_user` set to false, otherwise ignored. See [authorship](https://slack.dev) below. ",  # noqa: E501
+            info="URL to an image to use as the icon for this message. Must be used in conjunction with `as_user` set to false, otherwise ignored",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-link_names",
             display_name="Link Names",
             info="Find and link channel names and usernames.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-mrkdwn",
             display_name="Mrkdwn",
             info="Disable Slack markup parsing by setting to `false`. Enabled by default.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-parse",
             display_name="Parse",
-            info="Change how messages are treated. Defaults to `none`. See [below](https://slack.dev). ",
+            info="Change how messages are treated. Defaults to `none` ",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-reply_broadcast",
             display_name="Reply Broadcast",
             info="Used in conjunction with `thread_ts` and indicates whether reply should be made visible to everyone in the channel or conversation. Defaults to `false`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-text",
             display_name="Text",
-            info="How this field works and whether it is required depends on other fields you use in your API call. [See below](https://slack.dev) for more detail. ",  # noqa: E501
+            info="How this field works and whether it is required depends on other fields you use in your API call",
             show=False,
         ),
         MessageTextInput(
@@ -317,36 +326,42 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Unfurl Links",
             info="Pass true to enable unfurling of primarily text-based content.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_media",
             display_name="Unfurl Media",
             info="Pass false to disable unfurling of media content.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-username",
             display_name="Username",
-            info="Set your bot's user name. Must be used in conjunction with `as_user` set to false, otherwise ignored. See [authorship](https://slack.dev) below. ",  # noqa: E501
+            info="Set your bot's user name. Must be used in conjunction with `as_user` set to false, otherwise ignored",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-as_user",
             display_name="As User",
-            info="Pass true to update the message as the authed user. [Bot users](https://slack.dev) in this context are considered authed users. ",  # noqa: E501
+            info="Pass true to update the message as the authed user",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-attachments",
             display_name="Attachments",
             info="A JSON-based array of structured attachments, presented as a URL-encoded string. This field is required when not presenting `text`. If you don't include this field, the message's previous `attachments` will be retained. To remove previous `attachments`, include an empty array for this field. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-blocks",
             display_name="Blocks",
-            info="A JSON-based array of [structured blocks](https://slack.dev), presented as a URL-encoded string. If you don't include this field, the message's previous `blocks` will be retained. To remove previous `blocks`, include an empty array for this field. ",  # noqa: E501
+            info="A JSON-based array of structured blocks, presented as a URL-encoded string. If you don't include this field, the message's previous `blocks` will be retained. To remove previous `blocks`, include an empty array for this field. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-channel",
@@ -360,17 +375,19 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Link Names",
             info="Find and link channel names and usernames. Defaults to `none`. If you do not specify a value for this field, the original value set for the message will be overwritten with the default, `none`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-parse",
             display_name="Parse",
             info="Change how messages are treated. Defaults to `client`, unlike `chat.postMessage`. Accepts either `none` or `full`. If you do not specify a value for this field, the original value set for the message will be overwritten with the default, `client`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-text",
             display_name="Text",
-            info="New text for the message, using the [default formatting rules](https://slack.dev). It's not required when presenting `blocks` or `attachments`. ",  # noqa: E501
+            info="New text for the message, using the default formatting rules. It's not required when presenting `blocks` or `attachments`. ",  # noqa: E501
             show=False,
         ),
         MessageTextInput(
@@ -391,12 +408,14 @@ class SlackAPIComponent(LCToolComponent):
             display_name="File",
             info="File to remove reaction from.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_REMOVE_REACTION_FROM_ITEM-file_comment",
             display_name="File Comment",
             info="File comment to remove reaction from.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_REMOVE_REACTION_FROM_ITEM-name",
@@ -410,6 +429,7 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Timestamp",
             info="Timestamp of the message to remove reaction from.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_FETCH_CONVERSATION_HISTORY-channel",
@@ -444,31 +464,35 @@ class SlackAPIComponent(LCToolComponent):
         MessageTextInput(
             name="SLACK_FETCH_CONVERSATION_HISTORY-cursor",
             display_name="Cursor",
-            info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first 'page' of the collection. See [pagination](https://slack.dev) for more detail. ",  # noqa: E501
+            info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first 'page' of the collection. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
             display_name="As User",
             info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false. See [chat.postMessage](chat.postMessage#authorship). ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-attachments",
             display_name="Attachments",
             info="A JSON-based array of structured attachments, presented as a URL-encoded string. ",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-blocks",
             display_name="Blocks",
             info="A JSON-based array of structured blocks, presented as a URL-encoded string. ",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-channel",
             display_name="Channel",
-            info="Channel, private group, or DM channel to send message to. Can be an encoded ID, or a name. See [below](https://slack.dev) for more details. ",  # noqa: E501
+            info="Channel, private group, or DM channel to send message to. Can be an encoded ID, or a name",
             show=False,
         ),
         BoolInput(
@@ -476,12 +500,14 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Link Names",
             info="Find and link channel names and usernames.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-parse",
             display_name="Parse",
             info="Change how messages are treated. Defaults to `none`. See [chat.postMessage](chat.postMessage#formatting). ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-post_at",
@@ -494,11 +520,12 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Reply Broadcast",
             info="Used in conjunction with `thread_ts` and indicates whether reply should be made visible to everyone in the channel or conversation. Defaults to `false`. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-text",
             display_name="Text",
-            info="How this field works and whether it is required depends on other fields you use in your API call. [See below](https://slack.dev) for more detail. ",  # noqa: E501
+            info="How this field works and whether it is required depends on other fields you use in your API call",
             show=False,
         ),
         IntInput(
@@ -506,18 +533,21 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Thread Ts",
             info="Provide another message's `ts` value to make this message a reply. Avoid using a reply's `ts` value; use its parent instead. ",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_links",
             display_name="Unfurl Links",
             info="Pass true to enable unfurling of primarily text-based content.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_media",
             display_name="Unfurl Media",
             info="Pass false to disable unfurling of media content.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
@@ -541,7 +571,7 @@ class SlackAPIComponent(LCToolComponent):
         MessageTextInput(
             name="SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-cursor",
             display_name="Cursor",
-            info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first 'page' of the collection. See [pagination](https://slack.dev) for more detail. ",  # noqa: E501
+            info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first 'page' of the collection",  # noqa: E501
             show=False,
         ),
         IntInput(
