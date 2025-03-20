@@ -4516,7 +4516,7 @@ requires-dist = [
     { name = "qianfan", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
-    { name = "rise", path = "../rise/dist/rise-0.1.0-py3-none-any.whl" },
+    { name = "rise", path = "src/rise/dist/rise-0.1.0-py3-none-any.whl" },
     { name = "ruff", specifier = ">=0.9.7" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -8262,7 +8262,7 @@ wheels = [
 [[package]]
 name = "rise"
 version = "0.1.0"
-source = { path = "../rise/dist/rise-0.1.0-py3-none-any.whl" }
+source = { path = "src/rise/dist/rise-0.1.0-py3-none-any.whl" }
 wheels = [
     { filename = "rise-0.1.0-py3-none-any.whl", hash = "sha256:512bbe7a937bc105630d1be75155e657c7cf51a9594f2f2c3612ea2cfc45bde4" },
 ]

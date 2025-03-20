@@ -164,7 +164,7 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
-rise = { path = "../rise/dist/rise-0.1.0-py3-none-any.whl" }
+rise = { path = "./src/rise/dist/rise-0.1.0-py3-none-any.whl" }
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
