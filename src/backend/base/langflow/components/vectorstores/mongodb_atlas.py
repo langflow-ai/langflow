@@ -80,7 +80,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             )
 
             collection = mongo_client[self.db_name][self.collection_name]
-            collection.drop()  # Drop collection to override the vector store
+
         except Exception as e:
             msg = f"Failed to connect to MongoDB Atlas: {e}"
             raise ValueError(msg) from e
@@ -96,6 +96,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents:
+            collection.drop()  # Drop collection to override the vector store
             return MongoDBAtlasVectorSearch.from_documents(
                 documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
             )
