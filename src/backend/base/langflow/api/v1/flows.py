@@ -239,8 +239,12 @@ async def read_flows(
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
-                return [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-            return flows
+                # Convert to FlowHeader objects and compress the response
+                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                return compress_response(flow_headers)
+            
+            # Compress the full flows response
+            return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
         return await paginate(session, stmt, params=params)
