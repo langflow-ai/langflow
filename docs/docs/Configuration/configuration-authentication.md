@@ -149,3 +149,5 @@ A **Superuser** has full administrative priveleges.
 Your new user appears in the **Admin Page**.
 6. To confirm your new user's functionality, log out of Langflow, and log back in with your new user's credentials.
 Attempt to access the `/admin` page. You should be redirected to the `/flows` page, because the new user is not a superuser.
+
+You have started a secure Langflow server with authentication enabled and secret key encryption.
