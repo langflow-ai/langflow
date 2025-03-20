@@ -188,6 +188,16 @@ class GooglecalendarAPIComponent(LCToolComponent):
         "GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
         "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
     }
+    
+    _list_variables = {
+        "GOOGLECALENDAR_FIND_EVENT-event_types",
+        "GOOGLECALENDAR_CREATE_EVENT-recurrence",
+        "GOOGLECALENDAR_CREATE_EVENT-attendees",
+        "GOOGLECALENDAR_FIND_FREE_SLOTS-items",
+        "GOOGLECALENDAR_UPDATE_EVENT-recurrence",
+        "GOOGLECALENDAR_UPDATE_EVENT-attendees",
+    }
+
 
     inputs = [
         MessageTextInput(
@@ -786,7 +796,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         for field in all_fields:
             build_config[field]["show"] = False
 
-            if field in self._bool_variables:
+            if field in self._bool_variables or field in self._list_variables:
                 build_config[field]["value"] = None
             else:
                 build_config[field]["value"] = ""
