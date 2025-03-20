@@ -1,21 +1,26 @@
 import { expect, test } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
 
-// Function to generate random 10-character filename
-
+// Configure tests to run serially with a delay between each test
 test(
   "should navigate to files page and show empty state",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
-
     await awaitBootstrapTest(page, { skipModal: true });
 
-    // Wait for the sidebar to be visible
-    await page.waitForSelector('[data-testid="folder-sidebar"]', {
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
 
@@ -46,18 +51,24 @@ test(
   "should upload file using upload button",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
-
     const fileName = generateRandomFilename();
     const testFilePath = path.join(__dirname, "../../assets/test-file.txt");
     const fileContent = fs.readFileSync(testFilePath);
 
     await awaitBootstrapTest(page, { skipModal: true });
 
-    // Navigate to files page
-    await page.waitForSelector('[data-testid="folder-sidebar"]', {
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
+
     await page.getByText("My Files").first().click();
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
@@ -85,16 +96,22 @@ test(
   "should upload file using drag and drop",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
-
     const fileName = generateRandomFilename();
 
     await awaitBootstrapTest(page, { skipModal: true });
 
-    // Navigate to files page
-    await page.waitForSelector('[data-testid="folder-sidebar"]', {
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
+
     await page.getByText("My Files").first().click();
 
     // Create DataTransfer object and file
@@ -135,8 +152,6 @@ test(
   "should upload multiple files with different types",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
-
     const fileNames = {
       txt: generateRandomFilename(),
       json: generateRandomFilename(),
@@ -153,10 +168,18 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
 
-    // Navigate to files page
-    await page.waitForSelector('[data-testid="folder-sidebar"]', {
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
+
     await page.getByText("My Files").first().click();
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
@@ -201,8 +224,6 @@ test(
   "should search uploaded files",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
-
     const fileNames = {
       txt: generateRandomFilename(),
       json: generateRandomFilename(),
@@ -219,10 +240,18 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
 
-    // Navigate to files page
-    await page.waitForSelector('[data-testid="folder-sidebar"]', {
+    const firstRunLangflow = await page
+      .getByTestId("empty-folder-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
+
     await page.getByText("My Files").first().click();
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
