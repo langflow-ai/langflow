@@ -97,6 +97,8 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    enabled_output_cache: bool = True
+    """The output_cache controller in the _get_output_result() function of the component. Defaults to True."""
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
