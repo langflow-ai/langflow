@@ -637,7 +637,7 @@ class GitHubAPIComponent(LCToolComponent):
             build_config[field]["show"] = False
 
             if field in self._bool_variables:
-                build_config[field]["value"] = None
+                build_config[field]["value"] = False
             else:
                 build_config[field]["value"] = ""
 
