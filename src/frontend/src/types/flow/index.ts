@@ -31,6 +31,8 @@ export type FlowType = {
   folder_id?: string;
   webhook?: boolean;
   locked?: boolean | null;
+  public?: boolean;
+  access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
