@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
@@ -14,6 +14,7 @@ type ConnectionComponentProps = {
   options?: any[];
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
+  connectionLink?: string;
 };
 
 const ConnectionComponent = ({
@@ -24,38 +25,55 @@ const ConnectionComponent = ({
   options = [],
   searchCategory = [],
   buttonMetadata = { variant: "destructive", icon: "unplug" },
+  connectionLink = "",
   ...baseInputProps
 }: InputProps<any, ConnectionComponentProps>) => {
   const { value, handleOnNewValue } = baseInputProps;
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [link, setLink] = useState("");
   const { placeholder } = baseInputProps;
   const [open, setOpen] = useState(false);
-  const [connectionButton, setConnectionButton] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
-  const [connectionLink, setConnectionLink] = useState(
-    "https://github.com/langflow-ai/langflow",
-  );
-
-  const handleConnectionButtonClick = () => {
-    console.log("connectionLink", connectionLink);
-    setConnectionButton(true);
-    window.open(connectionLink, "_blank");
-  };
-
-  const handleOpenListSelectionDialog = () => setOpen(true);
-
-  const handleCloseListSelectionDialog = () => setOpen(false);
 
   useEffect(() => {
-    if (selectedItem[0]?.name !== value) {
-      setConnectionButton(false);
-      setConnectionLink(selectedItem[0]?.link);
-      handleOnNewValue(
-        { value: selectedItem[0]?.name },
-        { skipSnapshot: true },
-      );
+    let timeoutId: NodeJS.Timeout;
+
+    if (link === "loading") {
+      timeoutId = setTimeout(() => {
+        setLink("");
+      }, 5000);
     }
-  }, [selectedItem[0]?.name]);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [link]);
+
+  useEffect(() => {
+    if (connectionLink !== "") {
+      setLink(connectionLink);
+    }
+  }, [connectionLink]);
+
+  const handleConnectionButtonClick = () => {
+    setIsAuthenticated(true);
+    window.open(link, "_blank");
+  };
+
+  const handleSelection = (item: any) => {
+    setIsAuthenticated(false);
+    setLink("loading");
+    handleOnNewValue({ value: item.name }, { skipSnapshot: true });
+  };
+
+  const handleOpenListSelectionDialog = () => {
+    setOpen(true);
+  };
+
+  const handleCloseListSelectionDialog = () => setOpen(false);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -71,10 +89,12 @@ const ConnectionComponent = ({
             {selectedItem[0]?.icon && (
               <ForwardedIconComponent
                 name={selectedItem[0]?.icon}
-                className="mr-3 h-5 w-5"
+                className="h-5 w-5"
               />
             )}
-            {selectedItem[0]?.name || placeholder}
+            <span className="ml-2 truncate">
+              {selectedItem[0]?.name || placeholder}
+            </span>
             <ForwardedIconComponent
               name="ChevronsUpDown"
               className="ml-auto h-5 w-5"
@@ -82,28 +102,27 @@ const ConnectionComponent = ({
           </div>
         </Button>
 
-        <Button
-          size="icon"
-          variant="ghost"
-          disabled={!selectedItem[0]?.name || connectionButton}
-          className={cn(
-            "h-9 w-10 rounded-md border",
-            buttonMetadata.variant && `border-${buttonMetadata.variant}`,
-            connectionButton && "border-green-500",
-          )}
-          onClick={handleConnectionButtonClick}
-        >
-          <ForwardedIconComponent
-            name={
-              connectionButton ? "plug-zap" : buttonMetadata.icon || "unplug"
-            }
+        {!isAuthenticated && (
+          <Button
+            size="icon"
+            variant="ghost"
+            loading={selectedItem?.length > 0 && value && link === "loading"}
+            disabled={!selectedItem[0]?.name || link === ""}
             className={cn(
-              "h-5 w-5",
-              buttonMetadata.variant && `text-${buttonMetadata.variant}`,
-              connectionButton && "text-green-500",
+              "h-9 w-10 rounded-md border disabled:opacity-50",
+              buttonMetadata.variant && `border-${buttonMetadata.variant}`,
             )}
-          />
-        </Button>
+            onClick={handleConnectionButtonClick}
+          >
+            <ForwardedIconComponent
+              name={buttonMetadata.icon || "unplug"}
+              className={cn(
+                "h-5 w-5",
+                buttonMetadata.variant && `text-${buttonMetadata.variant}`,
+              )}
+            />
+          </Button>
+        )}
       </div>
 
       {helperText && (
@@ -114,6 +133,7 @@ const ConnectionComponent = ({
       )}
       <ListSelectionComponent
         open={open}
+        onSelection={handleSelection}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
         setSelectedList={setSelectedItem}

@@ -17,6 +17,7 @@ interface ListSelectionComponentProps {
   selectedList: any[];
   type: SelectionMode;
   searchCategories?: string[];
+  onSelection?: (action: any) => void;
 }
 
 const ListItem = ({
@@ -45,8 +46,10 @@ const ListItem = ({
       {"metaData" in item && item.metaData && (
         <span className="text-gray-500">{item.metaData}</span>
       )}
-      {isSelected && (
+      {isSelected ? (
         <ForwardedIconComponent name="check" className="ml-auto flex h-4 w-4" />
+      ) : (
+        <span className="ml-auto flex h-4 w-4" />
       )}
     </div>
   </Button>
@@ -56,6 +59,7 @@ const ListSelectionComponent = ({
   open,
   onClose,
   searchCategories = [],
+  onSelection,
   setSelectedList = () => {},
   selectedList = [],
   type,
@@ -137,7 +141,10 @@ const ListSelectionComponent = ({
                 isSelected={selectedList.some(
                   (selected) => selected.name === item.name,
                 )}
-                onClick={() => handleSelectAction(item)}
+                onClick={() => {
+                  handleSelectAction(item);
+                  onSelection?.(item);
+                }}
               />
             ))
           ) : (

@@ -225,6 +225,11 @@ export function ParameterRenderComponent({
           />
         );
       case "connect":
+        const link =
+          templateData?.options?.find(
+            (option: any) => option?.name === templateValue,
+          )?.link || "";
+
         return (
           <ConnectionComponent
             {...baseInputProps}
@@ -233,7 +238,7 @@ export function ParameterRenderComponent({
             options={templateData?.options}
             searchCategory={templateData?.search_category}
             buttonMetadata={templateData?.button_metadata}
-            connectionLink={templateData?.connection_link}
+            connectionLink={link as string}
           />
         );
       case "tab":
