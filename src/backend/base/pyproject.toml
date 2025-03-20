@@ -85,6 +85,7 @@ dependencies = [
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "elevenlabs>=1.54.0",
     "webrtcvad>=2.0.10",
+    "scipy>=1.15.2",
 ]
 
 [dependency-groups]
