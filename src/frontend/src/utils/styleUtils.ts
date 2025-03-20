@@ -1,4 +1,3 @@
-import { GithubIcon } from "../icons/Github";
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -283,6 +282,7 @@ import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
 import { GitLoaderIcon } from "../icons/GitLoader";
+import { GithubIcon } from "../icons/Github";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import { GooglecalendarIcon } from "../icons/Googlecalendar";
