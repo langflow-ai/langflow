@@ -187,6 +187,8 @@ test(
     await page.keyboard.press("Backspace");
     await page.waitForTimeout(600);
 
+    await page.waitForTimeout(5000);
+
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
     await page.waitForSelector("text=built successfully", {
