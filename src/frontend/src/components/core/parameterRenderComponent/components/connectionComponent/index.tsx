@@ -30,7 +30,9 @@ const ConnectionComponent = ({
 }: InputProps<any, ConnectionComponentProps>) => {
   const { value, handleOnNewValue } = baseInputProps;
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    connectionLink === "validated",
+  );
   const [link, setLink] = useState("");
   const { placeholder } = baseInputProps;
   const [open, setOpen] = useState(false);
@@ -55,17 +57,18 @@ const ConnectionComponent = ({
   useEffect(() => {
     if (connectionLink !== "") {
       setLink(connectionLink);
+      setIsAuthenticated(connectionLink === "validated");
     }
   }, [connectionLink]);
 
   const handleConnectionButtonClick = () => {
-    setIsAuthenticated(true);
     window.open(link, "_blank");
   };
 
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
     setLink("loading");
+    setSelectedItem([item]);
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 

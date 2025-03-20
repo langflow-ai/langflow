@@ -47,7 +47,13 @@ const ListItem = ({
         <span className="text-gray-500">{item.metaData}</span>
       )}
       {isSelected ? (
-        <ForwardedIconComponent name="check" className="ml-auto flex h-4 w-4" />
+        <ForwardedIconComponent
+          name="check"
+          className={cn(
+            "ml-auto flex h-4 w-4",
+            item.link === "validated" && "text-green-500",
+          )}
+        />
       ) : (
         <span className="ml-auto flex h-4 w-4" />
       )}
@@ -114,6 +120,7 @@ const ListSelectionComponent = ({
     onClose();
   }, [onClose]);
 
+  console.log(filteredList);
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="flex !w-auto w-fit min-w-[20vw] max-w-[50vw] flex-col">
@@ -139,9 +146,11 @@ const ListSelectionComponent = ({
               <ListItem
                 key={item.name}
                 item={item}
-                isSelected={selectedList.some(
-                  (selected) => selected.name === item.name,
-                )}
+                isSelected={
+                  selectedList.some(
+                    (selected) => selected.name === item.name,
+                  ) || item.link === "validated"
+                }
                 onClick={() => {
                   handleSelectAction(item);
                   onSelection?.(item);
