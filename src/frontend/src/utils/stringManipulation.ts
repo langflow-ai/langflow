@@ -28,11 +28,11 @@ function toKebabCase(str: string): string {
 }
 
 function toLowerCase(str: string): string {
-  return str.toLowerCase();
+  return str?.toLowerCase();
 }
 
 function toUpperCase(str: string): string {
-  return str.toUpperCase();
+  return str?.toUpperCase();
 }
 
 function noBlank(str: string): string {

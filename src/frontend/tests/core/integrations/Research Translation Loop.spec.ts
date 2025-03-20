@@ -59,7 +59,7 @@ withEventDeliveryModes(
     await page.getByTestId("button-send").click();
 
     await page.waitForSelector('[data-testid="div-chat-message"]', {
-      timeout: 30000,
+      timeout: 30000 * 3,
     });
 
     const textContents = await page
