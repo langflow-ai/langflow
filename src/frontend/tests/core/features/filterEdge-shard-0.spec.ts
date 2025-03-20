@@ -26,7 +26,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     const outputElements = await page
       .getByTestId("handle-retrievalqa-shownode-text-right")

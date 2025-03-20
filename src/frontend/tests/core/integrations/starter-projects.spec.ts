@@ -59,7 +59,6 @@ test(
     });
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();
