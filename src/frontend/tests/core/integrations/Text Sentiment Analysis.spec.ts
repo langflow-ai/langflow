@@ -26,13 +26,18 @@ withEventDeliveryModes(
       .click();
     await initialGPTsetup(page);
 
+    await page.getByTestId("input-file-component").last().click();
     const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("button_upload_file").click();
+    await page.getByTestId("drag-files-component").last().click();
+
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
       path.join(__dirname, "../../assets/test_file.txt"),
     );
-    await page.getByText("test_file.txt").isVisible();
+    await page.getByText("test_file.txt").last().isVisible();
+
+    await page.waitForTimeout(500);
+    await page.getByTestId("select-files-modal-button").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
