@@ -39,13 +39,14 @@ class MCPStdio(Component):
     client = MCPStdioClient()
     tools = types.ListToolsResult
     tool_names = [str]
-    display_name = "MCP Tools (stdio)"
+    display_name = "MCP Tools (stdio) [DEPRECATED]"
     description = (
         "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
     )
     documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "code"
     name = "MCPStdio"
+    legacy = True
 
     inputs = [
         MessageTextInput(
