@@ -29,15 +29,15 @@ class SlackAPIComponent(LCToolComponent):
 
     _display_to_enum_map = {
         # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
-        "List users endpoint": "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
-        "List conversations endpoint": "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
-        "Update slack chat message attributes": "SLACK_UPDATES_A_SLACK_MESSAGE",
-        "Post message to channel": "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
-        "Search messages endpoint": "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
+        "List Users ": "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
+        "List Conversations": "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
+        "Update Slack Chat Message Attributes": "SLACK_UPDATES_A_SLACK_MESSAGE",
+        "Post Message To Channel": "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+        "Search Messages Endpoint": "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
         # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
         # "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM", # Disabled temporarily
-        "Schedule message in chat": "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
-        "Add reminder for user": "SLACK_CREATE_A_REMINDER",
+        "Schedule Message In Chat": "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
+        "Add Reminder For User": "SLACK_CREATE_A_REMINDER",
     }
 
     _actions_data: dict = {
@@ -50,7 +50,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION": {
-            "display_name": "List users endpoint",
+            "display_name": "List Users ",
             "parameters": [
                 "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-limit",
                 "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-cursor",
@@ -58,7 +58,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS": {
-            "display_name": "List conversations endpoint",
+            "display_name": "List Conversations",
             "parameters": [
                 "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
                 "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-types",
@@ -67,7 +67,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_UPDATES_A_SLACK_MESSAGE": {
-            "display_name": "Update slack chat message attributes",
+            "display_name": "Update Slack Chat Message Attributes",
             "parameters": [
                 "SLACK_UPDATES_A_SLACK_MESSAGE-as_user",
                 "SLACK_UPDATES_A_SLACK_MESSAGE-attachments",
@@ -80,7 +80,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL": {
-            "display_name": "Post message to channel",
+            "display_name": "Post Message To Channel",
             "parameters": [
                 "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-as_user",
                 "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-attachments",
@@ -100,7 +100,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY": {
-            "display_name": "Search messages endpoint",
+            "display_name": "Search Messages Endpoint",
             "parameters": [
                 "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-count",
                 "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
@@ -132,7 +132,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME": {
-            "display_name": "Schedule message in chat",
+            "display_name": "Schedule Message In Chat",
             "parameters": [
                 "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
                 "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-attachments",
@@ -149,7 +149,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_CREATE_A_REMINDER": {
-            "display_name": "Add reminder for user",
+            "display_name": "Add Reminder For User",
             "parameters": [
                 "SLACK_CREATE_A_REMINDER-text",
                 "SLACK_CREATE_A_REMINDER-time",

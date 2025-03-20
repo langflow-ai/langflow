@@ -28,19 +28,19 @@ class GitHubAPIComponent(LCToolComponent):
     documentation: str = "https://docs.composio.dev"
 
     _display_to_enum_map = {
-        "Create a pull request": "GITHUB_CREATE_A_PULL_REQUEST",
-        "Star a repository for the authenticated user": "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER",
-        "List commits": "GITHUB_LIST_COMMITS",
-        "Get a pull request": "GITHUB_GET_A_PULL_REQUEST",
-        "Create an issue": "GITHUB_CREATE_AN_ISSUE",
-        "List repository issues": "GITHUB_LIST_REPOSITORY_ISSUES",
-        "List branches": "GITHUB_LIST_BRANCHES",
-        "List pull requests": "GITHUB_LIST_PULL_REQUESTS",
+        "Create A Pull Request": "GITHUB_CREATE_A_PULL_REQUEST",
+        "Star A Repository": "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER",
+        "List Commits": "GITHUB_LIST_COMMITS",
+        "Get A Pull Request": "GITHUB_GET_A_PULL_REQUEST",
+        "Create An Issue": "GITHUB_CREATE_AN_ISSUE",
+        "List Repository Issues": "GITHUB_LIST_REPOSITORY_ISSUES",
+        "List Branches": "GITHUB_LIST_BRANCHES",
+        "List Pull Requests": "GITHUB_LIST_PULL_REQUESTS",
     }
 
     _actions_data: dict = {
         "GITHUB_CREATE_A_PULL_REQUEST": {
-            "display_name": "Create a pull request",
+            "display_name": "Create A Pull Request",
             "parameters": [
                 "GITHUB_CREATE_A_PULL_REQUEST-owner",
                 "GITHUB_CREATE_A_PULL_REQUEST-repo",
@@ -55,14 +55,14 @@ class GitHubAPIComponent(LCToolComponent):
             ],
         },
         "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER": {
-            "display_name": "Star a repository for the authenticated user",
+            "display_name": "Star A Repository",
             "parameters": [
                 "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-owner",
                 "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-repo",
             ],
         },
         "GITHUB_LIST_COMMITS": {
-            "display_name": "List commits",
+            "display_name": "List Commits",
             "parameters": [
                 "GITHUB_LIST_COMMITS-owner",
                 "GITHUB_LIST_COMMITS-repo",
@@ -77,7 +77,7 @@ class GitHubAPIComponent(LCToolComponent):
             ],
         },
         "GITHUB_GET_A_PULL_REQUEST": {
-            "display_name": "Get a pull request",
+            "display_name": "Get A Pull Request",
             "parameters": [
                 "GITHUB_GET_A_PULL_REQUEST-owner",
                 "GITHUB_GET_A_PULL_REQUEST-repo",
@@ -85,7 +85,7 @@ class GitHubAPIComponent(LCToolComponent):
             ],
         },
         "GITHUB_CREATE_AN_ISSUE": {
-            "display_name": "Create an issue",
+            "display_name": "Create An Issue",
             "parameters": [
                 "GITHUB_CREATE_AN_ISSUE-owner",
                 "GITHUB_CREATE_AN_ISSUE-repo",
@@ -98,7 +98,7 @@ class GitHubAPIComponent(LCToolComponent):
             ],
         },
         "GITHUB_LIST_REPOSITORY_ISSUES": {
-            "display_name": "List repository issues",
+            "display_name": "List Repository Issues",
             "parameters": [
                 "GITHUB_LIST_REPOSITORY_ISSUES-owner",
                 "GITHUB_LIST_REPOSITORY_ISSUES-repo",
@@ -116,7 +116,7 @@ class GitHubAPIComponent(LCToolComponent):
             ],
         },
         "GITHUB_LIST_BRANCHES": {
-            "display_name": "List branches",
+            "display_name": "List Branches",
             "parameters": [
                 "GITHUB_LIST_BRANCHES-owner",
                 "GITHUB_LIST_BRANCHES-repo",
@@ -126,7 +126,7 @@ class GitHubAPIComponent(LCToolComponent):
             ],
         },
         "GITHUB_LIST_PULL_REQUESTS": {
-            "display_name": "List pull requests",
+            "display_name": "List Pull Requests",
             "parameters": [
                 "GITHUB_LIST_PULL_REQUESTS-owner",
                 "GITHUB_LIST_PULL_REQUESTS-repo",

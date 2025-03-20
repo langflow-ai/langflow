@@ -26,20 +26,20 @@ class GooglemeetAPIComponent(LCToolComponent):
     documentation: str = "https://docs.composio.dev"
 
     _display_to_enum_map = {
-        "Get Transcripts by Conference Record ID": "GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID",
-        "Get Conference Record by Space Name, Meeting Code, Start Time, End Time": "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET",  # noqa: E501
-        "Get Recordings by Conference Record ID": "GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID",
+        "Get Transcripts By Conference Record ID": "GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID",
+        "Get Conference Record By Space Name, Meeting Code, Start Time, End Time": "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET",  # noqa: E501
+        "Get Recordings By Conference Record ID": "GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID",
         "Create Meet": "GOOGLEMEET_CREATE_MEET",
         "Get Meet Details": "GOOGLEMEET_GET_MEET",
     }
 
     _actions_data: dict = {
         "GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID": {
-            "display_name": "Get Transcripts by Conference Record ID",
+            "display_name": "Get Transcripts By Conference Record ID",
             "parameters": ["GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id"],
         },
         "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET": {
-            "display_name": "Get Conference Record by Space Name, Meeting Code, Start Time, End Time",
+            "display_name": "Get Conference Record By Space Name, Meeting Code, Start Time, End Time",
             "parameters": [
                 "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-space_name",
                 "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-meeting_code",
@@ -48,7 +48,7 @@ class GooglemeetAPIComponent(LCToolComponent):
             ],
         },
         "GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID": {
-            "display_name": "Get Recordings by Conference Record ID",
+            "display_name": "Get Recordings By Conference Record ID",
             "parameters": ["GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id"],
         },
         "GOOGLEMEET_CREATE_MEET": {

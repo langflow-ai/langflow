@@ -29,8 +29,8 @@ class GooglecalendarAPIComponent(LCToolComponent):
 
     _display_to_enum_map = {
         "Update Google Event": "GOOGLECALENDAR_UPDATE_EVENT",
-        "Remove Attendee from Event": "GOOGLECALENDAR_REMOVE_ATTENDEE",
-        "Get Current Date and Time": "GOOGLECALENDAR_GET_CURRENT_DATE_TIME",
+        "Remove Attendee From Event": "GOOGLECALENDAR_REMOVE_ATTENDEE",
+        "Get Current Date And Time": "GOOGLECALENDAR_GET_CURRENT_DATE_TIME",
         "Quick Add Event": "GOOGLECALENDAR_QUICK_ADD",
         "List Google Calendars": "GOOGLECALENDAR_LIST_CALENDARS",
         "Find Event": "GOOGLECALENDAR_FIND_EVENT",
@@ -68,7 +68,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             ],
         },
         "GOOGLECALENDAR_REMOVE_ATTENDEE": {
-            "display_name": "Remove Attendee from Event",
+            "display_name": "Remove Attendee From Event",
             "parameters": [
                 "GOOGLECALENDAR_REMOVE_ATTENDEE-calendar_id",
                 "GOOGLECALENDAR_REMOVE_ATTENDEE-event_id",
@@ -76,7 +76,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             ],
         },
         "GOOGLECALENDAR_GET_CURRENT_DATE_TIME": {
-            "display_name": "Get Current Date and Time",
+            "display_name": "Get Current Date And Time",
             "parameters": ["GOOGLECALENDAR_GET_CURRENT_DATE_TIME-timezone"],
         },
         "GOOGLECALENDAR_QUICK_ADD": {
