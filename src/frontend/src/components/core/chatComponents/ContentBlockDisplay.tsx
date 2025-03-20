@@ -80,14 +80,16 @@ export function ContentBlockDisplay({
         >
           <div className="flex items-center gap-2 align-baseline">
             {headerIcon && (
-              <ForwardedIconComponent
-                name={headerIcon}
-                className={cn(
-                  "h-4 w-4",
-                  state !== "partial" && "text-status-green",
-                )}
-                strokeWidth={1.5}
-              />
+              <span data-testid="header-icon">
+                <ForwardedIconComponent
+                  name={headerIcon}
+                  className={cn(
+                    "h-4 w-4",
+                    state !== "partial" && "text-status-green",
+                  )}
+                  strokeWidth={1.5}
+                />
+              </span>
             )}
             <div className="relative h-6 overflow-hidden">
               <motion.div

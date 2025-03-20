@@ -143,7 +143,9 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
-  const { data: files } = useGetFilesV2();
+  const { data: files } = useGetFilesV2({
+    enabled: !!ENABLE_FILE_MANAGEMENT,
+  });
 
   const selectedFiles = (
     isList
