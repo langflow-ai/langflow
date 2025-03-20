@@ -5,7 +5,6 @@ test(
   "chat_io_teste",
   { tag: ["@release", "@workspace", "@development"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -59,9 +58,7 @@ test(
     await page.getByTestId("input-chat-playground").click();
     await page.getByTestId("input-chat-playground").fill("teste");
     await page.getByTestId("button-send").first().click();
-    const chat_input = await page
-      .getByTestId("chat-message-User-teste")
-      .textContent();
+    const chat_input = await page.getByTestId("div-chat-message").textContent();
 
     expect(chat_input).toBe("teste");
   },

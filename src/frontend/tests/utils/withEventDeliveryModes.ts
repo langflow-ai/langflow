@@ -5,6 +5,7 @@ type TestConfig = Parameters<typeof test>[1];
 
 /**
  * Wraps a test function to run it with both streaming and polling event delivery modes.
+ * Adds a 3-second delay between test runs to ensure proper separation.
  *
  * @param title The test title
  * @param config The test configuration (tags, etc)
@@ -17,8 +18,12 @@ export function withEventDeliveryModes(
 ) {
   const eventDeliveryModes = ["streaming", "polling"] as const;
 
-  for (const eventDelivery of eventDeliveryModes) {
+  for (const [index, eventDelivery] of eventDeliveryModes.entries()) {
     test(`${title} - ${eventDelivery}`, config, async ({ page }) => {
+      if (index === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 15000));
+      }
+
       // Intercept the config request and modify the event_delivery setting
       await page.route("**/api/v1/config", async (route) => {
         const response = await route.fetch();

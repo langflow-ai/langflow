@@ -92,6 +92,30 @@ withEventDeliveryModes(
 
     await page.waitForTimeout(2000);
 
+    let langflowCount = await page
+      .locator('[data-testid="langflow-0-option"]')
+      .count();
+
+    while (langflowCount === 0) {
+      await page.waitForTimeout(1000);
+      await page.getByTestId("icon-RefreshCcw").click();
+
+      const loadingOptions = page.getByText("Loading options...");
+      await loadingOptions.waitFor({ state: "visible", timeout: 30000 });
+
+      if (await loadingOptions.isVisible()) {
+        await expect(loadingOptions).toBeHidden({ timeout: 120000 });
+      }
+
+      await page.getByTestId("dropdown_str_database_name").nth(0).click();
+
+      await page.waitForTimeout(1000);
+
+      langflowCount = await page
+        .locator('[data-testid="langflow-0-option"]')
+        .count();
+    }
+
     await page.locator('[data-testid="langflow-0-option"]').nth(0).waitFor({
       timeout: 15000,
       state: "visible",
@@ -136,13 +160,44 @@ withEventDeliveryModes(
 
     await page.waitForTimeout(2000);
 
+    langflowCount = await page
+      .locator('[data-testid="langflow-0-option"]')
+      .count();
+
+    while (langflowCount === 0) {
+      await page.waitForTimeout(1000);
+      await page.getByTestId("icon-RefreshCcw").click();
+
+      const loadingOptions = page.getByText("Loading options...");
+      await loadingOptions.waitFor({ state: "visible", timeout: 30000 });
+
+      if (await loadingOptions.isVisible()) {
+        await expect(loadingOptions).toBeHidden({ timeout: 120000 });
+      }
+
+      await page.getByTestId("dropdown_str_database_name").nth(1).click();
+
+      await page.waitForTimeout(1000);
+
+      langflowCount = await page
+        .locator('[data-testid="langflow-0-option"]')
+        .count();
+    }
+
     await page.getByTestId("langflow-0-option").nth(0).click();
+
+    await page.waitForTimeout(2000);
+
+    const dropdowncount = await page
+      .locator('[data-testid="dropdown_str_collection_name"]')
+      .nth(1)
+      .count();
 
     await page
       .locator('[data-testid="dropdown_str_collection_name"]')
       .nth(1)
       .waitFor({
-        timeout: 15000,
+        timeout: 15000 * 3,
         state: "visible",
       });
 
@@ -185,7 +240,7 @@ withEventDeliveryModes(
 
     await page.getByText("Playground", { exact: true }).last().click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
+      timeout: 60000,
     });
     await page.getByTestId("input-chat-playground").last().fill("hello");
     await page.getByTestId("input-chat-playground").last().click();
@@ -209,7 +264,7 @@ withEventDeliveryModes(
     await page.getByRole("combobox").click();
     await page.getByLabel("Delete").click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
+      timeout: 60000,
     });
     await page.getByTestId("input-chat-playground").last().isVisible();
   },

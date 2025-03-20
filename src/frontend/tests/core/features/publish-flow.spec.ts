@@ -6,8 +6,6 @@ test(
   "user should be able to publish a flow",
   { tag: ["@release", "@workspace", "@api", "@development"] },
   async ({ page, context }) => {
-    test.skip(); //@TODO understand this behavior
-
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -35,8 +33,13 @@ test(
         await page.getByTestId("add-component-button-chat-input").click();
       });
 
+    await page.waitForTimeout(2000);
+
     await adjustScreenView(page);
     await page.getByTestId("publish-button").click();
+
+    await page.waitForTimeout(2000);
+
     await page.waitForSelector('[data-testid="shareable-playground"]', {
       timeout: 3000,
     });
@@ -47,8 +50,13 @@ test(
       ),
     ).resolves.toBeTruthy();
 
+    await page.waitForTimeout(2000);
+
     await page.getByTestId("publish-switch").click();
     const pagePromise = context.waitForEvent("page");
+
+    await page.waitForTimeout(2000);
+
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
     await newPage.waitForTimeout(3000);
@@ -73,6 +81,7 @@ test(
     });
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await page.goto(newUrl);
+    await page.waitForTimeout(2000);
     try {
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,
