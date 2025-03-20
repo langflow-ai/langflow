@@ -1,15 +1,15 @@
 from collections.abc import Sequence as SequenceABC
 from types import NoneType
-from typing import Union, List, Literal, Optional
+from typing import Literal, Union
 
 import pytest
+from langflow.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
+from langflow.io.schema import schema_to_langflow_inputs
 from langflow.schema.data import Data
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
-from pydantic import ValidationError, BaseModel, Field
-from langflow.inputs.inputs import MessageTextInput, BoolInput, DictInput, InputTypes, FloatInput, IntInput
-from langflow.io.schema import schema_to_langflow_inputs
+from pydantic import BaseModel, Field, ValidationError
 
 
 class TestInput:
@@ -185,29 +185,13 @@ class TestPostProcessType:
 def test_schema_to_langflow_inputs():
     # Define a test Pydantic model with various field types
     class TestSchema(BaseModel):
-        text_field: str = Field(
-            title="Custom Text Title",
-            description="A text field"
-        )
-        number_field: int = Field(
-            description="A number field"
-        )
-        optional_float: Optional[float] = Field(
-            default=3.14,
-            description="An optional float"
-        )
-        bool_field: bool = Field(
-            description="A boolean field"
-        )
-        dict_field: dict = Field(
-            description="A dictionary field"
-        )
-        list_field: List[str] = Field(
-            description="A list of strings"
-        )
-        literal_field: Literal["option1", "option2"] = Field(
-            description="A field with literal options"
-        )
+        text_field: str = Field(title="Custom Text Title", description="A text field")
+        number_field: int = Field(description="A number field")
+        optional_float: float | None = Field(default=3.14, description="An optional float")
+        bool_field: bool = Field(description="A boolean field")
+        dict_field: dict = Field(description="A dictionary field")
+        list_field: list[str] = Field(description="A list of strings")
+        literal_field: Literal["option1", "option2"] = Field(description="A field with literal options")
 
     # Convert schema to Langflow inputs
     inputs = schema_to_langflow_inputs(TestSchema)

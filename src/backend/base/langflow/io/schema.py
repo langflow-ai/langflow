@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING, Literal, Union
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field, create_model
 
-from langflow.inputs.inputs import FieldTypes, MessageTextInput, DictInput, BoolInput, FloatInput, IntInput
+from langflow.inputs.inputs import BoolInput, DictInput, FieldTypes, FloatInput, IntInput, MessageTextInput
 from langflow.schema.dotdict import dotdict
-from langflow.template import Input
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TEXT: str,
@@ -21,9 +20,9 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TAB: str,
 }
 
+from typing import get_args, get_origin
+
 from langflow.inputs.inputs import InputTypes
-from typing import get_origin, get_args, Literal
-from pydantic import BaseModel
 
 _convert_type_to_field_type = {
     str: MessageTextInput,
@@ -34,10 +33,9 @@ _convert_type_to_field_type = {
     list: MessageTextInput,
 }
 
+
 def schema_to_langflow_inputs(schema: type[BaseModel]) -> list["InputTypes"]:
-    """
-    Given a Pydantic schema, convert its fields to Langflow input definitions.
-    """
+    """Given a Pydantic schema, convert its fields to Langflow input definitions."""
     inputs = []
     for field_name, model_field in schema.model_fields.items():
         # Start with the field's annotation type

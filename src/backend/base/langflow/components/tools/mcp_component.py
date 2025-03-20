@@ -2,7 +2,6 @@ import asyncio
 import os
 from contextlib import AsyncExitStack
 
-import httpx
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -39,7 +38,7 @@ class MCPStdioClient:
                 args=command[1:],
                 env={"DEBUG": "true", "PATH": os.environ["PATH"]},
             )
-            
+
             # Use a new exit stack for this connection
             async with AsyncExitStack() as stack:
                 stdio_transport = await stack.enter_async_context(stdio_client(server_params))
@@ -47,11 +46,11 @@ class MCPStdioClient:
                 self.session = await stack.enter_async_context(ClientSession(self.stdio, self.write))
                 await self.session.initialize()
                 response = await self.session.list_tools()
-                
+
                 # Transfer context to instance exit stack
                 await stack.pop_all().aclose()
                 return response.tools
-                
+
         except Exception as e:
             msg = f"Error connecting to MCP server: {e}"
             raise ValueError(msg)
@@ -63,7 +62,6 @@ class MCPSseClient:
         self.sse = None
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-
 
     async def _connect_with_timeout(
         self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
@@ -103,7 +101,7 @@ class MCPSseClient:
 
 
 class MCPTools(Component):
-    schema_inputs: list[InputTypes]= []
+    schema_inputs: list[InputTypes] = []
     stdio_client = MCPStdioClient()
     sse_client = MCPSseClient()
     tools = []  # Will hold the list of available tools
@@ -131,7 +129,7 @@ class MCPTools(Component):
             info="Command for MCP stdio connection",
             value="uvx mcp-sse-shim@latest",
             show=True,  # Shown when mode is Stdio
-            #real_time_refresh=True,
+            # real_time_refresh=True,
             refresh_button=True,
         ),
         MessageTextInput(
@@ -140,7 +138,7 @@ class MCPTools(Component):
             info="URL for MCP SSE connection",
             value="http://localhost:7860/api/v1/mcp/sse",
             show=False,  # Shown when mode is SSE
-            #real_time_refresh=True,
+            # real_time_refresh=True,
             refresh_button=True,
         ),
         DropdownInput(
@@ -151,7 +149,7 @@ class MCPTools(Component):
             info="Select the tool to execute",
             show=True,
             required=True,
-            #real_time_refresh=True,
+            # real_time_refresh=True,
             refresh_button=True,
         ),
     ]
@@ -178,7 +176,7 @@ class MCPTools(Component):
             except Exception as e:
                 # Handle any errors during tool update
                 build_config["tool"]["options"] = []
-                msg = f"Failed to update tools: {str(e)}"
+                msg = f"Failed to update tools: {e!s}"
                 raise ValueError(msg)
         elif field_name == "tool":
             if len(self.tools) == 0:
@@ -213,7 +211,7 @@ class MCPTools(Component):
                     build_config[name] = input_dict
 
             except Exception as e:
-                logger.error(f"Error updating build config: {str(e)}")
+                logger.error(f"Error updating build config: {e!s}")
                 # Return original build_config on error
                 return build_config
 
