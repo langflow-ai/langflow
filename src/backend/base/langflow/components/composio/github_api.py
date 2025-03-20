@@ -413,12 +413,11 @@ class GitHubAPIComponent(LCToolComponent):
             info="A user that's mentioned in the issue.",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-labels",
             display_name="Labels",
             info="A list of comma separated label names. Example: `bug,ui,@high`",
             show=False,
-            is_list=True,
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-sort",
