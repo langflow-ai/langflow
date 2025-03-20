@@ -233,6 +233,9 @@ export function ParameterRenderComponent({
         return (
           <ConnectionComponent
             {...baseInputProps}
+            name={name}
+            nodeId={nodeId}
+            nodeClass={nodeClass}
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}

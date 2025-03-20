@@ -120,7 +120,6 @@ const ListSelectionComponent = ({
     onClose();
   }, [onClose]);
 
-  console.log(filteredList);
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="flex !w-auto w-fit min-w-[20vw] max-w-[50vw] flex-col">
