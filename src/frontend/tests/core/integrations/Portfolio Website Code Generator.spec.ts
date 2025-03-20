@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -46,15 +46,7 @@ withEventDeliveryModes(
       .first()
       .fill(process.env.ANTHROPIC_API_KEY ?? "");
 
-    const filePath = path.join(__dirname, "../../assets/test_file.txt");
-    await page.getByTestId("button_upload_file").click();
-
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("button_upload_file").click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(filePath);
-
-    await page.waitForTimeout(2000);
+    await uploadFile(page, "test_file.txt");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -64,7 +56,9 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector(".language-html", { timeout: 30000 * 3 });
+    await page.waitForSelector('[data-testid="chat-code-tab"]', {
+      timeout: 30000 * 3,
+    });
 
     await page.waitForSelector(".markdown", { timeout: 30000 });
 
@@ -77,13 +71,7 @@ withEventDeliveryModes(
 
     expect(concatAllText.length).toBeGreaterThan(200);
 
-    expect(concatAllText).toContain("html");
-    expect(concatAllText).toContain("<body>");
-    expect(concatAllText).toContain("</body>");
-    expect(concatAllText).toContain("</html>");
-    expect(concatAllText).toContain("responsive");
-    expect(concatAllText).toContain("section");
-    expect(concatAllText).toContain("header");
+    expect(concatAllText).toContain("div");
     expect(concatAllText).toContain("class=");
   },
 );

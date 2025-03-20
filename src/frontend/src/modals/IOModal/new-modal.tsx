@@ -144,6 +144,10 @@ export default function IOModal({
     ),
   );
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
+  const setCurrentSessionId = useUtilityStore(
+    (state) => state.setCurrentSessionId,
+  );
+
   const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
       mode: "union",
@@ -213,8 +217,10 @@ export default function IOModal({
       setSessionId(
         `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
       );
+      setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
+      setCurrentSessionId(visibleSession);
       if (selectedViewField?.type === "Session") {
         setSelectedViewField({
           id: visibleSession,

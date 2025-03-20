@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-QhsXW",
+            "id": "LoopComponent-Ayr6F",
             "name": "item",
             "output_types": [
               "Data"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-x6wkY",
+            "id": "ParseData-4kg7C",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-QhsXW{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-QhsXWœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-x6wkY{œfieldNameœ:œdataœ,œidœ:œParseData-x6wkYœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-Ayr6F{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-4kg7C{œfieldNameœ:œdataœ,œidœ:œParseData-4kg7Cœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LoopComponent-QhsXW",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-QhsXWœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-x6wkY",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-x6wkYœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "LoopComponent-Ayr6F",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ayr6Fœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-4kg7C",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-4kg7Cœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-x6wkY",
+            "id": "ParseData-4kg7C",
             "name": "text",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-uuAY6",
+            "id": "AnthropicModel-EIKEJ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-x6wkY{œdataTypeœ:œParseDataœ,œidœ:œParseData-x6wkYœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-uuAY6{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-uuAY6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseData-4kg7C{œdataTypeœ:œParseDataœ,œidœ:œParseData-4kg7Cœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-EIKEJ{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-EIKEJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParseData-x6wkY",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-x6wkYœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-uuAY6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-uuAY6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParseData-4kg7C",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-4kg7Cœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-EIKEJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-EIKEJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-uuAY6",
+            "id": "AnthropicModel-EIKEJ",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-9Kbcj",
+            "id": "MessagetoData-XJar4",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-AnthropicModel-uuAY6{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-uuAY6œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-9Kbcj{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-9Kbcjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-AnthropicModel-EIKEJ{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-EIKEJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-XJar4{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-XJar4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "AnthropicModel-uuAY6",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-uuAY6œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "MessagetoData-9Kbcj",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-9Kbcjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "AnthropicModel-EIKEJ",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-EIKEJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "MessagetoData-XJar4",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-XJar4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-9Kbcj",
+            "id": "MessagetoData-XJar4",
             "name": "data",
             "output_types": [
               "Data"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-QhsXW",
+            "id": "LoopComponent-Ayr6F",
             "name": "item",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "reactflow__edge-MessagetoData-9Kbcj{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-9Kbcjœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-QhsXW{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-QhsXWœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "id": "reactflow__edge-MessagetoData-XJar4{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-XJar4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-Ayr6F{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
-        "source": "MessagetoData-9Kbcj",
-        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-9Kbcjœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-QhsXW",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-QhsXWœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
+        "source": "MessagetoData-XJar4",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-XJar4œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-Ayr6F",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ayr6Fœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-QhsXW",
+            "id": "LoopComponent-Ayr6F",
             "name": "done",
             "output_types": [
               "Data"
@@ -127,19 +127,19 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-NpCtQ",
+            "id": "ParseData-jfscS",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-QhsXW{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-QhsXWœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-NpCtQ{œfieldNameœ:œdataœ,œidœ:œParseData-NpCtQœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-Ayr6F{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ayr6Fœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-jfscS{œfieldNameœ:œdataœ,œidœ:œParseData-jfscSœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LoopComponent-QhsXW",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-QhsXWœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-NpCtQ",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-NpCtQœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "LoopComponent-Ayr6F",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ayr6Fœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-jfscS",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-jfscSœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -147,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-NpCtQ",
+            "id": "ParseData-jfscS",
             "name": "text",
             "output_types": [
               "Message"
@@ -155,7 +155,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Uq5M0",
+            "id": "ChatOutput-B66b2",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -164,12 +164,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-NpCtQ{œdataTypeœ:œParseDataœ,œidœ:œParseData-NpCtQœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Uq5M0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Uq5M0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseData-jfscS{œdataTypeœ:œParseDataœ,œidœ:œParseData-jfscSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-B66b2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-B66b2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParseData-NpCtQ",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-NpCtQœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Uq5M0",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Uq5M0œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParseData-jfscS",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-jfscSœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-B66b2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-B66b2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-doR66",
+            "id": "ChatInput-2VCkW",
             "name": "message",
             "output_types": [
               "Message"
@@ -185,25 +185,27 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-Vwek5",
+            "id": "ArXivComponent-qDXvl",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-doR66{œdataTypeœ:œChatInputœ,œidœ:œChatInput-doR66œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-Vwek5{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-Vwek5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-2VCkW{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2VCkWœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-qDXvl{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-qDXvlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-doR66",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-doR66œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-Vwek5",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-Vwek5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-2VCkW",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-2VCkWœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-qDXvl",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-qDXvlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ArXivComponent",
-            "id": "ArXivComponent-Vwek5",
+            "id": "ArXivComponent-qDXvl",
             "name": "data",
             "output_types": [
               "Data"
@@ -211,24 +213,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-QhsXW",
+            "id": "LoopComponent-Ayr6F",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ArXivComponent-Vwek5{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-Vwek5œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-QhsXW{œfieldNameœ:œdataœ,œidœ:œLoopComponent-QhsXWœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "ArXivComponent-Vwek5",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-Vwek5œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-QhsXW",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-QhsXWœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ArXivComponent-qDXvl{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-qDXvlœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-Ayr6F{œfieldNameœ:œdataœ,œidœ:œLoopComponent-Ayr6Fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ArXivComponent-qDXvl",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-qDXvlœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-Ayr6F",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-Ayr6Fœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-Vwek5",
+          "id": "ArXivComponent-qDXvl",
           "node": {
             "base_classes": [
               "Data"
@@ -375,10 +378,10 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-Vwek5",
+        "id": "ArXivComponent-qDXvl",
         "measured": {
-          "height": 495,
-          "width": 360
+          "height": 443,
+          "width": 320
         },
         "position": {
           "x": 81.59312530546094,
@@ -389,7 +392,7 @@
       },
       {
         "data": {
-          "id": "LoopComponent-QhsXW",
+          "id": "LoopComponent-Ayr6F",
           "node": {
             "base_classes": [
               "Data"
@@ -492,10 +495,10 @@
           "type": "LoopComponent"
         },
         "dragging": false,
-        "id": "LoopComponent-QhsXW",
+        "id": "LoopComponent-Ayr6F",
         "measured": {
-          "height": 314,
-          "width": 360
+          "height": 280,
+          "width": 320
         },
         "position": {
           "x": 517.2087344858119,
@@ -506,7 +509,7 @@
       },
       {
         "data": {
-          "id": "ParseData-x6wkY",
+          "id": "ParseData-4kg7C",
           "node": {
             "base_classes": [
               "Data",
@@ -657,10 +660,10 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "id": "ParseData-x6wkY",
+        "id": "ParseData-4kg7C",
         "measured": {
-          "height": 383,
-          "width": 360
+          "height": 342,
+          "width": 320
         },
         "position": {
           "x": 996.5733307455723,
@@ -671,7 +674,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-uuAY6",
+          "id": "AnthropicModel-EIKEJ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -759,7 +762,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ANTHROPIC_API_KEY"
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
@@ -993,10 +996,10 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-uuAY6",
+        "id": "AnthropicModel-EIKEJ",
         "measured": {
-          "height": 896,
-          "width": 360
+          "height": 670,
+          "width": 320
         },
         "position": {
           "x": 1493.0259340837038,
@@ -1007,7 +1010,7 @@
       },
       {
         "data": {
-          "id": "MessagetoData-9Kbcj",
+          "id": "MessagetoData-XJar4",
           "node": {
             "base_classes": [
               "Data"
@@ -1098,10 +1101,10 @@
           "type": "MessagetoData"
         },
         "dragging": false,
-        "id": "MessagetoData-9Kbcj",
+        "id": "MessagetoData-XJar4",
         "measured": {
-          "height": 257,
-          "width": 360
+          "height": 230,
+          "width": 320
         },
         "position": {
           "x": 1863.8805295746977,
@@ -1112,7 +1115,7 @@
       },
       {
         "data": {
-          "id": "ParseData-NpCtQ",
+          "id": "ParseData-jfscS",
           "node": {
             "base_classes": [
               "Data",
@@ -1263,10 +1266,10 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "id": "ParseData-NpCtQ",
+        "id": "ParseData-jfscS",
         "measured": {
-          "height": 383,
-          "width": 360
+          "height": 342,
+          "width": 320
         },
         "position": {
           "x": 982.6945056277784,
@@ -1277,7 +1280,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-Uq5M0",
+          "id": "ChatOutput-B66b2",
           "node": {
             "base_classes": [
               "Message"
@@ -1572,10 +1575,10 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-Uq5M0",
+        "id": "ChatOutput-B66b2",
         "measured": {
-          "height": 74,
-          "width": 216
+          "height": 66,
+          "width": 192
         },
         "position": {
           "x": 1498.3739454769902,
@@ -1586,7 +1589,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-doR66",
+          "id": "ChatInput-2VCkW",
           "node": {
             "base_classes": [
               "Message"
@@ -1696,7 +1699,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -1736,6 +1739,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -1880,10 +1884,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-doR66",
+        "id": "ChatInput-2VCkW",
         "measured": {
-          "height": 74,
-          "width": 216
+          "height": 66,
+          "width": 192
         },
         "position": {
           "x": -235.49853728839307,
@@ -1894,7 +1898,7 @@
       },
       {
         "data": {
-          "id": "note-MMi4A",
+          "id": "note-yeBjr",
           "node": {
             "description": "### 💡 Add your Anthropic API key here 👇",
             "display_name": "",
@@ -1907,10 +1911,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-MMi4A",
+        "id": "note-yeBjr",
         "measured": {
           "height": 324,
-          "width": 361
+          "width": 358
         },
         "position": {
           "x": 1479.4278434913201,
@@ -1923,7 +1927,7 @@
       },
       {
         "data": {
-          "id": "note-CBAXQ",
+          "id": "note-Mkx31",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **Anthropic** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your Anthropic API key to the **Anthropic** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **Anthropic** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -1934,10 +1938,10 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-CBAXQ",
+        "id": "note-Mkx31",
         "measured": {
           "height": 647,
-          "width": 580
+          "width": 577
         },
         "position": {
           "x": -890.9006297459302,
@@ -1950,18 +1954,16 @@
       }
     ],
     "viewport": {
-      "x": 379.5589874665091,
-      "y": 421.54787373656177,
-      "zoom": 0.4567705571748025
+      "x": 437.2271770749776,
+      "y": 389.23678827947083,
+      "zoom": 0.42811620344860135
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
-  "endpoint_name": "search_loop",
-  "gradient": "3",
-  "icon": "Infinity",
-  "id": "a004bc07-f6ca-4a02-b8f8-7fb8ebaed7b0",
+  "endpoint_name": null,
+  "id": "aa7539cb-9c2e-4d25-b5df-c107a60591a1",
   "is_component": false,
-  "last_tested_version": "1.1.5",
+  "last_tested_version": "1.2.0",
   "name": "Research Translation Loop",
   "tags": [
     "chatbots",
