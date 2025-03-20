@@ -188,7 +188,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         "GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
         "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
     }
-    
+
     _list_variables = {
         "GOOGLECALENDAR_FIND_EVENT-event_types",
         "GOOGLECALENDAR_CREATE_EVENT-recurrence",
@@ -197,7 +197,6 @@ class GooglecalendarAPIComponent(LCToolComponent):
         "GOOGLECALENDAR_UPDATE_EVENT-recurrence",
         "GOOGLECALENDAR_UPDATE_EVENT-attendees",
     }
-
 
     inputs = [
         MessageTextInput(
