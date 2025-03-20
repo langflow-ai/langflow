@@ -104,7 +104,10 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page.getByTestId("handle-url-shownode-text-right").nth(0).click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-message-right")
+      .nth(0)
+      .click();
     await page.waitForTimeout(600);
 
     await page
@@ -129,7 +132,7 @@ test(
 
     // Connect dataframe output to second chat output
     await page
-      .getByTestId("handle-url-shownode-dataframe-right")
+      .getByTestId("handle-urlcomponent-shownode-dataframe-right")
       .nth(0)
       .click();
     await page.waitForTimeout(600);

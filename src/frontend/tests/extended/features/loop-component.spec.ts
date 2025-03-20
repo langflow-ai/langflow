@@ -116,7 +116,10 @@ test(
       .click();
 
     // URL -> Loop Data
-    await page.getByTestId("handle-url-shownode-data-right").first().click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .first()
+      .click();
     await page
       .getByTestId("handle-loopcomponent-shownode-data-left")
       .first()
