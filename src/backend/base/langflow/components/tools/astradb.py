@@ -1,8 +1,8 @@
 import os
 from typing import Any
-from dateutil.parser import parse
 
 from astrapy import Collection, DataAPIClient, Database
+from dateutil.parser import parse
 from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool, Tool
 
@@ -86,8 +86,8 @@ class AstraDBToolComponent(LCToolComponent):
                     "name": "attribute_name",
                     "display_name": "Attribute Name",
                     "type": "str",
-                    "description":  "Specify the attribute name to be filtered on the collection. "
-                                    "Leave empty if the attribute name is the same as the name of the field.",
+                    "description": "Specify the attribute name to be filtered on the collection. "
+                    "Leave empty if the attribute name is the same as the name of the field.",
                     "default": "",
                     "edit_mode": EditMode.INLINE,
                 },
@@ -308,8 +308,9 @@ class AstraDBToolComponent(LCToolComponent):
                 if filter_setting["operator"] == "$exists":
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: True}
                 elif filter_setting["operator"] in ["$in", "$nin", "$all"]:
-                    filters[filter_key] = {**filters.get(filter_key, {}),
-                        filter_setting["operator"]: value.split(",") if isinstance(value, str) else value
+                    filters[filter_key] = {
+                        **filters.get(filter_key, {}),
+                        filter_setting["operator"]: value.split(",") if isinstance(value, str) else value,
                     }
                 elif filter_setting["is_date"] == True:
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: parse(value)}

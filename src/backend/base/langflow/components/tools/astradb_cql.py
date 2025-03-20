@@ -85,8 +85,8 @@ class AstraDBCQLToolComponent(LCToolComponent):
                     "name": "field_name",
                     "display_name": "Field Name",
                     "type": "str",
-                    "description":  "Specify the column name to be filtered on the table. "
-                                    "Leave empty if the attribute name is the same as the name of the field.",
+                    "description": "Specify the column name to be filtered on the table. "
+                    "Leave empty if the attribute name is the same as the name of the field.",
                     "default": "",
                     "edit_mode": EditMode.INLINE,
                 },
@@ -180,19 +180,19 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
             # Check if the value looks like a date and format it
             # Astra REST API expects timestamps in format YYYY-MM-DDTHH:MI:SS.000Z
-            if param["is_timestamp"] == True: # noqa: E712
+            if param["is_timestamp"] == True:  # noqa: E712
                 date_obj = parser.parse(field_value)
                 field_value = date_obj.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
             if param["operator"] == "$exists":
                 where[field_name] = {**where.get(field_name, {}), param["operator"]: True}
             elif param["operator"] in ["$in", "$nin", "$all"]:
-                where[field_name]  = {**where.get(field_name, {}),
-                    param["operator"]: field_value.split(",") if isinstance(field_value, str) else field_value
+                where[field_name] = {
+                    **where.get(field_name, {}),
+                    param["operator"]: field_value.split(",") if isinstance(field_value, str) else field_value,
                 }
             else:
                 where[field_name] = {**where.get(field_name, {}), param["operator"]: field_value}
-
 
         url = f"{astra_url}?page-size={self.number_of_results}"
         url += f"&where={json.dumps(where)}"
@@ -223,7 +223,6 @@ class AstraDBCQLToolComponent(LCToolComponent):
                     args[param["name"]] = (str, Field(description=param["description"]))
                 else:
                     args[param["name"]] = (str | None, Field(description=param["description"], default=None))
-
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
