@@ -432,7 +432,7 @@ class SlackAPIComponent(LCToolComponent):
         BoolInput(
             name="SLACK_FETCH_CONVERSATION_HISTORY-inclusive",
             display_name="Inclusive",
-            info="Include messages with latest or oldest timestamp in results only when either timestamp is specified. ",
+            info="Include messages with latest or oldest timestamp in results only when either timestamp is specified. ",  # noqa: E501
             show=False,
         ),
         IntInput(
@@ -772,14 +772,14 @@ class SlackAPIComponent(LCToolComponent):
             raise ValueError(msg) from e
 
     async def _get_tools(self) -> list[Tool]:
-        DISABLED_TOOLS = [ # Disabled temporarily
+        disabled_tools = [  # Disabled temporarily
             "SLACK_ADD_REACTION_TO_AN_ITEM",
             "SLACK_FETCH_CONVERSATION_HISTORY",
-            "SLACK_REMOVE_REACTION_FROM_ITEM"
+            "SLACK_REMOVE_REACTION_FROM_ITEM",
         ]
         toolset = self._build_wrapper()
         tools = toolset.get_tools(actions=self._actions_data.keys())
-        tools = [tool for tool in tools if tool.name not in DISABLED_TOOLS]
+        tools = [tool for tool in tools if tool.name not in disabled_tools]
         for tool in tools:
             tool.tags = [tool.name]  # Assigning tags directly
         return tools
