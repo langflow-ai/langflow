@@ -14,6 +14,7 @@ from langflow.inputs import (
     MessageTextInput,
     SecretStrInput,
     StrInput,
+    NestedDictInput
 )
 from langflow.io import Output
 from langflow.schema.message import Message
@@ -157,13 +158,13 @@ class GooglesheetsAPIComponent(LCToolComponent):
             info="The starting cell for the update range, specified in A1 notation (e.g., 'A1', 'B2'). The update will extend from this cell to the right and down, based on the provided values.",  # noqa: E501
             show=False,
         ),
-        StrInput(
+        NestedDictInput(
             name="GOOGLESHEETS_BATCH_UPDATE-values",
-            display_name="Values",
+            display_name="Row Column Values",
             info="A 2D list representing the values to update. Each inner list corresponds to a row in the spreadsheet.",  # noqa: E501
-            show=False,
             is_list=True,
             required=True,
+            show=False,
         ),
         BoolInput(
             name="GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
@@ -313,10 +314,12 @@ class GooglesheetsAPIComponent(LCToolComponent):
         for field in all_fields:
             build_config[field]["show"] = False
 
-            if field in self._bool_variables:
-                build_config[field]["value"] = False
-            else:
-                build_config[field]["value"] = ""
+            # if field in self._bool_variables: # TODO: Remove this once the issue is fixed
+            #     build_config[field]["value"] = False
+            # elif field == "GOOGLESHEETS_BATCH_UPDATE-values":
+            #     build_config[field]["value"] = []
+            # else:
+            #     build_config[field]["value"] = ""
 
         action_key = self._display_to_enum_map.get(field_value)
 
