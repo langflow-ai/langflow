@@ -401,10 +401,10 @@ def print_banner(host: str, port: int) -> None:
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     panel_content_array = [title, *styled_notices, info_text]
-    if os.environ.get('DO_NOT_TRACK', "") != "true":
+    if os.environ.get("DO_NOT_TRACK", "") != "true":
         panel_content_array.append(telemetry_text)
     panel_content_array.append(access_link)
-    
+
     panel_content = "\n\n".join(panel_content_array)
     panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
     rprint(panel)
