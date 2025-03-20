@@ -16,6 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 
 export default function PublishDropdown() {
@@ -29,7 +30,7 @@ export default function PublishDropdown() {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const isPublished = currentFlow?.access_type === "public";
+  const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openApiModal, setOpenApiModal] = useState(false);
@@ -38,7 +39,7 @@ export default function PublishDropdown() {
     mutateAsync(
       {
         id: flowId ?? "",
-        access_type: checked ? "private" : "public",
+        access_type: checked ? "PRIVATE" : "PUBLIC",
       },
       {
         onSuccess: (updatedFlow) => {
@@ -138,9 +139,10 @@ export default function PublishDropdown() {
             }
           >
             <div
-              className={
-                !hasIO ? "cursor-not-allowed" : "" + "flex items-center"
-              }
+              className={cn(
+                !hasIO ? "cursor-not-allowed" : "",
+                "flex items-center",
+              )}
             >
               <DropdownMenuItem
                 data-testid="shareable-playground"
@@ -167,6 +169,7 @@ export default function PublishDropdown() {
                   data-testid="publish-switch"
                   className="scale-[85%]"
                   checked={isPublished}
+                  disabled={!hasIO}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -176,19 +179,6 @@ export default function PublishDropdown() {
               </div>
             </div>
           </ShadTooltipComponent>
-          {/* <DropdownMenuItem className="deploy-dropdown-item group">
-            <div className="group-hover:bg-accent">
-              <IconComponent
-                name="FileCode2"
-                className={`${groupStyle} icon-size mr-2`}
-              />
-              <span>Langflow SDK</span>
-              <IconComponent
-                name="ExternalLink"
-                className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
-              />
-            </div>
-          </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
