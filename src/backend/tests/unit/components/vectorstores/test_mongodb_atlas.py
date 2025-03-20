@@ -54,9 +54,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             },
         ]
 
-    def __create_search_index(
-        self, vector_store: MongoDBAtlasVectorSearch, default_kwargs: dict[str, Any]
-    ) -> None:
+    def __create_search_index(self, vector_store: MongoDBAtlasVectorSearch, default_kwargs: dict[str, Any]) -> None:
         """Create a vector search index if it doesn't exist."""
         try:
             index_definition = SearchIndexModel(
@@ -115,9 +113,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
     ) -> None:
         """Test creating a collection with data."""
         test_texts = ["test data 1", "test data 2", "something completely different"]
-        default_kwargs["ingest_data"] = [
-            Data(data={"text": text}) for text in test_texts
-        ]
+        default_kwargs["ingest_data"] = [Data(data={"text": text}) for text in test_texts]
 
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
@@ -140,9 +136,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             "Machine learning models process data",
             "The lazy dog sleeps all day long",
         ]
-        default_kwargs["ingest_data"] = [
-            Data(data={"text": text, "metadata": {}}) for text in test_data
-        ]
+        default_kwargs["ingest_data"] = [Data(data={"text": text, "metadata": {}}) for text in test_data]
         default_kwargs["number_of_results"] = 2
 
         # Create and initialize the component
