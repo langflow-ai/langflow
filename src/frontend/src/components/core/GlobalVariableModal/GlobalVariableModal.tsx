@@ -25,6 +25,7 @@ export default function GlobalVariableModal({
   children,
   asChild,
   initialData,
+  referenceField,
   open: myOpen,
   setOpen: mySetOpen,
   disabled = false,
@@ -32,6 +33,7 @@ export default function GlobalVariableModal({
   children?: JSX.Element;
   asChild?: boolean;
   initialData?: GlobalVariable;
+  referenceField?: string;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
   disabled?: boolean;
@@ -63,6 +65,9 @@ export default function GlobalVariableModal({
       setAvailableFields(
         sortByName(fields.concat(initialData?.default_fields ?? [])),
       );
+      if (referenceField && fields.includes(referenceField)) {
+        setFields([referenceField]);
+      }
     } else {
       setAvailableFields(["System", "System Message", "System Prompt"]);
     }
@@ -110,7 +115,7 @@ export default function GlobalVariableModal({
   }
 
   function submitForm() {
-    if (!initialData) {
+    if (!initialData || !initialData.id) {
       handleSaveVariable();
     } else {
       updateVariable({
