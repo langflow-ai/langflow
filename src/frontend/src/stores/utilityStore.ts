@@ -40,4 +40,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   webhookPollingInterval: 5000,
   setWebhookPollingInterval: (webhookPollingInterval: number) =>
     set({ webhookPollingInterval }),
+  currentSessionId: "",
+  setCurrentSessionId: (sessionId: string) =>
+    set({ currentSessionId: sessionId }),
 }));
