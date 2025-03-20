@@ -4,6 +4,8 @@ from .gmail_api import GmailAPIComponent
 from .googlecalendar_api import GooglecalendarAPIComponent
 from .googlemeet_api import GooglemeetAPIComponent
 from .googlesheets_api import GooglesheetsAPIComponent
+from .slack_api import SlackAPIComponent
+
 
 __all__ = [
     "ComposioAPIComponent",
@@ -12,4 +14,5 @@ __all__ = [
     "GooglecalendarAPIComponent",
     "GooglemeetAPIComponent",
     "GooglesheetsAPIComponent",
+    "SlackAPIComponent"
 ]

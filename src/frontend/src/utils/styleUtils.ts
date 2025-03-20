@@ -563,6 +563,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Slack", name: "slack", icon: "Slack" },
   { display_name: "Github", name: "github", icon: "Github" },
   { display_name: "Googlemeet", name: "googlemeet", icon: "Googlemeet" },
   { display_name: "Googlesheets", name: "googlesheets", icon: "Googlesheets" },
@@ -657,6 +658,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Slack: SvgSlackIcon,
   Github: GithubIcon,
   Googlemeet: GooglemeetIcon,
   Googlesheets: GooglesheetsIcon,
