@@ -1,13 +1,15 @@
 from collections.abc import Sequence as SequenceABC
 from types import NoneType
-from typing import Union
+from typing import Union, List, Literal, Optional
 
 import pytest
 from langflow.schema.data import Data
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel, Field
+from langflow.inputs.inputs import MessageTextInput, BoolInput, DictInput, InputTypes, FloatInput, IntInput
+from langflow.io.schema import schema_to_langflow_inputs
 
 
 class TestInput:
@@ -178,3 +180,92 @@ class TestPostProcessType:
             pass
 
         assert set(post_process_type(Union[CustomType, int])) == {CustomType, int}  # noqa: UP007
+
+
+def test_schema_to_langflow_inputs():
+    # Define a test Pydantic model with various field types
+    class TestSchema(BaseModel):
+        text_field: str = Field(
+            title="Custom Text Title",
+            description="A text field"
+        )
+        number_field: int = Field(
+            description="A number field"
+        )
+        optional_float: Optional[float] = Field(
+            default=3.14,
+            description="An optional float"
+        )
+        bool_field: bool = Field(
+            description="A boolean field"
+        )
+        dict_field: dict = Field(
+            description="A dictionary field"
+        )
+        list_field: List[str] = Field(
+            description="A list of strings"
+        )
+        literal_field: Literal["option1", "option2"] = Field(
+            description="A field with literal options"
+        )
+
+    # Convert schema to Langflow inputs
+    inputs = schema_to_langflow_inputs(TestSchema)
+
+    # Verify the number of inputs matches the schema fields
+    assert len(inputs) == 7
+
+    # Helper function to find input by name
+    def find_input(name: str) -> InputTypes:
+        return next(input for input in inputs if input.name == name)
+
+    # Test text field
+    text_input = find_input("text_field")
+    assert text_input.display_name == "Custom Text Title"
+    assert text_input.info == "A text field"
+    assert not text_input.required  # Note: in Pydantic v2, required is inverted
+    assert isinstance(text_input, MessageTextInput)  # Check the instance type instead of field_type
+
+    # Test number field
+    number_input = find_input("number_field")
+    assert number_input.display_name == "Number Field"
+    assert number_input.info == "A number field"
+    assert isinstance(number_input.field_type, type(IntInput)) or isinstance(number_input.field_type, type(FloatInput))
+
+    # Test optional float field
+    float_input = find_input("optional_float")
+    assert float_input.required  # Optional fields are not required
+    assert float_input.value == 3.14
+    assert isinstance(float_input.field_type, type(MessageTextInput))
+
+    # Test boolean field
+    bool_input = find_input("bool_field")
+    assert isinstance(bool_input.field_type, type(BoolInput))
+
+    # Test dictionary field
+    dict_input = find_input("dict_field")
+    assert isinstance(dict_input.field_type, type(DictInput))
+
+    # Test list field
+    list_input = find_input("list_field")
+    assert list_input.is_list is True
+    assert isinstance(list_input.field_type, type(MessageTextInput))
+
+    # Test literal field
+    literal_input = find_input("literal_field")
+    assert literal_input.options == ["option1", "option2"]
+    assert isinstance(literal_input.field_type, type(MessageTextInput))
+
+
+def test_schema_to_langflow_inputs_invalid_type():
+    # Define a schema with an unsupported type
+    class CustomType:
+        pass
+
+    class InvalidSchema(BaseModel):
+        model_config = {"arbitrary_types_allowed": True}  # Add this line
+        invalid_field: CustomType
+
+    # Test that attempting to convert an unsupported type raises TypeError
+    with pytest.raises(TypeError, match="Unsupported field type:"):
+        schema_to_langflow_inputs(InvalidSchema)
