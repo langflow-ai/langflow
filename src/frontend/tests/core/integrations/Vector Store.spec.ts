@@ -3,12 +3,13 @@ import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 // Add this line to declare Node.js global variables
 declare const process: any;
 declare const __dirname: string;
 
-test(
+withEventDeliveryModes(
   "Vector Store RAG",
   { tag: ["@release", "@starter-projects", "@development"] },
   async ({ page }) => {
@@ -29,7 +30,7 @@ test(
       .first()
       .click();
     await page.waitForSelector('[title="fit view"]', {
-      timeout: 100000,
+      timeout: 20000,
     });
 
     await page.getByTestId("fit_view").click();
@@ -97,7 +98,7 @@ test(
         .nth(0)
         .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
-      await page.waitForTimeout(10000);
+      await page.waitForTimeout(2000);
 
       await page
         .locator('[data-testid="dropdown_str_database_name"]')
@@ -113,11 +114,11 @@ test(
         .count();
     }
 
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("dropdown_str_database_name").nth(0).click();
 
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(2000);
 
     let langflowCount = await page
       .locator('[data-testid="langflow-0-option"]')
@@ -151,7 +152,7 @@ test(
         state: "visible",
       });
 
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("dropdown_str_collection_name").nth(0).click();
 
@@ -186,7 +187,7 @@ test(
         .nth(0)
         .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
-      await page.waitForTimeout(10000);
+      await page.waitForTimeout(2000);
 
       await page
         .locator('[data-testid="dropdown_str_database_name"]')
@@ -204,7 +205,7 @@ test(
 
     await page.getByTestId("dropdown_str_database_name").nth(1).click();
 
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(2000);
 
     langflowCount = await page
       .locator('[data-testid="langflow-0-option"]')
@@ -232,7 +233,7 @@ test(
 
     await page.getByTestId("langflow-0-option").nth(0).click();
 
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(2000);
 
     await page
       .locator('[data-testid="dropdown_str_collection_name"]')
@@ -244,7 +245,7 @@ test(
 
     await page.getByTestId("dropdown_str_collection_name").nth(1).click();
 
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(2000);
 
     await page.locator('[data-testid="fe_tests-0-option"]').nth(0).waitFor({
       timeout: 15000,
@@ -309,4 +310,5 @@ test(
     });
     await page.getByTestId("input-chat-playground").last().isVisible();
   },
+  { timeout: 60000 },
 );
