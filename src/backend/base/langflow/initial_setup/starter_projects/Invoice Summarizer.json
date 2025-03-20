@@ -25,9 +25,9 @@
         "id": "reactflow__edge-Prompt-jqHUa{œdataTypeœ:œPromptœ,œidœ:œPrompt-jqHUaœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-YDpm0{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-jqHUa",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-jqHUaœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jqHUaœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-YDpm0",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-needle-jWdIc{œdataTypeœ:œneedleœ,œidœ:œneedle-jWdIcœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-YDpm0{œfieldNameœ:œtoolsœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "needle-jWdIc",
-        "sourceHandle": "{œdataTypeœ:œneedleœ,œidœ:œneedle-jWdIcœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-jWdIcœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-YDpm0",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-ChatInput-r9vuH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-r9vuHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-YDpm0{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-r9vuH",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-r9vuHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-r9vuHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-YDpm0",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-Agent-YDpm0{œdataTypeœ:œAgentœ,œidœ:œAgent-YDpm0œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O7uUo{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O7uUoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-YDpm0",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-YDpm0œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-YDpm0œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-O7uUo",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O7uUoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-O7uUoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -685,7 +685,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000007568328950209746,
+            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "code": {
