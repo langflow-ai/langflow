@@ -1,4 +1,4 @@
-from .conversation_history import SlackConversationsHistoryComponent
+from .conversations_history import SlackConversationsHistoryComponent
 
 __all__ = [
     "SlackConversationsHistoryComponent",
