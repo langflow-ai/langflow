@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
-import { Input } from "@/components/ui/input";
+import { cn } from "@/utils/utils";
 import { useCallback, useMemo, useState } from "react";
 
 // Define a union type for selection mode
@@ -23,23 +23,25 @@ const ListItem = ({
   item,
   isSelected,
   onClick,
+  className,
 }: {
   item: any;
   isSelected: boolean;
   onClick: () => void;
+  className?: string;
 }) => (
   <Button
     key={item.id}
     unstyled
     size="sm"
-    className="w-full py-3"
+    className={cn("w-full py-3 pr-3", className)}
     onClick={onClick}
   >
     <div className="flex items-center gap-2">
       {item.icon && (
         <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
       )}
-      <span className="font-semibold">{item.name}</span>
+      <span className="truncate font-semibold">{item.name}</span>
       {"metaData" in item && item.metaData && (
         <span className="text-gray-500">{item.metaData}</span>
       )}
@@ -109,7 +111,7 @@ const ListSelectionComponent = ({
 
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
-      <DialogContent>
+      <DialogContent className="flex !w-auto w-fit min-w-[20vw] max-w-[50vw] flex-col">
         <div className="flex items-center justify-between">
           <SearchBarComponent
             searchCategories={searchCategories}
@@ -126,7 +128,7 @@ const ListSelectionComponent = ({
           </Button>
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex max-h-[80vh] flex-col gap-1 overflow-y-auto">
           {filteredList.length > 0 ? (
             filteredList.map((item) => (
               <ListItem
