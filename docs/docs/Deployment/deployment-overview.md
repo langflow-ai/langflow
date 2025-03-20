@@ -14,7 +14,7 @@ More specific instructions are available in the [Docker](/deployment-docker) and
 
 ## Langflow deployment architecture
 
-Langflow can be deployed as an **IDE** or as a **runtime**.
+Langflow can be deployed as an [IDE](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) or as a [runtime](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-runtime).
 
 The **IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE image. To deploy the Langflow IDE, see [Docker](/deployment-docker).
 
@@ -43,8 +43,6 @@ COPY ./flows/*.json /app/flows/
 ```
 
 An example [Dockerfile](https://github.com/langflow-ai/langflow-helm-charts/blob/main/examples/langflow-runtime/docker/Dockerfile) for bundling flows is hosted in the Langflow Helm Charts repository.
-
-For a step-by-step example, see Build Applications in Langflow in the Platform guide.
 
 For more on building the Langflow docker image and pushing it to Docker Hub, see [Package your flow as a docker image](/deployment-docker#package-your-flow-as-a-docker-image).
 
