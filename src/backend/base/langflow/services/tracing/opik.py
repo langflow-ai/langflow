@@ -31,11 +31,21 @@ def get_distributed_trace_headers(trace_id, span_id):
 class OpikTracer(BaseTracer):
     flow_id: str
 
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    def __init__(
+        self,
+        trace_name: str,
+        trace_type: str,
+        project_name: str,
+        trace_id: UUID,
+        user_id: str | None = None,
+        session_id: str | None = None,
+    ):
         self._project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.opik_trace_id = None
+        self.user_id = user_id
+        self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = {}
 
@@ -60,11 +70,13 @@ class OpikTracer(BaseTracer):
             metadata = {
                 "langflow_trace_id": trace_id,
                 "langflow_trace_name": self.trace_name,
-                "create_from": "langflow",
+                "user_id": self.user_id,
+                "created_from": "langflow",
             }
             self.trace = TraceData(
                 name=self.flow_id,
                 metadata=metadata,
+                thread_id=self.session_id,
             )
             self.opik_trace_id = self.trace.id
         except ImportError:
