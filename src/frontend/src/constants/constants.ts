@@ -654,6 +654,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "table",
   "link",
   "slider",
+  "tab",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
