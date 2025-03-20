@@ -79,7 +79,7 @@ dependencies = [
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
     "langchain-anthropic==0.3.0",
-    "langchain-astradb==0.5.2",
+    "langchain-astradb==0.5.3",
     "langchain-openai==0.2.12",
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",

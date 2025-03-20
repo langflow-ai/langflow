@@ -4013,16 +4013,16 @@ wheels = [
 
 [[package]]
 name = "langchain-astradb"
-version = "0.5.2"
+version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astrapy" },
     { name = "langchain-community" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/0d/fbb4e5d04d6da0327781de39c6409f32b1c2c1eb9004dac9c638753f3d6d/langchain_astradb-0.5.2.tar.gz", hash = "sha256:ff70c70ec72d6bce7f0fdad5ac561d1c6d1372100fc1e62f135010418ff9a203", size = 50321 }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/0e/6fc78ecc3af34cd044f97c5fd14ebde318920cdb9d2a0106e1ec194c42c9/langchain_astradb-0.5.3.tar.gz", hash = "sha256:c9b05d6288d645416c9e867cb86d90d8ff15a679f50941dd59ffdf18d7dc1d27", size = 52093 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/4e/6a92293669504831a34661aeb897ac5475af1320a39019c9a76ed1215436/langchain_astradb-0.5.2-py3-none-any.whl", hash = "sha256:da1d58f82825bc9505fce300fa6acac59abffd41b4ff435523c81d8dda049e9f", size = 56711 },
+    { url = "https://files.pythonhosted.org/packages/94/93/469c6ef15198148df9309c7426a657c457d63e24ebb4af7182f49b5949d5/langchain_astradb-0.5.3-py3-none-any.whl", hash = "sha256:42b1baf690270d160caf90b6cbdb82e43e4ab224f3b2b6ffcb57bcd7d23bf265", size = 58672 },
 ]
 
 [[package]]
@@ -4627,7 +4627,7 @@ requires-dist = [
     { name = "kubernetes", specifier = "==31.0.0" },
     { name = "langchain", specifier = "==0.3.10" },
     { name = "langchain-anthropic", specifier = "==0.3.0" },
-    { name = "langchain-astradb", specifier = "==0.5.2" },
+    { name = "langchain-astradb", specifier = "==0.5.3" },
     { name = "langchain-aws", specifier = "==0.2.7" },
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
