@@ -6,7 +6,6 @@ from .googlemeet_api import GooglemeetAPIComponent
 from .googlesheets_api import GooglesheetsAPIComponent
 from .slack_api import SlackAPIComponent
 
-
 __all__ = [
     "ComposioAPIComponent",
     "GitHubAPIComponent",
@@ -14,5 +13,5 @@ __all__ = [
     "GooglecalendarAPIComponent",
     "GooglemeetAPIComponent",
     "GooglesheetsAPIComponent",
-    "SlackAPIComponent"
+    "SlackAPIComponent",
 ]
