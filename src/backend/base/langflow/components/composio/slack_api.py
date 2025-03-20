@@ -28,14 +28,14 @@ class SlackAPIComponent(LCToolComponent):
     documentation: str = "https://docs.composio.dev"
 
     _display_to_enum_map = {
-        "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM",
+        # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
         "List users endpoint": "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
         "List conversations endpoint": "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
         "Update slack chat message attributes": "SLACK_UPDATES_A_SLACK_MESSAGE",
         "Post message to channel": "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
         "Search messages endpoint": "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
-        "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY",
-        "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM",
+        # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
+        # "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM", # Disabled temporarily
         "Schedule message in chat": "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
         "Add reminder for user": "SLACK_CREATE_A_REMINDER",
     }
@@ -772,8 +772,14 @@ class SlackAPIComponent(LCToolComponent):
             raise ValueError(msg) from e
 
     async def _get_tools(self) -> list[Tool]:
+        DISABLED_TOOLS = [ # Disabled temporarily
+            "SLACK_ADD_REACTION_TO_AN_ITEM",
+            "SLACK_FETCH_CONVERSATION_HISTORY",
+            "SLACK_REMOVE_REACTION_FROM_ITEM"
+        ]
         toolset = self._build_wrapper()
         tools = toolset.get_tools(actions=self._actions_data.keys())
+        tools = [tool for tool in tools if tool.name not in DISABLED_TOOLS]
         for tool in tools:
             tool.tags = [tool.name]  # Assigning tags directly
         return tools
