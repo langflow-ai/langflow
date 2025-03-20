@@ -787,7 +787,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             build_config[field]["show"] = False
 
             if field in self._bool_variables:
-                build_config[field]["value"] = False
+                build_config[field]["value"] = None
             else:
                 build_config[field]["value"] = ""
 
