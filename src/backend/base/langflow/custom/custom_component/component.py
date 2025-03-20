@@ -971,7 +971,7 @@ class Component(CustomComponent):
         return (output for output in self._outputs_map.values() if self._should_process_output(output))
 
     async def _get_output_result(self, output):
-        if output.cache and output.value != UNDEFINED:
+        if output.cache and output.value != UNDEFINED and self.enabled_output_cache:
             return output.value
 
         if output.method is None:

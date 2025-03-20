@@ -48,6 +48,7 @@ class CustomComponent(BaseComponent):
         user_id (Optional[Union[UUID, str]]): The user ID associated with the custom component.
         status (Optional[Any]): The status of the custom component.
         _tree (Optional[dict]): The code tree of the custom component.
+        enabled_output_cache (Optional[bool]): The output_cache controller in the _get_output_result() function of the component.
     """
 
     # True constants that should be shared (using ClassVar)
@@ -61,6 +62,8 @@ class CustomComponent(BaseComponent):
     """The description of the component. Defaults to None."""
     icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
+    enabled_output_cache: bool = True
+    """The output_cache controller in the _get_output_result() function of the component. Defaults to True."""
 
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.
