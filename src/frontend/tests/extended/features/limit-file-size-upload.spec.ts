@@ -84,7 +84,7 @@ test(
 
     await expect(
       page.getByText(
-        `The file size is too large. Please select a file smaller than ${maxFileSizeUpload}MB`,
+        `The file size is too large. Please select a file smaller than ${(maxFileSizeUpload * 1024).toFixed(2)} KB`,
       ),
     ).toBeVisible();
   },
