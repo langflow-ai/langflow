@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeAll(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 7000));
+});
+
+test.afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 7000));
+});
+
 test(
   "should see general profile gradient",
   { tag: ["@release"] },
@@ -29,7 +37,6 @@ test(
   { tag: ["@release", "@workspace", "@api"] },
 
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
     const randomName = Math.random().toString(36).substring(2);
     const randomName2 = Math.random().toString(36).substring(2);
     const randomName3 = Math.random().toString(36).substring(2);
