@@ -215,6 +215,8 @@ test(
       ).isVisible(),
     );
 
+    await page.waitForTimeout(2000);
+
     await awaitBootstrapTest(page, { skipGoto: true });
 
     await page.getByTestId("side_nav_options_all-templates").click();
