@@ -1,13 +1,13 @@
 ---
 title: Memory
-slug: /platform-memory
+slug: /memory
 ---
 
 The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database located at `langflow/src/backend/base/langflow/langflow.db`.
 
 ## Configure external memory
 
-To replace the default Langflow SQLite database with another database, modify the following environment variables and start Langflow with them.
+To replace the default Langflow SQLite database with another database, modify the `LANGFLOW_DATABASE_URL` and start Langflow with this value.
 
 ```
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
@@ -27,9 +27,9 @@ LANGFLOW_DB_CONNECT_TIMEOUT=20
 - `pool_size`: Maximum number of database connections to keep in the pool (default: 20)
 - `max_overflow`: Maximum number of connections that can be created beyond the pool_size (default: 30)
 - `pool_timeout`: Number of seconds to wait before timing out on getting a connection from the pool (default: 30)
-- `pool_pre_ping`: If true, the pool will test connections for liveness upon each checkout (default: true)
+- `pool_pre_ping`: If true, the pool tests connections for liveness upon each checkout (default: true)
 - `pool_recycle`: Number of seconds after which a connection is automatically recycled (default: 1800, or 30 minutes)
-- `echo`: If true, SQL queries will be logged for debugging purposes (default: false)
+- `echo`: If true, SQL queries are logged for debugging purposes (default: false)
 - `LANGFLOW_DB_CONNECT_TIMEOUT`: Maximum number of seconds to wait when establishing a new database connection (default: 20)
 
 ## Cache memory

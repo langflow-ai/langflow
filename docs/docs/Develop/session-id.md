@@ -1,6 +1,6 @@
 ---
 title: Session ID
-slug: /platform-session-id
+slug: /session-id
 ---
 
 Session ID is a unique identifier for client/server connections. A single session equals the duration of a client's connection to a server.
@@ -28,15 +28,13 @@ curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
 }'
 ```
 
-The `my_custom_session_value` value will be used in components that accept it, and the stored messages from this flow will be stored in `langflow.db` with their respective `session_id` values.
+The `my_custom_session_value` value will be used in components that accept it, and the stored messages from this flow are stored in `langflow.db` with their respective `session_id` values.
 
 ## Retrieval of messages from memory by session ID
 
-The default memory component helper can access the default langflow.db sqlite database, or an external database if you've configured one. 
+Add a [Message store](/components-helpers#message-store) component to a flow to access the default `langflow.db` database. The component accepts `sessionID` as a filter parameter, and will use the session ID value from upstream automatically to retrieve message history by session ID from storage.
 
-The component accepts `sessionID` as a filter parameter, and will use the session ID value from upstream automatically to retrieve message history by session ID from storage.
+Messages can be retrieved by `session_id` from the `/monitor` endpoint in the API. For more information, see the [API examples](https://docs.langflow.org/api-reference-api-examples#get-messages).
 
-Messages can also be retrieved by `session_id` from the /monitor endpoint in the API.
-
-For more information, see the [API examples](https://docs.langflow.org/api-reference-api-examples#get-messages).
+For an example of session ID in action, see [Use Session IDs in Langflow](https://www.youtube.com/watch?v=nJiF_eF21MY).
 

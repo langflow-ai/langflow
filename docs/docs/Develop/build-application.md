@@ -1,6 +1,6 @@
 ---
-title: Build applications in Langflow
-slug: /platform-build-application
+title: Build an application in Langflow
+slug: /build-application
 ---
 
 This guide walks you through the process of building and deploying an application using Langflow.

@@ -1,6 +1,6 @@
 ---
 title: Logging
-slug: /platform-logging
+slug: /logging
 ---
 
 Langflow uses the `loguru` library for logging.
