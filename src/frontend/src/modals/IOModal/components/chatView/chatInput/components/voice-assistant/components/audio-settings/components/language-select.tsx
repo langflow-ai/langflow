@@ -41,7 +41,7 @@ const LanguageSelect = ({
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
           <SelectGroup>
-            {allLanguages.map((lang) => (
+            {allLanguages?.map((lang) => (
               <SelectItem key={lang?.value} value={lang?.value}>
                 <div className="max-w-[220px] truncate text-left">
                   {lang?.name}
