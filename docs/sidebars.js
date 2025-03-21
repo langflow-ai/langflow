@@ -147,6 +147,7 @@ module.exports = {
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
+        "Integrations/integrations-opik",
         {
           type: "doc",
           id: "Integrations/integrations-mcp",
