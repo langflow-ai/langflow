@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Tza35",
+            "id": "ChatInput-Enwwh",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "NovitaModel-NPPoo",
+            "id": "NovitaModel-20MWu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Tza35{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Tza35œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-NPPoo{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-NPPooœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Enwwh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Enwwhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-20MWu{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Tza35",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Tza35œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "NovitaModel-NPPoo",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-NPPooœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Enwwh",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Enwwhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "NovitaModel-20MWu",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-20MWuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-lo2oI",
+            "id": "Prompt-YubZ1",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "NovitaModel-NPPoo",
+            "id": "NovitaModel-20MWu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-lo2oI{œdataTypeœ:œPromptœ,œidœ:œPrompt-lo2oIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-NPPoo{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-NPPooœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-YubZ1{œdataTypeœ:œPromptœ,œidœ:œPrompt-YubZ1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-20MWu{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-lo2oI",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-lo2oIœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "NovitaModel-NPPoo",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-NPPooœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-YubZ1",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-YubZ1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "NovitaModel-20MWu",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-20MWuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "NovitaModel",
-            "id": "NovitaModel-NPPoo",
+            "id": "NovitaModel-20MWu",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-G6tol",
+            "id": "ChatOutput-N3tYJ",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,18 +80,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-NovitaModel-NPPoo{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-NPPooœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-G6tol{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-G6tolœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-NovitaModel-20MWu{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-20MWuœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-N3tYJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N3tYJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "NovitaModel-NPPoo",
-        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-NPPooœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-G6tol",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-G6tolœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "NovitaModel-20MWu",
+        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-20MWuœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-N3tYJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N3tYJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-Tza35",
+          "id": "ChatInput-Enwwh",
           "node": {
             "base_classes": [
               "Message"
@@ -201,7 +201,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -241,6 +241,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -385,7 +386,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Tza35",
+        "id": "ChatInput-Enwwh",
         "measured": {
           "height": 66,
           "width": 192
@@ -399,7 +400,7 @@
       },
       {
         "data": {
-          "id": "Prompt-lo2oI",
+          "id": "Prompt-YubZ1",
           "node": {
             "base_classes": [
               "Message"
@@ -514,9 +515,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-lo2oI",
+        "id": "Prompt-YubZ1",
         "measured": {
-          "height": 203,
+          "height": 278,
           "width": 320
         },
         "position": {
@@ -528,7 +529,7 @@
       },
       {
         "data": {
-          "id": "NovitaModel-NPPoo",
+          "id": "NovitaModel-20MWu",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -603,7 +604,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -612,7 +613,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "NOVITA_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -809,7 +810,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -884,21 +885,21 @@
           "type": "NovitaModel"
         },
         "dragging": false,
-        "id": "NovitaModel-NPPoo",
+        "id": "NovitaModel-20MWu",
         "measured": {
-          "height": 671,
+          "height": 632,
           "width": 320
         },
         "position": {
           "x": 840.6904825863304,
           "y": 28.607467331181716
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-G6tol",
+          "id": "ChatOutput-N3tYJ",
           "node": {
             "base_classes": [
               "Message"
@@ -1193,7 +1194,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-G6tol",
+        "id": "ChatOutput-N3tYJ",
         "measured": {
           "height": 66,
           "width": 192
@@ -1207,7 +1208,7 @@
       },
       {
         "data": {
-          "id": "note-u4rse",
+          "id": "note-MFDQt",
           "node": {
             "description": "# Diet analysis\n\nAnalyze and score dietary health with a [NovitaAI](https://novita.ai/docs/guides/introduction) LLM. \n\n## Prerequisites\n\n* A [NovitaAI API Key](https://novita.ai/settings/key-management)\n\n## Quickstart\n\n1. Add your **NovitaAI API Key** to the **Novita AI** agent.\n2. In the **Chat input** component, enter your diet for the day.\n3. The **Novita AI** analyzes your diet with the **Prompt**, and outputs its analysis to **Chat output**.\n4. Try different models with the **Model Name** menu.\n\n",
             "display_name": "",
@@ -1218,7 +1219,7 @@
         },
         "dragging": false,
         "height": 636,
-        "id": "note-u4rse",
+        "id": "note-MFDQt",
         "measured": {
           "height": 636,
           "width": 325
@@ -1234,14 +1235,14 @@
       }
     ],
     "viewport": {
-      "x": 188.5810308950804,
-      "y": 326.70291895230537,
-      "zoom": 0.7310399087047124
+      "x": 93.52021572674903,
+      "y": 210.3952364478577,
+      "zoom": 0.8640597928279287
     }
   },
   "description": "Enter your daily food intake (food/grams) to receive dietary advice!",
   "endpoint_name": null,
-  "id": "9bee0aca-0816-4afe-a4a5-64088e40dd74",
+  "id": "5616e60d-d21f-4465-83c4-d8d120e075d8",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Diet Analysis",

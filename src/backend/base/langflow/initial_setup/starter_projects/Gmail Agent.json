@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-fifot",
+            "id": "ChatInput-auIvg",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-5rqMu",
+            "id": "Agent-gCLrf",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-fifot{œdataTypeœ:œChatInputœ,œidœ:œChatInput-fifotœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-5rqMu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-5rqMuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-auIvg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-auIvgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-gCLrf{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-fifot",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-fifotœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-5rqMu",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-5rqMuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-auIvg",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-auIvgœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-gCLrf",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-gCLrfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-5rqMu",
+            "id": "Agent-gCLrf",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-mXpv2",
+            "id": "ChatOutput-8WiQm",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-5rqMu{œdataTypeœ:œAgentœ,œidœ:œAgent-5rqMuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mXpv2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mXpv2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-gCLrf{œdataTypeœ:œAgentœ,œidœ:œAgent-gCLrfœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8WiQm{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8WiQmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-5rqMu",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-5rqMuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-mXpv2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mXpv2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-gCLrf",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-gCLrfœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-8WiQm",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8WiQmœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ComposioAPI",
-            "id": "ComposioAPI-Z0Iiy",
+            "id": "ComposioAPI-Tdreq",
             "name": "tools",
             "output_types": [
               "Tool"
@@ -73,24 +73,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-5rqMu",
+            "id": "Agent-gCLrf",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ComposioAPI-Z0Iiy{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-Z0Iiyœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-5rqMu{œfieldNameœ:œtoolsœ,œidœ:œAgent-5rqMuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ComposioAPI-Z0Iiy",
-        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-Z0Iiyœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-5rqMu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-5rqMuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ComposioAPI-Tdreq{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-Tdreqœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-gCLrf{œfieldNameœ:œtoolsœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ComposioAPI-Tdreq",
+        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-Tdreqœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-gCLrf",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-gCLrfœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Agent-5rqMu",
+          "id": "Agent-gCLrf",
           "node": {
             "base_classes": [
               "Message"
@@ -742,7 +743,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-5rqMu",
+        "id": "Agent-gCLrf",
         "measured": {
           "height": 624,
           "width": 320
@@ -756,7 +757,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-fifot",
+          "id": "ChatInput-auIvg",
           "node": {
             "base_classes": [
               "Message"
@@ -869,7 +870,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -909,6 +910,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -1053,7 +1055,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-fifot",
+        "id": "ChatInput-auIvg",
         "measured": {
           "height": 66,
           "width": 192
@@ -1067,7 +1069,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-mXpv2",
+          "id": "ChatOutput-8WiQm",
           "node": {
             "base_classes": [
               "Message"
@@ -1365,7 +1367,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-mXpv2",
+        "id": "ChatOutput-8WiQm",
         "measured": {
           "height": 66,
           "width": 192
@@ -1379,7 +1381,7 @@
       },
       {
         "data": {
-          "id": "note-Oh8JB",
+          "id": "note-y0nez",
           "node": {
             "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the App Names field\n   - Click the refresh button next to the App Name\n   - Follow the Gmail authentication link\n   - After authenticating, click refresh again\n   - Verify that authentication status shows as successful\n\n3. Select Actions\n   - Default actions (pre-selected):\n     - GMAIL_SEND_EMAIL: Send emails directly\n     - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select additional actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
             "display_name": "",
@@ -1390,7 +1392,7 @@
         },
         "dragging": false,
         "height": 842,
-        "id": "note-Oh8JB",
+        "id": "note-y0nez",
         "measured": {
           "height": 842,
           "width": 395
@@ -1408,7 +1410,7 @@
         "data": {
           "description": "Use Composio toolset to run actions with your agent",
           "display_name": "Composio Tools",
-          "id": "ComposioAPI-Z0Iiy",
+          "id": "ComposioAPI-Tdreq",
           "node": {
             "base_classes": [
               "Tool"
@@ -1445,6 +1447,7 @@
                 "hidden": null,
                 "method": "build_tool",
                 "name": "tools",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -1794,7 +1797,7 @@
           "type": "ComposioAPI"
         },
         "dragging": false,
-        "id": "ComposioAPI-Z0Iiy",
+        "id": "ComposioAPI-Tdreq",
         "measured": {
           "height": 497,
           "width": 320
@@ -1803,20 +1806,21 @@
           "x": -137.53986902236176,
           "y": 20.325147658297382
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 568.8302643946312,
-      "y": 91.93195183355544,
-      "zoom": 0.7104297128050097
+      "x": 666.3549315745112,
+      "y": 178.32327136900147,
+      "zoom": 0.8590936972080208
     }
   },
   "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
   "endpoint_name": null,
-  "id": "0473161e-ca7e-413c-9113-e98a142313ed",
+  "id": "db962555-dbb0-477f-85cc-536c68b32ee8",
   "is_component": false,
+  "last_tested_version": "1.2.0",
   "name": "Gmail Agent",
   "tags": [
     "agents"
