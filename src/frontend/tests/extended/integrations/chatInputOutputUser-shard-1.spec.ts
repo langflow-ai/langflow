@@ -97,12 +97,17 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
+    await page.getByTestId("fit_view").click();
+
     // Fill URL input
     await page
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page.getByTestId("handle-url-shownode-text-right").nth(0).click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-message-right")
+      .nth(0)
+      .click();
     await page.waitForTimeout(600);
 
     await page
@@ -127,7 +132,7 @@ test(
 
     // Connect dataframe output to second chat output
     await page
-      .getByTestId("handle-url-shownode-dataframe-right")
+      .getByTestId("handle-urlcomponent-shownode-dataframe-right")
       .nth(0)
       .click();
     await page.waitForTimeout(600);
@@ -181,6 +186,8 @@ test(
     await dataEdge.click();
     await page.keyboard.press("Backspace");
     await page.waitForTimeout(600);
+
+    await page.waitForTimeout(5000);
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
