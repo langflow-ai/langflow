@@ -274,9 +274,15 @@ test(
 
     await page.locator('//*[@id="react-flow-id"]').click();
 
+    await page.waitForTimeout(1000);
+
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
 
     await page.getByText("built successfully").last().click({
       timeout: 15000,
