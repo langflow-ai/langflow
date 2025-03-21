@@ -97,51 +97,105 @@ class ComposioAPIComponent(LCToolComponent):
 
         # Handle the click of the Tool Name connect button
         if field_name == "tool_name" and field_value:
-            # Initialize the Composio ToolSet with your API key
-            toolset = ComposioToolSet(api_key=self.api_key)
+            # If it's a dictionary, we need to do validation
+            if isinstance(field_value, dict):
+                toolset = ComposioToolSet(api_key=self.api_key)
+                connected_apps = [app for app in toolset.get_connected_accounts() if app.status == "ACTIVE"]
 
-            # Get the entity (e.g., "default" for your user)
-            entity = toolset.get_entity(id=self.entity_id)
+                # Get the unique list of appName from the connected apps
+                connected_app_names = [app.appName.lower() for app in connected_apps]
 
-            # Initiate a GitHub connection and get the redirect URL
-            connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))
+                # If the current field value is a dictionary, it means the user has selected a tool
+                if "validate" in field_value:
+                    # Check if the selected tool is connected
+                    check_app = field_value["validate"].lower()
 
-            # Get the index of the selected tool in the list of options
-            selected_tool_index = next(
-                (ind for ind, tool in enumerate(build_config["tool_name"]["options"]) if tool["name"] == field_value),
-                None,
-            )
+                    # If the tool selected is NOT what we are validating, return the build config
+                    if check_app != self.tool_name.lower():
+                        # Set the helper text and helper text metadata field of the actions now
+                        build_config["actions"]["helper_text"] = "Please connect before selecting tools."
+                        build_config["actions"]["helper_text_metadata"] = {
+                            "icon": "OctagonAlert",
+                            "variant": "destructive"
+                        }
 
-            # Print the direct HTTP link for authentication
-            build_config["tool_name"]["options"][selected_tool_index]["link"] = connection_request.redirectUrl
+                        return build_config
 
-            # Set the helper text and helper text metadata field of the actions now
-            build_config["actions"]["helper_text"] = "Successfully Authenticated! Select an action."
-            build_config["actions"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
+                    if check_app not in connected_app_names:
+                        return build_config
 
-        if field_name == "use_case" or (field_name == "tool_name" and field_value):
-            toolset = ComposioToolSet(api_key=self.api_key)
-            connected_apps = [app for app in toolset.get_connected_accounts() if app.status == "ACTIVE"]
+                    # Get the index of the selected tool in the list of options
+                    selected_tool_index = next(
+                        (
+                            ind for ind, tool in enumerate(build_config["tool_name"]["options"])
+                            if tool["name"] == field_value["validate"]
+                        ),
+                        None,
+                    )
 
-            # Get the list of actions available
-            all_actions = list(Action.all())
-            authenticated_actions = sorted(
-                [
-                    action
-                    for action in all_actions
-                    if action.app.lower() in [app.appName.lower() for app in connected_apps]
-                    and action.app.lower() == self.tool_name.lower()
-                ],
-                key=lambda x: x.name,
-            )
+                    # Set the link to be the text 'validated'
+                    build_config["tool_name"]["options"][selected_tool_index]["link"] = "validated"
 
-            # Return the list of action names
-            build_config["actions"]["options"] = [
-                {
-                    "name": action.name,
+                    # Set the helper text and helper text metadata field of the actions now
+                    build_config["actions"]["helper_text"] = ""
+                    build_config["actions"]["helper_text_metadata"] = {
+                        "icon": "Check",
+                        "variant": "success"
+                    }
+                else:
+                    return build_config
+
+                # Get the list of actions available
+                all_actions = list(Action.all())
+                authenticated_actions = sorted(
+                    [
+                        action
+                        for action in all_actions
+                        if action.app.lower() in [app.appName.lower() for app in connected_apps]
+                        and action.app.lower() == self.tool_name.lower()
+                    ],
+                    key=lambda x: x.name,
+                )
+
+                # Return the list of action names
+                build_config["actions"]["options"] = [
+                    {
+                        "name": action.name,
+                    }
+                    for action in authenticated_actions
+                ]
+            else:
+                # Initialize the Composio ToolSet with your API key
+                toolset = ComposioToolSet(api_key=self.api_key)
+
+                # Get the entity (e.g., "default" for your user)
+                entity = toolset.get_entity(id=self.entity_id)
+
+                # Initiate a GitHub connection and get the redirect URL
+                connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))
+
+                # Get the index of the selected tool in the list of options
+                selected_tool_index = next(
+                    (
+                        ind for ind, tool in enumerate(build_config["tool_name"]["options"])
+                        if tool["name"] == field_value
+                    ),
+                    None,
+                )
+
+                # Print the direct HTTP link for authentication
+                build_config["tool_name"]["options"][selected_tool_index]["link"] = connection_request.redirectUrl
+
+                # Set the helper text and helper text metadata field of the actions now
+                build_config["actions"]["helper_text"] = "Please connect before selecting tools."
+                build_config["actions"]["helper_text_metadata"] = {
+                    "icon": "OctagonAlert",
+                    "variant": "destructive"
                 }
-                for action in authenticated_actions
-            ]
+
+                # Reset the list of actions selected too
+                build_config["actions"]["options"] = []
+                build_config["actions"]["value"] = ""
 
         return build_config
 
