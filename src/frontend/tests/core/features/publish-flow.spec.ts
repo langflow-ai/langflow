@@ -28,7 +28,10 @@ test(
       .getByTestId("inputsChat Input")
       .hover({ timeout: 3000 })
       .then(async () => {
-        await page.getByTestId("add-component-button-chat-input").click();
+        await page
+          .getByTestId("add-component-button-chat-input")
+          .last()
+          .click();
       });
 
     await page.waitForTimeout(2000);

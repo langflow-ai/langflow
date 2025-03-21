@@ -23,7 +23,7 @@ test(
       .getByTestId("modelsOpenAI")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-openai").click();
+        await page.getByTestId("add-component-button-openai").last().click();
       });
 
     await page.getByTestId("fit_view").click();
