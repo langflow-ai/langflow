@@ -16,7 +16,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -37,7 +37,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -99,6 +99,7 @@ jobs:
             # If input suites were not provided, determine based on changes
             if [[ "$SUITES" == "[]" ]]; then
               echo "No input suites provided - determining from changes"
+              SUITES='[]'  # Ensure we start with a valid JSON array
               TAGS=()
               # Add suites and tags based on changed files
               if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
@@ -126,6 +127,11 @@ jobs:
                 TAGS+=("@database")
                 echo "Added database suite"
               fi
+              if [[ "${{ steps.filter.outputs.development }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["development"]')
+                TAGS+=("@development")
+                echo "Added development suite"
+              fi
 
               # Create grep pattern if we have tags
               if [ ${#TAGS[@]} -gt 0 ]; then
@@ -135,6 +141,21 @@ jobs:
               fi
             else
               # Process input suites to tags
+              # First ensure SUITES is valid JSON
+              if ! echo "$SUITES" | jq -e . > /dev/null 2>&1; then
+                echo "Warning: Input suites is not valid JSON, attempting to fix"
+                # Try to fix common issues like missing quotes
+                if [[ "$SUITES" == "[development]" ]]; then
+                  SUITES='["development"]'
+                elif [[ "$SUITES" =~ ^\[(.*)\]$ ]]; then
+                  # Extract items and add quotes
+                  ITEMS="${BASH_REMATCH[1]}"
+                  QUOTED_ITEMS=$(echo "$ITEMS" | sed 's/\([^,]*\)/"\1"/g')
+                  SUITES="[$QUOTED_ITEMS]"
+                fi
+                echo "Fixed suites: $SUITES"
+              fi
+              
               TAGS=()
               if echo "$SUITES" | jq -e 'contains(["components"])' > /dev/null; then
                 TAGS+=("@components")
@@ -150,6 +171,9 @@ jobs:
               fi
               if echo "$SUITES" | jq -e 'contains(["database"])' > /dev/null; then
                 TAGS+=("@database")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["development"])' > /dev/null; then
+                TAGS+=("@development")
               fi
 
               if [ ${#TAGS[@]} -gt 0 ]; then
@@ -168,6 +192,7 @@ jobs:
           # Ensure proper JSON formatting for matrix output
           echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
+          echo "suites=$SUITES" >> $GITHUB_OUTPUT
 
       - name: Setup Node ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4

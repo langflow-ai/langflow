@@ -47,6 +47,8 @@ export type InputComponentType = {
   nodeStyle?: boolean;
   isToolMode?: boolean;
   popoverWidth?: string;
+  commandWidth?: string;
+  blockAddNewGlobalVariable?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -535,6 +537,7 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => void;
+  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {
@@ -595,7 +598,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
   clampDescription?: number;
 };
 
@@ -622,6 +625,7 @@ export type chatMessagePropsType = {
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type genericModalPropsType = {
@@ -679,6 +683,7 @@ export type IOModalPropsType = {
   isPlayground?: boolean;
   cleanOnClose?: boolean;
   canvasOpen?: boolean;
+  playgroundPage?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -796,6 +801,7 @@ export type chatViewProps = {
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type IOFileInputProps = {

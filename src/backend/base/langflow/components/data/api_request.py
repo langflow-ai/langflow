@@ -26,8 +26,7 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
+from langflow.schema import Data, DataFrame, Message, dotdict
 
 
 class APIRequestComponent(Component):
@@ -155,7 +154,9 @@ class APIRequestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="make_requests"),
+        Output(display_name="Data", name="data", method="as_data"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Message", name="message", method="as_message"),
     ]
 
     def _parse_json_value(self, value: Any) -> Any:
@@ -452,7 +453,12 @@ class APIRequestComponent(Component):
                     self.log("Failed to decode JSON response")
                     result = response.text.encode("utf-8")
 
-            metadata.update({"result": result})
+            # If result is a dictionary, merge it with metadata
+            if isinstance(result, dict):
+                metadata.update(result)
+            else:
+                # If result is not a dict, store it as 'data'
+                metadata["data"] = result
 
             if include_httpx_metadata:
                 metadata.update(
@@ -526,7 +532,7 @@ class APIRequestComponent(Component):
         urls = [self.add_query_params(url, query_params) for url in urls]
 
         async with httpx.AsyncClient() as client:
-            results = await asyncio.gather(
+            return await asyncio.gather(
                 *[
                     self.make_request(
                         client,
@@ -542,8 +548,6 @@ class APIRequestComponent(Component):
                     for u, rec in zip(urls, bodies, strict=False)
                 ]
             )
-        self.status = results
-        return results
 
     async def _response_info(
         self, response: httpx.Response, *, with_file_path: bool = False
@@ -641,3 +645,31 @@ class APIRequestComponent(Component):
                 return {}  # Return empty dictionary instead of None
             return processed_headers
         return {}
+
+    async def as_data(self) -> Data:
+        """Convert the API response data into a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the API response data.
+        """
+        data = await self.make_requests()
+        dicts = {"output": [d.data for d in data]}
+        return Data(**dicts)
+
+    async def as_dataframe(self) -> DataFrame:
+        """Convert the API response data into a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the API response data.
+        """
+        data = await self.make_requests()
+        return DataFrame(data)
+
+    async def as_message(self) -> Message:
+        """Convert the API response data into a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the API response data.
+        """
+        data = await self.as_data()
+        return Message(text=str(data))

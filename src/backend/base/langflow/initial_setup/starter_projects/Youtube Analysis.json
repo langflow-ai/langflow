@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-5DgSV",
+            "id": "YouTubeCommentsComponent-1B3Fv",
             "name": "comments",
             "output_types": [
               "DataFrame"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-s2QTv",
+            "id": "BatchRunComponent-gNH2h",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeCommentsComponent-5DgSV{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-5DgSVœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-s2QTv{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-s2QTvœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-1B3Fv{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-1B3Fvœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-gNH2h{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-gNH2hœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-5DgSV",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-5DgSVœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "BatchRunComponent-s2QTv",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-s2QTvœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-1B3Fv",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-1B3Fvœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "BatchRunComponent-gNH2h",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-gNH2hœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ZVATe",
+            "id": "OpenAIModel-05xLQ",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "model",
-            "id": "BatchRunComponent-s2QTv",
+            "id": "BatchRunComponent-gNH2h",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-ZVATe{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ZVATeœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-s2QTv{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-s2QTvœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-05xLQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-05xLQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-gNH2h{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-gNH2hœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-ZVATe",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ZVATeœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "BatchRunComponent-s2QTv",
-        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-s2QTvœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-05xLQ",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-05xLQœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "BatchRunComponent-gNH2h",
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-gNH2hœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-s2QTv",
+            "id": "BatchRunComponent-gNH2h",
             "name": "batch_results",
             "output_types": [
               "DataFrame"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "ParseDataFrame-pJJ7Z",
+            "id": "ParseDataFrame-OIHSx",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-BatchRunComponent-s2QTv{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-s2QTvœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-pJJ7Z{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-pJJ7Zœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-gNH2h{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-gNH2hœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-OIHSx{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-OIHSxœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-s2QTv",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-s2QTvœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParseDataFrame-pJJ7Z",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-pJJ7Zœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-gNH2h",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-gNH2hœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParseDataFrame-OIHSx",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-OIHSxœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseDataFrame",
-            "id": "ParseDataFrame-pJJ7Z",
+            "id": "ParseDataFrame-OIHSx",
             "name": "text",
             "output_types": [
               "Message"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-Kn7x9",
+            "id": "Prompt-aWbxe",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseDataFrame-pJJ7Z{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-pJJ7Zœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Kn7x9{œfieldNameœ:œanalysisœ,œidœ:œPrompt-Kn7x9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseDataFrame-OIHSx{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-OIHSxœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aWbxe{œfieldNameœ:œanalysisœ,œidœ:œPrompt-aWbxeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParseDataFrame-pJJ7Z",
-        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-pJJ7Zœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Kn7x9",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-Kn7x9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParseDataFrame-OIHSx",
+        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-OIHSxœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-aWbxe",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-aWbxeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Kn7x9",
+            "id": "Prompt-aWbxe",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -127,19 +127,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Px7Zt",
+            "id": "Agent-3FPSt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-Kn7x9{œdataTypeœ:œPromptœ,œidœ:œPrompt-Kn7x9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-Px7Zt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Px7Ztœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-aWbxe{œdataTypeœ:œPromptœ,œidœ:œPrompt-aWbxeœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-3FPSt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3FPStœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-Kn7x9",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Kn7x9œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Px7Zt",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Px7Ztœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-aWbxe",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aWbxeœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-3FPSt",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3FPStœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -147,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Px7Zt",
+            "id": "Agent-3FPSt",
             "name": "response",
             "output_types": [
               "Message"
@@ -155,7 +155,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-W5R97",
+            "id": "ChatOutput-i5hlZ",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -164,12 +164,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Px7Zt{œdataTypeœ:œAgentœ,œidœ:œAgent-Px7Ztœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-W5R97{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-W5R97œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-3FPSt{œdataTypeœ:œAgentœ,œidœ:œAgent-3FPStœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-i5hlZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-i5hlZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Px7Zt",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Px7Ztœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-W5R97",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-W5R97œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-3FPSt",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3FPStœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-i5hlZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-i5hlZœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-ppAJD",
+            "id": "YouTubeTranscripts-nSvJC",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Px7Zt",
+            "id": "Agent-3FPSt",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscripts-ppAJD{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-ppAJDœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Px7Zt{œfieldNameœ:œtoolsœ,œidœ:œAgent-Px7Ztœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-nSvJC{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-nSvJCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3FPSt{œfieldNameœ:œtoolsœ,œidœ:œAgent-3FPStœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-ppAJD",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-ppAJDœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Px7Zt",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Px7Ztœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YouTubeTranscripts-nSvJC",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-nSvJCœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3FPSt",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3FPStœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -205,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Aprv5",
+            "id": "ChatInput-aeyrx",
             "name": "message",
             "output_types": [
               "Message"
@@ -213,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "input_text",
-            "id": "ConditionalRouter-NmX80",
+            "id": "ConditionalRouter-DNDns",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Aprv5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Aprv5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-NmX80{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-NmX80œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-aeyrx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aeyrxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-DNDns{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-DNDnsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Aprv5",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Aprv5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-NmX80",
-        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-NmX80œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-aeyrx",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aeyrxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ConditionalRouter-DNDns",
+        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-DNDnsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -233,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Aprv5",
+            "id": "ChatInput-aeyrx",
             "name": "message",
             "output_types": [
               "Message"
@@ -241,19 +241,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "ConditionalRouter-NmX80",
+            "id": "ConditionalRouter-DNDns",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Aprv5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Aprv5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-NmX80{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-NmX80œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-aeyrx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aeyrxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-DNDns{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-DNDnsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Aprv5",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Aprv5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-NmX80",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-NmX80œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-aeyrx",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aeyrxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ConditionalRouter-DNDns",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-DNDnsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -261,7 +261,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-NmX80",
+            "id": "ConditionalRouter-DNDns",
             "name": "true_result",
             "output_types": [
               "Message"
@@ -269,19 +269,19 @@
           },
           "targetHandle": {
             "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-5DgSV",
+            "id": "YouTubeCommentsComponent-1B3Fv",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ConditionalRouter-NmX80{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-NmX80œ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-5DgSV{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-5DgSVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ConditionalRouter-DNDns{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-DNDnsœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-1B3Fv{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-1B3Fvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ConditionalRouter-NmX80",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-NmX80œ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-5DgSV",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-5DgSVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ConditionalRouter-DNDns",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-DNDnsœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-1B3Fv",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-1B3Fvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -289,7 +289,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-NmX80",
+            "id": "ConditionalRouter-DNDns",
             "name": "true_result",
             "output_types": [
               "Message"
@@ -297,25 +297,25 @@
           },
           "targetHandle": {
             "fieldName": "url",
-            "id": "Prompt-Kn7x9",
+            "id": "Prompt-aWbxe",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ConditionalRouter-NmX80{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-NmX80œ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-Kn7x9{œfieldNameœ:œurlœ,œidœ:œPrompt-Kn7x9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ConditionalRouter-DNDns{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-DNDnsœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-aWbxe{œfieldNameœ:œurlœ,œidœ:œPrompt-aWbxeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ConditionalRouter-NmX80",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-NmX80œ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Kn7x9",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-Kn7x9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ConditionalRouter-DNDns",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-DNDnsœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-aWbxe",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-aWbxeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "BatchRunComponent-s2QTv",
+          "id": "BatchRunComponent-gNH2h",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -489,10 +489,10 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-s2QTv",
+        "id": "BatchRunComponent-gNH2h",
         "measured": {
-          "height": 446,
-          "width": 360
+          "height": 399,
+          "width": 320
         },
         "position": {
           "x": 635.0665302273813,
@@ -503,7 +503,7 @@
       },
       {
         "data": {
-          "id": "YouTubeCommentsComponent-5DgSV",
+          "id": "YouTubeCommentsComponent-1B3Fv",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -695,21 +695,21 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-5DgSV",
+        "id": "YouTubeCommentsComponent-1B3Fv",
         "measured": {
-          "height": 556,
-          "width": 360
+          "height": 497,
+          "width": 320
         },
         "position": {
           "x": 191.60600144515274,
           "y": 6042.239455161904
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "OpenAIModel-ZVATe",
+          "id": "OpenAIModel-05xLQ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -815,7 +815,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[1],\n            combobox=True,\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            info=\"The maximum number of retries to make when generating.\",\n            advanced=True,\n            value=5,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The timeout for requests to OpenAI completion API.\",\n            advanced=True,\n            value=700,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n        max_retries = self.max_retries\n        timeout = self.timeout\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n            max_retries=max_retries,\n            request_timeout=timeout,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[1],\n            combobox=True,\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            info=\"The maximum number of retries to make when generating.\",\n            advanced=True,\n            value=5,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The timeout for requests to OpenAI completion API.\",\n            advanced=True,\n            value=700,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n        max_retries = self.max_retries\n        timeout = self.timeout\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n            max_retries=max_retries,\n            request_timeout=timeout,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -985,7 +985,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -1027,7 +1027,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
@@ -1078,10 +1078,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-ZVATe",
+        "id": "OpenAIModel-05xLQ",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 525,
+          "width": 320
         },
         "position": {
           "x": 192.79820011992825,
@@ -1092,7 +1092,7 @@
       },
       {
         "data": {
-          "id": "ParseDataFrame-pJJ7Z",
+          "id": "ParseDataFrame-OIHSx",
           "node": {
             "base_classes": [
               "Message"
@@ -1227,10 +1227,10 @@
           "type": "ParseDataFrame"
         },
         "dragging": false,
-        "id": "ParseDataFrame-pJJ7Z",
+        "id": "ParseDataFrame-OIHSx",
         "measured": {
-          "height": 352,
-          "width": 360
+          "height": 334,
+          "width": 320
         },
         "position": {
           "x": 993.5819211529395,
@@ -1241,7 +1241,7 @@
       },
       {
         "data": {
-          "id": "Agent-Px7Zt",
+          "id": "Agent-3FPSt",
           "node": {
             "base_classes": [
               "Message"
@@ -1891,10 +1891,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Px7Zt",
+        "id": "Agent-3FPSt",
         "measured": {
-          "height": 698,
-          "width": 360
+          "height": 624,
+          "width": 320
         },
         "position": {
           "x": 1982.1085644220088,
@@ -1905,7 +1905,7 @@
       },
       {
         "data": {
-          "id": "Prompt-Kn7x9",
+          "id": "Prompt-aWbxe",
           "node": {
             "base_classes": [
               "Message"
@@ -2067,10 +2067,10 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-Kn7x9",
+        "id": "Prompt-aWbxe",
         "measured": {
-          "height": 448,
-          "width": 360
+          "height": 495,
+          "width": 320
         },
         "position": {
           "x": 1575.3649919098807,
@@ -2081,7 +2081,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-W5R97",
+          "id": "ChatOutput-i5hlZ",
           "node": {
             "base_classes": [
               "Message"
@@ -2379,10 +2379,10 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-W5R97",
+        "id": "ChatOutput-i5hlZ",
         "measured": {
-          "height": 257,
-          "width": 360
+          "height": 230,
+          "width": 320
         },
         "position": {
           "x": 2365.8487393880428,
@@ -2393,7 +2393,7 @@
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-ppAJD",
+          "id": "YouTubeTranscripts-nSvJC",
           "node": {
             "base_classes": [
               "Data",
@@ -2426,6 +2426,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -2509,6 +2510,7 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
@@ -2518,9 +2520,10 @@
                       "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
@@ -2530,9 +2533,10 @@
                       "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
@@ -2542,7 +2546,20 @@
                       "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -2641,10 +2658,10 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-ppAJD",
+        "id": "YouTubeTranscripts-nSvJC",
         "measured": {
-          "height": 466,
-          "width": 360
+          "height": 417,
+          "width": 320
         },
         "position": {
           "x": 1577.7800211610804,
@@ -2655,7 +2672,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-Aprv5",
+          "id": "ChatInput-aeyrx",
           "node": {
             "base_classes": [
               "Message"
@@ -2768,7 +2785,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -2808,6 +2825,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -2952,10 +2970,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Aprv5",
+        "id": "ChatInput-aeyrx",
         "measured": {
-          "height": 257,
-          "width": 360
+          "height": 230,
+          "width": 320
         },
         "position": {
           "x": -894.6710448870117,
@@ -2966,7 +2984,7 @@
       },
       {
         "data": {
-          "id": "note-fVy2q",
+          "id": "note-ATxMO",
           "node": {
             "description": "# Batch Run component\n\nThis component processes a DataFrame by running each row through a Language Model (LLM). Perfect for batch analysis, sentiment scoring, or content generation at scale.\n\n## How It Works\n1. Accepts a DataFrame with text data.\n2. Routes each row through your chosen LLM.\n3. Returns new DataFrame with `text_input` and `model_response`.\n\n",
             "display_name": "",
@@ -2979,10 +2997,10 @@
         },
         "dragging": false,
         "height": 522,
-        "id": "note-fVy2q",
+        "id": "note-ATxMO",
         "measured": {
           "height": 522,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 631.7137680312561,
@@ -2995,7 +3013,7 @@
       },
       {
         "data": {
-          "id": "note-ib6pc",
+          "id": "note-7bKvt",
           "node": {
             "description": "## Set up the YouTube API\n1. Go to [Google Cloud Console](https://console.cloud.google.com).\n2. Create a new project or select existing one.\n3. Enable YouTube Data API v3:\n   - Navigate to APIs & Services > Library.\n   - Search \"YouTube Data API v3\".\n   - Click Enable.\n4. Create credentials:\n   - Go to APIs & Services > Credentials.\n   - Click Create Credentials > API Key.\n5. Copy your new API key for use in the component.\n\n⚠️ Remember to:\n- Restrict the API key to YouTube Data API v3 only.\n- Set appropriate quotas and restrictions.\n",
             "display_name": "",
@@ -3008,10 +3026,10 @@
         },
         "dragging": false,
         "height": 486,
-        "id": "note-ib6pc",
+        "id": "note-7bKvt",
         "measured": {
           "height": 486,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 1579.119903578572,
@@ -3024,7 +3042,7 @@
       },
       {
         "data": {
-          "id": "note-dhEu8",
+          "id": "note-rMgY5",
           "node": {
             "description": "# 🎥 YouTube Video Analysis\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n\n## Prerequisites\n-  OpenAI API Key\n-  YouTube Data API v3 key",
             "display_name": "",
@@ -3037,10 +3055,10 @@
         },
         "dragging": false,
         "height": 454,
-        "id": "note-dhEu8",
+        "id": "note-rMgY5",
         "measured": {
           "height": 454,
-          "width": 436
+          "width": 433
         },
         "position": {
           "x": -1366.105596485301,
@@ -3053,7 +3071,7 @@
       },
       {
         "data": {
-          "id": "ConditionalRouter-NmX80",
+          "id": "ConditionalRouter-DNDns",
           "node": {
             "base_classes": [
               "Message"
@@ -3296,10 +3314,10 @@
           "type": "ConditionalRouter"
         },
         "dragging": false,
-        "id": "ConditionalRouter-NmX80",
+        "id": "ConditionalRouter-DNDns",
         "measured": {
-          "height": 658,
-          "width": 360
+          "height": 588,
+          "width": 320
         },
         "position": {
           "x": -352.80314888328695,
@@ -3310,17 +3328,16 @@
       }
     ],
     "viewport": {
-      "x": 505.76519965138317,
-      "y": -1259.3934784241562,
-      "zoom": 0.301928683991489
+      "x": 401.72676890198,
+      "y": -2953.276665335332,
+      "zoom": 0.543344895149028
     }
   },
   "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
-  "icon": "Youtube",
-  "id": "3b0d43c2-dc2c-4906-8a3e-850702b534c4",
+  "id": "2956e72a-2ad1-4848-aa74-ee9143e6e88e",
   "is_component": false,
-  "last_tested_version": "1.1.3",
+  "last_tested_version": "1.2.0",
   "name": "Youtube Analysis",
   "tags": [
     "agents",

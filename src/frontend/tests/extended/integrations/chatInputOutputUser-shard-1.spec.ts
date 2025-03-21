@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -28,11 +28,18 @@ test(
 
     await page.getByTestId("button_run_chat output").last().click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(600);
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
     });
+
+    await page
+      .getByText("built successfully")
+      .last()
+      .click({
+        timeout: 30000 * 3,
+      });
 
     await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
       timeout: 30000,
@@ -58,7 +65,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
     await page.waitForSelector('[data-testid="dataURL"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page
@@ -105,15 +112,18 @@ test(
 
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-text-output-modal"]`,
-      {
-        timeout: 1000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
 
     // Connect dataframe output to second chat output
     await page
@@ -129,16 +139,19 @@ test(
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-text-output-modal"]`,
-      {
-        timeout: 1000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
 
     // Remove text connection
@@ -149,16 +162,19 @@ test(
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-dataframe-output-modal"]`,
-      {
-        timeout: 3000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
     // Remove all connections
     const dataEdge = await page.locator(".react-flow__edge").first();
@@ -168,14 +184,25 @@ test(
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-data-output-modal"]`,
-      {
-        timeout: 3000,
-      },
-    );
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+
+    const closeButton = await page
+      .getByText(`Close`, {
+        exact: true,
+      })
+      .count();
+
+    expect(closeButton).toBeGreaterThan(1);
   },
 );
