@@ -72,11 +72,7 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list["InputTypes"]:
         default = None if required else model_field.default
 
         # Construct the Langflow input.
-        input_obj = langflow_field_type(
-            display_name=title,
-            name=field_name,
-            info=description
-        )
+        input_obj = langflow_field_type(display_name=title, name=field_name, info=description)
         inputs.append(input_obj)
     return inputs
 
