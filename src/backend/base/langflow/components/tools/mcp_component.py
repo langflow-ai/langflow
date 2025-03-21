@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -273,8 +272,7 @@ class MCPToolsComponent(Component):
                 return Message(text=output.content[0].text)
             return Message(text="You must select a tool", error=True)
         except Exception as e:
-            trace = traceback.format_exc()
-            msg = f"Error in build_output: {e!s}\nTrace: {trace}"
+            msg = f"Error in build_output: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
 

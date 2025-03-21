@@ -2,7 +2,6 @@ import asyncio
 import base64
 import json
 import logging
-import traceback
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -50,8 +49,6 @@ def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[
         except Exception as e:
             msg = f"Error in {func.__name__}: {e!s}"
             logger.exception(msg)
-            trace = traceback.format_exc()
-            logger.exception(trace)
             raise
 
     return wrapper
@@ -143,8 +140,6 @@ async def handle_list_resources():
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
         logger.exception(msg)
-        trace = traceback.format_exc()
-        logger.exception(trace)
         raise
     return resources
 
@@ -184,8 +179,6 @@ async def handle_read_resource(uri: str) -> bytes:
     except Exception as e:
         msg = f"Error reading resource {uri}: {e!s}"
         logger.exception(msg)
-        trace = traceback.format_exc()
-        logger.exception(trace)
         raise
 
 
@@ -212,8 +205,6 @@ async def handle_list_tools():
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         logger.exception(msg)
-        trace = traceback.format_exc()
-        logger.exception(trace)
         raise
     return tools
 
@@ -378,8 +369,6 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
             except Exception as e:
                 msg = f"Error in MCP: {e!s}"
                 logger.exception(msg)
-                trace = traceback.format_exc()
-                logger.exception(trace)
                 raise
     finally:
         current_user_ctx.reset(token)
