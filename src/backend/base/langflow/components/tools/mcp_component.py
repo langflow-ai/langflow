@@ -100,7 +100,7 @@ class MCPToolsComponent(Component):
     _tool_cache: dict = {}  # Cache for tool objects
     default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
 
-    display_name = "MCP Tools"
+    display_name = "MCP Server"
     description = (
         "Connects to an MCP server over Stdio or SSE and exposes its tools as Langflow tools to be used by an Agent."
     )
