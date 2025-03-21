@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-qN4UL",
+            "id": "ParseData-uKULv",
             "name": "text",
             "output_types": [
               "Message"
@@ -15,18 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-3QKQF",
+            "id": "AnthropicModel-vog1V",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-qN4UL{œdataTypeœ:œParseDataœ,œidœ:œParseData-qN4ULœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-3QKQF{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-3QKQFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParseData-qN4UL",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-qN4ULœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-3QKQF",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-3QKQFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-uKULv{œdataTypeœ:œParseDataœ,œidœ:œParseData-uKULvœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-vog1V{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-vog1Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-uKULv",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-uKULvœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-vog1V",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-vog1Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -34,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-2kYku",
+            "id": "TextInput-FRxv5",
             "name": "text",
             "output_types": [
               "Message"
@@ -42,18 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "AnthropicModel-3QKQF",
+            "id": "AnthropicModel-vog1V",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-2kYku{œdataTypeœ:œTextInputœ,œidœ:œTextInput-2kYkuœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-3QKQF{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-3QKQFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "TextInput-2kYku",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-2kYkuœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-3QKQF",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-3QKQFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextInput-FRxv5{œdataTypeœ:œTextInputœ,œidœ:œTextInput-FRxv5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-vog1V{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-vog1Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "TextInput-FRxv5",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-FRxv5œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-vog1V",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-vog1Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-3QKQF",
+            "id": "AnthropicModel-vog1V",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -69,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Anz6s",
+            "id": "ChatOutput-vpJbx",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -78,11 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-AnthropicModel-3QKQF{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-3QKQFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Anz6s{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Anz6sœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "AnthropicModel-3QKQF",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-3QKQFœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Anz6s",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Anz6sœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-AnthropicModel-vog1V{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-vog1Vœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vpJbx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vpJbxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "AnthropicModel-vog1V",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-vog1Vœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-vpJbx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vpJbxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -90,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-hy2sm",
+            "id": "AnthropicModel-5piN6",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -98,18 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutputv2-ZQldd",
+            "id": "StructuredOutput-ApbKx",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AnthropicModel-hy2sm{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-hy2smœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputv2-ZQldd{œfieldNameœ:œllmœ,œidœ:œStructuredOutputv2-ZQlddœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "AnthropicModel-hy2sm",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-hy2smœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutputv2-ZQldd",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputv2-ZQlddœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-AnthropicModel-5piN6{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-5piN6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-ApbKx{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-ApbKxœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "AnthropicModel-5piN6",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-5piN6œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutput-ApbKx",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-ApbKxœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -117,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-idUvo",
+            "id": "ParseData-sbo55",
             "name": "text",
             "output_types": [
               "Message"
@@ -125,25 +129,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutputv2-ZQldd",
+            "id": "StructuredOutput-ApbKx",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-idUvo{œdataTypeœ:œParseDataœ,œidœ:œParseData-idUvoœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputv2-ZQldd{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputv2-ZQlddœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParseData-idUvo",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-idUvoœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutputv2-ZQldd",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputv2-ZQlddœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-sbo55{œdataTypeœ:œParseDataœ,œidœ:œParseData-sbo55œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-ApbKx{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-ApbKxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-sbo55",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-sbo55œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-ApbKx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-ApbKxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-GICjp",
+            "id": "File-u0H8v",
             "name": "data",
             "output_types": [
               "Data"
@@ -151,24 +157,27 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-idUvo",
+            "id": "ParseData-sbo55",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-GICjp{œdataTypeœ:œFileœ,œidœ:œFile-GICjpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-idUvo{œfieldNameœ:œdataœ,œidœ:œParseData-idUvoœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-GICjp",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GICjpœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-idUvo",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-idUvoœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-u0H8v{œdataTypeœ:œFileœ,œidœ:œFile-u0H8vœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-sbo55{œfieldNameœ:œdataœ,œidœ:œParseData-sbo55œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "File-u0H8v",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-u0H8vœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-sbo55",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-sbo55œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutputv2-ZQldd",
+            "id": "StructuredOutput-ApbKx",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -176,24 +185,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-qN4UL",
+            "id": "ParseData-uKULv",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutputv2-ZQldd{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutputv2-ZQlddœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-qN4UL{œfieldNameœ:œdataœ,œidœ:œParseData-qN4ULœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "StructuredOutputv2-ZQldd",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutputv2-ZQlddœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-qN4UL",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-qN4ULœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-StructuredOutput-ApbKx{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-ApbKxœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-uKULv{œfieldNameœ:œdataœ,œidœ:œParseData-uKULvœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutput-ApbKx",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-ApbKxœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-uKULv",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-uKULvœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ParseData-idUvo",
+          "id": "ParseData-sbo55",
           "node": {
             "base_classes": [
               "Data",
@@ -341,7 +351,7 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "id": "ParseData-idUvo",
+        "id": "ParseData-sbo55",
         "measured": {
           "height": 342,
           "width": 320
@@ -355,7 +365,7 @@
       },
       {
         "data": {
-          "id": "ParseData-qN4UL",
+          "id": "ParseData-uKULv",
           "node": {
             "base_classes": [
               "Data",
@@ -503,7 +513,7 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "id": "ParseData-qN4UL",
+        "id": "ParseData-uKULv",
         "measured": {
           "height": 342,
           "width": 320
@@ -517,7 +527,7 @@
       },
       {
         "data": {
-          "id": "TextInput-2kYku",
+          "id": "TextInput-FRxv5",
           "node": {
             "base_classes": [
               "Message"
@@ -609,7 +619,7 @@
           "type": "TextInput"
         },
         "dragging": false,
-        "id": "TextInput-2kYku",
+        "id": "TextInput-FRxv5",
         "measured": {
           "height": 230,
           "width": 320
@@ -623,7 +633,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-hy2sm",
+          "id": "AnthropicModel-5piN6",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -702,7 +712,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -711,7 +721,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ANTHROPIC_API_KEY"
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
@@ -753,7 +763,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
+                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -851,7 +861,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -893,7 +903,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
@@ -945,9 +955,9 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-hy2sm",
+        "id": "AnthropicModel-5piN6",
         "measured": {
-          "height": 801,
+          "height": 670,
           "width": 320
         },
         "position": {
@@ -959,7 +969,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-3QKQF",
+          "id": "AnthropicModel-vog1V",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1038,7 +1048,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1047,7 +1057,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ANTHROPIC_API_KEY"
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
@@ -1089,7 +1099,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
+                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -1187,7 +1197,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -1229,7 +1239,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
@@ -1281,9 +1291,9 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-3QKQF",
+        "id": "AnthropicModel-vog1V",
         "measured": {
-          "height": 801,
+          "height": 670,
           "width": 320
         },
         "position": {
@@ -1295,7 +1305,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-Anz6s",
+          "id": "ChatOutput-vpJbx",
           "node": {
             "base_classes": [
               "Message"
@@ -1593,7 +1603,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-Anz6s",
+        "id": "ChatOutput-vpJbx",
         "measured": {
           "height": 66,
           "width": 192
@@ -1607,7 +1617,7 @@
       },
       {
         "data": {
-          "id": "note-gCIcE",
+          "id": "note-KVOU7",
           "node": {
             "description": "### 💡 Upload your resume here",
             "display_name": "",
@@ -1620,7 +1630,7 @@
         },
         "dragging": false,
         "height": 358,
-        "id": "note-gCIcE",
+        "id": "note-KVOU7",
         "measured": {
           "height": 358,
           "width": 345
@@ -1636,7 +1646,7 @@
       },
       {
         "data": {
-          "id": "note-hzqgI",
+          "id": "note-pq8w3",
           "node": {
             "description": "## 📝 Portfolio Website Code Generator\n\nYour uploaded resume is parsed into a structured format, and output as HTML/CSS code for your own resume website!\n\n✅ **Accepted Formats:** PDF or TXT  \n✅ To ensure readability, provide clear headings, bullet points, and proper formatting. \n### 📌 Structured output fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects.",
             "display_name": "",
@@ -1647,7 +1657,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-hzqgI",
+        "id": "note-pq8w3",
         "measured": {
           "height": 324,
           "width": 325
@@ -1663,7 +1673,7 @@
       },
       {
         "data": {
-          "id": "note-cc1Ie",
+          "id": "note-4GusB",
           "node": {
             "description": "### 💡 Click **Open table** to view the schema",
             "display_name": "",
@@ -1676,7 +1686,7 @@
         },
         "dragging": false,
         "height": 438,
-        "id": "note-cc1Ie",
+        "id": "note-4GusB",
         "measured": {
           "height": 438,
           "width": 358
@@ -1692,7 +1702,7 @@
       },
       {
         "data": {
-          "id": "note-NwmXB",
+          "id": "note-Tqu2d",
           "node": {
             "description": "### 💡 Add your Anthropic API key here",
             "display_name": "",
@@ -1705,7 +1715,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-NwmXB",
+        "id": "note-Tqu2d",
         "measured": {
           "height": 324,
           "width": 361
@@ -1721,7 +1731,7 @@
       },
       {
         "data": {
-          "id": "note-6xc0C",
+          "id": "note-Tc72L",
           "node": {
             "description": "### 💡 Add your Anthropic API key here",
             "display_name": "",
@@ -1734,7 +1744,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-6xc0C",
+        "id": "note-Tc72L",
         "measured": {
           "height": 324,
           "width": 343
@@ -1750,7 +1760,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutputv2-ZQldd",
+          "id": "StructuredOutput-ApbKx",
           "node": {
             "base_classes": [
               "Data",
@@ -2091,7 +2101,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutputv2-ZQldd",
+        "id": "StructuredOutput-ApbKx",
         "measured": {
           "height": 447,
           "width": 320
@@ -2100,12 +2110,12 @@
           "x": 1306.940204747624,
           "y": 645.3388247558626
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "File-GICjp",
+          "id": "File-u0H8v",
           "node": {
             "base_classes": [
               "Data"
@@ -2147,6 +2157,34 @@
                 "tool_mode": true,
                 "types": [
                   "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "load_dataframe",
+                "name": "dataframe",
+                "required_inputs": [],
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "load_message",
+                "name": "message",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2269,7 +2307,7 @@
               "path": {
                 "_input_type": "FileInput",
                 "advanced": false,
-                "display_name": "Path",
+                "display_name": "Files",
                 "dynamic": false,
                 "fileTypes": [
                   "txt",
@@ -2296,9 +2334,9 @@
                   "bz2",
                   "gz"
                 ],
-                "file_path": "",
+                "file_path": [],
                 "info": "Supported file extensions: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
-                "list": false,
+                "list": true,
                 "list_add_label": "Add More",
                 "name": "path",
                 "placeholder": "",
@@ -2308,6 +2346,25 @@
                 "trace_as_metadata": true,
                 "type": "file",
                 "value": ""
+              },
+              "separator": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "Specify the separator to use between multiple outputs in Message format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n\n"
               },
               "silent_errors": {
                 "_input_type": "BoolInput",
@@ -2352,9 +2409,9 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-GICjp",
+        "id": "File-u0H8v",
         "measured": {
-          "height": 228,
+          "height": 336,
           "width": 320
         },
         "position": {
@@ -2366,18 +2423,16 @@
       }
     ],
     "viewport": {
-      "x": -158.19733671893528,
-      "y": 43.39993635528333,
-      "zoom": 0.648669567640396
+      "x": 258.19631043779543,
+      "y": 250.36039957268596,
+      "zoom": 0.3767176834743995
     }
   },
   "description": "This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.",
-  "endpoint_name": "portfolio_website",
-  "gradient": "3",
-  "icon": "file-user",
-  "id": "98f3f604-418e-4d6a-ac71-6476222ebe13",
+  "endpoint_name": null,
+  "id": "c8719bf8-c53b-4d8d-a195-139891cad0f5",
   "is_component": false,
-  "last_tested_version": "1.1.5",
+  "last_tested_version": "1.2.0",
   "name": "Portfolio Website Code Generator",
   "tags": [
     "chatbots",

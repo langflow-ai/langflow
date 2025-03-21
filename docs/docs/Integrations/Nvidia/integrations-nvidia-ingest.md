@@ -1,5 +1,5 @@
 ---
-title:  Integrate Nvidia Ingest with Langflow
+title:  Integrate NVIDIA Ingest with Langflow
 slug: /integrations-nvidia-ingest
 ---
 
@@ -25,7 +25,7 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
   * If you are installing Langflow from the Python Package Index:
   ```bash
   source **YOUR_LANGFLOW_VENV**/bin/activate
-  uv pip install 'langflow[nv-ingest]'
+  uv pip install --prerelease=allow 'langflow[nv-ingest]'
   uv run langflow run
   ```
 

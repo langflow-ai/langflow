@@ -5,9 +5,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
 
+import pandas as pd
+
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, HandleInput, Output
+from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 
@@ -114,11 +117,12 @@ class BaseFileComponent(Component, ABC):
     _base_inputs = [
         FileInput(
             name="path",
-            display_name="Path",
+            display_name="Files",
             fileTypes=[],  # Dynamically set in __init__
             info="",  # Dynamically set in __init__
             required=False,
-            value="",
+            list=True,
+            value=[],
         ),
         HandleInput(
             name="file_path",
@@ -130,6 +134,14 @@ class BaseFileComponent(Component, ABC):
             required=False,
             input_types=["Data", "Message"],
             is_list=True,
+            advanced=True,
+        ),
+        StrInput(
+            name="separator",
+            display_name="Separator",
+            value="\n\n",
+            show=True,
+            info="Specify the separator to use between multiple outputs in Message format.",
             advanced=True,
         ),
         BoolInput(
@@ -161,7 +173,11 @@ class BaseFileComponent(Component, ABC):
         ),
     ]
 
-    _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
+    _base_outputs = [
+        Output(display_name="Data", name="data", method="load_files"),
+        Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
+        Output(display_name="Message", name="message", method="load_message"),
+    ]
 
     @abstractmethod
     def process_files(self, file_list: list[BaseFile]) -> list[BaseFile]:
@@ -174,7 +190,7 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
-    def load_files(self) -> list[Data]:
+    def load_files_base(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
 
         Returns:
@@ -210,6 +226,80 @@ class BaseFileComponent(Component, ABC):
                         shutil.rmtree(file.path)
                     else:
                         file.path.unlink()
+
+    def load_files(self) -> list[Data]:
+        """Load files and return as Data objects.
+
+        Returns:
+            list[Data]: List of Data objects from all files
+        """
+        data_list = self.load_files_base()
+        if not data_list:
+            return [Data()]
+        return data_list
+
+    def load_dataframe(self) -> DataFrame:
+        """Load files and return as DataFrame.
+
+        Returns:
+            DataFrame: DataFrame containing all file data
+        """
+        data_list = self.load_files()
+        if not data_list:
+            return DataFrame()
+
+        # First handle CSV files specially
+        csv_data = []
+        non_csv_rows = []
+
+        for data in data_list:
+            file_path = data.data.get(self.SERVER_FILE_PATH_FIELDNAME)
+            if file_path and str(file_path).lower().endswith(".csv"):
+                try:
+                    csv_data.extend(pd.read_csv(file_path).to_dict("records"))
+                except Exception as e:
+                    self.log(f"Error processing CSV file {file_path}: {e}")
+                    if not self.silent_errors:
+                        raise
+            else:
+                # Handle non-CSV files as before
+                row = dict(data.data) if data.data else {}
+                if data.text:
+                    row["text"] = data.text
+                if file_path:
+                    row["file_path"] = file_path
+                non_csv_rows.append(row)
+
+        # Combine CSV and non-CSV data
+        all_rows = csv_data + non_csv_rows
+        return DataFrame(all_rows)
+
+    def load_message(self) -> Message:
+        """Load files and return as Message with concatenated content.
+
+        Returns:
+            Message: Message containing concatenated file content
+        """
+        data_list = self.load_files()
+        if not data_list:
+            return Message(text="")
+
+        # Concatenate all text content
+        text_content = []
+        for data in data_list:
+            content = data.text if data.text else ""
+            text_content.append(content)
+
+        # Join with separator
+        final_text = self.separator.join(text_content)
+
+        # Create message with all metadata
+        all_data = {}
+        for data in data_list:
+            if data.data:
+                all_data.update(data.data)
+
+        return Message(text=final_text, data=all_data)
 
     @property
     def valid_extensions(self) -> list[str]:

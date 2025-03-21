@@ -262,6 +262,7 @@ const config = {
         "cosmic-void": "hsl(var(--cosmic-void))",
         "slider-input-border": "var(--slider-input-border)",
         "zinc-foreground": "hsl(var(--zinc-foreground))",
+        "red-foreground": "hsl(var(--red-foreground))",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -365,6 +366,9 @@ const config = {
           },
           "&::-webkit-scrollbar-thumb:hover": {
             backgroundColor: "hsl(var(--placeholder-foreground))",
+          },
+          "&::-webkit-scrollbar-corner": {
+            backgroundColor: "transparent",
           },
           cursor: "auto",
         },
