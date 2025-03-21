@@ -628,7 +628,7 @@ class GitHubAPIComponent(LCToolComponent):
                     param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
-                    if value is None or value == "":
+                    if value is None or value == "" or value == []:
                         continue
 
                     if field in self._bool_variables:
