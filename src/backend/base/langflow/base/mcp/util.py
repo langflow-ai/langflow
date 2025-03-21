@@ -132,10 +132,6 @@ class MCPStdioClient:
         return response.tools
 
 
-# Define constant for status code
-HTTP_TEMPORARY_REDIRECT = 307
-
-
 class MCPSseClient:
     def __init__(self):
         self.write = None
@@ -146,7 +142,7 @@ class MCPSseClient:
     async def pre_check_redirect(self, url: str):
         async with httpx.AsyncClient(follow_redirects=False) as client:
             response = await client.request("HEAD", url)
-            if response.status_code == HTTP_TEMPORARY_REDIRECT:
+            if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                 return response.headers.get("Location")
         return url
 
