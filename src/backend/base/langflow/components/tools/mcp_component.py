@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -260,17 +261,20 @@ class MCPToolsComponent(Component):
         """Build output with improved error handling and validation."""
         try:
             await self.update_tools()
-            exec_tool = self._tool_cache[self.tool]
-            tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
-            kwargs = {}
-            for arg in tool_args:
-                value = getattr(self, arg.name, None)
-                if value:
-                    kwargs[arg.name] = value
-            output = await exec_tool.coroutine(**kwargs)
-            return Message(text=output.content[0].text)
+            if self.tool != "":
+                exec_tool = self._tool_cache[self.tool]
+                tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
+                kwargs = {}
+                for arg in tool_args:
+                    value = getattr(self, arg.name, None)
+                    if value:
+                        kwargs[arg.name] = value
+                output = await exec_tool.coroutine(**kwargs)
+                return Message(text=output.content[0].text)
+            return Message(text="You must select a tool", error=True)
         except Exception as e:
-            msg = f"Error in build_output: {e!s}"
+            trace = traceback.format_exc()
+            msg = f"Error in build_output: {e!s}\nTrace: {trace}"
             logger.exception(msg)
             raise ValueError(msg) from e
 
