@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from contextlib import AsyncExitStack
 
@@ -21,6 +22,8 @@ from langflow.schema import Message
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
+
+logger = logging.getLogger(__name__)
 
 
 class MCPStdioClient:
@@ -133,7 +136,7 @@ class MCPTools(Component):
             refresh_button=True,
         ),
         MessageTextInput(
-            name="url",
+            name="sse_url",
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
             value="http://localhost:7860/api/v1/mcp/sse",
@@ -163,11 +166,11 @@ class MCPTools(Component):
         if field_name == "mode":
             if field_value == "Stdio":
                 build_config["command"]["show"] = True
-                build_config["url"]["show"] = False
+                build_config["sse_url"]["show"] = False
             elif field_value == "SSE":
                 build_config["command"]["show"] = False
-                build_config["url"]["show"] = True
-        elif field_name == "command" or field_name == "url":
+                build_config["sse_url"]["show"] = True
+        elif field_name == "command" or field_name == "sse_url":
             try:
                 await self.update_tools()
                 # Safely update the tool options after tools are updated
@@ -237,7 +240,7 @@ class MCPTools(Component):
                 self.tools = await self.stdio_client.connect_to_server(self.command)
         elif self.mode == "SSE":
             if self.sse_client.session is None:
-                self.tools = await self.sse_client.connect_to_server(self.url, {})
+                self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
         else:
             msg = "Invalid mode selected."
             raise ValueError(msg)
