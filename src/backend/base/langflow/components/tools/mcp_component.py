@@ -153,7 +153,7 @@ class MCPToolsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Tools", name="tools", method="build_output"),
+        Output(display_name="Response", name="response", method="build_output"),
     ]
 
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
