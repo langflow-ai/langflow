@@ -323,6 +323,13 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 
 This component implements a Vector Store using HCD.
 
+To use the HCD vector store, add your deployment's collection name, username, password, and HCD API endpoint.
+The endpoint must be formatted like `http[s]://<domain name or IP>[:port]`, for example, `http://34.137.224.226:8181`.
+
+To use the HCD vector store for embeddings ingestion, connect it to an embeddings model and a file loader:
+
+![HCD vector store embeddings ingestion](/img/component-hcd-example-flow.png)
+
 ### Inputs
 
 | Name | Display Name | Info |
