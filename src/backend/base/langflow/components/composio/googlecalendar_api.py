@@ -252,7 +252,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         MessageTextInput(
             name="GOOGLECALENDAR_LIST_CALENDARS-min_access_role",
             display_name="Min Access Role",
-            info="The minimum access role for the user in the returned entries.",
+            info="The minimum access role for the user in the returned entries. Accepted values are 'owner' & 'reader'",
             show=False,
         ),
         MessageTextInput(
@@ -594,7 +594,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         MessageTextInput(
             name="GOOGLECALENDAR_QUICK_ADD-send_updates",
             display_name="Send Updates",
-            info="Guests who should receive notifications about the creation of the new event.",
+            info="Guests who should receive notifications about the creation of the new event. Accepted fields include 'all', 'none', 'externalOnly'",
             show=False,
             value="none",
         ),
