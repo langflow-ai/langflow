@@ -49,19 +49,20 @@ class OpikTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = {}
 
-        self._ready: bool = self._setup_opik(trace_id)
+        config = self._get_config()
+        self._ready: bool = self._setup_opik(config, trace_id) if config else False
         self._distributed_headers = None
 
     @property
     def ready(self):
         return self._ready
 
-    def _setup_opik(self, trace_id: UUID) -> bool:
+    def _setup_opik(self, config: dict, trace_id: UUID) -> bool:
         try:
             from opik import Opik
             from opik.api_objects.trace import TraceData
 
-            self._client = Opik(project_name=self._project_name, _show_misconfiguration_message=False)
+            self._client = Opik(project_name=self._project_name, _show_misconfiguration_message=False, **config)
 
             missing_configuration, _ = self._client._config.get_misconfiguration_detection_results()
 
@@ -221,3 +222,14 @@ class OpikTracer(BaseTracer):
             value = str(value)
 
         return value
+
+    @staticmethod
+    def _get_config() -> dict:
+        host = os.getenv("OPIK_URL_OVERRIDE", None)
+        api_key = os.getenv("OPIK_API_KEY", None)
+        workspace = os.getenv("OPIK_WORKSPACE", None)
+
+        # API Key is mandatory for Opik Cloud and URL is mandatory for Open-Source Opik Server
+        if host or api_key:
+            return {"host": host, "api_key": api_key, "workspace": workspace}
+        return {}
