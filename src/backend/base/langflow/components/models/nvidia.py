@@ -36,7 +36,7 @@ class NVIDIAModelComponent(LCModelComponent):
             value=None,
             options=[model.id for model in all_models],
             combobox=True,
-            real_time_refresh=True,
+            refresh_button=True,
         ),
         BoolInput(
             name="detailed_thinking",
@@ -58,7 +58,6 @@ class NVIDIAModelComponent(LCModelComponent):
             display_name="NVIDIA Base URL",
             value="https://integrate.api.nvidia.com/v1",
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
-            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -66,7 +65,6 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The NVIDIA API Key.",
             advanced=False,
             value="NVIDIA_API_KEY",
-            real_time_refresh=True,
         ),
         SliderInput(
             name="temperature",

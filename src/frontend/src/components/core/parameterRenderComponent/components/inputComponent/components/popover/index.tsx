@@ -56,14 +56,13 @@ const OptionBadge = ({
     className={cn("flex items-center gap-1 truncate", className)}
   >
     <div className="truncate">{option}</div>
-    <div>
-      <X
-        className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-        onClick={(e) =>
-          onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
-        }
-        data-testid="remove-icon-badge"
-      />
+    <div
+      data-testid="remove-icon-badge"
+      onClick={(e) =>
+        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+      }
+    >
+      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive" />
     </div>
   </Badge>
 );
@@ -230,7 +229,7 @@ const CustomInputPopover = ({
           className={getAnchorClassName(editNode, disabled, isFocused)}
           onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
         >
-          {selectedOptions?.length > 0 ? (
+          {!disabled && selectedOptions?.length > 0 ? (
             <div className="mr-5 flex flex-wrap gap-2">
               {selectedOptions.map((option) => (
                 <OptionBadge
@@ -241,7 +240,7 @@ const CustomInputPopover = ({
                 />
               ))}
             </div>
-          ) : selectedOption?.length > 0 ? (
+          ) : !disabled && selectedOption?.length > 0 ? (
             <ShadTooltip content={selectedOption} side="left">
               <div
                 style={{
@@ -263,7 +262,7 @@ const CustomInputPopover = ({
             </ShadTooltip>
           ) : null}
 
-          {!selectedOption?.length && !selectedOptions?.length && (
+          {(!selectedOption?.length && !selectedOptions?.length) || disabled ? (
             <input
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
@@ -275,7 +274,7 @@ const CustomInputPopover = ({
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={value || ""}
+              value={disabled ? "" : value || ""}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -286,7 +285,9 @@ const CustomInputPopover = ({
                 blockAddNewGlobalVariable,
               )}
               placeholder={
-                selectedOptions?.length > 0 || selectedOption ? "" : placeholder
+                !disabled && (selectedOptions?.length > 0 || selectedOption)
+                  ? ""
+                  : placeholder
               }
               onChange={(e) => onChange?.(e.target.value)}
               onKeyDown={(e) => {
@@ -295,7 +296,7 @@ const CustomInputPopover = ({
               }}
               data-testid={editNode ? id + "-edit" : id}
             />
-          )}
+          ) : null}
         </div>
       </PopoverAnchor>
 
