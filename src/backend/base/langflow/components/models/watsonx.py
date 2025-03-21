@@ -22,7 +22,6 @@ class WatsonxAIComponent(LCModelComponent):
     icon = "WatsonxAI"
     name = "IBMwatsonxModel"
     beta = False
-    _previous_url = ""
 
     _default_models = ["ibm/granite-3-2b-instruct", "ibm/granite-3-8b-instruct", "ibm/granite-13b-instruct-v2"]
 
@@ -45,7 +44,7 @@ class WatsonxAIComponent(LCModelComponent):
         ),
         StrInput(
             name="project_id",
-            display_name="watsonx project id",
+            display_name="watsonx Project ID",
         ),
         SecretStrInput(
             name="api_key",
@@ -77,7 +76,7 @@ class WatsonxAIComponent(LCModelComponent):
         ),
         DropdownInput(
             name="decoding_method",
-            display_name="Decoding method",
+            display_name="Decoding Method",
             advanced=True,
             options=["greedy", "sample"],
             value="greedy",
@@ -142,7 +141,7 @@ class WatsonxAIComponent(LCModelComponent):
             models = [model["model_id"] for model in data.get("resources", [])]
             return sorted(models)
         except Exception:
-            logger.exception("Error fetching models")
+            logger.exception("Error fetching models. Using default models.")
             return WatsonxAIComponent._default_models
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
