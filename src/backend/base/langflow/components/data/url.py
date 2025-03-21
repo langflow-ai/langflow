@@ -139,6 +139,7 @@ class URLComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
+        self.status = data
         return data
 
     def fetch_content_text(self) -> Message:
@@ -150,4 +151,6 @@ class URLComponent(Component):
 
     def as_dataframe(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
-        return DataFrame(self.fetch_content())
+        df = DataFrame(self.fetch_content())
+        self.status = df
+        return df
