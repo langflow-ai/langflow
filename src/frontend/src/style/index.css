@@ -44,7 +44,7 @@
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
-    --jse-theme-color: hsl(0, 0%, 100%);
+    --jse-theme-color: hsl(240, 5%, 96%);
     --jse-theme-color-highlight: hsl(240, 6%, 90%);
     --jse-menu-color: hsl(0, 0%, 0%);
     --jse-main-border: hsl(240, 6%, 90%);
@@ -187,6 +187,12 @@
     --slider-input-border: #d4d4d8;
 
     --zinc-foreground: 240 5.9% 90%;
+
+
+
+    --accent-amber: 21.7 77.8% 26.5%;
+    --accent-amber-foreground: 26 90.5% 37.1%; 
+    --red-foreground: 0 90.6% 70.8%;
   }
 
   .dark {
@@ -214,8 +220,7 @@
     --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --canvas-dot: 240 5.3% 26.1%; /* hsl(240, 5.3%, 26.1%) */
-    --accent-amber: 26 90% 37%; /* hsl(26, 90%, 37%) */
-    --accent-amber-foreground: 26 90% 37%; /* hsl(26, 90%, 37%) */
+
     --accent-emerald: 164 86% 16%; /* hsl(164, 86%, 16%) */
     --accent-emerald-foreground: 158 64% 52%; /* hsl(158, 64%, 52%) */
     --accent-emerald-hover: 163.1 88.1% 19.8%; /* hsl(163.1, 88.1%, 19.8%) */
@@ -439,5 +444,10 @@
     --slider-input-border: #d4d4d8;
 
     --zinc-foreground: 240 5.2% 33.9%;
+
+
+    --accent-amber: 48 96.5% 88.8%;
+    --accent-amber-foreground: 45.9 96.7% 64.5%;
+    --red-foreground: 0 72.2% 50.6%;
   }
 }
