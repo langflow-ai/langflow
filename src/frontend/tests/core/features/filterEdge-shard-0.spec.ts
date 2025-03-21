@@ -26,7 +26,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     const outputElements = await page
       .getByTestId("handle-retrievalqa-shownode-text-right")
@@ -64,12 +64,16 @@ test(
       .getByTestId("handle-retrievalqa-shownode-language model-left")
       .all();
 
+    await page.waitForTimeout(1000);
+
     for (const element of rqaChainInputElements1) {
       if (await element.isVisible()) {
         visibleElementHandle = element;
         break;
       }
     }
+
+    await page.waitForTimeout(1000);
 
     await visibleElementHandle.hover().then(async () => {
       await expect(

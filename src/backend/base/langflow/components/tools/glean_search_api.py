@@ -101,7 +101,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     display_name: str = "Glean Search API"
     description: str = "Search using Glean's API."
     documentation: str = "https://docs.langflow.org/Components/components-tools#glean-search-api"
-    icon: str = "GleanSearch"
+    icon: str = "Glean"
 
     outputs = [
         Output(display_name="Data", name="data", method="run_model"),
