@@ -21,4 +21,8 @@ export type UtilityStoreType = {
   setChatValueStore: (value: string) => void;
   dismissAll: boolean;
   setDismissAll: (dismissAll: boolean) => void;
+  currentSessionId: string;
+  setCurrentSessionId: (sessionId: string) => void;
+  setClientId: (clientId: string) => void;
+  clientId: string;
 };

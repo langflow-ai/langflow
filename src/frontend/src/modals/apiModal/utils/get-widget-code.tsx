@@ -9,9 +9,18 @@ export default function getWidgetCode({
   flowId,
   flowName,
   isAuth,
+  copy = false,
 }: GetCodeType): string {
-  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js"></script>
+  const source = copy
+    ? `<script
+  src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js">
+</script>`
+    : `<script
+  src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/
+build/static/js/bundle.min.js">
+</script>`;
 
+  return `${source}
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
@@ -20,7 +29,6 @@ export default function getWidgetCode({
         ? `
     api_key="..."`
         : ""
-    }
-
-  ></langflow-chat>`;
+    }>
+</langflow-chat>`;
 }

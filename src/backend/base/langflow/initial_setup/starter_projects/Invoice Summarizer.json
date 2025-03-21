@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-WRaed",
+            "id": "Prompt-jqHUa",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-IDDA1",
+            "id": "Agent-YDpm0",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-WRaed{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-jqHUa{œdataTypeœ:œPromptœ,œidœ:œPrompt-jqHUaœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-YDpm0{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-WRaed",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WRaedœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-jqHUa",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jqHUaœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-YDpm0",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "needle",
-            "id": "needle-nk3Lq",
+            "id": "needle-jWdIc",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-IDDA1",
+            "id": "Agent-YDpm0",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-needle-nk3Lq{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IDDA1{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-needle-jWdIc{œdataTypeœ:œneedleœ,œidœ:œneedle-jWdIcœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-YDpm0{œfieldNameœ:œtoolsœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "needle-nk3Lq",
-        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-nk3Lqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "needle-jWdIc",
+        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-jWdIcœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-YDpm0",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-V0cjZ",
+            "id": "ChatInput-r9vuH",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,25 +71,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-IDDA1",
+            "id": "Agent-YDpm0",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-V0cjZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-r9vuH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-r9vuHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-YDpm0{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-V0cjZ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-V0cjZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-r9vuH",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-r9vuHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-YDpm0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-IDDA1",
+            "id": "Agent-YDpm0",
             "name": "response",
             "output_types": [
               "Message"
@@ -97,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Ftr5v",
+            "id": "ChatOutput-O7uUo",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -106,17 +108,18 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-IDDA1{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Ftr5v{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-IDDA1",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IDDA1œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Ftr5v",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Ftr5vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-YDpm0{œdataTypeœ:œAgentœ,œidœ:œAgent-YDpm0œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O7uUo{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O7uUoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-YDpm0",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-YDpm0œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-O7uUo",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-O7uUoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-JlPa7",
+          "id": "note-gpQ5H",
           "node": {
             "description": "# Invoice Summarizer\n\nLeverage the **Needle Search API** and an **Agent** to gather and summarize your invoice data quickly and accurately.\n\n## Prerequisites\n\n* A **Collection** and an **API Key** from your [Needle.ai](https://needle-ai.com) deployment\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Load your invoices into your Needle Collection. \n\n2. In the **Needle Search** tool, add your **Needle Collection ID** and **Needle API Key**.\n\n3. In the **Agent** component, add your **OpenAI Key**.\n\n4. Open the **Playground** and query your invoices. The **Agent** component determines the correct query and search size for data retrieval.\n",
             "display_name": "",
@@ -129,7 +132,7 @@
         },
         "dragging": false,
         "height": 632,
-        "id": "note-JlPa7",
+        "id": "note-gpQ5H",
         "measured": {
           "height": 632,
           "width": 583
@@ -145,7 +148,7 @@
       },
       {
         "data": {
-          "id": "Prompt-WRaed",
+          "id": "Prompt-jqHUa",
           "node": {
             "base_classes": [
               "Message"
@@ -259,21 +262,21 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-WRaed",
+        "id": "Prompt-jqHUa",
         "measured": {
-          "height": 256,
+          "height": 330,
           "width": 320
         },
         "position": {
-          "x": 531.8828954152592,
-          "y": -476.0431839408612
+          "x": 538.822113660558,
+          "y": -560.1812051651086
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-Ftr5v",
+          "id": "ChatOutput-O7uUo",
           "node": {
             "base_classes": [
               "Message"
@@ -568,7 +571,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-Ftr5v",
+        "id": "ChatOutput-O7uUo",
         "measured": {
           "height": 66,
           "width": 192
@@ -582,7 +585,7 @@
       },
       {
         "data": {
-          "id": "note-TRZfV",
+          "id": "note-owux5",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -594,7 +597,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-TRZfV",
+        "id": "note-owux5",
         "measured": {
           "height": 324,
           "width": 324
@@ -608,7 +611,7 @@
       },
       {
         "data": {
-          "id": "note-P7KNw",
+          "id": "note-b3LuQ",
           "node": {
             "description": "### 💡 Add your Needle Search API key here 👇",
             "display_name": "",
@@ -621,7 +624,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-P7KNw",
+        "id": "note-b3LuQ",
         "measured": {
           "height": 324,
           "width": 401
@@ -637,7 +640,7 @@
       },
       {
         "data": {
-          "id": "needle-nk3Lq",
+          "id": "needle-jWdIc",
           "node": {
             "base_classes": [
               "Message"
@@ -671,6 +674,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -734,7 +738,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "needle_api_key",
                 "password": true,
                 "placeholder": "",
@@ -742,7 +746,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "NEEDLE_API_KEY"
               },
               "query": {
                 "_input_type": "MessageTextInput",
@@ -895,7 +899,7 @@
           "showNode": true,
           "type": "needle"
         },
-        "id": "needle-nk3Lq",
+        "id": "needle-jWdIc",
         "measured": {
           "height": 582,
           "width": 320
@@ -909,7 +913,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-V0cjZ",
+          "id": "ChatInput-r9vuH",
           "node": {
             "base_classes": [
               "Message"
@@ -1021,7 +1025,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -1061,6 +1065,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -1205,7 +1210,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-V0cjZ",
+        "id": "ChatInput-r9vuH",
         "measured": {
           "height": 230,
           "width": 320
@@ -1219,7 +1224,7 @@
       },
       {
         "data": {
-          "id": "Agent-IDDA1",
+          "id": "Agent-YDpm0",
           "node": {
             "base_classes": [
               "Message"
@@ -1398,7 +1403,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1406,7 +1411,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1900,7 +1905,7 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-IDDA1",
+        "id": "Agent-YDpm0",
         "measured": {
           "height": 624,
           "width": 320
@@ -1914,14 +1919,14 @@
       }
     ],
     "viewport": {
-      "x": 220.76849981202122,
-      "y": 353.4961393018069,
-      "zoom": 0.6618875325223841
+      "x": 176.17345116464503,
+      "y": 410.5061991131597,
+      "zoom": 0.7205422604177993
     }
   },
   "description": "Your AI Agent Accountant - Leverage Needle with Langflows Agent.",
   "endpoint_name": null,
-  "id": "94da35d5-a43e-4260-b205-9d0df477cb69",
+  "id": "58b6fe7e-22f9-47d8-b0aa-d7a9c752d423",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Invoice Summarizer",

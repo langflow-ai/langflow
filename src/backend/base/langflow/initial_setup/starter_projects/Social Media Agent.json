@@ -2,10 +2,12 @@
   "data": {
     "edges": [
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-B3OZd",
+            "id": "ApifyActors-n0Tjo",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -13,24 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-KXbzb",
+            "id": "Agent-EePDq",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ApifyActors-B3OZd{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-B3OZdœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-KXbzb{œfieldNameœ:œtoolsœ,œidœ:œAgent-KXbzbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ApifyActors-B3OZd",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-B3OZdœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-KXbzb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-KXbzbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ApifyActors-n0Tjo{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-n0Tjoœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-EePDq{œfieldNameœ:œtoolsœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ApifyActors-n0Tjo",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-n0Tjoœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-EePDq",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-0TUqW",
+            "id": "ApifyActors-t44sy",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -38,24 +43,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-KXbzb",
+            "id": "Agent-EePDq",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ApifyActors-0TUqW{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-0TUqWœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-KXbzb{œfieldNameœ:œtoolsœ,œidœ:œAgent-KXbzbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ApifyActors-0TUqW",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-0TUqWœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-KXbzb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-KXbzbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ApifyActors-t44sy{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-t44syœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-EePDq{œfieldNameœ:œtoolsœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ApifyActors-t44sy",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-t44syœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-EePDq",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-3C2ac",
+            "id": "ChatInput-9joxW",
             "name": "message",
             "output_types": [
               "Message"
@@ -63,24 +71,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-KXbzb",
+            "id": "Agent-EePDq",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-3C2ac{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3C2acœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-KXbzb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-KXbzbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-3C2ac",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3C2acœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-KXbzb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-KXbzbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-9joxW{œdataTypeœ:œChatInputœ,œidœ:œChatInput-9joxWœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EePDq{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-9joxW",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-9joxWœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-EePDq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-KXbzb",
+            "id": "Agent-EePDq",
             "name": "response",
             "output_types": [
               "Message"
@@ -88,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-lTzgN",
+            "id": "ChatOutput-dWtqL",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -97,17 +108,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__Agent-KXbzb{œdataTypeœ:œAgentœ,œidœ:œAgent-KXbzbœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lTzgN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lTzgNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "Agent-KXbzb",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-KXbzbœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-lTzgN",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lTzgNœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-EePDq{œdataTypeœ:œAgentœ,œidœ:œAgent-EePDqœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-dWtqL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-dWtqLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-EePDq",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EePDqœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-dWtqL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-dWtqLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ApifyActors-0TUqW",
+          "id": "ApifyActors-t44sy",
           "node": {
             "base_classes": [
               "Data",
@@ -196,7 +208,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -204,7 +216,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "APIFY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -297,7 +309,7 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-0TUqW",
+        "id": "ApifyActors-t44sy",
         "measured": {
           "height": 628,
           "width": 320
@@ -311,7 +323,7 @@
       },
       {
         "data": {
-          "id": "ApifyActors-B3OZd",
+          "id": "ApifyActors-n0Tjo",
           "node": {
             "base_classes": [
               "Data",
@@ -400,7 +412,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -408,7 +420,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "APIFY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -501,7 +513,7 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-B3OZd",
+        "id": "ApifyActors-n0Tjo",
         "measured": {
           "height": 628,
           "width": 320
@@ -515,7 +527,7 @@
       },
       {
         "data": {
-          "id": "note-xXNfV",
+          "id": "note-QhVg5",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -527,7 +539,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-xXNfV",
+        "id": "note-QhVg5",
         "measured": {
           "height": 324,
           "width": 324
@@ -541,7 +553,7 @@
       },
       {
         "data": {
-          "id": "note-kRYk5",
+          "id": "note-JuSWo",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -554,7 +566,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-kRYk5",
+        "id": "note-JuSWo",
         "measured": {
           "height": 324,
           "width": 324
@@ -570,7 +582,7 @@
       },
       {
         "data": {
-          "id": "note-1r49Y",
+          "id": "note-yDKv9",
           "node": {
             "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
@@ -583,7 +595,7 @@
         },
         "dragging": false,
         "height": 657,
-        "id": "note-1r49Y",
+        "id": "note-yDKv9",
         "measured": {
           "height": 657,
           "width": 525
@@ -599,7 +611,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-3C2ac",
+          "id": "ChatInput-9joxW",
           "node": {
             "base_classes": [
               "Message"
@@ -709,7 +721,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -749,6 +761,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -893,7 +906,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-3C2ac",
+        "id": "ChatInput-9joxW",
         "measured": {
           "height": 66,
           "width": 192
@@ -907,7 +920,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-lTzgN",
+          "id": "ChatOutput-dWtqL",
           "node": {
             "base_classes": [
               "Message"
@@ -1200,7 +1213,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-lTzgN",
+        "id": "ChatOutput-dWtqL",
         "measured": {
           "height": 66,
           "width": 192
@@ -1214,7 +1227,7 @@
       },
       {
         "data": {
-          "id": "note-xQRMd",
+          "id": "note-NYz05",
           "node": {
             "description": "### 💡 Add your OpenAI API key here ",
             "display_name": "",
@@ -1226,7 +1239,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-xQRMd",
+        "id": "note-NYz05",
         "measured": {
           "height": 324,
           "width": 324
@@ -1240,7 +1253,7 @@
       },
       {
         "data": {
-          "id": "Agent-KXbzb",
+          "id": "Agent-EePDq",
           "node": {
             "base_classes": [
               "Message"
@@ -1419,7 +1432,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1427,7 +1440,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1922,7 +1935,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-KXbzb",
+        "id": "Agent-EePDq",
         "measured": {
           "height": 624,
           "width": 320
@@ -1931,19 +1944,19 @@
           "x": 1023.5315500182937,
           "y": 280.6548808097231
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -37.341352016254405,
-      "y": -91.95251540726224,
-      "zoom": 0.8575366287284449
+      "x": 280.5777285013439,
+      "y": 153.83586264930773,
+      "zoom": 0.6859951115676428
     }
   },
   "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
   "endpoint_name": null,
-  "id": "23a735de-a049-4058-b4dd-89e5da601ed1",
+  "id": "6aa57fa5-c085-4a30-8654-b56b4944679a",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Social Media Agent",

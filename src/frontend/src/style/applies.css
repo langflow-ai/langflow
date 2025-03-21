@@ -1280,6 +1280,10 @@
   .btn-add-input-list {
     @apply flex h-8 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
   }
+
+  .btn-playground-actions {
+    @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
+  }
 }
 
 /* Gradient background */
@@ -1292,6 +1296,14 @@
   left: 0;
   justify-content: center;
   align-items: center;
+}
+
+.deploy-dropdown-item {
+  @apply px-2.5 py-1 hover:bg-background cursor-pointer h-11 font-normal text-[14px] !important;
+}
+
+.deploy-dropdown-item > :first-child {
+  @apply flex items-center w-full px-2 h-8 py-1 rounded-md !important;
 }
 
 :root {

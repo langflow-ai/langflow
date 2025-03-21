@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-7RVLY",
+            "id": "AgentQL-SX5lE",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-O0yDh",
+            "id": "Agent-6kg5B",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-7RVLY{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-7RVLYœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-O0yDh{œfieldNameœ:œtoolsœ,œidœ:œAgent-O0yDhœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-SX5lE{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-SX5lEœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-6kg5B{œfieldNameœ:œtoolsœ,œidœ:œAgent-6kg5Bœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-7RVLY",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-7RVLYœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-O0yDh",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-O0yDhœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-SX5lE",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-SX5lEœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-6kg5B",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6kg5Bœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-Wm5fh",
+            "id": "TavilySearchComponent-rYJ93",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-O0yDh",
+            "id": "Agent-6kg5B",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-Wm5fh{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-Wm5fhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-O0yDh{œfieldNameœ:œtoolsœ,œidœ:œAgent-O0yDhœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-rYJ93{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-rYJ93œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-6kg5B{œfieldNameœ:œtoolsœ,œidœ:œAgent-6kg5Bœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-Wm5fh",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-Wm5fhœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-O0yDh",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-O0yDhœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-rYJ93",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-rYJ93œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-6kg5B",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6kg5Bœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-JghTQ",
+            "id": "ChatInput-RjE2C",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,25 +71,55 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-O0yDh",
+            "id": "Agent-6kg5B",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-JghTQ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JghTQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-O0yDh{œfieldNameœ:œinput_valueœ,œidœ:œAgent-O0yDhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-RjE2C{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RjE2Cœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-6kg5B{œfieldNameœ:œinput_valueœ,œidœ:œAgent-6kg5Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-JghTQ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-JghTQœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-O0yDh",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-O0yDhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-RjE2C",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RjE2Cœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-6kg5B",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-6kg5Bœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-6kg5B",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-x7zHw",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-Agent-6kg5B{œdataTypeœ:œAgentœ,œidœ:œAgent-6kg5Bœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-x7zHw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-x7zHwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-6kg5B",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-6kg5Bœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-x7zHw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-x7zHwœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-JghTQ",
+          "id": "ChatInput-RjE2C",
           "node": {
             "base_classes": [
               "Message"
@@ -202,7 +232,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -242,6 +272,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -386,21 +417,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-JghTQ",
+        "id": "ChatInput-RjE2C",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 32.99622536761149,
-          "y": 367.6878380048698
+          "x": 29.709503239241485,
+          "y": 315.10028395094986
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-HVvix",
+          "id": "ChatOutput-x7zHw",
           "node": {
             "base_classes": [
               "Message"
@@ -692,7 +723,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-HVvix",
+        "id": "ChatOutput-x7zHw",
         "measured": {
           "height": 66,
           "width": 192
@@ -706,7 +737,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-Wm5fh",
+          "id": "TavilySearchComponent-rYJ93",
           "node": {
             "base_classes": [
               "Data",
@@ -765,7 +796,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -773,7 +804,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "TAVILY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1039,23 +1070,23 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-Wm5fh",
+        "id": "TavilySearchComponent-rYJ93",
         "measured": {
-          "height": 435,
+          "height": 437,
           "width": 320
         },
         "position": {
           "x": 345.9762510966062,
           "y": 500.79656821057074
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-7RVLY",
+          "id": "AgentQL-SX5lE",
           "node": {
             "base_classes": [
               "Data"
@@ -1093,6 +1124,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -1114,7 +1146,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1122,7 +1154,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "AGENTQL_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1446,21 +1478,21 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-7RVLY",
+        "id": "AgentQL-SX5lE",
         "measured": {
-          "height": 599,
+          "height": 602,
           "width": 320
         },
         "position": {
-          "x": 258.9873392343597,
-          "y": -351.3788533005941
+          "x": 331.42030247682777,
+          "y": -359.7956260200852
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-O0yDh",
+          "id": "Agent-6kg5B",
           "node": {
             "base_classes": [
               "Message"
@@ -1635,7 +1667,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1643,7 +1675,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -2136,9 +2168,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-O0yDh",
+        "id": "Agent-6kg5B",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -2150,7 +2182,7 @@
       },
       {
         "data": {
-          "id": "note-XsoMT",
+          "id": "note-l316C",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2162,7 +2194,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-XsoMT",
+        "id": "note-l316C",
         "measured": {
           "height": 324,
           "width": 324
@@ -2176,7 +2208,7 @@
       },
       {
         "data": {
-          "id": "note-WnGqC",
+          "id": "note-9uZJm",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2189,21 +2221,21 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-WnGqC",
+        "id": "note-9uZJm",
         "measured": {
           "height": 346,
           "width": 324
         },
         "position": {
-          "x": 328.21954223681814,
-          "y": -160.4106577664784
+          "x": 338.27967602049426,
+          "y": -413.92602911511665
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-Qqusp",
+          "id": "note-X4Slm",
           "node": {
             "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
@@ -2214,7 +2246,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-Qqusp",
+        "id": "note-X4Slm",
         "measured": {
           "height": 674,
           "width": 467
@@ -2230,7 +2262,7 @@
       },
       {
         "data": {
-          "id": "note-jNCi3",
+          "id": "note-s2MdP",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2243,14 +2275,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-jNCi3",
+        "id": "note-s2MdP",
         "measured": {
           "height": 324,
           "width": 344
         },
         "position": {
-          "x": 331.0865722920669,
-          "y": 447.2225407807426
+          "x": 343.1587328324782,
+          "y": 449.2345675374778
         },
         "resizing": false,
         "selected": false,
@@ -2259,14 +2291,14 @@
       }
     ],
     "viewport": {
-      "x": 407.36179700368467,
-      "y": 437.56262661430094,
-      "zoom": 0.7174828925593176
+      "x": 424.9980860019988,
+      "y": 301.1687784963252,
+      "zoom": 0.6254645347553064
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "id": "b91c6971-fe73-479b-b5d3-d08ac651ea21",
+  "id": "44912ccb-acc0-4963-bdf6-1274bc455b63",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Price Deal Finder",

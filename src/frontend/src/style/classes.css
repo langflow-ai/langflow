@@ -18,8 +18,8 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 pre {
   font-family: inherit;
@@ -250,13 +250,17 @@ pre code {
   display: inline-block;
   width: 100%;
   /* Background color */
-  background-color: hsl(var(--code-background)) !important;
+  background-color: hsl(var(--muted)) !important;
+  font-size: 12px !important;
+}
+
+.dark pre code {
   color: hsl(var(--code-foreground)) !important;
 }
 
 pre {
   /* Background color */
-  background-color: hsl(var(--code-background)) !important;
+  background-color: hsl(var(--muted)) !important;
 }
 
 .prose li::marker {
@@ -284,5 +288,24 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .markdown td {
-  min-width: 78px;
+  min-width: 100px;
+}
+
+.jse-group-button.jse-last,
+.jse-button.jse-sort,
+.jse-dropdown-button:last-child,
+.jse-button.jse-transform {
+  display: none !important;
+}
+.jse-search-box-background {
+  display: none !important;
+}
+
+.jse-search-box-container {
+  position: absolute !important;
+  right: 0 !important;
+}
+
+.linenumber {
+  font-style: normal !important;
 }

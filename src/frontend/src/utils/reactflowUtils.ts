@@ -1698,17 +1698,49 @@ export function templatesGenerator(data: APIObjectType) {
 
 export function extractFieldsFromComponenents(data: APIObjectType) {
   const fields = new Set<string>();
+
+  // Check if data exists
+  if (!data) {
+    console.warn("[Types] Data is undefined in extractFieldsFromComponenents");
+    return fields;
+  }
+
   Object.keys(data).forEach((key) => {
+    // Check if data[key] exists
+    if (!data[key]) {
+      console.warn(
+        `[Types] data["${key}"] is undefined in extractFieldsFromComponenents`,
+      );
+      return;
+    }
+
     Object.keys(data[key]).forEach((kind) => {
+      // Check if data[key][kind] exists
+      if (!data[key][kind]) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"] is undefined in extractFieldsFromComponenents`,
+        );
+        return;
+      }
+
+      // Check if template exists
+      if (!data[key][kind].template) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"].template is undefined in extractFieldsFromComponenents`,
+        );
+        return;
+      }
+
       Object.keys(data[key][kind].template).forEach((field) => {
         if (
-          data[key][kind].template[field].display_name &&
-          data[key][kind].template[field].show
+          data[key][kind].template[field]?.display_name &&
+          data[key][kind].template[field]?.show
         )
           fields.add(data[key][kind].template[field].display_name!);
       });
     });
   });
+
   return fields;
 }
 /**
@@ -1982,4 +2014,8 @@ export function buildPositionDictionary(nodes: AllNodeType[]) {
     positionDictionary[node.position.x] = node.position.y;
   });
   return positionDictionary;
+}
+
+export function hasStreaming(nodes: AllNodeType[]) {
+  return nodes.some((node) => node.data.node?.template?.stream?.value);
 }

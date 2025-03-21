@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.constants import MAX_TAB_OPTION_LENGTH, MAX_TAB_OPTIONS
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.table import Column, TableOptions, TableSchema
 
@@ -30,6 +31,7 @@ class FieldTypes(str, Enum):
     TABLE = "table"
     LINK = "link"
     SLIDER = "slider"
+    TAB = "tab"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -71,6 +73,9 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
 
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
+
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
 
     info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
@@ -134,6 +139,7 @@ class DatabaseLoadMixin(BaseModel):
 class FileMixin(BaseModel):
     file_path: list[str] | str | None = Field(default="")
     file_types: list[str] = Field(default=[], alias="fileTypes")
+    temp_file: bool = Field(default=False)
 
     @field_validator("file_path")
     @classmethod
@@ -183,6 +189,31 @@ class DropDownMixin(BaseModel):
     """Variable that defines if the user can insert custom values in the dropdown."""
     dialog_inputs: dict[str, Any] | None = None
     """Dictionary of dialog inputs for the field. Default is an empty object."""
+
+
+class TabMixin(BaseModel):
+    """Mixin for tab input fields that allows a maximum of 3 values, each with a maximum of 20 characters."""
+
+    options: list[str] = Field(default_factory=list, max_length=3)
+    """List of tab options. Maximum of 3 values allowed."""
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, v):
+        """Validate that there are at most 3 tab values and each value has at most 20 characters."""
+        if len(v) > MAX_TAB_OPTIONS:
+            msg = f"Maximum of {MAX_TAB_OPTIONS} tab values allowed. Got {len(v)} values."
+            raise ValueError(msg)
+
+        for i, value in enumerate(v):
+            if len(value) > MAX_TAB_OPTION_LENGTH:
+                msg = (
+                    f"Tab value at index {i} exceeds maximum length of {MAX_TAB_OPTION_LENGTH} "
+                    f"characters. Got {len(value)} characters."
+                )
+                raise ValueError(msg)
+
+        return v
 
 
 class MultilineMixin(BaseModel):

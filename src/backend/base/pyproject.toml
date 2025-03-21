@@ -81,7 +81,11 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+    "jsonquerylang>=1.1.1",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    "elevenlabs>=1.54.0",
+    "webrtcvad>=2.0.10",
+    "scipy>=1.15.2",
 ]
 
 [dependency-groups]
@@ -190,6 +194,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "langflow/api/v1/*" = [
+    "TCH", # FastAPI needs to evaluate types at runtime
+]
+"langflow/api/v2/*" = [
     "TCH", # FastAPI needs to evaluate types at runtime
 ]
 "langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [

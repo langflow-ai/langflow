@@ -39,6 +39,7 @@ type BuildVerticesParams = {
   edges?: Edge[];
   logBuilds?: boolean;
   session?: string;
+  playgroundPage?: boolean;
   stream?: boolean;
 };
 
@@ -69,6 +70,10 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
+function logFlowLoad(message: string, data?: any) {
+  console.log(`[FlowLoad] ${message}`, data || "");
+}
+
 export async function updateVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
@@ -81,6 +86,7 @@ export async function updateVerticesOrder(
   runId?: string;
   verticesToRun: string[];
 }> {
+  logFlowLoad("Updating vertices order");
   return new Promise(async (resolve, reject) => {
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
@@ -92,7 +98,9 @@ export async function updateVerticesOrder(
         nodes,
         edges,
       );
+      logFlowLoad("Got vertices order response:", orderResponse);
     } catch (error: any) {
+      logFlowLoad("Error getting vertices order:", error);
       setErrorData({
         title: MISSED_ERROR_ALERT,
         list: [error.response?.data?.detail ?? "Unknown Error"],
@@ -129,6 +137,7 @@ export async function updateVerticesOrder(
 export async function buildFlowVerticesWithFallback(
   params: BuildVerticesParams,
 ) {
+  logFlowLoad("Starting flow load");
   try {
     // Use shouldUsePolling() to determine stream mode
     return await buildFlowVertices({ ...params });
@@ -226,10 +235,13 @@ export async function buildFlowVertices({
   edges,
   logBuilds,
   session,
+  playgroundPage,
   stream = true,
 }: BuildVerticesParams) {
   const inputs = {};
-  let buildUrl = `${BASE_URL_API}build/${flowId}/flow`;
+
+  let buildUrl = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow`;
+
   const queryParams = new URLSearchParams();
 
   if (startNodeId) {

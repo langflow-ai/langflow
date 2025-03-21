@@ -2,6 +2,7 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
@@ -65,6 +66,7 @@ export function ParameterRenderComponent({
       disabled,
       nodeClass,
       handleNodeClass,
+      helperText: templateData?.helper_text,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
@@ -164,6 +166,9 @@ export function ParameterRenderComponent({
           <InputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
+            file_path={templateData.file_path}
+            isList={templateData.list ?? false}
+            tempFile={templateData.temp_file ?? false}
             id={`inputfile_${id}`}
           />
         );
@@ -205,6 +210,14 @@ export function ParameterRenderComponent({
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
             id={`slider_${id}`}
+          />
+        );
+      case "tab":
+        return (
+          <TabComponent
+            {...baseInputProps}
+            options={templateData?.options || []}
+            id={`tab_${id}`}
           />
         );
       default:
