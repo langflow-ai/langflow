@@ -15,7 +15,6 @@ For more information on NVIDIA NIM, see the [NVIDIA documentation](https://docs.
 * [NVIDIA NIM WSL2 installed](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
 * A NIM container deployed. The prerequisites vary between models.
 For example, to deploy the `mistral-nemo-12b-instruct` NIM, follow the instructions for **Windows on RTX AI PCs (Beta)** on your [model's deployment overview](https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct/deploy?environment=wsl2.md)
-* [WSL2 installed](https://learn.microsoft.com/en-us/windows/wsl/install)
 * Windows 11 build 23H2 (and later)
 * At least 12 GB of RAM
 
