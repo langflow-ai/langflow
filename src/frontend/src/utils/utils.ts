@@ -87,10 +87,10 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
     .join(" ");
 
@@ -100,10 +100,10 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
     .join(" ");
 }
