@@ -424,54 +424,76 @@ class MCPToolsComponent(Component):
             msg = f"Error updating tool configuration: {e!s}"
             raise ValueError(msg) from e
 
+    # async def build_output(self) -> Message:
+    #     """Build output with improved error handling and validation."""
+    #     try:
+    #         await self.update_tools()
+
+    #         if not self.tool:
+    #             msg = "No tool selected"
+    #             raise ValueError(msg)
+
+    #         tool_obj = next((t for t in self._tool_cache if t.name == self.tool), None)
+    #         if not tool_obj:
+    #             msg = f"Selected tool '{self.tool}' not found"
+    #             raise ValueError(msg)
+
+    #         # Validate schema inputs before processing
+    #         try:
+    #             self.schema_inputs = await self._validate_schema_inputs(tool_obj)
+    #         except ValueError as e:
+    #             logger.error(f"Schema validation error: {e!s}")
+    #             msg = f"Invalid tool configuration: {e!s}"
+    #             raise ValueError(msg) from e
+
+    #         # Handle case where tool doesn't require inputs
+    #         if not self.schema_inputs:
+    #             logger.info(f"Tool '{self.tool}' doesn't require any inputs")
+    #             kwargs = {}
+    #         else:
+    #             kwargs = {}
+    #             for schema_input in self.schema_inputs:
+    #                 if not schema_input or not hasattr(schema_input, "name"):
+    #                     continue
+    #                 print(f"Schema input: {schema_input.name}")
+    #                 value=getattr(self, schema_input.name, "")
+    #                 print(f"Value: {value}")
+    #                 if getattr(schema_input, "required", True) and value is None:
+    #                     msg = f"Required input '{schema_input.name}' is missing"
+    #                     raise ValueError(msg)
+
+    #                 kwargs[schema_input.name] = value
+    #         if not isinstance(tool_obj,str):
+    #             output = await tool_obj.func(kwargs)
+    #         else:
+    #             print(f"Tool {tool_obj} is not a StructuredTool")
+    #             return Message(text="Invalid tool object")
+    #         if not output:
+    #             return Message(text="Tool execution completed but returned no output")
+
+    #         return Message(text=output)
+
+    #     except ValueError as e:
+    #         logger.error(f"Validation error in build_output: {e!s}")
+    #         raise
+    #     except Exception as e:
+    #         logger.error(f"Error in build_output: {e!s}")
+    #         msg = f"Failed to execute tool: {e!s}"
+    #         raise ValueError(msg) from e
     async def build_output(self) -> Message:
         """Build output with improved error handling and validation."""
         try:
             await self.update_tools()
-
-            if not self.tool:
-                msg = "No tool selected"
-                raise ValueError(msg)
-
-            tool_obj = next((t for t in self.tools if t.name == self.tool), None)
-            if not tool_obj:
-                msg = f"Selected tool '{self.tool}' not found"
-                raise ValueError(msg)
-
-            # Validate schema inputs before processing
-            try:
-                self.schema_inputs = await self._validate_schema_inputs(tool_obj)
-            except ValueError as e:
-                logger.error(f"Schema validation error: {e!s}")
-                msg = f"Invalid tool configuration: {e!s}"
-                raise ValueError(msg) from e
-
-            # Handle case where tool doesn't require inputs
-            if not self.schema_inputs:
-                logger.info(f"Tool '{self.tool}' doesn't require any inputs")
-                kwargs = {}
-            else:
-                kwargs = {}
-                for schema_input in self.schema_inputs:
-                    if not schema_input or not hasattr(schema_input, "name"):
-                        continue
-
-                    value = self.get(schema_input.name)
-                    if getattr(schema_input, "required", True) and value is None:
-                        msg = f"Required input '{schema_input.name}' is missing"
-                        raise ValueError(msg)
-
-                    kwargs[schema_input.name] = value
-
-            output = await tool_obj.func(kwargs)
-            if not output:
-                return Message(text="Tool execution completed but returned no output")
-
+            exec_tool=self._tool_cache[self.tool]
+            tool_args=self.get_inputs_for_all_tools(self.tools)[self.tool]
+            kwargs={}
+            for arg in tool_args:
+                value= getattr(self, arg.name, None)
+                if value:
+                    kwargs[arg.name]=value
+            print(f"kwargs: {kwargs}")
+            output=await exec_tool.func(**kwargs)
             return Message(text=output)
-
-        except ValueError as e:
-            logger.error(f"Validation error in build_output: {e!s}")
-            raise
         except Exception as e:
             logger.error(f"Error in build_output: {e!s}")
             msg = f"Failed to execute tool: {e!s}"

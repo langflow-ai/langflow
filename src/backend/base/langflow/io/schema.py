@@ -2,7 +2,7 @@ from typing import Literal, Union
 
 from pydantic import BaseModel, Field, create_model
 
-from langflow.inputs.inputs import BoolInput, DictInput, FieldTypes, FloatInput, IntInput, MessageTextInput
+from langflow.inputs.inputs import BoolInput, DictInput, FieldTypes, FloatInput, IntInput, MessageTextInput,TableInput
 from langflow.schema.dotdict import dotdict
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
@@ -30,7 +30,7 @@ _convert_type_to_field_type = {
     float: FloatInput,
     bool: BoolInput,
     dict: DictInput,
-    list: MessageTextInput,
+    list:MessageTextInput ,
 }
 
 
@@ -68,14 +68,17 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list["InputTypes"]:
         # Get metadata from the Pydantic Field.
         title = model_field.title or field_name.replace("_", " ").title()
         description = model_field.description or ""
-        required = not model_field.is_required
+        required = model_field.is_required()
         default = None if required else model_field.default
 
         # Construct the Langflow input.
         input_obj = langflow_field_type(
             display_name=title,
             name=field_name,
-            info=description
+            info=description,
+            required=required,
+            is_list=is_list,
+            # value=default
         )
         inputs.append(input_obj)
     return inputs
