@@ -194,65 +194,45 @@ class MCPToolsComponent(Component):
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
-        if field_name == "mode":
-            if field_value == "Stdio":
-                build_config["command"]["show"] = True
-                build_config["sse_url"]["show"] = False
-            elif field_value == "SSE":
-                build_config["command"]["show"] = False
-                build_config["sse_url"]["show"] = True
-        elif field_name in ("command", "sse_url"):
-            try:
-                await self.update_tools()
-                # Safely update the tool options after tools are updated
-                if "tool" in build_config:
-                    build_config["tool"]["options"] = self.tool_names
-            except Exception as e:
-                # Handle any errors during tool update
-                build_config["tool"]["options"] = []
-                msg = f"Failed to update tools: {e!s}"
-                raise ValueError(msg) from e
-        elif field_name == "tool":
-            if len(self.tools) == 0:
-                await self.update_tools()
-            if self.tool is None:
-                return build_config
-            tool_obj = None
-            for tool in self.tools:
-                if tool.name == self.tool:
-                    tool_obj = tool
-                    break
-            if tool_obj is None:
-                msg = f"Tool {self.tool} not found in available tools: {self.tools}"
-                logger.warning(msg)
-                return build_config
         try:
             if field_name == "mode":
+                self.remove_non_default_keys(build_config)
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
-                    build_config["url"]["show"] = False
+                    build_config["sse_url"]["show"] = False
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
-                    build_config["url"]["show"] = True
-            elif field_name in ("command", "url"):
+                    build_config["sse_url"]["show"] = True
+            if field_name in ("command", "sse_url", "mode"):
                 try:
                     await self.update_tools()
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
-                        build_config["tool"]["value"] = self.tool_names[0]
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
-                    logger.exception(msg)
                     raise ValueError(msg) from e
+            elif field_name == "tool":
+                if len(self.tools) == 0:
+                    await self.update_tools()
+                if self.tool is None:
+                    return build_config
+                tool_obj = None
+                for tool in self.tools:
+                    if tool.name == self.tool:
+                        tool_obj = tool
+                        break
+                if tool_obj is None:
+                    msg = f"Tool {self.tool} not found in available tools: {self.tools}"
+                    logger.warning(msg)
+                    return build_config
+                self.remove_non_default_keys(build_config)
+                await self._update_tool_config(build_config, field_value)
             elif field_name == "tool_mode":
                 build_config["tool"]["show"] = not field_value
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
                         build_config[key]["show"] = not field_value
-            if field_name == "tool":
-                self.remove_non_default_keys(build_config)
-                await self._update_tool_config(build_config, field_value)
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
