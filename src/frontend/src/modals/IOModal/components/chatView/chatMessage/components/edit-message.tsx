@@ -55,6 +55,15 @@ export const MarkdownField = ({
           pre({ node, ...props }) {
             return <>{props.children}</>;
           },
+          table: ({ node, ...props }) => {
+            return (
+              <div className="max-w-full overflow-hidden rounded-md border bg-muted">
+                <div className="max-h-[600px] w-full overflow-auto p-4">
+                  <table className="!my-0 w-full">{props.children}</table>
+                </div>
+              </div>
+            );
+          },
           code: ({ node, inline, className, children, ...props }) => {
             let content = children as string;
             if (
