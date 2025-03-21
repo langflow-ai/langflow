@@ -1,15 +1,11 @@
 import asyncio
-import os
-from contextlib import AsyncExitStack
 from typing import Any
 
-import httpx
 from langchain_core.tools import StructuredTool
-from mcp import ClientSession
-from mcp.client.sse import sse_client
-from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from langflow.base.mcp.util import (
+    MCPSseClient,
+    MCPStdioClient,
     create_input_schema_from_json_schema,
     create_tool_coroutine,
     create_tool_func,
@@ -21,74 +17,6 @@ from langflow.io import MessageTextInput, Output, TabInput
 from langflow.io.schema import schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema import Message
-
-# Define constant for status code
-HTTP_TEMPORARY_REDIRECT = 307
-
-
-class MCPStdioClient:
-    def __init__(self):
-        self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
-
-    async def connect_to_server(self, command_str: str):
-        command = command_str.split(" ")
-        server_params = StdioServerParameters(
-            command=command[0],
-            args=command[1:],
-            env={"DEBUG": "true", "PATH": os.environ["PATH"]},
-        )
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-        self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-        await self.session.initialize()
-        response = await self.session.list_tools()
-        return response.tools
-
-
-class MCPSseClient:
-    def __init__(self):
-        self.write = None
-        self.sse = None
-        self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
-
-    async def pre_check_redirect(self, url: str):
-        async with httpx.AsyncClient(follow_redirects=False) as client:
-            response = await client.request("HEAD", url)
-            if response.status_code == HTTP_TEMPORARY_REDIRECT:
-                return response.headers.get("Location")
-        return url
-
-    async def _connect_with_timeout(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
-    ):
-        sse_transport = await self.exit_stack.enter_async_context(
-            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-        )
-        self.sse, self.write = sse_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
-        await self.session.initialize()
-
-    async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
-    ):
-        if headers is None:
-            headers = {}
-        url = await self.pre_check_redirect(url)
-        try:
-            await asyncio.wait_for(
-                self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
-                timeout=timeout_seconds,
-            )
-            if self.session is None:
-                msg = "Session not initialized"
-                raise ValueError(msg)
-            response = await self.session.list_tools()
-        except asyncio.TimeoutError as err:
-            msg = f"Connection to {url} timed out after {timeout_seconds} seconds"
-            raise TimeoutError(msg) from err
-        return response.tools
 
 
 class MCPToolsComponent(Component):

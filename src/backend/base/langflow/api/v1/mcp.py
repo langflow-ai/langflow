@@ -9,7 +9,7 @@ from contextvars import ContextVar
 from functools import wraps
 from typing import Annotated, Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pydantic
 from anyio import BrokenResourceError
@@ -23,6 +23,7 @@ from starlette.background import BackgroundTasks
 
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
+from langflow.base.mcp.util import get_flow
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
@@ -201,8 +202,8 @@ async def handle_list_tools():
                     continue
 
                 tool = types.Tool(
-                    name=str(flow.id),  # Use flow.id instead of name
-                    description=f"{flow.name}: {flow.description}"
+                    name=flow.name,
+                    description=f"{flow.id}: {flow.description}"
                     if flow.description
                     else f"Tool generated from flow: {flow.name}",
                     inputSchema=json_schema_from_flow(flow),
@@ -230,11 +231,12 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
     current_user = current_user_ctx.get()
 
     async def execute_tool(session):
-        flow = (await session.exec(select(Flow).where(Flow.id == UUID(name)))).first()
-
+        # get flow id from name
+        flow = await get_flow(name, current_user.id, session)
         if not flow:
-            msg = f"Flow with id '{name}' not found"
+            msg = f"Flow with name '{name}' not found"
             raise ValueError(msg)
+        flow_id = flow.id
 
         # Process inputs
         processed_inputs = dict(arguments)
@@ -275,7 +277,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
             try:
                 response = await build_flow_and_stream(
-                    flow_id=UUID(name),
+                    flow_id=flow_id,
                     inputs=input_request,
                     background_tasks=background_tasks,
                     current_user=current_user,

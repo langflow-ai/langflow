@@ -1,38 +1,17 @@
 # from langflow.field_typing import Data
-import os
-from contextlib import AsyncExitStack
 
 from langchain_core.tools import StructuredTool
-from mcp import ClientSession, StdioServerParameters, types
-from mcp.client.stdio import stdio_client
+from mcp import types
 
-from langflow.base.mcp.util import create_input_schema_from_json_schema, create_tool_coroutine, create_tool_func
+from langflow.base.mcp.util import (
+    MCPStdioClient,
+    create_input_schema_from_json_schema,
+    create_tool_coroutine,
+    create_tool_func,
+)
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
-
-
-class MCPStdioClient:
-    def __init__(self):
-        # Initialize session and client objects
-        self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
-
-    async def connect_to_server(self, command_str: str):
-        command = command_str.split(" ")
-        server_params = StdioServerParameters(
-            command=command[0], args=command[1:], env={"DEBUG": "true", "PATH": os.environ["PATH"]}
-        )
-
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-        self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-
-        await self.session.initialize()
-
-        # List available tools
-        response = await self.session.list_tools()
-        return response.tools
 
 
 class MCPStdio(Component):
