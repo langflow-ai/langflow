@@ -115,6 +115,8 @@ test(
       .nth(0)
       .click();
 
+    await page.waitForTimeout(1000);
+
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
     await page.waitForSelector("text=built successfully", {
@@ -185,7 +187,6 @@ test(
     const dataEdge = await page.locator(".react-flow__edge").first();
     await dataEdge.click();
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(600);
 
     await page.waitForTimeout(5000);
 

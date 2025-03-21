@@ -132,7 +132,10 @@ test(
 
     // Move the Agent node a bit
 
-    await page.getByTestId("handle-url-shownode-toolset-right").first().click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-toolset-right")
+      .first()
+      .click();
 
     await page.getByTestId("handle-agent-shownode-tools-left").first().click();
 
