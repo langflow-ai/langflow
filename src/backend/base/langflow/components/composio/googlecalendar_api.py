@@ -438,7 +438,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-summary",
-            display_name="Summary",
+            display_name="Summary/Title",
             info="Summary (title) of the event.",
             show=False,
         ),
@@ -679,7 +679,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-summary",
-            display_name="Summary",
+            display_name="Summary/Title",
             info="Summary (title) of the event.",
             show=False,
         ),
@@ -788,7 +788,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
                     param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
-                    if value is None or value in ("", []):
+                    if value is None or value == "" or value == [] or value == [""] or value == ['']:
                         continue
 
                     if field in self._bool_variables:

@@ -323,7 +323,7 @@ class GmailAPIComponent(LCToolComponent):
                 for field in self._actions_data[action_key]["parameters"]:
                     value = getattr(self, field)
 
-                    if value is None or value == "":
+                    if value is None or value == "" or value == [] or value == [""] or value == ['']:
                         continue
 
                     if field in self._bool_variables:

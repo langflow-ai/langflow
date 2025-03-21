@@ -21,7 +21,7 @@ from langflow.schema.message import Message
 
 
 class GooglesheetsAPIComponent(LCToolComponent):
-    display_name: str = "Google sheets"
+    display_name: str = "Google Sheets"
     description: str = "Google Sheets API"
     name = "GooglesheetsAPI"
     icon = "Googlesheets"
@@ -285,7 +285,7 @@ class GooglesheetsAPIComponent(LCToolComponent):
                     param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
-                    if value is None or value == "":
+                    if value is None or value == "" or value == [] or value == [""] or value == ['']:
                         continue
 
                     if field in self._bool_variables:
