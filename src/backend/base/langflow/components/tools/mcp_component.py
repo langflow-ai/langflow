@@ -1,7 +1,7 @@
 import asyncio
-import logging
 import os
 from contextlib import AsyncExitStack
+from typing import Any
 
 import httpx
 from langchain_core.tools import StructuredTool
@@ -24,8 +24,6 @@ from langflow.schema import Message
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
-
-logger = logging.getLogger(__name__)
 
 
 class MCPStdioClient:
@@ -100,8 +98,7 @@ class MCPToolsComponent(Component):
     tools: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
-    default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode","tool"]
-
+    default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
 
     display_name = "MCP Tools"
     description = (
@@ -186,12 +183,13 @@ class MCPToolsComponent(Component):
 
             schema_inputs = schema_to_langflow_inputs(input_schema)
             if not schema_inputs:
-                logger.warning(f"No input parameters defined for tool '{tool_obj.name}'")
+                msg = f"No input parameters defined for tool '{tool_obj.name}'"
+                logger.warning(msg)
                 return []
 
         except Exception as e:
-            logger.error(f"Error validating schema inputs: {e!s}")
-            msg = f"Failed to validate schema inputs: {e!s}"
+            msg = f"Error validating schema inputs: {e!s}"
+            logger.exception(msg)
             raise ValueError(msg) from e
         else:
             return schema_inputs
@@ -215,7 +213,7 @@ class MCPToolsComponent(Component):
                 # Handle any errors during tool update
                 build_config["tool"]["options"] = []
                 msg = f"Failed to update tools: {e!s}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
         elif field_name == "tool":
             if len(self.tools) == 0:
                 await self.update_tools()
@@ -227,7 +225,8 @@ class MCPToolsComponent(Component):
                     tool_obj = tool
                     break
             if tool_obj is None:
-                logger.warning(f"Tool {self.tool} not found in available tools: {self.tools}")
+                msg = f"Tool {self.tool} not found in available tools: {self.tools}"
+                logger.warning(msg)
                 return build_config
         try:
             if field_name == "mode":
@@ -245,21 +244,22 @@ class MCPToolsComponent(Component):
                         build_config["tool"]["value"] = self.tool_names[0]
                 except Exception as e:
                     build_config["tool"]["options"] = []
-                    logger.error(f"Failed to update tools: {e!s}")
                     msg = f"Failed to update tools: {e!s}"
+                    logger.exception(msg)
                     raise ValueError(msg) from e
-            elif field_name =="tool_mode":
+            elif field_name == "tool_mode":
                 build_config["tool"]["show"] = not field_value
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
                         build_config[key]["show"] = not field_value
-            if field_name in ("tool"):
+            if field_name == "tool":
                 self.remove_non_default_keys(build_config)
                 await self._update_tool_config(build_config, field_value)
 
         except Exception as e:
-            logger.error(f"Error in update_build_config: {e!s}")
-            raise
+            msg = f"Error in update_build_config: {e!s}"
+            logger.exception(msg)
+            raise ValueError(msg) from e
         else:
             return build_config
 
@@ -273,12 +273,13 @@ class MCPToolsComponent(Component):
                 input_schema = schema_to_langflow_inputs(create_input_schema_from_json_schema(tool.inputSchema))
                 inputs[tool.name] = input_schema
             except (AttributeError, ValueError, TypeError, KeyError) as e:
-                logger.error(f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}")
+                msg = f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}"
+                logger.exception(msg)
                 continue
         return inputs
 
     def remove_input_schema_from_build_config(
-        self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes]]
+        self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes], Any]
     ):
         """Remove the input schema for the tool from the build config."""
         # Keep only schemas that don't belong to the current tool
@@ -305,7 +306,8 @@ class MCPToolsComponent(Component):
 
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
-            logger.warning(f"Tool {tool_name} not found in available tools: {self.tools}")
+            msg = f"Tool {tool_name} not found in available tools: {self.tools}"
+            logger.warning(msg)
             return
 
         try:
@@ -316,13 +318,15 @@ class MCPToolsComponent(Component):
             # Get and validate new inputs
             self.schema_inputs = await self._validate_schema_inputs(tool_obj)
             if not self.schema_inputs:
-                logger.info(f"No input parameters to configure for tool '{tool_name}'")
+                msg = f"No input parameters to configure for tool '{tool_name}'"
+                logger.info(msg)
                 return
 
             # Add new inputs to build config
             for schema_input in self.schema_inputs:
                 if not schema_input or not hasattr(schema_input, "name"):
-                    logger.warning("Invalid schema input detected, skipping")
+                    msg = "Invalid schema input detected, skipping"
+                    logger.warning(msg)
                     continue
 
                 try:
@@ -332,16 +336,18 @@ class MCPToolsComponent(Component):
                     input_dict.setdefault("required", True)
                     build_config[name] = input_dict
                 except (AttributeError, KeyError, TypeError) as e:
-                    logger.error(f"Error processing schema input {schema_input}: {e!s}")
+                    msg = f"Error processing schema input {schema_input}: {e!s}"
+                    logger.exception(msg)
                     continue
 
         except ValueError as e:
-            logger.error(f"Schema validation error for tool {tool_name}: {e!s}")
+            msg = f"Schema validation error for tool {tool_name}: {e!s}"
+            logger.exception(msg)
             self.schema_inputs = []
             return
         except (AttributeError, KeyError, TypeError) as e:
-            logger.error(f"Error updating tool config: {e!s}")
-            msg = f"Error updating tool configuration: {e!s}"
+            msg = f"Error updating tool config: {e!s}"
+            logger.exception(msg)
             raise ValueError(msg) from e
 
     async def build_output(self) -> Message:
@@ -358,8 +364,8 @@ class MCPToolsComponent(Component):
             output = await exec_tool.coroutine(**kwargs)
             return Message(text=output.content[0].text)
         except Exception as e:
-            logger.error(f"Error in build_output: {e!s}")
-            msg = f"Failed to execute tool: {e!s}"
+            msg = f"Error in build_output: {e!s}"
+            logger.exception(msg)
             raise ValueError(msg) from e
 
     async def update_tools(self) -> list[StructuredTool]:
@@ -386,7 +392,8 @@ class MCPToolsComponent(Component):
                 try:
                     args_schema = create_input_schema_from_json_schema(tool.inputSchema)
                     if not args_schema:
-                        logger.warning(f"Empty schema for tool '{tool.name}', skipping")
+                        msg = f"Empty schema for tool '{tool.name}', skipping"
+                        logger.warning(msg)
                         continue
 
                     client = self.stdio_client if self.mode == "Stdio" else self.sse_client
@@ -405,14 +412,15 @@ class MCPToolsComponent(Component):
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
                 except (AttributeError, ValueError, TypeError, KeyError) as e:
-                    logger.error(f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e!s}")
+                    msg = f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e!s}"
+                    logger.exception(msg)
                     continue
 
             self.tool_names = [tool.name for tool in self.tools if hasattr(tool, "name")]
 
         except (ValueError, RuntimeError, asyncio.TimeoutError) as e:
-            logger.error(f"Error updating tools: {e!s}")
-            msg = f"Failed to update tools: {e!s}"
+            msg = f"Error updating tools: {e!s}"
+            logger.exception(msg)
             raise ValueError(msg) from e
         else:
             return tool_list

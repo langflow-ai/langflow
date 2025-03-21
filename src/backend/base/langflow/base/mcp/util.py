@@ -86,8 +86,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         # For non-required fields, wrap the type in Optional[...] and set a default value.
         if field_name not in required_fields:
-            # base_type = base_type | None
-            base_type = base_type
             field_metadata["default"] = field_def.get("default", None)
 
         fields[field_name] = (base_type, Field(**field_metadata))
