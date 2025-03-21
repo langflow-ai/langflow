@@ -1,6 +1,5 @@
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
-import { iconsType } from "@/types/components";
 import { lazy } from "react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 
@@ -334,7 +333,6 @@ export const nodeIconsLucide: Record<string, string> = {
   PostgresChatMessageHistory: "Postgres",
   BaiduQianfan: "QianFanChat",
   Vectara: "Vectara",
-  ArrowUpToLine: "ArrowUpToLine",
   Cassandra: "Cassandra",
   Chroma: "Chroma",
   Couchbase: "Couchbase",
@@ -352,7 +350,6 @@ export const nodeIconsLucide: Record<string, string> = {
   AstraDB: "AstraDB",
   BingSearchAPIWrapper: "Bing",
   BingSearchRun: "Bing",
-  CloudDownload: "CloudDownload",
   Olivya: "Olivya",
   Bing: "Bing",
   Cohere: "Cohere",
@@ -375,7 +372,6 @@ export const nodeIconsLucide: Record<string, string> = {
   Groq: "Groq",
   HCD: "HCD",
   HNLoader: "HackerNews",
-  Filter: "Filter",
   HuggingFaceHub: "HuggingFace",
   HuggingFace: "HuggingFace",
   HuggingFaceEmbeddings: "HuggingFace",
@@ -449,253 +445,42 @@ export const nodeIconsLucide: Record<string, string> = {
   wrappers: "Gift",
   unknown: "HelpCircle",
   custom: "Edit",
-  Keyboard: "Keyboard",
-  ArrowRight: "ArrowRight",
-  Play: "Play",
   BotMessageSquareIcon: "BotMessageSquare",
-  CheckCheck: "CheckCheck",
-  ListFilter: "ListFilter",
-  ScrollText: "ScrollText",
-  Workflow: "Workflow",
-  User: "User",
-  ScanEye: "ScanEye",
-  Type: "Type",
-  FolderIcon: "FolderIcon",
-  X: "X",
-  Trash2: "Trash2",
-  CircleOff: "CircleOff",
-  Boxes: "Boxes",
-  Network: "Network",
-  XCircle: "XCircle",
-  Info: "Info",
-  CheckCircle2: "CheckCircle2",
-  FileJson: "FileJson",
-  FileChartColumn: "FileChartColumn",
-  FileType: "FileType",
-  File: "File",
-  SquarePen: "SquarePen",
-  Zap: "Zap",
-  MessagesSquare: "MessagesSquare",
-  ExternalLink: "ExternalLink",
+  TextSearchIcon: "TextSearch",
   ChevronsUpDown: "ChevronsUpDown",
-  Check: "Check",
-  Home: "Home",
-  Users2: "Users2",
   SunIcon: "Sun",
   MoonIcon: "Moon",
-  Bell: "Bell",
-  AlertTriangle: "AlertTriangle",
-  ChevronLeft: "ChevronLeft",
-  SlidersHorizontal: "SlidersHorizontal",
-  Palette: "Palette",
-  RefreshCcwDot: "RefreshCcwDot",
-  FolderUp: "FolderUp",
-  SquarePlay: "SquarePlay",
-  LayoutPanelTop: "LayoutPanelTop",
-  Database: "Database",
-  Blocks: "Blocks",
-  ChevronDown: "ChevronDown",
-  ArrowLeft: "ArrowLeft",
-  BrainCircuit: "BrainCircuit",
-  Wand2: "Wand2",
-  Layers: "Layers",
-  Binary: "Binary",
-  Paperclip: "Paperclip",
-  PocketKnife: "PocketKnife",
-  Scissors: "Scissors",
-  Cpu: "Cpu",
-  Hammer: "Hammer",
+  FolderIcon: "FolderIcon",
   GradientSave: "GradientSave",
-  Shield: "Shield",
-  NotebookPen: "NotebookPen",
-  Plus: "Plus",
-  Redo: "Redo",
-  Settings2: "Settings2",
-  FileType2: "FileType2",
-  Undo: "Undo",
-  FileSearch2: "FileSearch2",
-  ChevronRight: "ChevronRight",
-  Circle: "Circle",
-  CircleDot: "CircleDot",
-  Clipboard: "Clipboard",
-  PlusCircle: "PlusCircle",
-  PlusSquare: "PlusSquare",
-  Code2: "Code2",
-  Globe: "Globe",
-  Variable: "Variable",
-  Snowflake: "Snowflake",
-  Store: "Store",
-  Download: "Download",
-  Replace: "Replace",
-  Eraser: "Eraser",
-  Lock: "Lock",
-  LockOpen: "LockOpen",
-  ListX: "ListX",
-  Newspaper: "Newspaper",
-  Tags: "Tags",
-  CodeXml: "CodeXml",
-  PieChart: "PieChart",
-  LucideSend: "LucideSend",
-  Sparkles: "Sparkles",
-  DownloadCloud: "DownloadCloud",
-  FileText: "FileText",
-  FolderPlus: "FolderPlus",
-  GitFork: "GitFork",
-  FileDown: "FileDown",
-  FilePen: "FilePen",
-  FileUp: "FileUp",
-  Menu: "Menu",
-  Save: "Save",
-  Search: "Search",
-  Copy: "Copy",
-  Upload: "Upload",
-  MessageSquare: "MessageSquare",
-  MoreHorizontal: "MoreHorizontal",
-  UserMinus2: "UserMinus2",
-  UserPlus2: "UserPlus2",
-  Pencil: "Pencil",
-  PencilRuler: "PencilRuler",
-  ChevronsRight: "ChevronsRight",
-  ChevronsLeft: "ChevronsLeft",
-  EyeOff: "EyeOff",
-  Eye: "Eye",
-  UserCog2: "UserCog2",
-  Key: "Key",
-  Unplug: "Unplug",
-  Group: "Group",
-  LogIn: "LogIn",
-  ChevronUp: "ChevronUp",
-  PencilLine: "PencilLine",
-  Ungroup: "Ungroup",
-  BookMarked: "BookMarked",
-  Minus: "Minus",
-  LogOut: "LogOut",
-  BotMessageSquare: "BotMessageSquare",
-  Square: "Square",
-  Minimize2: "Minimize2",
-  Maximize2: "Maximize2",
-  FormInput: "FormInput",
-  ChevronRightSquare: "ChevronRightSquare",
-  Plane: "Plane",
-  Users: "Users",
-  ListOrdered: "ListOrdered",
-  SaveAll: "SaveAll",
-  MessageSquareMore: "MessageSquareMore",
-  Forward: "Forward",
-  Share2: "Share2",
-  Share: "Share",
-  GitBranchPlus: "GitBranchPlus",
-  Infinity: "Infinity",
-  Loader2: "Loader2",
-  BookmarkPlus: "BookmarkPlus",
-  Heart: "Heart",
-  Package2: "Package2",
-  FileSearch: "FileSearch",
-  Compass: "Compass",
-  Link2: "Link2",
-  Pin: "Pin",
-  Link: "Link",
-  ToyBrick: "ToyBrick",
-  RefreshCcw: "RefreshCcw",
-  SquareArrowOutUpRight: "SquareArrowOutUpRight",
-  Combine: "Combine",
-  TerminalIcon: "TerminalIcon",
-  TerminalSquare: "TerminalSquare",
-  TextCursorInput: "TextCursorInput",
-  Repeat: "Repeat",
-  Sliders: "Sliders",
-  ScreenShare: "ScreenShare",
-  Code: "Code",
-  OctagonAlert: "OctagonAlert",
-  Ellipsis: "Ellipsis",
-  Braces: "Braces",
-  FlaskConical: "FlaskConical",
-  AlertCircle: "AlertCircle",
-  Bot: "Bot",
-  EllipsisVertical: "EllipsisVertical",
-  Delete: "Delete",
-  Command: "Command",
-  ArrowBigUp: "ArrowBigUp",
-  PanelRightClose: "PanelRightClose",
-  Dot: "Dot",
-  LayoutGrid: "LayoutGrid",
-  StickyNote: "StickyNote",
-  note: "StickyNote",
-  RotateCcw: "RotateCcw",
-  Wrench: "Wrench",
-  GripVertical: "GripVertical",
   FolderPlusIcon: "FolderPlus",
   PaperclipIcon: "Paperclip",
-  Settings: "Settings",
-  Monitor: "Monitor",
-  Moon: "Moon",
-  Sun: "Sun",
-  PanelLeftClose: "PanelLeftClose",
-  PanelLeftOpen: "PanelLeftOpen",
-  ArrowUpRight: "ArrowUpRight",
-  Scroll: "Scroll",
-  Image: "Image",
-  CopyPlus: "CopyPlus",
-  Pen: "Pen",
-  TwitterLogoIcon: "TwitterLogoIcon",
-  TextSearchIcon: "TextSearch",
-  FileQuestion: "FileQuestion",
-  List: "List",
-  SquareCode: "SquareCode",
-  ListChecks: "ListChecks",
-  PanelRightOpen: "PanelRightOpen",
-  CornerDownLeft: "CornerDownLeft",
-  ChevronsDownUp: "ChevronsDownUp",
-  OptionIcon: "OptionIcon",
-  ChartNetwork: "ChartNetwork",
+  TerminalIcon: "TerminalIcon",
+  OptionIcon: "Option",
   Option: "OptionIcon",
-  FreezeAll: "FreezeAll",
-  Table: "Table",
-  Scan: "Scan",
   GlobeOkIcon: "GlobeOk",
-  CircleCheckBig: "CircleCheckBig",
-  ZoomIn: "ZoomIn",
-  ZoomOut: "ZoomOut",
-  Sigma: "Sigma",
-  Radio: "Radio",
-  DatabaseZap: "DatabaseZap",
-  Cog: "Cog",
-  ArrowRightLeft: "ArrowRightLeft",
-  FolderSync: "FolderSync",
-  ThumbsUp: "ThumbsUp",
-  ThumbsDown: "ThumbsDown",
   ThumbDownIconCustom: "ThumbDownCustom",
   ThumbUpIconCustom: "ThumbUpCustom",
-  Serper: "Serper",
-  FileCode2: "FileCode2",
-  Columns2: "Columns2",
   ScrapeGraphAI: "ScrapeGraph",
-  ScrapeGraph: "ScrapeGraph",
   ScrapeGraphSmartScraperApi: "ScrapeGraph",
   ScrapeGraphMarkdownifyApi: "ScrapeGraph",
-  Mic: "Mic",
-  MicOff: "MicOff",
-  Mic2: "Mic2",
-  DollarSign: "DollarSign",
-  BookOpenText: "BookOpenText",
-  AudioLines: "AudioLines",
+  note: "StickyNote",
 };
 
 export const getLucideIconName = (name: string): string => {
   const map = {
     AlertCircle: 'circle-alert',
     AlertTriangle: 'triangle-alert',
-    TerminalSquare: 'terminal-square',
+    TerminalSquare: 'square-terminal',
+    Wand2: 'wand-sparkles',
   };
-  return map[name] || name;
+  const kebabCaseName = name
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
+  return map[name] || kebabCaseName;
 };
 
 export const nodeIconsMapping: Record<string, () => Promise<any>> = {
-  // Custom icons with default exports
-  "Perplexity": () => import("@/icons/Perplexity/Perplexity"),
-  "YouTube": () => import("@/icons/Youtube/youtube"),
-  
-  // Add top-level imported icons
   "AI/ML": () => import("@/icons/AIML").then(mod => ({ default: mod.AIMLIcon })),
   "AIML": () => import("@/icons/AIML").then(mod => ({ default: mod.AIMLIcon })),
   "AgentQL": () => import("@/icons/AgentQL").then(mod => ({ default: mod.AgentQLIcon })),
@@ -770,6 +555,7 @@ export const nodeIconsMapping: Record<string, () => Promise<any>> = {
   "OpenAI": () => import("@/icons/OpenAi").then(mod => ({ default: mod.OpenAiIcon })),
   "OpenRouter": () => import("@/icons/OpenRouter").then(mod => ({ default: mod.OpenRouterIcon })),
   "OpenSearch": () => import("@/icons/OpenSearch").then(mod => ({ default: mod.OpenSearch })),
+  "Perplexity": () => import("@/icons/Perplexity").then(mod => ({ default: mod.PerplexityIcon })),
   "Pinecone": () => import("@/icons/Pinecone").then(mod => ({ default: mod.PineconeIcon })),
   "Postgres": () => import("@/icons/Postgres").then(mod => ({ default: mod.PostgresIcon })),
   "Python": () => import("@/icons/Python").then(mod => ({ default: mod.PythonIcon })),
@@ -777,6 +563,7 @@ export const nodeIconsMapping: Record<string, () => Promise<any>> = {
   "QianFanChat": () => import("@/icons/QianFanChat").then(mod => ({ default: mod.QianFanChatIcon })),
   "Redis": () => import("@/icons/Redis").then(mod => ({ default: mod.RedisIcon })),
   "SambaNova": () => import("@/icons/SambaNova").then(mod => ({ default: mod.SambaNovaIcon })),
+  "ScrapeGraph": () => import("@/icons/ScrapeGraphAI").then(mod => ({ default: mod.ScrapeGraph })),
   "SearchAPI": () => import("@/icons/SearchAPI").then(mod => ({ default: mod.SearchAPIIcon })),
   "Searx": () => import("@/icons/Searx").then(mod => ({ default: mod.SearxIcon })),
   "SerpSearch": () => import("@/icons/SerpSearch").then(mod => ({ default: mod.SerpSearchIcon })),
@@ -798,6 +585,7 @@ export const nodeIconsMapping: Record<string, () => Promise<any>> = {
   "Wikipedia": () => import("@/icons/Wikipedia/Wikipedia").then(mod => ({ default: mod.default })),
   "Wolfram": () => import("@/icons/Wolfram/Wolfram").then(mod => ({ default: mod.default })),
   "xAI": () => import("@/icons/xAI").then(mod => ({ default: mod.XAIIcon })),
+  "YouTube": () => import("@/icons/Youtube").then(mod => ({ default: mod.YouTubeSvgIcon })),
   "ZepMemory": () => import("@/icons/ZepMemory").then(mod => ({ default: mod.ZepMemoryIcon })),
 
   // Other icons
@@ -809,61 +597,17 @@ export const nodeIconsMapping: Record<string, () => Promise<any>> = {
 
 // Function to get a lazy-loaded icon component
 export const getNodeIcon = (name: string) => {
-  // Try from nodeIconsLucide as a string mapping
   const iconName = nodeIconsLucide[name];
-  if (iconName) {
-    // Try to find the icon in our nodeIconsMapping
-    if (nodeIconsMapping[iconName]) {
-      return lazy(nodeIconsMapping[iconName]);
-    }
-    
-    // // Try from lucide dynamic imports
-    // if (dynamicIconImports[iconName]) {
-    //   try {
-    //     return lazy(dynamicIconImports[iconName]);
-    //   } catch (e) {
-    //     console.log('could not load icon', iconName);
-    //     // Fall through to next option
-    //   }
-    // }
+
+  if (nodeIconsMapping[iconName || name]) {
+    return lazy(nodeIconsMapping[iconName || name]);
   }
 
-  if (nodeIconsMapping[name]) {
-    return lazy(nodeIconsMapping[name]);
-  }
-  
-  // Try transformed name (capitalization)
-  // const transformedName = name
-  //   ?.split("-")
-  //   ?.map((x) => String(x[0]).toUpperCase() + String(x).slice(1))
-  //   ?.join("");
-  
-  // if (nodeIconsMapping[transformedName]) {
-  //   return lazy(nodeIconsMapping[transformedName]);
-  // }
-
-  const kebabCaseName = name
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .replace(/\s+/g, '-')
-    .toLowerCase();
-
-  const lucideIconName = getLucideIconName(kebabCaseName);
+  const lucideIconName = getLucideIconName(iconName || name);
   
   if (dynamicIconImports[lucideIconName]) {
     try {
       return lazy(dynamicIconImports[lucideIconName]);
-    } catch (e) {
-      console.log('could not load icon', lucideIconName);
-      // Fall through to next option
-    }
-  }
-  
-  
-  
-  // Try from lucide dynamic imports with the original name
-  if (name && dynamicIconImports[name]) {
-    try {
-      return lazy(dynamicIconImports[name]);
     } catch (e) {
       // Fall through to next option
     }
