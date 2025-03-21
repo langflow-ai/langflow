@@ -141,11 +141,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             rprint(f"✓ LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            rprint("[bold blue]Initializing super user[/bold blue]")
             if need_initialize:
+                current_time = asyncio.get_event_loop().time()
+                rprint("[bold blue]Initializing super user[/bold blue]")
                 await initialize_super_user_if_needed()
-            rprint(f"✓ Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                rprint(f"✓ Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
             rprint("[bold blue]Loading bundles[/bold blue]")
