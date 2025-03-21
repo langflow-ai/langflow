@@ -2,10 +2,8 @@ import logging
 from typing import Any
 
 import requests
-from ibm_watsonx_ai import Credentials
-from ibm_watsonx_ai.foundation_models import ModelInference
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames
-from langchain_ibm import WatsonxLLM
+from langchain_ibm import ChatWatsonx
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -137,7 +135,7 @@ class WatsonxAIComponent(LCModelComponent):
         """Fetch available models from the watsonx.ai API."""
         try:
             endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {"version": "2024-09-16", "filters": "function_text_generation,!lifecycle_withdrawn:and"}
+            params = {"version": "2024-09-16", "filters": "function_text_chat,!lifecycle_withdrawn"}
             response = requests.get(endpoint, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
@@ -163,11 +161,6 @@ class WatsonxAIComponent(LCModelComponent):
                 logger.exception("Error updating model options.")
 
     def build_model(self) -> LanguageModel:
-        creds = Credentials(
-            api_key=SecretStr(self.api_key).get_secret_value(),
-            url=self.url,
-        )
-
         generate_params = {
             GenTextParamsMetaNames.MAX_NEW_TOKENS: self.max_tokens or 200,
             GenTextParamsMetaNames.MIN_NEW_TOKENS: self.min_tokens or 0,
@@ -186,11 +179,11 @@ class WatsonxAIComponent(LCModelComponent):
                 }
             )
 
-        model = ModelInference(
+        return ChatWatsonx(
+            apikey=SecretStr(self.api_key).get_secret_value(),
+            url=self.url,
+            project_id=self.project_id,
             model_id=self.model_name,
             params=generate_params,
-            credentials=creds,
-            project_id=self.project_id,
+            streaming=self.stream,
         )
-
-        return WatsonxLLM(watsonx_model=model, streaming=self.stream)
