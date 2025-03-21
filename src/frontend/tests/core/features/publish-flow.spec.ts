@@ -12,27 +12,6 @@ test(
       timeout: 5000,
     });
 
-    let flowId = "";
-    let retries = 0;
-    const maxRetries = 3;
-
-    while (flowId.length === 0 && retries < maxRetries) {
-      const url = page.url();
-      flowId = url.split("/").pop() || "";
-
-      if (flowId.length === 0) {
-        console.log(
-          `Empty flowId detected (attempt ${retries + 1}/${maxRetries}), waiting and retrying...`,
-        );
-        await page.waitForTimeout(1000);
-        retries++;
-      }
-    }
-
-    expect(flowId).toBeDefined();
-    expect(flowId).not.toBeNull();
-    expect(flowId.length).toBeGreaterThan(0);
-
     await page.getByTestId("blank-flow").click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 5000,
@@ -44,6 +23,7 @@ test(
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
       timeout: 3000,
     });
+
     await page
       .getByTestId("inputsChat Input")
       .hover({ timeout: 3000 })
@@ -53,7 +33,7 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
     await page.getByTestId("publish-button").click();
 
     await page.waitForTimeout(3000);

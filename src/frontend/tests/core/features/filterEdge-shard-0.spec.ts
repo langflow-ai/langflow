@@ -64,12 +64,16 @@ test(
       .getByTestId("handle-retrievalqa-shownode-language model-left")
       .all();
 
+    await page.waitForTimeout(1000);
+
     for (const element of rqaChainInputElements1) {
       if (await element.isVisible()) {
         visibleElementHandle = element;
         break;
       }
     }
+
+    await page.waitForTimeout(1000);
 
     await visibleElementHandle.hover().then(async () => {
       await expect(
