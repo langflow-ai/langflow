@@ -709,7 +709,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "list of messages details: {text}"
+                "value": "list of messages details: {file_path}"
               }
             },
             "tool_mode": false
