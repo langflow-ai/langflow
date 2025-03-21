@@ -47,6 +47,7 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
+from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -58,10 +59,16 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
+    """Retrieve all component types with compression for better performance.
+
+    Returns a compressed response containing all available component types.
+    """
     from langflow.interface.components import get_and_cache_all_types_dict
 
     try:
-        return await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        # Return compressed response using our utility function
+        return compress_response(all_types)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
