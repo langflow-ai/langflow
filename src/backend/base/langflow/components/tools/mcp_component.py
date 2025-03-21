@@ -100,8 +100,7 @@ class MCPToolsComponent(Component):
     tools: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
-    default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode","tool"]
-
+    default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
 
     display_name = "MCP Tools"
     description = (
@@ -248,7 +247,7 @@ class MCPToolsComponent(Component):
                     logger.error(f"Failed to update tools: {e!s}")
                     msg = f"Failed to update tools: {e!s}"
                     raise ValueError(msg) from e
-            elif field_name =="tool_mode":
+            elif field_name == "tool_mode":
                 build_config["tool"]["show"] = not field_value
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
