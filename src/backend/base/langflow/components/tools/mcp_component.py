@@ -292,7 +292,7 @@ class MCPToolsComponent(Component):
             elif field_value == "SSE":
                 build_config["command"]["show"] = False
                 build_config["sse_url"]["show"] = True
-        elif field_name == "command" or field_name == "sse_url":
+        elif field_name in ("command", "sse_url"):
             try:
                 await self.update_tools()
                 # Safely update the tool options after tools are updated
@@ -480,13 +480,13 @@ class MCPToolsComponent(Component):
     async def update_tools(self) -> list[StructuredTool]:
         """Connect to the MCP server and update available tools with improved error handling."""
         try:
-            await self._validate_connection_params(self.mode, self.command, self.url)
+            await self._validate_connection_params(self.mode, self.command, self.sse_url)
 
             if self.mode == "Stdio":
                 if not self.stdio_client.session:
                     self.tools = await self.stdio_client.connect_to_server(self.command)
             elif self.mode == "SSE" and not self.sse_client.session:
-                self.tools = await self.sse_client.connect_to_server(self.url, {})
+                self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
 
             if not self.tools:
                 logger.warning("No tools returned from server")
