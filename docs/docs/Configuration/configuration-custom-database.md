@@ -30,7 +30,7 @@ touch .env
 ```
 
 3. To set the database URL environment variable, add it to your `.env` file:
-```plaintext
+```text
 LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
 ```
 

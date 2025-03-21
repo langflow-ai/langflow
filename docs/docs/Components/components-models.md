@@ -247,6 +247,34 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 |-------|---------------|------------------------------------------------------------------|
 | model | LanguageModel | An instance of HuggingFaceHub configured with the specified parameters. |
 
+## Language Model
+
+This component generates text using either OpenAI or Anthropic language models.
+
+Use this component as a drop-in replacement for LLM models to switch between different model providers and models.
+
+Instead of swapping out model components when you want to try a different provider (like switching between OpenAI and Anthropic components),  change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
+
+For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
+
+### Inputs
+
+| Name                | Type         | Description                                                                                   |
+|---------------------|--------------|-----------------------------------------------------------------------------------------------|
+| provider            | String       | The model provider to use. Options: "OpenAI", "Anthropic". Default: "OpenAI".                 |
+| model_name          | String       | The name of the model to use. Options depend on selected provider.                           |
+| api_key             | SecretString | The API Key for authentication with the selected provider.                                    |
+| input_value         | String       | The input text to send to the model.                                                         |
+| system_message      | String       | A system message that helps set the behavior of the assistant (advanced).                    |
+| stream              | Boolean      | Whether to stream the response. Default: `False` (advanced).                                 |
+| temperature         | Float        | Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1` (advanced).           |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatOpenAI or ChatAnthropic configured with the specified parameters. |
+
 ## LMStudio
 
 This component generates text using LM Studio's local language models.

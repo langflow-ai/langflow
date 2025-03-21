@@ -53,7 +53,7 @@ This component concatenates two text sources into a single text chunk using a sp
 |message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
 
 
-## Create data
+## Create Data
 
 :::important
 This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
@@ -257,6 +257,32 @@ This component converts [Message](/concepts-objects#message-object) objects to [
 |------|--------------|------|
 | data | Data | The converted [Data](/concepts-objects#data-object) object. |
 
+
+## Parser
+
+:::important
+This component is in **Beta** as of Langflow version 1.3.
+:::
+
+This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
+
+To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For DataFrames, use column names, for example `Name: {Name}`. For Data objects, use `{text}`.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| stringify | Stringify | Enable to convert input to a string instead of using a template. |
+| template | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names (e.g. `Name: {Name}`). For Data objects, use `{text}`. |
+| input_data | Data or DataFrame | The input to parse - accepts either a DataFrame or Data object. |
+| sep | Separator | String used to separate rows/items. Default: newline. |
+| clean_data | Clean Data | When stringify is enabled, cleans data by removing empty rows and lines. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| parsed_text | Parsed Text | The resulting formatted text as a [Message](/concepts-objects#message-object) object. |
 
 ## Parse DataFrame
 
