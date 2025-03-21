@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from contextlib import AsyncExitStack
 
@@ -22,6 +23,8 @@ from langflow.schema import Message
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
+
+logger = logging.getLogger(__name__)
 
 
 class MCPStdioClient:
@@ -212,7 +215,7 @@ class MCPToolsComponent(Component):
             refresh_button=True,
         ),
         MessageTextInput(
-            name="url",
+            name="sse_url",
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
             value="http://localhost:7860/api/v1/mcp/sse",
@@ -282,6 +285,37 @@ class MCPToolsComponent(Component):
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
+        if field_name == "mode":
+            if field_value == "Stdio":
+                build_config["command"]["show"] = True
+                build_config["sse_url"]["show"] = False
+            elif field_value == "SSE":
+                build_config["command"]["show"] = False
+                build_config["sse_url"]["show"] = True
+        elif field_name == "command" or field_name == "sse_url":
+            try:
+                await self.update_tools()
+                # Safely update the tool options after tools are updated
+                if "tool" in build_config:
+                    build_config["tool"]["options"] = self.tool_names
+            except Exception as e:
+                # Handle any errors during tool update
+                build_config["tool"]["options"] = []
+                msg = f"Failed to update tools: {e!s}"
+                raise ValueError(msg)
+        elif field_name == "tool":
+            if len(self.tools) == 0:
+                await self.update_tools()
+            if self.tool is None:
+                return build_config
+            tool_obj = None
+            for tool in self.tools:
+                if tool.name == self.tool:
+                    tool_obj = tool
+                    break
+            if tool_obj is None:
+                logger.warning(f"Tool {self.tool} not found in available tools: {self.tools}")
+                return build_config
         try:
             if field_name == "mode":
                 if field_value == "Stdio":
