@@ -578,7 +578,7 @@ export default function Page({
             }}
             className="theme-attribution"
             minZoom={0.2}
-            maxZoom={8}
+            maxZoom={3}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}

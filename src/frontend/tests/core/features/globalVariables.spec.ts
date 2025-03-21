@@ -21,11 +21,12 @@ test(
 
     await page
       .getByTestId("modelsOpenAI")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .hover()
+      .then(async () => {
+        await page.getByTestId("add-component-button-openai").last().click();
+      });
 
-    await adjustScreenView(page);
+    await page.getByTestId("fit_view").click();
 
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();
