@@ -30,8 +30,8 @@ class SlackAPIComponent(LCToolComponent):
     _display_to_enum_map = {
         # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
         "List Users": "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
-        "List Conversations": "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
-        "Update Slack Chat Message Attributes": "SLACK_UPDATES_A_SLACK_MESSAGE",
+        "List Channels": "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
+        "Update Slack Chat Message": "SLACK_UPDATES_A_SLACK_MESSAGE",
         "Post Message To Channel": "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
         "Search Messages Endpoint": "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
         # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
@@ -58,7 +58,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS": {
-            "display_name": "List Conversations",
+            "display_name": "List Channels",
             "parameters": [
                 "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
                 "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-types",
@@ -67,7 +67,7 @@ class SlackAPIComponent(LCToolComponent):
             ],
         },
         "SLACK_UPDATES_A_SLACK_MESSAGE": {
-            "display_name": "Update Slack Chat Message Attributes",
+            "display_name": "Update Slack Chat Message",
             "parameters": [
                 "SLACK_UPDATES_A_SLACK_MESSAGE-as_user",
                 "SLACK_UPDATES_A_SLACK_MESSAGE-attachments",
@@ -232,6 +232,7 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Cursor",
             info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first `page` of the collection",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-include_locale",
@@ -365,8 +366,8 @@ class SlackAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="SLACK_UPDATES_A_SLACK_MESSAGE-channel",
-            display_name="Channel",
-            info="Channel containing the message to be updated.",
+            display_name="Channel Id",
+            info="Channel Id containing the message to be updated.",
             show=False,
             required=True,
         ),
@@ -471,7 +472,7 @@ class SlackAPIComponent(LCToolComponent):
         BoolInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
             display_name="As User",
-            info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false. See [chat.postMessage](chat.postMessage#authorship). ",  # noqa: E501
+            info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false",  # noqa: E501
             show=False,
             advanced=True,
         ),
@@ -494,6 +495,7 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Channel",
             info="Channel, private group, or DM channel to send message to. Can be an encoded ID, or a name",
             show=False,
+            required=True,
         ),
         BoolInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-link_names",
@@ -505,7 +507,7 @@ class SlackAPIComponent(LCToolComponent):
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-parse",
             display_name="Parse",
-            info="Change how messages are treated. Defaults to `none`. See [chat.postMessage](chat.postMessage#formatting). ",  # noqa: E501
+            info="Change how messages are treated. Defaults to `none`",  # noqa: E501
             show=False,
             advanced=True,
         ),
@@ -573,6 +575,7 @@ class SlackAPIComponent(LCToolComponent):
             display_name="Cursor",
             info="Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first 'page' of the collection",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-count",
@@ -584,7 +587,7 @@ class SlackAPIComponent(LCToolComponent):
         BoolInput(
             name="SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
             display_name="Highlight",
-            info="Pass a value of `true` to enable query highlight markers (see below).",
+            info="Pass a value of `true` to enable query highlight markers",
             show=False,
         ),
         IntInput(
