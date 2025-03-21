@@ -2,7 +2,7 @@ from typing import Literal, Union
 
 from pydantic import BaseModel, Field, create_model
 
-from langflow.inputs.inputs import BoolInput, DictInput, FieldTypes, FloatInput, IntInput, MessageTextInput,TableInput
+from langflow.inputs.inputs import BoolInput, DictInput, FieldTypes, FloatInput, IntInput, MessageTextInput
 from langflow.schema.dotdict import dotdict
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
@@ -30,7 +30,7 @@ _convert_type_to_field_type = {
     float: FloatInput,
     bool: BoolInput,
     dict: DictInput,
-    list:MessageTextInput ,
+    list: MessageTextInput,
 }
 
 

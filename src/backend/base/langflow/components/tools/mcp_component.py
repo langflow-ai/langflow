@@ -484,15 +484,15 @@ class MCPToolsComponent(Component):
         """Build output with improved error handling and validation."""
         try:
             await self.update_tools()
-            exec_tool=self._tool_cache[self.tool]
-            tool_args=self.get_inputs_for_all_tools(self.tools)[self.tool]
-            kwargs={}
+            exec_tool = self._tool_cache[self.tool]
+            tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
+            kwargs = {}
             for arg in tool_args:
-                value= getattr(self, arg.name, None)
+                value = getattr(self, arg.name, None)
                 if value:
-                    kwargs[arg.name]=value
+                    kwargs[arg.name] = value
             print(f"kwargs: {kwargs}")
-            output=await exec_tool.func(**kwargs)
+            output = await exec_tool.func(**kwargs)
             return Message(text=output)
         except Exception as e:
             logger.error(f"Error in build_output: {e!s}")
