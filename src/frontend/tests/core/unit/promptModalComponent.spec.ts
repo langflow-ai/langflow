@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { zoomOut } from "../../utils/zoom-out";
 test(
   "PromptTemplateComponent",
   { tag: ["@release", "@workspace"] },
@@ -187,6 +187,7 @@ test(
 
     await page.getByText("Close").last().click();
 
+    await zoomOut(page, 2);
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("advanced-button-modal").click();
 
