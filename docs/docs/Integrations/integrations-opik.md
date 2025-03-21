@@ -15,8 +15,8 @@ This guide walks you through how to configure Langflow to collect [tracing](http
 ## Prerequisites
 
 - A project in Langflow with a runnable flow
-- An Opik server running
-- An Opik API Key for Comet managed Opik deployment
+- An Open-Source Opik server or an Opik Cloud account - You can learn more about the differences [here](https://www.comet.com/docs/opik/faq#what-is-the-difference-between-opik-cloud-and-the-open-source-opik-platform-)
+- If you are using Opik Cloud, you will also need your [Opik API key](https://www.comet.com/docs/opik/faq#what-is-the-difference-between-opik-cloud-and-the-open-source-opik-platform-)
 
 ## Set your Opik configuration as environment variables
 
