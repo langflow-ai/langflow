@@ -269,7 +269,7 @@ class MCPToolsComponent(Component):
                     if value:
                         kwargs[arg.name] = value
                 output = await exec_tool.coroutine(**kwargs)
-                return Message(text=output.content[0].text)
+                return Message(text=output.content[len(output.content)-1].text)
             return Message(text="You must select a tool", error=True)
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
