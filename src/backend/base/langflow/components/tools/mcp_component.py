@@ -17,6 +17,7 @@ from langflow.inputs import DropdownInput
 from langflow.inputs.inputs import InputTypes
 from langflow.io import MessageTextInput, Output, TabInput
 from langflow.io.schema import schema_to_langflow_inputs
+from langflow.logging import logger
 from langflow.schema import Message
 
 # Define constant for status code
@@ -29,31 +30,63 @@ class MCPStdioClient:
         self.exit_stack = AsyncExitStack()
         self.stdio = None
         self.write = None
+        self._connected = False
+
+    async def disconnect(self):
+        """Safely disconnect and cleanup resources."""
+        try:
+            if self._connected and self.exit_stack:
+                await self.exit_stack.aclose()
+                self._connected = False
+                self.session = None
+                self.stdio = None
+                self.write = None
+        except (RuntimeError, asyncio.CancelledError, AttributeError) as e:
+            logger.error(f"Error during disconnect: {e}")
 
     async def connect_to_server(self, command_str: str):
+        """Connect to MCP server with improved error handling and validation."""
+        if not command_str or not command_str.strip():
+            msg = "Command string cannot be empty"
+            raise ValueError(msg)
+
         try:
-            command = command_str.split(" ")
+            if self._connected:
+                await self.disconnect()
+
+            command = command_str.split()
+            if not command:
+                msg = "Invalid command format"
+                raise ValueError(msg)
+
             server_params = StdioServerParameters(
-                command=command[0],
-                args=command[1:],
-                env={"DEBUG": "true", "PATH": os.environ["PATH"]},
+                command=command[0], args=command[1:], env={"DEBUG": "true", "PATH": os.environ.get("PATH", "")}
             )
 
-            # Use a new exit stack for this connection
             async with AsyncExitStack() as stack:
-                stdio_transport = await stack.enter_async_context(stdio_client(server_params))
-                self.stdio, self.write = stdio_transport
-                self.session = await stack.enter_async_context(ClientSession(self.stdio, self.write))
-                await self.session.initialize()
-                response = await self.session.list_tools()
+                try:
+                    stdio_transport = await stack.enter_async_context(stdio_client(server_params))
+                    self.stdio, self.write = stdio_transport
+                    self.session = await stack.enter_async_context(ClientSession(self.stdio, self.write))
+                    await self.session.initialize()
+                    response = await self.session.list_tools()
 
-                # Transfer context to instance exit stack
-                await stack.pop_all().aclose()
-                return response.tools
+                    # Transfer context to instance exit stack
+                    await stack.pop_all().aclose()
+                    self._connected = True
+                except Exception as e:
+                    await stack.aclose()
+                    msg = f"Failed to initialize MCP server: {e!s}"
+                    raise RuntimeError(msg) from e
+                else:
+                    return response.tools
 
         except Exception as e:
-            msg = f"Error connecting to MCP server: {e}"
-            raise ValueError(msg)
+            self._connected = False
+            self.session = None
+            msg = f"Error connecting to MCP server: {e!s}"
+            logger.error(msg)
+            raise ValueError(msg) from e
 
 
 class MCPSseClient:
@@ -62,50 +95,97 @@ class MCPSseClient:
         self.sse = None
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
+        self._connected = False
+        self._connection_lock = asyncio.Lock()
+
+    async def disconnect(self):
+        """Safely disconnect and cleanup resources."""
+        try:
+            if self._connected and self.exit_stack:
+                await self.exit_stack.aclose()
+                self._connected = False
+                self.session = None
+                self.sse = None
+                self.write = None
+        except (RuntimeError, asyncio.CancelledError, AttributeError) as e:
+            logger.error(f"Error during disconnect: {e}")
 
     async def _connect_with_timeout(
         self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
     ):
-        async with AsyncExitStack() as stack:
-            sse_transport = await stack.enter_async_context(
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-            )
-            self.sse, self.write = sse_transport
-            self.session = await stack.enter_async_context(ClientSession(self.sse, self.write))
-            await self.session.initialize()
-            await stack.pop_all().aclose()
-
-    async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
-    ):
-        try:
-            if headers is None:
-                headers = {}
-            url = await self.pre_check_redirect(url)
-            try:
-                await asyncio.wait_for(
-                    self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
-                    timeout=timeout_seconds,
-                )
-                if self.session is None:
-                    msg = "Session not initialized"
-                    raise ValueError(msg)
-                response = await self.session.list_tools()
-            except asyncio.TimeoutError as err:
-                msg = f"Connection to {url} timed out after {timeout_seconds} seconds"
-                raise TimeoutError(msg) from err
-            return response.tools
-        except Exception as e:
-            msg = f"Error connecting to MCP server: {e}"
+        """Connect to SSE server with timeout and proper resource management."""
+        if not url:
+            msg = "URL cannot be empty"
             raise ValueError(msg)
 
+        async with AsyncExitStack() as stack:
+            try:
+                sse_transport = await stack.enter_async_context(
+                    sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+                )
+                self.sse, self.write = sse_transport
+                self.session = await stack.enter_async_context(ClientSession(self.sse, self.write))
+                await self.session.initialize()
+                await stack.pop_all().aclose()
+                self._connected = True
+            except Exception as e:
+                await stack.aclose()
+                msg = f"Failed to initialize SSE connection: {e!s}"
+                raise RuntimeError(msg) from e
 
-class MCPTools(Component):
+    async def connect_to_server(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        timeout_seconds: int = 500,
+        sse_read_timeout_seconds: int = 500,
+    ):
+        """Connect to server with improved error handling and connection management."""
+        async with self._connection_lock:
+            try:
+                if self._connected:
+                    await self.disconnect()
+
+                headers = headers or {}
+                url = await self.pre_check_redirect(url)
+
+                try:
+                    await asyncio.wait_for(
+                        self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
+                        timeout=timeout_seconds,
+                    )
+
+                    if not self.session:
+                        msg = "Session not initialized"
+                        raise ValueError(msg)
+
+                    response = await self.session.list_tools()
+
+                except asyncio.TimeoutError as err:
+                    msg = f"Connection to {url} timed out after {timeout_seconds} seconds"
+                    logger.error(msg)
+                    raise TimeoutError(msg) from err
+                except Exception as e:
+                    msg = f"Connection failed: {e!s}"
+                    raise RuntimeError(msg) from e
+                else:
+                    return response.tools
+
+            except Exception as e:
+                self._connected = False
+                self.session = None
+                msg = f"Error connecting to MCP server: {e!s}"
+                logger.error(msg)
+                raise ValueError(msg) from e
+
+
+class MCPToolsComponent(Component):
     schema_inputs: list[InputTypes] = []
     stdio_client = MCPStdioClient()
     sse_client = MCPSseClient()
-    tools = []  # Will hold the list of available tools
-    tool_names = [str]
+    tools: list = []
+    tool_names: list[str] = []
+    _tool_cache: dict = {}  # Cache for tool objects
 
     display_name = "MCP Tools"
     description = (
@@ -127,9 +207,8 @@ class MCPTools(Component):
             name="command",
             display_name="MCP Command",
             info="Command for MCP stdio connection",
-            value="uvx mcp-sse-shim@latest",
-            show=True,  # Shown when mode is Stdio
-            # real_time_refresh=True,
+            value="uvx arxiv-mcp-server",
+            show=True,
             refresh_button=True,
         ),
         MessageTextInput(
@@ -137,8 +216,7 @@ class MCPTools(Component):
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
             value="http://localhost:7860/api/v1/mcp/sse",
-            show=False,  # Shown when mode is SSE
-            # real_time_refresh=True,
+            show=False,
             refresh_button=True,
         ),
         DropdownInput(
@@ -149,8 +227,15 @@ class MCPTools(Component):
             info="Select the tool to execute",
             show=True,
             required=True,
-            # real_time_refresh=True,
-            refresh_button=True,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="tool_placeholder",
+            display_name="Tool Placeholder",
+            info="Placeholder for the tool",
+            value="",
+            show=False,
+            tool_mode=True,
         ),
     ]
 
@@ -158,112 +243,263 @@ class MCPTools(Component):
         Output(display_name="Tools", name="tools", method="build_output"),
     ]
 
-    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        """Toggle the visibility of connection-specific fields based on the selected mode."""
-        if field_name == "mode":
-            if field_value == "Stdio":
-                build_config["command"]["show"] = True
-                build_config["url"]["show"] = False
-            elif field_value == "SSE":
-                build_config["command"]["show"] = False
-                build_config["url"]["show"] = True
-        elif field_name == "command" or field_name == "url":
-            try:
-                await self.update_tools()
-                # Safely update the tool options after tools are updated
-                if "tool" in build_config:
-                    build_config["tool"]["options"] = self.tool_names
-            except Exception as e:
-                # Handle any errors during tool update
-                build_config["tool"]["options"] = []
-                msg = f"Failed to update tools: {e!s}"
-                raise ValueError(msg)
-        elif field_name == "tool":
-            if len(self.tools) == 0:
-                await self.update_tools()
-            if self.tool is None:
-                return build_config
-            tool_obj = None
-            for tool in self.tools:
-                if tool.name == self.tool:
-                    tool_obj = tool
-                    break
-            if tool_obj is None:
-                logger.warning(f"Tool {self.tool} not found in available tools: {self.tools}")
-                return build_config
-
-            try:
-                input_schema = create_input_schema_from_json_schema(tool_obj.inputSchema)
-                self.schema_inputs = schema_to_langflow_inputs(input_schema)
-
-                # Ensure schema_inputs is never None
-                if self.schema_inputs is None:
-                    self.schema_inputs = []
-
-                for schema_input in self.schema_inputs:
-                    name = schema_input.name
-                    input_dict = schema_input.dict()
-                    # Ensure required fields are present
-                    if "value" not in input_dict:
-                        input_dict["value"] = None
-                    if "required" not in input_dict:
-                        input_dict["required"] = True
-                    build_config[name] = input_dict
-
-            except Exception as e:
-                logger.error(f"Error updating build config: {e!s}")
-                # Return original build_config on error
-                return build_config
-
-        return build_config
-
-    async def build_output(self) -> Message:
-        # convert tool to DataFrame using args_schema
-        await self.update_tools()
-        if not self.tool:
-            raise ValueError("No tool selected")
-        kwargs = {}
-        for schema_input in self.schema_inputs:
-            kwargs[schema_input.name] = self.get(schema_input.name)
-        output = await self.tool.func(kwargs)
-        print(output)
-        print(type(output))
-        return Message(text=output)
-
-    async def update_tools(self) -> list[StructuredTool]:
-        """Connect to the MCP server using the selected mode and return available tools as StructuredTool instances."""
-        if self.mode == "Stdio":
-            if self.stdio_client.session is None:
-                self.tools = await self.stdio_client.connect_to_server(self.command)
-        elif self.mode == "SSE":
-            if self.sse_client.session is None:
-                self.tools = await self.sse_client.connect_to_server(self.url, {})
-        else:
-            msg = "Invalid mode selected."
+    async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
+        """Validate connection parameters based on mode."""
+        if mode not in ["Stdio", "SSE"]:
+            msg = f"Invalid mode: {mode}. Must be either 'Stdio' or 'SSE'"
             raise ValueError(msg)
 
-        tool_list = []
-        for tool in self.tools:
-            args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+        if mode == "Stdio" and not command:
+            msg = "Command is required for Stdio mode"
+            raise ValueError(msg)
+        if mode == "SSE" and not url:
+            msg = "URL is required for SSE mode"
+            raise ValueError(msg)
+
+    async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
+        """Validate and process schema inputs for a tool."""
+        try:
+            if not tool_obj or not hasattr(tool_obj, "inputSchema"):
+                msg = "Invalid tool object or missing input schema"
+                raise ValueError(msg)
+
+            input_schema = create_input_schema_from_json_schema(tool_obj.inputSchema)
+            if not input_schema:
+                msg = f"Empty input schema for tool '{tool_obj.name}'"
+                raise ValueError(msg)
+
+            schema_inputs = schema_to_langflow_inputs(input_schema)
+            if not schema_inputs:
+                logger.warning(f"No input parameters defined for tool '{tool_obj.name}'")
+                return []
+
+        except Exception as e:
+            logger.error(f"Error validating schema inputs: {e!s}")
+            msg = f"Failed to validate schema inputs: {e!s}"
+            raise ValueError(msg) from e
+        else:
+            return schema_inputs
+
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Toggle the visibility of connection-specific fields based on the selected mode."""
+        try:
+            if field_name == "mode":
+                if field_value == "Stdio":
+                    build_config["command"]["show"] = True
+                    build_config["url"]["show"] = False
+                elif field_value == "SSE":
+                    build_config["command"]["show"] = False
+                    build_config["url"]["show"] = True
+            elif field_name in ("command", "url"):
+                try:
+                    await self.update_tools()
+                    if "tool" in build_config:
+                        build_config["tool"]["options"] = self.tool_names
+                except Exception as e:
+                    build_config["tool"]["options"] = []
+                    logger.error(f"Failed to update tools: {e!s}")
+                    msg = f"Failed to update tools: {e!s}"
+                    raise ValueError(msg) from e
+            elif field_name == "tool_mode":
+                build_config["tool"]["show"] = not field_value
+                default_keys = ["code", "_type", "mode", "command", "url", "tool_placeholder", "tool_mode"]
+                for key, value in list(build_config.items()):
+                    if key not in default_keys and isinstance(value, dict) and "show" in value:
+                        build_config[key]["show"] = not field_value
+            elif field_name == "tool":
+                await self._update_tool_config(build_config, field_value)
+
+        except Exception as e:
+            logger.error(f"Error in update_build_config: {e!s}")
+            raise
+        else:
+            return build_config
+
+    def get_inputs_for_all_tools(self, tools: list) -> dict:
+        """Get input schemas for all tools."""
+        inputs = {}
+        for tool in tools:
+            if not tool or not hasattr(tool, "name"):
+                continue
+            try:
+                input_schema = schema_to_langflow_inputs(create_input_schema_from_json_schema(tool.inputSchema))
+                inputs[tool.name] = input_schema
+            except (AttributeError, ValueError, TypeError, KeyError) as e:
+                logger.error(f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}")
+                continue
+        return inputs
+
+    def remove_input_schema_from_build_config(
+        self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes]]
+    ):
+        """Remove the input schema for the tool from the build config."""
+        # Keep only schemas that don't belong to the current tool
+        input_schema = {k: v for k, v in input_schema.items() if k != tool_name}
+        # Remove all inputs from other tools
+        for value in input_schema.values():
+            for _input in value:
+                if _input.name in build_config:
+                    build_config.pop(_input.name)
+
+    async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
+        """Update tool configuration with proper error handling."""
+        if not self.tools:
+            await self.update_tools()
+
+        if not tool_name:
+            return
+
+        tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
+        if not tool_obj:
+            logger.warning(f"Tool {tool_name} not found in available tools: {self.tools}")
+            return
+
+        try:
+            # Get all tool inputs and remove old ones
+            input_schema_for_all_tools = self.get_inputs_for_all_tools(self.tools)
+            self.remove_input_schema_from_build_config(build_config, tool_name, input_schema_for_all_tools)
+
+            # Get and validate new inputs
+            self.schema_inputs = await self._validate_schema_inputs(tool_obj)
+            if not self.schema_inputs:
+                logger.info(f"No input parameters to configure for tool '{tool_name}'")
+                return
+
+            # Add new inputs to build config
+            for schema_input in self.schema_inputs:
+                if not schema_input or not hasattr(schema_input, "name"):
+                    logger.warning("Invalid schema input detected, skipping")
+                    continue
+
+                try:
+                    name = schema_input.name
+                    input_dict = schema_input.to_dict()
+                    input_dict.setdefault("value", None)
+                    input_dict.setdefault("required", True)
+                    build_config[name] = input_dict
+                except (AttributeError, KeyError, TypeError) as e:
+                    logger.error(f"Error processing schema input {schema_input}: {e!s}")
+                    continue
+
+        except ValueError as e:
+            logger.error(f"Schema validation error for tool {tool_name}: {e!s}")
+            self.schema_inputs = []
+            return
+        except (AttributeError, KeyError, TypeError) as e:
+            logger.error(f"Error updating tool config: {e!s}")
+            msg = f"Error updating tool configuration: {e!s}"
+            raise ValueError(msg) from e
+
+    async def build_output(self) -> Message:
+        """Build output with improved error handling and validation."""
+        try:
+            await self.update_tools()
+
+            if not self.tool:
+                msg = "No tool selected"
+                raise ValueError(msg)
+
+            tool_obj = next((t for t in self.tools if t.name == self.tool), None)
+            if not tool_obj:
+                msg = f"Selected tool '{self.tool}' not found"
+                raise ValueError(msg)
+
+            # Validate schema inputs before processing
+            try:
+                self.schema_inputs = await self._validate_schema_inputs(tool_obj)
+            except ValueError as e:
+                logger.error(f"Schema validation error: {e!s}")
+                msg = f"Invalid tool configuration: {e!s}"
+                raise ValueError(msg) from e
+
+            # Handle case where tool doesn't require inputs
+            if not self.schema_inputs:
+                logger.info(f"Tool '{self.tool}' doesn't require any inputs")
+                kwargs = {}
+            else:
+                kwargs = {}
+                for schema_input in self.schema_inputs:
+                    if not schema_input or not hasattr(schema_input, "name"):
+                        continue
+
+                    value = self.get(schema_input.name)
+                    if getattr(schema_input, "required", True) and value is None:
+                        msg = f"Required input '{schema_input.name}' is missing"
+                        raise ValueError(msg)
+
+                    kwargs[schema_input.name] = value
+
+            output = await tool_obj.func(kwargs)
+            if not output:
+                return Message(text="Tool execution completed but returned no output")
+
+            return Message(text=output)
+
+        except ValueError as e:
+            logger.error(f"Validation error in build_output: {e!s}")
+            raise
+        except Exception as e:
+            logger.error(f"Error in build_output: {e!s}")
+            msg = f"Failed to execute tool: {e!s}"
+            raise ValueError(msg) from e
+
+    async def update_tools(self) -> list[StructuredTool]:
+        """Connect to the MCP server and update available tools with improved error handling."""
+        try:
+            await self._validate_connection_params(self.mode, self.command, self.url)
+
             if self.mode == "Stdio":
-                tool_list.append(
-                    StructuredTool(
+                if not self.stdio_client.session:
+                    self.tools = await self.stdio_client.connect_to_server(self.command)
+            elif self.mode == "SSE" and not self.sse_client.session:
+                self.tools = await self.sse_client.connect_to_server(self.url, {})
+
+            if not self.tools:
+                logger.warning("No tools returned from server")
+                return []
+
+            tool_list = []
+            for tool in self.tools:
+                if not tool or not hasattr(tool, "name"):
+                    logger.warning("Invalid tool object detected, skipping")
+                    continue
+
+                try:
+                    args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+                    if not args_schema:
+                        logger.warning(f"Empty schema for tool '{tool.name}', skipping")
+                        continue
+
+                    client = self.stdio_client if self.mode == "Stdio" else self.sse_client
+                    if not client or not client.session:
+                        msg = f"Invalid client session for tool '{tool.name}'"
+                        raise ValueError(msg)
+
+                    tool_obj = StructuredTool(
                         name=tool.name,
-                        description=tool.description,
+                        description=tool.description or "",
                         args_schema=args_schema,
-                        func=create_tool_func(tool.name, args_schema, self.stdio_client.session),
-                        coroutine=create_tool_coroutine(tool.name, args_schema, self.stdio_client.session),
+                        func=create_tool_func(tool.name, args_schema, client.session),
+                        coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
+                        tags=[tool.name],
                     )
-                )
-            elif self.mode == "SSE":
-                tool_list.append(
-                    StructuredTool(
-                        name=tool.name,
-                        description=tool.description,
-                        args_schema=args_schema,
-                        func=create_tool_func(tool.name, args_schema, self.sse_client.session),
-                        coroutine=create_tool_coroutine(tool.name, args_schema, self.sse_client.session),
-                    )
-                )
-        self.tool_names = [tool.name for tool in self.tools]
-        return tool_list
+                    tool_list.append(tool_obj)
+                    self._tool_cache[tool.name] = tool_obj
+                except (AttributeError, ValueError, TypeError, KeyError) as e:
+                    logger.error(f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e!s}")
+                    continue
+
+            self.tool_names = [tool.name for tool in self.tools if hasattr(tool, "name")]
+
+        except (ValueError, RuntimeError, asyncio.TimeoutError) as e:
+            logger.error(f"Error updating tools: {e!s}")
+            msg = f"Failed to update tools: {e!s}"
+            raise ValueError(msg) from e
+        else:
+            return tool_list
+
+    async def _get_tools(self):
+        """Get cached tools or update if necessary."""
+        if not self.tools:
+            return await self.update_tools()
+        return self.tools

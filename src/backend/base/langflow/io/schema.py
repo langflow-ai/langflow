@@ -75,8 +75,7 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list["InputTypes"]:
         input_obj = langflow_field_type(
             display_name=title,
             name=field_name,
-            info=description,
-            value=default,
+            info=description
         )
         inputs.append(input_obj)
     return inputs
