@@ -3,7 +3,6 @@ import base64
 import json
 import logging
 from collections.abc import Awaitable, Callable
-from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from functools import wraps
 from typing import Annotated, Any, ParamSpec, TypeVar
@@ -29,7 +28,7 @@ from langflow.services.database.models import Flow, User
 from langflow.services.deps import (
     get_db_service,
     get_settings_service,
-    get_storage_service,
+    get_storage_service, session_scope,
 )
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -54,17 +53,9 @@ def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[
     return wrapper
 
 
-@asynccontextmanager
-async def get_db_session():
-    """Get a database session using the database service."""
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
-        yield session
-
-
 async def with_db_session(operation: Callable[[Any], Awaitable[T]]) -> T:
     """Execute an operation within a database session context."""
-    async with get_db_session() as session:
+    async with session_scope() as session:
         return await operation(session)
 
 
