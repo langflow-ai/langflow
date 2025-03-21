@@ -19,19 +19,25 @@ export function AppInitPage() {
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
-  const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
+  const { isFetched, refetch } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
-  useGetConfig({ enabled: isFetched });
+  const { isFetched: isConfigFetched } = useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
   useGetTagsQuery({ enabled: isFetched });
   useGetFoldersQuery({ enabled: isFetched });
-  const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery();
+  const { isFetched: isExamplesFetched, refetch: refetchExamples } =
+    useGetBasicExamplesQuery();
 
   useEffect(() => {
     if (isFetched) {
       refreshStars();
     }
-  }, [isFetched]);
+
+    if (isConfigFetched) {
+      refetch();
+      refetchExamples();
+    }
+  }, [isFetched, isConfigFetched]);
 
   return (
     //need parent component with width and height
