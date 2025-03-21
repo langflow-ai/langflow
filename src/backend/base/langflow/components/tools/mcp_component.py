@@ -28,7 +28,6 @@ HTTP_TEMPORARY_REDIRECT = 307
 logger = logging.getLogger(__name__)
 
 
-
 class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
@@ -64,7 +63,7 @@ class MCPSseClient:
         return url
 
     async def _connect_with_timeout(
-            self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
+        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
     ):
         sse_transport = await self.exit_stack.enter_async_context(
             sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
@@ -74,7 +73,7 @@ class MCPSseClient:
         await self.session.initialize()
 
     async def connect_to_server(
-            self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
+        self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
     ):
         if headers is None:
             headers = {}
