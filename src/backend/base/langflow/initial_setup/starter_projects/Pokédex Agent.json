@@ -25,9 +25,9 @@
         "id": "reactflow__edge-APIRequest-I3YfL{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-I3YfLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-gTlzD{œfieldNameœ:œtoolsœ,œidœ:œAgent-gTlzDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "APIRequest-I3YfL",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-I3YfLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-I3YfLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-gTlzD",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-gTlzDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-gTlzDœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-vQuMN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vQuMNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-gTlzD{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gTlzDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-vQuMN",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vQuMNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vQuMNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-gTlzD",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gTlzDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-gTlzDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Agent-gTlzD{œdataTypeœ:œAgentœ,œidœ:œAgent-gTlzDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uUc50{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uUc50œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-gTlzD",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-gTlzDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-gTlzDœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-uUc50",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uUc50œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-uUc50œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
