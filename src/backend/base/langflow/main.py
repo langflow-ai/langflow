@@ -105,8 +105,6 @@ async def load_bundles_with_error_handling():
 
 
 def get_lifespan(*, fix_migration=False, version=None):
-    telemetry_service = get_telemetry_service()
-
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         # Startup message
@@ -124,7 +122,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await create_or_update_starter_projects(all_types_dict)
-            telemetry_service.start()
             await load_flows_from_directory()
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
@@ -265,6 +262,9 @@ def create_app():
         )
 
     FastAPIInstrumentor.instrument_app(app)
+
+    telemetry_service = get_telemetry_service()
+    telemetry_service.start()
 
     add_pagination(app)
     return app
