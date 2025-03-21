@@ -28,13 +28,17 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             >
               {folders?.length > 1 ? "Empty folder" : "Start building"}
             </h3>
-            <p className="pb-5 text-sm text-secondary-foreground">
+            <p
+              data-testid="empty-folder-description"
+              className="pb-5 text-sm text-secondary-foreground"
+            >
               Begin with a template, or start from scratch.
             </p>
             <Button
               variant="default"
               onClick={() => setOpenModal(true)}
               id="new-project-btn"
+              data-testid="new_project_btn_empty_page"
             >
               <ForwardedIconComponent
                 name="Plus"
