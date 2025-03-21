@@ -151,6 +151,6 @@ class URLComponent(Component):
 
     def as_dataframe(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
-        df = DataFrame(self.fetch_content())
-        self.status = df
-        return df
+        data_frame = DataFrame(self.fetch_content())
+        self.status = data_frame
+        return data_frame
