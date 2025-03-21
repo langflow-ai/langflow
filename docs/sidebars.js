@@ -174,6 +174,7 @@ module.exports = {
           label: "NVIDIA",
           items: [
             "Integrations/Nvidia/integrations-nvidia-ingest",
+            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
           ],
         },
       ],
