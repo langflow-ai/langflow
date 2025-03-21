@@ -262,7 +262,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_PULL_REQUESTS-state",
-            display_name="StateEnm",
+            display_name="State",
             info="Either `open`, `closed`, or `all` to filter by state.",
             show=False,
             value="open",
@@ -281,7 +281,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_PULL_REQUESTS-sort",
-            display_name="SortEnm",
+            display_name="Sort",
             info="What to sort results by. `popularity` will sort by the number of comments. `long-running` will sort by date created and will limit the results to pull requests that have been open for more than a month and have had activity within the past month. ",  # noqa: E501
             show=False,
             value="created",
@@ -289,7 +289,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_PULL_REQUESTS-direction",
-            display_name="DirectionEnm",
+            display_name="Direction",
             info="The direction of the sort. Default: `desc` when sort is `created` or sort is not specified, otherwise `asc`. ",  # noqa: E501
             show=False,
             advanced=True,
@@ -399,7 +399,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-state",
-            display_name="StateEnm",
+            display_name="State",
             info="Indicates the state of the issues to return.",
             show=False,
             value="open",
@@ -432,7 +432,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-sort",
-            display_name="SortEnm",
+            display_name="Sort",
             info="What to sort results by",
             show=False,
             value="created",
@@ -440,7 +440,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES-direction",
-            display_name="DirectionEnm",
+            display_name="Direction",
             info="The direction to sort the results by",
             show=False,
             value="desc",
@@ -556,7 +556,7 @@ class GitHubAPIComponent(LCToolComponent):
         ),
         MessageTextInput(
             name="GITHUB_LIST_COMMITS-sha",
-            display_name="Sha",
+            display_name="SHA",
             info="SHA or branch to start listing commits from. Default: the repository's default branch (usually `main`). ",  # noqa: E501
             show=False,
         ),
