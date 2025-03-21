@@ -1,8 +1,8 @@
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
-from dateutil.parser import parse
 from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool, Tool
 
@@ -118,11 +118,11 @@ class AstraDBToolComponent(LCToolComponent):
                     "default": "False",
                 },
                 {
-                    "name": "is_date",
-                    "display_name": "Is Date",
+                    "name": "is_timestamp",
+                    "display_name": "Is Timestamp",
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate if the field is a date, datetime or timestamp."),
+                    "description": ("Indicate if the field is a timestamp."),
                     "options": ["True", "False"],
                     "default": "False",
                 },
@@ -285,6 +285,47 @@ class AstraDBToolComponent(LCToolComponent):
 
         return result
 
+    def parse_timestamp(self, timestamp_str: str) -> datetime:
+        """Parse a timestamp string into Astra DB REST API format.
+
+        Args:
+            timestamp_str (str): Input timestamp string
+
+        Returns:
+            datetime: Datetime object
+
+        Raises:
+            ValueError: If the timestamp cannot be parsed
+        """
+        # Common datetime formats to try
+        formats = [
+            "%Y-%m-%d",  # 2024-03-21
+            "%Y-%m-%dT%H:%M:%S",  # 2024-03-21T15:30:00
+            "%Y-%m-%dT%H:%M:%S%z",  # 2024-03-21T15:30:00+0000
+            "%Y-%m-%d %H:%M:%S",  # 2024-03-21 15:30:00
+            "%d/%m/%Y",  # 21/03/2024
+            "%Y/%m/%d",  # 2024/03/21
+        ]
+
+        for fmt in formats:
+            try:
+                # Parse the date string
+                date_obj = datetime.strptime(timestamp_str, fmt).astimezone()
+
+                # If the parsed date has no timezone info, assume UTC
+                if date_obj.tzinfo is None:
+                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+
+                # Convert to UTC and format
+                return date_obj.astimezone(timezone.utc)
+
+            except ValueError:
+                continue
+
+        msg = f"Could not parse date: {timestamp_str}"
+        logger.error(msg)
+        raise ValueError(msg)
+
     def build_filter(self, args: dict, filter_settings: list) -> dict:
         """Build filter dictionary for AstraDB query.
 
@@ -312,8 +353,16 @@ class AstraDBToolComponent(LCToolComponent):
                         **filters.get(filter_key, {}),
                         filter_setting["operator"]: value.split(",") if isinstance(value, str) else value,
                     }
-                elif filter_setting["is_date"] == True:  # noqa: E712
-                    filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: parse(value)}
+                elif filter_setting["is_timestamp"] == True:  # noqa: E712
+                    try:
+                        filters[filter_key] = {
+                            **filters.get(filter_key, {}),
+                            filter_setting["operator"]: self.parse_timestamp(value),
+                        }
+                    except ValueError as e:
+                        msg = f"Error parsing timestamp: {e} - Use the prompt to specify the date in the correct format"
+                        logger.error(msg)
+                        raise ValueError(msg) from e
                 else:
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
         return filters
@@ -349,7 +398,13 @@ class AstraDBToolComponent(LCToolComponent):
         if projection and len(projection) > 0:
             find_options["projection"] = projection
 
-        results = collection.find(**find_options)
+        try:
+            results = collection.find(**find_options)
+        except Exception as e:
+            msg = f"Error on Astra DB Tool {self.tool_name} request: {e}"
+            logger.error(msg)
+            raise ValueError(msg) from e
+
         logger.info(f"Tool {self.tool_name} executed`")
 
         data: list[Data] = [Data(data=doc) for doc in results]

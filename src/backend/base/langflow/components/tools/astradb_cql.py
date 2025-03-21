@@ -1,10 +1,10 @@
 import json
 import urllib
+from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Any
 
 import requests
-from dateutil import parser
 from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool, Tool
 
@@ -161,6 +161,47 @@ class AstraDBCQLToolComponent(LCToolComponent):
         ),
     ]
 
+    def parse_timestamp(self, timestamp_str: str) -> str:
+        """Parse a timestamp string into Astra DB REST API format.
+
+        Args:
+            timestamp_str (str): Input timestamp string
+
+        Returns:
+            str: Formatted timestamp string in YYYY-MM-DDTHH:MI:SS.000Z format
+
+        Raises:
+            ValueError: If the timestamp cannot be parsed
+        """
+        # Common datetime formats to try
+        formats = [
+            "%Y-%m-%d",  # 2024-03-21
+            "%Y-%m-%dT%H:%M:%S",  # 2024-03-21T15:30:00
+            "%Y-%m-%dT%H:%M:%S%z",  # 2024-03-21T15:30:00+0000
+            "%Y-%m-%d %H:%M:%S",  # 2024-03-21 15:30:00
+            "%d/%m/%Y",  # 21/03/2024
+            "%Y/%m/%d",  # 2024/03/21
+        ]
+
+        for fmt in formats:
+            try:
+                # Parse the date string
+                date_obj = datetime.strptime(timestamp_str, fmt).astimezone()
+
+                # If the parsed date has no timezone info, assume UTC
+                if date_obj.tzinfo is None:
+                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+
+                # Convert to UTC and format
+                utc_date = date_obj.astimezone(timezone.utc)
+                return utc_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            except ValueError:
+                continue
+
+        msg = f"Could not parse date: {timestamp_str}"
+        logger.error(msg)
+        raise ValueError(msg)
+
     def astra_rest(self, args):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
@@ -178,11 +219,13 @@ class AstraDBCQLToolComponent(LCToolComponent):
             if field_value is None:
                 continue
 
-            # Check if the value looks like a date and format it
-            # Astra REST API expects timestamps in format YYYY-MM-DDTHH:MI:SS.000Z
             if param["is_timestamp"] == True:  # noqa: E712
-                date_obj = parser.parse(field_value)
-                field_value = date_obj.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                try:
+                    field_value = self.parse_timestamp(field_value)
+                except ValueError as e:
+                    msg = f"Error parsing timestamp: {e} - Use the prompt to specify the date in the correct format"
+                    logger.error(msg)
+                    raise ValueError(msg) from e
 
             if param["operator"] == "$exists":
                 where[field_name] = {**where.get(field_name, {}), param["operator"]: True}
@@ -203,7 +246,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
         res = requests.request("GET", url=url, headers=headers, timeout=10)
 
         if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
-            msg = f"Error on Astra DB CQL request: {res.text}"
+            msg = f"Error on Astra DB CQL Tool {self.tool_name} request: {res.text}"
             logger.error(msg)
             raise ValueError(msg)
 
