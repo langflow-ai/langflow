@@ -30,7 +30,7 @@ export default function PublishDropdown() {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const isPublished = currentFlow?.access_type === "public";
+  const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openApiModal, setOpenApiModal] = useState(false);
@@ -39,7 +39,7 @@ export default function PublishDropdown() {
     mutateAsync(
       {
         id: flowId ?? "",
-        access_type: checked ? "private" : "public",
+        access_type: checked ? "PRIVATE" : "PUBLIC",
       },
       {
         onSuccess: (updatedFlow) => {
@@ -143,9 +143,9 @@ export default function PublishDropdown() {
                 !hasIO ? "cursor-not-allowed" : "",
                 "flex items-center",
               )}
+              data-testid="shareable-playground"
             >
               <DropdownMenuItem
-                data-testid="shareable-playground"
                 disabled={!hasIO || !isPublished}
                 className="deploy-dropdown-item group flex-1"
                 onClick={() => {
@@ -179,19 +179,6 @@ export default function PublishDropdown() {
               </div>
             </div>
           </ShadTooltipComponent>
-          {/* <DropdownMenuItem className="deploy-dropdown-item group">
-            <div className="group-hover:bg-accent">
-              <IconComponent
-                name="FileCode2"
-                className={`${groupStyle} icon-size mr-2`}
-              />
-              <span>Langflow SDK</span>
-              <IconComponent
-                name="ExternalLink"
-                className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
-              />
-            </div>
-          </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>

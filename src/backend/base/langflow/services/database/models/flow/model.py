@@ -33,8 +33,8 @@ HEX_COLOR_LENGTH = 7
 
 
 class AccessTypeEnum(str, Enum):
-    PRIVATE = "private"
-    PUBLIC = "public"
+    PRIVATE = "PRIVATE"
+    PUBLIC = "PUBLIC"
 
 
 class FlowBase(SQLModel):
@@ -59,7 +59,7 @@ class FlowBase(SQLModel):
                 values_callable=lambda enum: [member.value for member in enum],
             ),
             nullable=False,
-            server_default=text("'private'"),
+            server_default=text("'PRIVATE'"),
         ),
     )
 
