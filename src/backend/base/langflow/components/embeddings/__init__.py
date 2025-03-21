@@ -4,6 +4,7 @@ from .astra_vectorize import AstraVectorizeComponent
 from .azure_openai import AzureOpenAIEmbeddingsComponent
 from .cloudflare import CloudflareWorkersAIEmbeddingsComponent
 from .cohere import CohereEmbeddingsComponent
+from .embedding_model import EmbeddingModelComponent
 from .google_generative_ai import GoogleGenerativeAIEmbeddingsComponent
 from .huggingface_inference_api import HuggingFaceInferenceAPIEmbeddingsComponent
 from .lmstudioembeddings import LMStudioEmbeddingsComponent
@@ -22,6 +23,7 @@ __all__ = [
     "AzureOpenAIEmbeddingsComponent",
     "CloudflareWorkersAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
+    "EmbeddingModelComponent",
     "EmbeddingSimilarityComponent",
     "GoogleGenerativeAIEmbeddingsComponent",
     "HuggingFaceInferenceAPIEmbeddingsComponent",
