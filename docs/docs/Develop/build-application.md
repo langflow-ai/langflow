@@ -99,7 +99,7 @@ EXPOSE 7860
 CMD ["langflow", "run", "--backend-only", "--env-file","/app/.env","--host", "0.0.0.0", "--port", "7860"]
 ```
 
-The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`. For more information on configuring logs, see [Logging](/platform-logging).
+The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`. For more information on configuring logs, see [Logging](/logging).
 
 :::note
 Optionally, remove the `--backend-only` flag from the startup command to start Langflow with the frontend enabled.
