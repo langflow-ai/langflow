@@ -120,7 +120,7 @@ class MCPToolsComponent(Component):
             name="command",
             display_name="MCP Command",
             info="Command for MCP stdio connection",
-            value="uvx arxiv-mcp-server",
+            value="uvx mcp-server-fetch",
             show=True,
             refresh_button=True,
         ),
