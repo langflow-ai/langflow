@@ -3,6 +3,7 @@ import logging
 import os
 from contextlib import AsyncExitStack
 
+import httpx
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -27,69 +28,25 @@ HTTP_TEMPORARY_REDIRECT = 307
 logger = logging.getLogger(__name__)
 
 
+
 class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-        self.stdio = None
-        self.write = None
-        self._connected = False
-
-    async def disconnect(self):
-        """Safely disconnect and cleanup resources."""
-        try:
-            if self._connected and self.exit_stack:
-                await self.exit_stack.aclose()
-                self._connected = False
-                self.session = None
-                self.stdio = None
-                self.write = None
-        except (RuntimeError, asyncio.CancelledError, AttributeError) as e:
-            logger.error(f"Error during disconnect: {e}")
 
     async def connect_to_server(self, command_str: str):
-        """Connect to MCP server with improved error handling and validation."""
-        if not command_str or not command_str.strip():
-            msg = "Command string cannot be empty"
-            raise ValueError(msg)
-
-        try:
-            if self._connected:
-                await self.disconnect()
-
-            command = command_str.split()
-            if not command:
-                msg = "Invalid command format"
-                raise ValueError(msg)
-
-            server_params = StdioServerParameters(
-                command=command[0], args=command[1:], env={"DEBUG": "true", "PATH": os.environ.get("PATH", "")}
-            )
-
-            async with AsyncExitStack() as stack:
-                try:
-                    stdio_transport = await stack.enter_async_context(stdio_client(server_params))
-                    self.stdio, self.write = stdio_transport
-                    self.session = await stack.enter_async_context(ClientSession(self.stdio, self.write))
-                    await self.session.initialize()
-                    response = await self.session.list_tools()
-
-                    # Transfer context to instance exit stack
-                    await stack.pop_all().aclose()
-                    self._connected = True
-                except Exception as e:
-                    await stack.aclose()
-                    msg = f"Failed to initialize MCP server: {e!s}"
-                    raise RuntimeError(msg) from e
-                else:
-                    return response.tools
-
-        except Exception as e:
-            self._connected = False
-            self.session = None
-            msg = f"Error connecting to MCP server: {e!s}"
-            logger.error(msg)
-            raise ValueError(msg) from e
+        command = command_str.split(" ")
+        server_params = StdioServerParameters(
+            command=command[0],
+            args=command[1:],
+            env={"DEBUG": "true", "PATH": os.environ["PATH"]},
+        )
+        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+        self.stdio, self.write = stdio_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+        await self.session.initialize()
+        response = await self.session.list_tools()
+        return response.tools
 
 
 class MCPSseClient:
@@ -98,88 +55,43 @@ class MCPSseClient:
         self.sse = None
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-        self._connected = False
-        self._connection_lock = asyncio.Lock()
 
-    async def disconnect(self):
-        """Safely disconnect and cleanup resources."""
-        try:
-            if self._connected and self.exit_stack:
-                await self.exit_stack.aclose()
-                self._connected = False
-                self.session = None
-                self.sse = None
-                self.write = None
-        except (RuntimeError, asyncio.CancelledError, AttributeError) as e:
-            logger.error(f"Error during disconnect: {e}")
+    async def pre_check_redirect(self, url: str):
+        async with httpx.AsyncClient(follow_redirects=False) as client:
+            response = await client.request("HEAD", url)
+            if response.status_code == HTTP_TEMPORARY_REDIRECT:
+                return response.headers.get("Location")
+        return url
 
     async def _connect_with_timeout(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
+            self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
     ):
-        """Connect to SSE server with timeout and proper resource management."""
-        if not url:
-            msg = "URL cannot be empty"
-            raise ValueError(msg)
-
-        async with AsyncExitStack() as stack:
-            try:
-                sse_transport = await stack.enter_async_context(
-                    sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-                )
-                self.sse, self.write = sse_transport
-                self.session = await stack.enter_async_context(ClientSession(self.sse, self.write))
-                await self.session.initialize()
-                await stack.pop_all().aclose()
-                self._connected = True
-            except Exception as e:
-                await stack.aclose()
-                msg = f"Failed to initialize SSE connection: {e!s}"
-                raise RuntimeError(msg) from e
+        sse_transport = await self.exit_stack.enter_async_context(
+            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+        )
+        self.sse, self.write = sse_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
+        await self.session.initialize()
 
     async def connect_to_server(
-        self,
-        url: str,
-        headers: dict[str, str] | None = None,
-        timeout_seconds: int = 500,
-        sse_read_timeout_seconds: int = 500,
+            self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
     ):
-        """Connect to server with improved error handling and connection management."""
-        async with self._connection_lock:
-            try:
-                if self._connected:
-                    await self.disconnect()
-
-                headers = headers or {}
-                url = await self.pre_check_redirect(url)
-
-                try:
-                    await asyncio.wait_for(
-                        self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
-                        timeout=timeout_seconds,
-                    )
-
-                    if not self.session:
-                        msg = "Session not initialized"
-                        raise ValueError(msg)
-
-                    response = await self.session.list_tools()
-
-                except asyncio.TimeoutError as err:
-                    msg = f"Connection to {url} timed out after {timeout_seconds} seconds"
-                    logger.error(msg)
-                    raise TimeoutError(msg) from err
-                except Exception as e:
-                    msg = f"Connection failed: {e!s}"
-                    raise RuntimeError(msg) from e
-                else:
-                    return response.tools
-
-            except Exception as e:
-                self._connected = False
-                self.session = None
-                msg = f"Error connecting to MCP server: {e!s}"
-                logger.error(msg)
-                raise ValueError(msg) from e
+        if headers is None:
+            headers = {}
+        url = await self.pre_check_redirect(url)
+        try:
+            await asyncio.wait_for(
+                self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
+                timeout=timeout_seconds,
+            )
+            if self.session is None:
+                msg = "Session not initialized"
+                raise ValueError(msg)
+            response = await self.session.list_tools()
+        except asyncio.TimeoutError as err:
+            msg = f"Connection to {url} timed out after {timeout_seconds} seconds"
+            raise TimeoutError(msg) from err
+        return response.tools
 
 
 class MCPToolsComponent(Component):
@@ -491,9 +403,8 @@ class MCPToolsComponent(Component):
                 value = getattr(self, arg.name, None)
                 if value:
                     kwargs[arg.name] = value
-            print(f"kwargs: {kwargs}")
-            output = await exec_tool.func(**kwargs)
-            return Message(text=output)
+            output = await exec_tool.coroutine(**kwargs)
+            return Message(text=output.content[0].text)
         except Exception as e:
             logger.error(f"Error in build_output: {e!s}")
             msg = f"Failed to execute tool: {e!s}"
