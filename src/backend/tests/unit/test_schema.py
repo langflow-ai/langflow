@@ -198,8 +198,11 @@ def test_schema_to_langflow_inputs():
     assert len(inputs) == 5
 
     # Helper function to find input by name
-    def find_input(name: str) -> InputTypes:
-        return next(_input for _input in inputs if input.name == name)
+    def find_input(name: str) -> InputTypes | None:
+        for _input in inputs:
+            if _input.name == name:
+                return _input
+        return None
 
     # Test text field
     text_input = find_input("text_field")
