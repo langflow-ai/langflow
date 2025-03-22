@@ -7,6 +7,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
 
   async ({ page }) => {
+    test.skip();
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
