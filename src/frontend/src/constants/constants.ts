@@ -964,6 +964,7 @@ export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
 export const DRAG_EVENTS_CUSTOM_TYPESS = {
   genericnode: "genericNode",
   notenode: "noteNode",
+  "text/plain": "text/plain",
 };
 
 export const NOTE_NODE_MIN_WIDTH = 324;
