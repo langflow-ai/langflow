@@ -11,7 +11,7 @@ declare const __dirname: string;
 
 withEventDeliveryModes(
   "Vector Store RAG",
-  { tag: ["@release", "@starter-projects", "@development"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
