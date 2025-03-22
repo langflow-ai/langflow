@@ -25,10 +25,12 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
+    check_need_initialize,
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
+    set_initialized_version,
     sync_flows_from_fs,
 )
 from langflow.interface.components import get_and_cache_all_types_dict
@@ -127,8 +129,11 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             start_time = asyncio.get_event_loop().time()
 
+            need_initialize = await check_need_initialize(version)
+            rprint(f"[bold green]Need initialize: {need_initialize}[/bold green]")
+
             rprint("[bold blue]Initializing services[/bold blue]")
-            await initialize_services(fix_migration=fix_migration)
+            await initialize_services(fix_migration=fix_migration, need_initialize=need_initialize)
             rprint(f"✓ Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
@@ -136,10 +141,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             rprint(f"✓ LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            rprint("[bold blue]Initializing super user[/bold blue]")
-            await initialize_super_user_if_needed()
-            rprint(f"✓ Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            if need_initialize:
+                current_time = asyncio.get_event_loop().time()
+                rprint("[bold blue]Initializing super user[/bold blue]")
+                await initialize_super_user_if_needed()
+                rprint(f"✓ Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
             rprint("[bold blue]Loading bundles[/bold blue]")
@@ -151,11 +157,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             rprint("[bold blue]Caching types[/bold blue]")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             rprint(f"✓ Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            current_time = asyncio.get_event_loop().time()
-            rprint("[bold blue]Creating/updating starter projects[/bold blue]")
-            await create_or_update_starter_projects(all_types_dict)
-            rprint(f"✓ Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            if need_initialize:
+                current_time = asyncio.get_event_loop().time()
+                rprint("[bold blue]Creating/updating starter projects[/bold blue]")
+                await create_or_update_starter_projects(all_types_dict)
+                rprint(f"✓ Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             telemetry_service.start()
 
@@ -167,6 +173,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
             rprint(f"✓ Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            # write initialized version to file
+            await set_initialized_version(version)
 
             total_time = asyncio.get_event_loop().time() - start_time
             rprint(f"[bold green]✓ Total initialization time: {total_time:.2f}s[/bold green]")

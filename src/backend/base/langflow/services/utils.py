@@ -226,20 +226,24 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         # Don't re-raise since this is a cleanup task
 
 
-async def initialize_services(*, fix_migration: bool = False) -> None:
+async def initialize_services(*, fix_migration: bool = False, need_initialize: bool = True) -> None:
     """Initialize all the services needed."""
     # Test cache connection
     get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Setup the superuser
-    await initialize_database(fix_migration=fix_migration)
+    if need_initialize:
+        await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
-    await db_service.initialize_alembic_log_file()
+    settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+    if need_initialize:
+        await db_service.initialize_alembic_log_file()
+        async with db_service.with_session() as session:
+            settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+            await setup_superuser(settings_service, session)
+        try:
+            await get_db_service().assign_orphaned_flows_to_superuser()
+        except sqlalchemy_exc.IntegrityError as exc:
+            logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     async with db_service.with_session() as session:
-        settings_service = get_service(ServiceType.SETTINGS_SERVICE)
-        await setup_superuser(settings_service, session)
-    try:
-        await get_db_service().assign_orphaned_flows_to_superuser()
-    except sqlalchemy_exc.IntegrityError as exc:
-        logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
-    await clean_transactions(settings_service, session)
-    await clean_vertex_builds(settings_service, session)
+        await clean_transactions(settings_service, session)
+        await clean_vertex_builds(settings_service, session)
