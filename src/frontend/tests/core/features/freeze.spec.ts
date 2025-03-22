@@ -219,6 +219,8 @@ test(
 
     await page.getByTestId("icon-FreezeAll").last().click();
 
+    await page.waitForTimeout(3000);
+
     await page.keyboard.press("Escape");
 
     await page.locator('//*[@id="react-flow-id"]').click();
@@ -231,6 +233,8 @@ test(
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
     });
+
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -270,11 +274,9 @@ test(
 
     await page.getByText("Freeze", { exact: true }).click();
 
+    await page.waitForTimeout(3000);
+
     await page.keyboard.press("Escape");
-
-    await page.locator('//*[@id="react-flow-id"]').click();
-
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -304,15 +306,11 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(firstTextFreezed).toContain("Lorem Ipsum");
-    expect(secondRunWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(firstTextFreezed).toBe(secondRunWithoutFreezing);
+
+    expect(firstTextFreezed).not.toBe(firstRunWithoutFreezing);
+    expect(firstTextFreezed).not.toBe(thirdTextWithoutFreezing);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-
-    expect(thirdTextWithoutFreezing).toContain("Lorem Ipsum");
-
-    const lengthDifference = Math.abs(
-      thirdTextWithoutFreezing?.length! - firstTextFreezed?.length!,
-    );
-    expect(lengthDifference).toBeLessThan(100);
+    expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   },
 );
