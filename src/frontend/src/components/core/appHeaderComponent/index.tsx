@@ -92,7 +92,7 @@ export default function AppHeader(): JSX.Element {
               unstyled
               className="hidden items-center whitespace-nowrap pr-2 2xl:inline"
               onClick={() =>
-                window.open("https://github.com/langflow-ai/langflow", "_blank")
+                window.open("https://github.com/deeptern-ai/deeptern", "_blank")
               }
             >
               <GithubStarComponent />
@@ -139,7 +139,7 @@ export default function AppHeader(): JSX.Element {
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <ShadTooltip
-              content="Go to Langflow Store"
+              content="Go to Deeptern Store"
               side="bottom"
               styleClasses="z-10"
             >
@@ -172,7 +172,7 @@ export default function AppHeader(): JSX.Element {
                 className="flex text-sm font-medium"
                 onClick={() =>
                   window.open(
-                    "https://docs.datastax.com/en/langflow/index.html",
+                    "https://docs.deeptern.com/en/deeptern/index.html",
                     "_blank",
                   )
                 }

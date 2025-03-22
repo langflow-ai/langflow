@@ -37,10 +37,10 @@ test(
 
     await page.goto("/");
 
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector("text=sign in to Deeptern", { timeout: 30000 });
 
-    await page.getByPlaceholder("Username").fill("langflow");
-    await page.getByPlaceholder("Password").fill("langflow");
+    await page.getByPlaceholder("Username").fill("Deeptern");
+    await page.getByPlaceholder("Password").fill("Deeptern");
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -265,10 +265,10 @@ test(
 
     await page.getByText("Logout", { exact: true }).click();
 
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector("text=sign in to Deeptern", { timeout: 30000 });
 
-    await page.getByPlaceholder("Username").fill("langflow");
-    await page.getByPlaceholder("Password").fill("langflow");
+    await page.getByPlaceholder("Username").fill("Deeptern");
+    await page.getByPlaceholder("Password").fill("Deeptern");
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
