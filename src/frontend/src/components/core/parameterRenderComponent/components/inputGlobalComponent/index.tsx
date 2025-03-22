@@ -34,7 +34,7 @@ export default function InputGlobalComponent({
   );
 
   useEffect(() => {
-    if (globalVariables) {
+    if (globalVariables && !disabled) {
       if (
         load_from_db &&
         !globalVariables.find((variable) => variable.name === value)
@@ -56,7 +56,7 @@ export default function InputGlobalComponent({
         );
       }
     }
-  }, [globalVariables, unavailableFields]);
+  }, [globalVariables, unavailableFields, disabled]);
 
   function handleDelete(key: string) {
     if (value === key && load_from_db) {
