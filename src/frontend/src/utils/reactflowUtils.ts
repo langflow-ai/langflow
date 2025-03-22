@@ -937,6 +937,7 @@ export function convertValuesToNumbers(arr) {
         } else {
           newObj[key] = value.toString();
         }
+      }
     }
     return newObj;
   });
