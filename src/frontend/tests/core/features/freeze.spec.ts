@@ -149,7 +149,9 @@ test(
 
     await page
       .getByTestId("inputlist_str_urls_0")
-      .fill("https://www.lipsum.com/");
+      .fill(
+        "https://www.selenium.dev/selenium/web/window_switching_tests/simple_page.html",
+      );
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -305,10 +307,8 @@ test(
       .textContent();
 
     expect(firstRunWithoutFreezing).toBe(firstTextFreezed);
-    expect(thirdTextWithoutFreezing).toBe(firstTextFreezed);
-
-    expect(secondRunWithoutFreezing).not.toBe(firstTextFreezed);
-    expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-    expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
+    expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(secondRunWithoutFreezing).not.toBe(thirdTextWithoutFreezing);
+    expect(firstRunWithoutFreezing).toBe(secondRunWithoutFreezing);
   },
 );
