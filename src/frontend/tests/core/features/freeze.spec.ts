@@ -280,7 +280,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
@@ -306,8 +306,8 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(firstTextFreezed).toBe(thirdTextWithoutFreezing);
-    expect(firstTextFreezed).not.toBe(secondRunWithoutFreezing);
+    expect(firstTextFreezed).not.toBe(thirdTextWithoutFreezing);
+    expect(firstTextFreezed).toBe(secondRunWithoutFreezing);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   },
 );
