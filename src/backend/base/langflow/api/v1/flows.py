@@ -522,6 +522,9 @@ async def download_multiple_file(
     return flows_without_api_keys[0]
 
 
+all_starter_folder_flows: list[FlowRead] = []
+
+
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 async def read_basic_examples(
     *,
@@ -536,6 +539,10 @@ async def read_basic_examples(
         list[FlowRead]: A list of basic example flows.
     """
     try:
+        global all_starter_folder_flows  # noqa: PLW0603
+
+        if all_starter_folder_flows:
+            return compress_response(all_starter_folder_flows)
         # Get the starter folder
         starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
 
@@ -543,10 +550,10 @@ async def read_basic_examples(
             return []
 
         # Get all flows in the starter folder
-        flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+        all_starter_folder_flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
 
         # Return compressed response using our utility function
-        return compress_response(flows)
+        return compress_response(all_starter_folder_flows)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
