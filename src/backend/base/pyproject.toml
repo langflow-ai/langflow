@@ -86,6 +86,7 @@ dependencies = [
     "elevenlabs>=1.54.0",
     "webrtcvad>=2.0.10",
     "scipy>=1.15.2",
+    "watercrawl-py>=0.1.0,<1.0.0",
 ]
 
 [dependency-groups]
