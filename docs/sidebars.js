@@ -86,6 +86,18 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Develop with Langflow",
+      items: [
+        "Develop/develop-overview",
+        "Develop/build-application",
+        "Develop/session-id",
+        "Develop/logging",
+        "Develop/memory",
+        "Develop/install-custom-dependencies",
+      ],
+    },
+    {
+      type: "category",
       label: "Deployment",
       items: [
         {
