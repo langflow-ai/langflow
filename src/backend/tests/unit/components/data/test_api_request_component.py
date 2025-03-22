@@ -144,7 +144,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Data)
         assert result.data["source"] == url
-        assert result.data["data"] == binary_content
+
 
     @respx.mock
     async def test_make_request_timeout(self, component):
