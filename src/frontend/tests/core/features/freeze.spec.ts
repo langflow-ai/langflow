@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to freeze a component",
-  { tag: ["@release", "@workspace", "@components"] },
+  { tag: ["@release", "@workspace", "@components", "@development"] },
 
   async ({ page }) => {
     await awaitBootstrapTest(page);
