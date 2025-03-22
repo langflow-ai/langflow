@@ -931,12 +931,12 @@ export function convertValuesToNumbers(arr) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         let value = obj[key];
-        if (/^\d+$/.test(value)) {
+        if (/^-?\d*\.?\d+$/.test(value) && value !== "") {
           value = value?.toString().trim();
+          newObj[key] = Number(value);
+        } else {
+          newObj[key] = value.toString();
         }
-        newObj[key] =
-          value === "" || isNaN(value) ? value.toString() : Number(value);
-      }
     }
     return newObj;
   });
