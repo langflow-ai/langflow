@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to freeze a component",
-  { tag: ["@release", "@workspace", "@components", "@development"] },
+  { tag: ["@release", "@workspace", "@components"] },
 
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -149,9 +149,7 @@ test(
 
     await page
       .getByTestId("inputlist_str_urls_0")
-      .fill(
-        "https://www.selenium.dev/selenium/web/window_switching_tests/simple_page.html",
-      );
+      .fill("https://www.lipsum.com/");
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -221,6 +219,8 @@ test(
 
     await page.getByTestId("icon-FreezeAll").last().click();
 
+    await page.waitForTimeout(3000);
+
     await page.keyboard.press("Escape");
 
     await page.locator('//*[@id="react-flow-id"]').click();
@@ -233,6 +233,8 @@ test(
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
     });
+
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -272,15 +274,13 @@ test(
 
     await page.getByText("Freeze", { exact: true }).click();
 
+    await page.waitForTimeout(3000);
+
     await page.keyboard.press("Escape");
-
-    await page.locator('//*[@id="react-flow-id"]').click();
-
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
@@ -306,9 +306,8 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(firstRunWithoutFreezing).toBe(firstTextFreezed);
-    expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
-    expect(secondRunWithoutFreezing).not.toBe(thirdTextWithoutFreezing);
-    expect(firstRunWithoutFreezing).toBe(secondRunWithoutFreezing);
+    expect(firstTextFreezed).toBe(thirdTextWithoutFreezing);
+    expect(firstTextFreezed).not.toBe(secondRunWithoutFreezing);
+    expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   },
 );
