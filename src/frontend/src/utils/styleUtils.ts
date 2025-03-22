@@ -304,6 +304,7 @@ import { MaritalkIcon } from "../icons/Maritalk";
 import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
+import { ModelScopeIcon } from "../icons/ModelScope";
 import { MongoDBIcon } from "../icons/MongoDB";
 import { NeedleIcon } from "../icons/Needle";
 import { NotDiamondIcon } from "../icons/NotDiamond";
@@ -727,6 +728,7 @@ export const nodeIconsLucide: iconsType = {
   Composio: ComposioIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
+  ModelScope: ModelScopeIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
