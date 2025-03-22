@@ -304,15 +304,11 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(firstTextFreezed).toContain("Lorem Ipsum");
+    expect(firstRunWithoutFreezing).toBe(firstTextFreezed);
+    expect(thirdTextWithoutFreezing).toBe(firstTextFreezed);
+
     expect(secondRunWithoutFreezing).not.toBe(firstTextFreezed);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-
-    expect(thirdTextWithoutFreezing).toContain("Lorem Ipsum");
-
-    const lengthDifference = Math.abs(
-      thirdTextWithoutFreezing?.length! - firstTextFreezed?.length!,
-    );
-    expect(lengthDifference).toBeLessThan(100);
+    expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   },
 );
