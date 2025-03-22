@@ -306,8 +306,11 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(firstTextFreezed).not.toBe(thirdTextWithoutFreezing);
     expect(firstTextFreezed).toBe(secondRunWithoutFreezing);
+
+    expect(firstTextFreezed).not.toBe(firstRunWithoutFreezing);
+    expect(firstTextFreezed).not.toBe(thirdTextWithoutFreezing);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
+    expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   },
 );
