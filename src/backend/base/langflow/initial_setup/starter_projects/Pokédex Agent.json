@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "APIRequest",
-            "id": "APIRequest-I3YfL",
+            "id": "APIRequest-dajH9",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-gTlzD",
+            "id": "Agent-Mb9SA",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-APIRequest-I3YfL{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-I3YfLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-gTlzD{œfieldNameœ:œtoolsœ,œidœ:œAgent-gTlzDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-APIRequest-dajH9{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-dajH9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Mb9SA{œfieldNameœ:œtoolsœ,œidœ:œAgent-Mb9SAœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "APIRequest-I3YfL",
-        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-I3YfLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-gTlzD",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-gTlzDœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "APIRequest-dajH9",
+        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-dajH9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-Mb9SA",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Mb9SAœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-vQuMN",
+            "id": "ChatInput-j4Jnt",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-gTlzD",
+            "id": "Agent-Mb9SA",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-vQuMN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vQuMNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-gTlzD{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gTlzDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-j4Jnt{œdataTypeœ:œChatInputœ,œidœ:œChatInput-j4Jntœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Mb9SA{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Mb9SAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-vQuMN",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vQuMNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-gTlzD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-gTlzDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-j4Jnt",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-j4Jntœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-Mb9SA",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Mb9SAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-gTlzD",
+            "id": "Agent-Mb9SA",
             "name": "response",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-uUc50",
+            "id": "ChatOutput-HdjF0",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-gTlzD{œdataTypeœ:œAgentœ,œidœ:œAgent-gTlzDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uUc50{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uUc50œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-Mb9SA{œdataTypeœ:œAgentœ,œidœ:œAgent-Mb9SAœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HdjF0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HdjF0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-gTlzD",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-gTlzDœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-uUc50",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-uUc50œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-Mb9SA",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-Mb9SAœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-HdjF0",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HdjF0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -93,7 +93,7 @@
         "data": {
           "description": "Make HTTP requests using URLs or cURL commands.",
           "display_name": "API Request",
-          "id": "APIRequest-I3YfL",
+          "id": "APIRequest-dajH9",
           "node": {
             "base_classes": [
               "Data",
@@ -592,7 +592,7 @@
           "type": "APIRequest"
         },
         "dragging": false,
-        "id": "APIRequest-I3YfL",
+        "id": "APIRequest-dajH9",
         "measured": {
           "height": 523,
           "width": 360
@@ -606,7 +606,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-vQuMN",
+          "id": "ChatInput-j4Jnt",
           "node": {
             "base_classes": [
               "Message"
@@ -904,7 +904,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-vQuMN",
+        "id": "ChatInput-j4Jnt",
         "measured": {
           "height": 74,
           "width": 216
@@ -918,7 +918,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-uUc50",
+          "id": "ChatOutput-HdjF0",
           "node": {
             "base_classes": [
               "Message"
@@ -1215,7 +1215,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-uUc50",
+        "id": "ChatOutput-HdjF0",
         "measured": {
           "height": 74,
           "width": 216
@@ -1229,7 +1229,7 @@
       },
       {
         "data": {
-          "id": "note-KLtZz",
+          "id": "note-apcPB",
           "node": {
             "description": "## Open the playground and ask anything about a Pokémon! ⚡ 🐹",
             "display_name": "",
@@ -1242,7 +1242,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-KLtZz",
+        "id": "note-apcPB",
         "measured": {
           "height": 324,
           "width": 393
@@ -1258,7 +1258,7 @@
       },
       {
         "data": {
-          "id": "note-NK1IS",
+          "id": "note-NDNyW",
           "node": {
             "description": "# Pokédex Agent\n\nCollect research on Pokémon with a specialized **Agent** and the Pokédex API.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **Agent** component.\n2.  Click **Playground** and ask about your favorite Pokémon.\nThe **Agent** queries the Pokedex API and returns a formatted entry.",
             "display_name": "",
@@ -1269,7 +1269,7 @@
         },
         "dragging": false,
         "height": 543,
-        "id": "note-NK1IS",
+        "id": "note-NDNyW",
         "measured": {
           "height": 543,
           "width": 352
@@ -1285,7 +1285,7 @@
       },
       {
         "data": {
-          "id": "note-JuATf",
+          "id": "note-W2hGS",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -1298,7 +1298,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-JuATf",
+        "id": "note-W2hGS",
         "measured": {
           "height": 324,
           "width": 337
@@ -1314,7 +1314,7 @@
       },
       {
         "data": {
-          "id": "Agent-gTlzD",
+          "id": "Agent-Mb9SA",
           "node": {
             "base_classes": [
               "Message"
@@ -1550,7 +1550,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
                 "required": false,
@@ -1560,7 +1560,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "0.5819222813956155"
+                "value": ""
               },
               "json_mode": {
                 "_input_type": "BoolInput",
@@ -1995,7 +1995,7 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-gTlzD",
+        "id": "Agent-Mb9SA",
         "measured": {
           "height": 698,
           "width": 360
@@ -2009,9 +2009,9 @@
       }
     ],
     "viewport": {
-      "x": 335.4484893412189,
-      "y": 681.2799267718543,
-      "zoom": 0.7488502535633749
+      "x": 384.1609310406771,
+      "y": 506.38162079555184,
+      "zoom": 0.8212339247223495
     }
   },
   "description": "Research Pokémon with a specialized Agent and the Pokédex API.",
