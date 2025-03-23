@@ -105,6 +105,8 @@ async def load_bundles_with_error_handling():
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    telemetry_service = get_telemetry_service()
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         # Startup message
@@ -122,6 +124,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await create_or_update_starter_projects(all_types_dict)
+            telemetry_service.start()
             await load_flows_from_directory()
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
@@ -221,21 +224,35 @@ def create_app():
         return await call_next(request)
 
     settings = get_settings_service().settings
-    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
-        # set here for create_app() entry point
-        prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < MAX_PORT:
-            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
-            settings.prometheus_enabled = True
-            settings.prometheus_port = prome_port
-        else:
-            msg = f"Invalid port number {prome_port_str}"
-            raise ValueError(msg)
+    prometheus_port_str = os.getenv("LANGFLOW_PROMETHEUS_PORT", "9090")
+    metrics_mode = os.getenv("LANGFLOW_METRICS_PORT_MODE", "inline").lower()
+
+    try:
+        prometheus_port = int(prometheus_port_str)
+        if not (0 < prometheus_port < MAX_PORT):
+            raise ValueError
+    except ValueError:
+        logger.warning(f"Invalid LANGFLOW_PROMETHEUS_PORT '{prometheus_port_str}', defaulting to port 9090")
+        prometheus_port = 9090
+
+    settings.prometheus_enabled = True
+    settings.prometheus_port = prometheus_port
+
+    logger.info(f"Prometheus metrics enabled | mode: '{metrics_mode}' | port: {prometheus_port}")
 
     if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
+        if metrics_mode == "inline":
+            from prometheus_client import make_asgi_app
 
-        start_http_server(settings.prometheus_port)
+            logger.debug("Mounting Prometheus /metrics endpoint on main FastAPI app")
+            app.mount("/metrics", make_asgi_app())
+        elif metrics_mode == "separate":
+            logger.debug("Prometheus metrics will be served on a separate port by the TelemetryService")
+        else:
+            logger.warning(f"Unknown LANGFLOW_METRICS_PORT_MODE='{metrics_mode}', defaulting to 'inline'")
+            from prometheus_client import make_asgi_app
+
+            app.mount("/metrics", make_asgi_app())
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -261,10 +278,7 @@ def create_app():
             content={"message": str(exc)},
         )
 
-    FastAPIInstrumentor.instrument_app(app)
-
-    telemetry_service = get_telemetry_service()
-    telemetry_service.start()
+    FastAPIInstrumentor.instrument_app(app, excluded_urls="health,health_check")
 
     add_pagination(app)
     return app

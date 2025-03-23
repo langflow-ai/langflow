@@ -25,6 +25,9 @@ DEFAULT_LOG_FORMAT = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
 )
 
+# Define all paths you want to exclude from logs
+EXCLUDED_PATHS = ["/health", "/health_check", "/metrics"]
+
 
 class SizedLogBuffer:
     def __init__(
@@ -270,6 +273,11 @@ def configure_container_logging(log_level: str, log_format: str | None, env_mode
         log_format (str | None): Log format string (may be unused in specific container modes).
         env_mode (str): One of "container", "container_json".
     """
+
+    def log_filter(record):
+        # Check if message contains any excluded path
+        return not any(path in record["message"] for path in EXCLUDED_PATHS)
+
     if env_mode == "container_json":
 
         def sink(message):
@@ -279,7 +287,7 @@ def configure_container_logging(log_level: str, log_format: str | None, env_mode
             # Make sure it's flushed immediately
             sys.stdout.flush()
 
-        logger.add(sink, level=log_level.upper())
+        logger.add(sink, level=log_level.upper(), filter=log_filter)
     else:
         if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
             log_format = os.getenv("LANGFLOW_LOG_FORMAT")
@@ -287,7 +295,12 @@ def configure_container_logging(log_level: str, log_format: str | None, env_mode
         if log_format is None:
             log_format = DEFAULT_LOG_FORMAT
 
-        logger.add(sys.stdout, format=log_format, level=log_level.upper())
+        logger.add(
+            sys.stdout,
+            format=log_format,
+            level=log_level.upper(),
+            filter=log_filter,
+        )
 
 
 def configure_standard_logging(log_level: str, log_file: Path | None, log_format: str | None, async_file: bool) -> None:

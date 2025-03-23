@@ -3,11 +3,14 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
+import threading
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
+import uvicorn
 from loguru import logger
+from prometheus_client import make_asgi_app
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
@@ -46,6 +49,8 @@ class TelemetryService(Service):
             os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
         )
         self.log_package_version_task: asyncio.Task | None = None
+        self._metrics_thread: threading.Thread | None = None
+        self._metrics_server_started = False  # Flag to track if the metrics server has been started
 
     async def telemetry_worker(self) -> None:
         while self.running:
@@ -127,6 +132,13 @@ class TelemetryService(Service):
             self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
             self.log_package_version_task = asyncio.create_task(self.log_package_version())
+
+            # Launch metrics server on separate port
+            if (
+                self.settings_service.settings.prometheus_enabled
+                and os.getenv("LANGFLOW_METRICS_PORT_MODE") == "separate"
+            ):
+                self.start_metrics_server()
         except Exception:  # noqa: BLE001
             logger.exception("Error starting telemetry service")
 
@@ -165,3 +177,42 @@ class TelemetryService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
+
+    def start_metrics_server(self) -> None:
+        """Start Prometheus metrics server on a separate port if configured."""
+        # Ensure we only start the server once — thread is alive OR we already marked it as started
+        if getattr(self, "_metrics_server_started", False):
+            if hasattr(self, "_metrics_thread") and self._metrics_thread and self._metrics_thread.is_alive():
+                logger.debug("Prometheus metrics server already running (flag + thread check). Skipping start.")
+                return
+            logger.warning("Metrics server flag was set but thread is dead. Proceeding to restart it.")
+
+        port = self.settings_service.settings.prometheus_port
+        host = os.getenv("LANGFLOW_METRICS_HOST", "0.0.0.0")
+        log_level = os.getenv("LANGFLOW_METRICS_LOG_LEVEL", "warning")
+
+        metrics_app = make_asgi_app()
+
+        def run_metrics_server():
+            try:
+                logger.info(f"Starting Prometheus metrics server at http://{host}:{port}/metrics")
+                uvicorn.run(
+                    metrics_app,
+                    host=host,
+                    port=port,
+                    log_level=log_level,
+                    # Optional future tuning
+                    access_log=False,
+                    timeout_keep_alive=5,
+                )
+            except Exception as e:
+                logger.exception(f"Failed to start Prometheus metrics server on {host}:{port}: {e}")
+
+        self._metrics_thread = threading.Thread(
+            target=run_metrics_server,
+            name="PrometheusMetricsServer",
+            daemon=True,
+        )
+        self._metrics_thread.start()
+        self._metrics_server_started = True  # mark it as started after launching the thread
+        logger.debug(f"Prometheus metrics server thread started (daemon=True) on port {port}")

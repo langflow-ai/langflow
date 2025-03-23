@@ -26,8 +26,10 @@ docker run -d \
 --name langflow-backend \
 --network $NETWORK_NAME \
 -p ${BACKEND_PORT}:${BACKEND_PORT} \
+-p 9090:9090 \
 --sysctl net.ipv6.conf.all.disable_ipv6=1 \
-"${BACKEND_IMAGE}"
+--mount type=bind,source="$(pwd)"/.env,target=/app/.env \
+"${BACKEND_IMAGE}" --env-file /app/.env
 
 sleep 5
 

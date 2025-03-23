@@ -29,6 +29,14 @@ from langflow.logging.logger import (
 )
 from loguru import logger as loguru_logger
 
+# The filter from your logger config
+EXCLUDED_PATHS = ["/health", "/health_check", "/metrics"]
+
+
+def log_filter(record):
+    return not any(path in record["message"] for path in EXCLUDED_PATHS)
+
+
 # =========================
 # Tests for SizedLogBuffer
 # =========================
@@ -301,6 +309,22 @@ def test_intercept_handler_emit(capfd: pytest.LogCaptureFixture) -> None:
 # ============================================
 
 
+@pytest.mark.parametrize(
+    "message,expected",
+    [
+        ("GET /health", False),
+        ("POST /health_check", False),
+        ("GET /metrics", False),
+        ("Request to /api/v1/run", True),
+        ("Normal log message", True),
+    ],
+)
+def test_log_filter_excludes_known_paths(message, expected):
+    """Test that the log_filter function correctly filters out known paths."""
+    record = {"message": message}
+    assert log_filter(record) == expected
+
+
 def test_serialize_log_valid() -> None:
     """Test that serialize_log returns a valid JSON string representation of a given log record."""
     # Create a mock Loguru-style record that matches your function's expectations
@@ -309,7 +333,7 @@ def test_serialize_log_valid() -> None:
     # Use SimpleNamespace objects for nested attributes that need to be accessed with dot notation
     level_obj = SimpleNamespace(name="DEBUG")
     process_obj = SimpleNamespace(id=1234)
-    thread_obj = SimpleNamespace(id=5678)
+    thread_obj = SimpleNamespace(id=5678, name="test_thread")
 
     # Build the record dictionary with proper structure
     mock_record = {
@@ -340,7 +364,7 @@ def test_serialize_log_valid() -> None:
     assert parsed_result["function"] == "test_function"
     assert parsed_result["line"] == 10
     assert parsed_result["process"] == 1234
-    assert parsed_result["thread"] == 5678
+    assert parsed_result["thread"] == "test_thread"
 
 
 def create_mock_record(message="Test message", level="INFO", exception=None) -> dict:
@@ -348,7 +372,7 @@ def create_mock_record(message="Test message", level="INFO", exception=None) -> 
     mock_time = datetime.datetime.now()
     level_obj = SimpleNamespace(name=level)
     process_obj = SimpleNamespace(id=1234)
-    thread_obj = SimpleNamespace(id=5678)
+    thread_obj = SimpleNamespace(id=5678, name="test_thread")
 
     return {
         "time": mock_time,
