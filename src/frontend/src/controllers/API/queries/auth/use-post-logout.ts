@@ -45,9 +45,6 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
       queryClient.invalidateQueries({ queryKey: ["useGetRefreshFlowsQuery"] });
       queryClient.invalidateQueries({ queryKey: ["useGetFolders"] });
       queryClient.invalidateQueries({ queryKey: ["useGetFolder"] });
-      queryClient.removeQueries({ queryKey: ["useGetRefreshFlowsQuery"] });
-      queryClient.removeQueries({ queryKey: ["useGetFolders"] });
-      queryClient.removeQueries({ queryKey: ["useGetFolder"] });
     },
     onError: (error) => {
       console.error(error);
