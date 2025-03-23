@@ -78,8 +78,9 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Data)
         assert result.data["source"] == url
-        assert "key" in result.data
-        assert result.data["key"] == "value"
+        # The JSON response is nested in the 'result' key
+        assert "result" in result.data
+        assert result.data["result"]["key"] == "value"
 
     @respx.mock
     async def test_make_request_with_metadata(self, component):
