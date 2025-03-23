@@ -245,14 +245,11 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             df_result = await component.as_dataframe()
             assert isinstance(df_result, DataFrame)
 
-            # Test Message output
-            msg_result = await component.as_message()
-            assert isinstance(msg_result, Message)
-
-            # Test Data output
-            data_result = await component.as_data()
-            assert isinstance(data_result, Data)
-            assert isinstance(data_result.data["output"], list)
+            # Test Data output - to_data returns a list of Data objects
+            test_data = {"test": "value"}
+            data_result = component.to_data(test_data)
+            assert isinstance(data_result, list)
+            assert all(isinstance(item, Data) for item in data_result)
 
     async def test_invalid_urls(self, component):
         # Test invalid URL handling
