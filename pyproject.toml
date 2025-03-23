@@ -120,6 +120,7 @@ dependencies = [
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
     "opik>=1.6.3",
+    "unstructured[pdf]>=0.17.2",
 ]
 
 [dependency-groups]

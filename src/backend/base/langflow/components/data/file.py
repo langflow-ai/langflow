@@ -2,6 +2,7 @@ from langflow.base.data import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import BoolInput, IntInput
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class FileComponent(BaseFileComponent):
@@ -50,9 +51,12 @@ class FileComponent(BaseFileComponent):
             list[BaseFileComponent.BaseFile]: Updated list of files with merged data.
         """
 
-        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:
-            """Processes a single file and returns its Data object."""
+        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | list[Data] | None:
+            """Processes a single file and returns its Data object or list of Data objects."""
             try:
+                # Check if it's a PDF file and we should use unstructured
+                if file_path.lower().endswith('.pdf'):
+                    return self._process_pdf_with_unstructured(file_path, silent_errors=silent_errors)
                 return parse_text_file_to_data(file_path, silent_errors=silent_errors)
             except FileNotFoundError as e:
                 msg = f"File not found: {file_path}. Error: {e}"
@@ -89,5 +93,61 @@ class FileComponent(BaseFileComponent):
                 max_concurrency=concurrency,
             )
 
+        # Flatten the processed_data if it contains lists of Data objects
+        flattened_data = []
+        for item in processed_data:
+            if isinstance(item, list):
+                flattened_data.extend(item)
+            elif item is not None:
+                flattened_data.append(item)
+
         # Use rollup_basefile_data to merge processed data with BaseFile objects
-        return self.rollup_data(file_list, processed_data)
+        return self.rollup_data(file_list, flattened_data)
+    
+    def _process_pdf_with_unstructured(self, file_path: str, *, silent_errors: bool = False) -> list[Data] | None:
+        """Process PDF using unstructured library to extract structured data.
+        
+        Args:
+            file_path (str): Path to the PDF file
+            silent_errors (bool): Whether to silence errors
+        
+        Returns:
+            list[Data]: List of Data objects, one for each element in the PDF
+        """
+        try:
+            from unstructured.partition.pdf import partition_pdf
+            import pandas as pd
+            
+            # Get PDF elements using unstructured
+            elements = partition_pdf(file_path)
+            
+            element_data = [element.to_dict() for element in elements]
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(element_data)
+            
+            # Drop columns where all values are NA/null
+            df = df.dropna(axis=1, how='all')
+            
+            if "element_id" in df.columns:
+                df = df.drop("element_id", axis=1)
+            
+            # Convert DataFrame rows to a list of Data objects
+            records = df.to_dict('records')
+            data_list = [Data(data={**row, "file_path": file_path}) for row in records]
+            
+            # Return the list of Data objects
+            return data_list
+            
+        except ImportError as e:
+            msg = f"Could not import unstructured library: {e}. Please install with 'pip install unstructured[pdf]'"
+            self.log(msg)
+            if not silent_errors:
+                raise
+            return None
+        except Exception as e:
+            msg = f"Error processing PDF with unstructured: {e}"
+            self.log(msg)
+            if not silent_errors:
+                raise
+            return None
