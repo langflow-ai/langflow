@@ -307,11 +307,6 @@ class Component(CustomComponent):
                 msg = "Could not find module for class"
                 raise ValueError(msg)
 
-            source_file = inspect.getsourcefile(module)
-            if source_file is None:
-                print(f"[set_class_code] Skipping built-in or C-extension module: {module}")
-                return
-
             class_code = inspect.getsource(module)
             self._code = class_code
         except (OSError, TypeError) as e:
