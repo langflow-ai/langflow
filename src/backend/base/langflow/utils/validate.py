@@ -198,7 +198,6 @@ def create_class(code, class_name):
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
         
-        # Combine extraction and compilation to reduce intermediate steps
         class_code = extract_class_code(module, class_name)
         compiled_class = compile_class_code(class_code)
         
