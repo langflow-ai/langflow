@@ -109,6 +109,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        async_file_env = os.getenv("LANGFLOW_ASYNC_FILE")
+        async_file = async_file_env.lower() in ("true", "1", "yes") if async_file_env is not None else True
+        configure(async_file=async_file)
+
         startup_msg = f"Starting Langflow v{version}" if version else "Starting Langflow"
         logger.info(f"🚀 {startup_msg}")
         rprint(f"[bold green]🚀 {startup_msg}...[/bold green]")
@@ -167,12 +171,7 @@ def create_app():
 
     __version__ = get_version_info()["version"]
 
-    # Read the environment variable; default to True for backwards compatibility.
-    async_file_env = os.getenv("LANGFLOW_ASYNC_FILE")
-    async_file = async_file_env.lower() in ("true", "1", "yes") if async_file_env is not None else True
-
-    configure(async_file=async_file)
-
+    configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     app.add_middleware(
