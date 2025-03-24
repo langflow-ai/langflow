@@ -1055,6 +1055,9 @@ async def check_need_initialize(cur_version: str) -> bool:
         bool: True if Langflow needs to be initialized, False otherwise.
     """
     settings_service = get_settings_service()
-    if not settings_service.settings.init_once_per_version:
-        return True
-    return not await check_if_initialized(cur_version)
+    # Always initialize if init_once_per_version is disabled
+    if settings_service.settings.init_once_per_version:
+        # Only initialize if the current version hasn't been initialized yet
+        return not await check_if_initialized(cur_version)
+    # Otherwise, always initialize
+    return True
