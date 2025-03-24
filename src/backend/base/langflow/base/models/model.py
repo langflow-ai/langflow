@@ -168,9 +168,6 @@ class LCModelComponent(Component):
         input_value: str | Message,
         system_message: str | None = None,
     ):
-        if getattr(self, "detailed_thinking", False):
-            system_message = DETAILED_THINKING_PREFIX + (system_message or "")
-
         return self._get_chat_result(
             runnable=runnable,
             stream=stream,
