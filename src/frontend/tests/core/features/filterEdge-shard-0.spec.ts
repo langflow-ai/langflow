@@ -64,6 +64,8 @@ test(
       .getByTestId("handle-retrievalqa-shownode-language model-left")
       .all();
 
+    await page.waitForTimeout(1000);
+
     for (const element of rqaChainInputElements1) {
       if (await element.isVisible()) {
         visibleElementHandle = element;
@@ -71,7 +73,11 @@ test(
       }
     }
 
+    await page.waitForTimeout(500);
+
     await visibleElementHandle.hover().then(async () => {
+      await page.waitForTimeout(1000);
+
       await expect(
         page.getByText("Drag to connect compatible outputs").first(),
       ).toBeVisible();
@@ -101,7 +107,11 @@ test(
       }
     }
 
+    await page.waitForTimeout(500);
+
     await visibleElementHandle.hover().then(async () => {
+      await page.waitForTimeout(1000);
+
       await expect(
         page.getByText("Drag to connect compatible outputs").first(),
       ).toBeVisible();

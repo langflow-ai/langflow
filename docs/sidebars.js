@@ -147,6 +147,7 @@ module.exports = {
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
+        "Integrations/integrations-opik",
         {
           type: "doc",
           id: "Integrations/integrations-mcp",
@@ -174,6 +175,7 @@ module.exports = {
           label: "NVIDIA",
           items: [
             "Integrations/Nvidia/integrations-nvidia-ingest",
+            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
           ],
         },
       ],
