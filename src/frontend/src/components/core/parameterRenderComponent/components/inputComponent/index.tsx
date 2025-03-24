@@ -42,6 +42,7 @@ export default function InputComponent({
   popoverWidth,
   commandWidth,
   blockAddNewGlobalVariable = false,
+  hasRefreshButton = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -155,6 +156,7 @@ export default function InputComponent({
               popoverWidth={popoverWidth}
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
+              hasRefreshButton={hasRefreshButton}
             />
           )}
         </>

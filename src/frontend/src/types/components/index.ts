@@ -49,6 +49,7 @@ export type InputComponentType = {
   popoverWidth?: string;
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
+  hasRefreshButton?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;

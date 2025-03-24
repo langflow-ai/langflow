@@ -185,6 +185,7 @@ const CustomInputPopover = ({
   popoverWidth,
   commandWidth,
   blockAddNewGlobalVariable,
+  hasRefreshButton,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -254,8 +255,9 @@ const CustomInputPopover = ({
                   className={cn(
                     editNode && "text-xs",
                     nodeStyle
-                      ? "max-w-60 rounded-[3px] px-1 font-mono"
+                      ? "max-w-56 rounded-[3px] px-1 font-mono"
                       : "bg-muted",
+                    hasRefreshButton && "max-w-48",
                   )}
                 />
               </div>
