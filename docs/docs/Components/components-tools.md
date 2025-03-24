@@ -257,25 +257,40 @@ This component allows you to call the Serper.dev Google Search API.
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
-## MCP Tools (stdio)
 
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over `stdio` and exposes its tools as Langflow tools to be used by an Agent component.
+## MCP Server
 
-To use the MCP stdio component, follow these steps:
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the server's tools as tools.
 
-1. Add the MCP stdio component to your workflow, and connect it to an agent. The flow looks like this:
+Additional MCP functionality is available through the `v1/mcp` endpoint. For more information, see [MCP integrations](/integrations-mcp).
 
-![MCP stdio component](/img/mcp-stdio-component.png)
+To use the MCP server component with an agent component, follow these steps:
 
-2. In the MCP stdio component, in the **mcp command** field, enter the command to start your MCP server. For a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+1. Add the MCP server component to your workflow, and connect it to an agent. The flow looks like this:
+
+![MCP server component](/img/mcp-stdio-component.png)
+
+2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
 
 ```bash
 uvx mcp-server-fetch
 ```
 
-3. Open the **Playground**.
+`uvx` is included with `uv` in the Langflow package. To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+For an example of using `npx` MCP servers, see [MCP integrations](integrations-mcp#connect-an-astra-db-mcp-server-to-langflow).
+
+3. In the **Tool** field, select the server tool you want the component to use.
+The available fields change based on the selected tool.
+For information on the parameters, see the MCP server's documentation.
+4. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
-This confirms the MCP server is connected and working.
+This confirms the MCP server is connected and its tools are being used in Langflow.
+
+For more information see [MCP integrations](/integrations-mcp).
+
+### MCP Server-Sent Events (SSE) mode
+
+
 
 ### Inputs
 
@@ -289,28 +304,18 @@ This confirms the MCP server is connected and working.
 |-------|-----------|-------------------------------------------|
 | tools | List[Tool]| List of tools exposed by the MCP server   |
 
+## MCP Tools (stdio)
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
+
+
 ## MCP Tools (SSE)
-
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over [SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) and exposes its tools as Langflow tools to be used by an Agent component.
-
-To use the MCP SSE component, follow these steps:
-
-1. Add the MCP SSE component to your workflow, and connect it to an agent. The flow looks similar to the MCP stdio component flow.
-
-2. In the MCP SSE component, in the **url** field, enter the URL of your current Langflow server's `mcp/sse` endpoint.
-This will fetch all currently available tools from the Langflow server.
-
-### Inputs
-
-| Name | Type   | Description                                          |
-|------|--------|------------------------------------------------------|
-| url  | String | SSE URL (default: `http://localhost:7860/api/v1/mcp/sse`) |
-
-### Outputs
-
-| Name  | Type      | Description                               |
-|-------|-----------|-------------------------------------------|
-| tools | List[Tool]| List of tools exposed by the MCP server   |
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
 
 ## Python Code Structured Tool
 
