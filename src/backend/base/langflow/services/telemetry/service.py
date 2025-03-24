@@ -125,22 +125,32 @@ class TelemetryService(Service):
         await self._queue_event((self.send_telemetry_data, payload, "component"))
 
     def start(self) -> None:
-        if self.running or self.do_not_track:
+        """Start the telemetry service."""
+        if self.running:
+            logger.info("TelemetryService already running; skipping telemetry startup")
             return
-        try:
-            self.running = True
-            self._start_time = datetime.now(timezone.utc)
-            self.worker_task = asyncio.create_task(self.telemetry_worker())
-            self.log_package_version_task = asyncio.create_task(self.log_package_version())
 
-            # Launch metrics server on separate port
+        try:
             if (
                 self.settings_service.settings.prometheus_enabled
                 and os.getenv("LANGFLOW_METRICS_PORT_MODE") == "separate"
+                and not self._metrics_server_started
             ):
+                logger.debug("Starting metrics server")
                 self.start_metrics_server()
-        except Exception:  # noqa: BLE001
-            logger.exception("Error starting telemetry service")
+
+            self.running = True
+
+            if self.do_not_track:
+                logger.info("TelemetryService disabled due to do_not_track; skipping telemetry startup")
+                return
+
+            self._start_time = datetime.now(timezone.utc)
+            self.worker_task = asyncio.create_task(self.telemetry_worker())
+            self.log_package_version_task = asyncio.create_task(self.log_package_version())
+        except Exception as e:
+            logger.exception(f"Error starting TelemetryService telemetry: {e}")
+            self.running = False  # Reset running state on failure
 
     async def flush(self) -> None:
         if self.do_not_track:
