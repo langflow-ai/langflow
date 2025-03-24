@@ -254,7 +254,7 @@ const CustomInputPopover = ({
                   className={cn(
                     editNode && "text-xs",
                     nodeStyle
-                      ? "max-w-60 rounded-[3px] px-1 font-mono"
+                      ? "max-w-48 rounded-[3px] px-1 font-mono"
                       : "bg-muted",
                   )}
                 />
