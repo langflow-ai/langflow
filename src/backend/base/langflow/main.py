@@ -236,21 +236,21 @@ def create_app():
         return await call_next(request)
 
     settings = get_settings_service().settings
-    prometheus_port_str = os.getenv("LANGFLOW_PROMETHEUS_PORT", "9090")
-    metrics_mode = os.getenv("LANGFLOW_METRICS_PORT_MODE", "inline").lower()
+    prome_port_str = os.getenv("LANGFLOW_PROMETHEUS_PORT")
+    metrics_mode = os.getenv("LANGFLOW_METRICS_PORT_MODE")
 
-    try:
-        prometheus_port = int(prometheus_port_str)
-        if not (0 < prometheus_port < MAX_PORT):
-            raise ValueError
-    except ValueError:
-        logger.warning(f"Invalid LANGFLOW_PROMETHEUS_PORT '{prometheus_port_str}', defaulting to port 9090")
-        prometheus_port = 9090
+    if prome_port_str:
+        # set here for create_app() entry point
+        prome_port = int(prome_port_str)
+        if prome_port > 0 or prome_port < MAX_PORT:
+            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            settings.prometheus_enabled = True
+            settings.prometheus_port = prome_port
+        else:
+            msg = f"Invalid port number {prome_port_str}"
+            raise ValueError(msg)
 
-    settings.prometheus_enabled = True
-    settings.prometheus_port = prometheus_port
-
-    logger.info(f"Prometheus metrics enabled | mode: '{metrics_mode}' | port: {prometheus_port}")
+    logger.info(f"Prometheus metrics enabled | mode: '{metrics_mode}' | port: {prome_port_str}")
 
     if settings.prometheus_enabled:
         if metrics_mode == "inline":
