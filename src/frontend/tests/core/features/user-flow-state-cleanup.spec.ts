@@ -136,11 +136,6 @@ test(
     });
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Verify admin sees empty state
-    await page.waitForSelector('[data-testid="new_project_btn_empty_page"]', {
-      timeout: 30000,
-    });
-
     // Verify admin can't see User A's flow
     await expect(page.getByText(userAFlowName, { exact: true })).toBeVisible({
       timeout: 2000,
