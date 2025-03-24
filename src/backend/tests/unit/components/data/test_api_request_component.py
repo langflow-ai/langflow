@@ -8,7 +8,7 @@ import pytest
 import respx
 from httpx import Response
 from langflow.components.data import APIRequestComponent
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import Data, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -145,7 +145,6 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Data)
         assert result.data["source"] == url
-
 
     @respx.mock
     async def test_make_request_timeout(self, component):

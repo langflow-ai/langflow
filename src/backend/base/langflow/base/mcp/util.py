@@ -60,13 +60,14 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], session) -> Ca
     return tool_func
 
 
-async def get_flow(flow_name: str, user_id: str, session) -> Flow | None:
+async def get_flow_snake_case(flow_name: str, user_id: str, session) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
-        if flow.to_data().name == flow_name:
+        this_flow_name = "_".join(flow.name.lower().split())
+        if this_flow_name == flow_name:
             return flow
     return None
 

@@ -21,7 +21,7 @@ from starlette.background import BackgroundTasks
 
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
-from langflow.base.mcp.util import get_flow
+from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
@@ -186,11 +186,12 @@ async def handle_list_tools():
                 if flow.user_id is None:
                     continue
 
+                flow_name = "_".join(flow.name.lower().split())
                 tool = types.Tool(
-                    name=flow.name,
+                    name=flow_name,
                     description=f"{flow.id}: {flow.description}"
                     if flow.description
-                    else f"Tool generated from flow: {flow.name}",
+                    else f"Tool generated from flow: {flow_name}",
                     inputSchema=json_schema_from_flow(flow),
                 )
                 tools.append(tool)
@@ -215,7 +216,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
     async def execute_tool(session):
         # get flow id from name
-        flow = await get_flow(name, current_user.id, session)
+        flow = await get_flow_snake_case(name, current_user.id, session)
         if not flow:
             msg = f"Flow with name '{name}' not found"
             raise ValueError(msg)
