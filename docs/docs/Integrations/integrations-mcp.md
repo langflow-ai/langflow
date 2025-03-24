@@ -63,7 +63,7 @@ Use the [MCP stdio component](/components-tools#mcp-tools-stdio) to connect Lang
 6. Create a [Simple agent starter project](/starter-projects-simple-agent).
 7. Remove the **URL** tool and replace it with an [MCP stdio component](/components-tools#mcp-tools-stdio) component.
 The flow should look like this:
-![MCP stdio component](/img/mcp-stdio-component.png)
+![MCP stdio component](/img/mcp-server-component.png)
 8. In the **MCP stdio** component, in the **MCP command** field, add the following code:
 
 ```plain
@@ -74,3 +74,12 @@ npx -y @datastax/astra-db-mcp
 10. Open the **Playground**.
 Langflow is now connected to your Astra DB database through the MCP.
 You can use the MCP to create, read, update, and delete data from your database.
+
+
+## Create a travel agent flow
+
+
+## Use flows as tools from Cursor
+
+
+## Debug flows with the MCP inspector

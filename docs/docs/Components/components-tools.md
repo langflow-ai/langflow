@@ -3,6 +3,8 @@ title: Tools
 slug: /components-tools
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Tool components in Langflow
 
 Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
@@ -260,17 +262,14 @@ This component allows you to call the Serper.dev Google Search API.
 
 ## MCP Server
 
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the server's tools as tools.
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for [Agent](/components-agents) in Langflow to use.
 
-Additional MCP functionality is available through the `v1/mcp` endpoint. For more information, see [MCP integrations](/integrations-mcp).
+Additional MCP functionality is available through the `/api/v1/mcp` API endpoints. For more information, see [MCP integrations](/integrations-mcp).
 
 To use the MCP server component with an agent component, follow these steps:
 
-1. Add the MCP server component to your workflow, and connect it to an agent. The flow looks like this:
-
-![MCP server component](/img/mcp-stdio-component.png)
-
-2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+1. Add the MCP server component to your workflow.
+2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
 
 ```bash
 uvx mcp-server-fetch
@@ -279,18 +278,23 @@ uvx mcp-server-fetch
 `uvx` is included with `uv` in the Langflow package. To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 For an example of using `npx` MCP servers, see [MCP integrations](integrations-mcp#connect-an-astra-db-mcp-server-to-langflow).
 
-3. In the **Tool** field, select the server tool you want the component to use.
+3. Click the <Icon name="RefreshCw" aria-label="Refresh"/> icon to get the server's list of **Tools**.
+4. In the **Tool** field, select the server tool you want the component to use.
 The available fields change based on the selected tool.
 For information on the parameters, see the MCP server's documentation.
-4. Open the **Playground**.
-Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
-This confirms the MCP server is connected and its tools are being used in Langflow.
+5. In the MCP server component, enable **Tool mode**.
+Connect the MCP server component's **Toolset** port to an **Agent** component's **Tools** port.
 
-For more information see [MCP integrations](/integrations-mcp).
+The flow looks similar to this:
+![MCP server component](/img/mcp-server-component.png)
+
+5. Open the **Playground**.
+Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
+This confirms the MCP server is connected, and its tools are being used in Langflow.
+
+For more information, see [MCP integrations](/integrations-mcp).
 
 ### MCP Server-Sent Events (SSE) mode
-
-
 
 ### Inputs
 
