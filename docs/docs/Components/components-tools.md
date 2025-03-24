@@ -288,7 +288,7 @@ Connect the MCP server component's **Toolset** port to an **Agent** component's 
 The flow looks similar to this:
 ![MCP server component](/img/mcp-server-component.png)
 
-5. Open the **Playground**.
+6. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
 This confirms the MCP server is connected, and its tools are being used in Langflow.
 
