@@ -217,6 +217,7 @@ def create_class(code, class_name):
         msg = f"Error creating class: {e!s}"
         raise ValueError(msg) from e
 
+
 def create_type_ignore_class():
     """Create a TypeIgnore class for AST module if it doesn't exist.
 
