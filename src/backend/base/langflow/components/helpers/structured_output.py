@@ -1,6 +1,9 @@
 from typing import TYPE_CHECKING, cast
 
+from langchain.output_parsers import PydanticOutputParser
+from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field, create_model
+from trustcall import create_extractor
 
 from langflow.base.models.chat_result import get_chat_result
 from langflow.custom import Component
@@ -160,8 +163,7 @@ class StructuredOutputComponent(Component):
         )
 
         try:
-            llm_with_structured_output = cast("LanguageModel", self.llm).with_structured_output(schema=output_model)  # type: ignore[valid-type, attr-defined]
-
+            llm_with_structured_output = cast("LanguageModel", create_extractor(self.llm, tools=[output_model]))
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
             raise TypeError(msg) from exc
@@ -176,10 +178,13 @@ class StructuredOutputComponent(Component):
             input_value=self.input_value,
             config=config_dict,
         )
+        if "responses" in result:
+            result = result["responses"][0].model_dump()
         if isinstance(result, BaseModel):
             result = result.model_dump()
-        if "objects" in result:
+        if result and "objects" in result:
             return result["objects"]
+
         return result
 
     def build_structured_output(self) -> Data:
@@ -192,3 +197,8 @@ class StructuredOutputComponent(Component):
         if isinstance(output, list):
             return DataFrame(data=output)
         return DataFrame(data=[output])
+
+    def is_last_pydantic_output_parser(self, llm_with_structured_output: Runnable) -> bool:
+        return isinstance(llm_with_structured_output.last, PydanticOutputParser) and not issubclass(
+            llm_with_structured_output.last.__class__, PydanticOutputParser
+        )
