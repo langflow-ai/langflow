@@ -7,11 +7,11 @@ Langflow provides flexible memory management options for storage and retrieval.
 
 This page details memory configuration in Langflow.
 
-- [Local database tables](#local-langflow-database-tables)
-- [Local message storage](#store-messages-in-local-memory)
-- [External memory configuration](#configure-external-memory)
-- [Database connection settings](#configure-the-external-database-connection)
-- [Cache configuration](#cache-memory)
+- [Local Langflow database tables](#local-langflow-database-tables)
+- [Store messages in local memory](#store-messages-in-local-memory)
+- [Configure external memory](#configure-external-memory)
+- [Configure the external database connection](#configure-the-external-database-connection)
+- [Configure cache memory](#cache-memory)
 
 ## Local Langflow database tables
 
@@ -76,7 +76,7 @@ LANGFLOW_DB_CONNECT_TIMEOUT=20
 - `echo`: If true, SQL queries are logged for debugging purposes (default: false)
 - `LANGFLOW_DB_CONNECT_TIMEOUT`: Maximum number of seconds to wait when establishing a new database connection (default: 20)
 
-## Cache memory
+## Configure cache memory
 
 Langflow provides multiple caching options that can be configured using the `LANGFLOW_CACHE_TYPE` environment variable.
 
