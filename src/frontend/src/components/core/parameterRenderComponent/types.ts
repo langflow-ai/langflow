@@ -20,6 +20,7 @@ export type BaseInputProps<valueType = any> = {
   metadata?: any;
   nodeId?: string;
   nodeInformationMetadata?: NodeInfoType;
+  hasRefreshButton?: boolean;
 };
 
 // Generic type for composing input props
