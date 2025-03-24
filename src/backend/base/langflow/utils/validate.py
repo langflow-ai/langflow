@@ -204,16 +204,18 @@ def create_class(code, class_name):
         return build_class_constructor(compiled_class, exec_globals, class_name)
 
     except SyntaxError as e:
-        raise ValueError(f"Syntax error in code: {e!s}") from e
+        msg = f"Syntax error in code: {e!s}"
+        raise ValueError(msg) from e
     except NameError as e:
-        raise ValueError(f"Name error (possibly undefined variable): {e!s}") from e
+        msg = f"Name error (possibly undefined variable): {e!s}"
+        raise ValueError(msg) from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
     except Exception as e:
-        raise ValueError(f"Error creating class: {e!s}") from e
-
+        msg = f"Error creating class: {e!s}"
+        raise ValueError(msg) from e
 
 def create_type_ignore_class():
     """Create a TypeIgnore class for AST module if it doesn't exist.
@@ -250,7 +252,7 @@ def prepare_global_scope(module):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.Assign)):
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
             definitions.append(node)
 
     for node in imports:
