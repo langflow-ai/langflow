@@ -6,7 +6,7 @@ slug: /build-application
 This guide walks you through the process of building an application using Langflow.
 You'll learn how to set up a project directory, manage dependencies, configure environment variables, and package your Langflow application in a Docker container, or run it locally.
 
-To deploy your application to Docker or Kubernetes, see [Deployment](/deployment-overview).
+To deploy your application to Docker or Kubernetes, see [Deployment](/deployment-docker).
 
 ## Create a project directory
 
@@ -60,7 +60,7 @@ OPENAI_API_KEY=sk-...
 
 Add your flows `.JSON` files to the `/flows` folder.
 
-To export your flows from Langflow, see [Flows](/Concepts/concepts-flows).
+To export your flows from Langflow, see [Flows](/concepts-flows).
 
 Optionally, add any custom components to a `/components` folder, and specify the path in your `docker.env`.
 
