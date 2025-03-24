@@ -3,9 +3,17 @@ title: Memory
 slug: /memory
 ---
 
-This page explains how local memory, external storage, and caching are configured in Langflow.
+Langflow provides flexible memory management options for storage and retrieval.
 
-## Database tables
+This page details memory configuration in Langflow.
+
+- [Local database tables](#local-langflow-database-tables)
+- [Local message storage](#store-messages-in-local-memory)
+- [External memory configuration](#configure-external-memory)
+- [Database connection settings](#configure-the-external-database-connection)
+- [Cache configuration](#cache-memory)
+
+## Local Langflow database tables
 
 The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database located at `langflow/src/backend/base/langflow/langflow.db`. The following tables are stored in `langflow.db`:
 
