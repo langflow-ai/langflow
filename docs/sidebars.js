@@ -147,6 +147,12 @@ module.exports = {
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
+        "Integrations/integrations-opik",
+        {
+          type: "doc",
+          id: "Integrations/integrations-mcp",
+          label: "MCP (Model context protocol)"
+        },
         {
           type: 'category',
           label: 'Google',
@@ -169,6 +175,7 @@ module.exports = {
           label: "NVIDIA",
           items: [
             "Integrations/Nvidia/integrations-nvidia-ingest",
+            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
           ],
         },
       ],
@@ -179,6 +186,7 @@ module.exports = {
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-components",
+        "Contributing/contributing-component-tests",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
@@ -195,6 +203,30 @@ module.exports = {
           href: "https://github.com/langflow-ai/langflow/releases/latest",
         },
       ],
+    },
+    {
+      type: "category",
+      label: "Support",
+      items: [
+        {
+          type: "doc",
+          id: "Support/luna-for-langflow",
+          label: "Luna for Langflow",
+        },
+      ],
+    },
+    {
+      type: "html",
+      className: "sidebar-ad",
+      value: `
+        <a href="https://astra.datastax.com/signup?type=langflow" target="_blank" class="menu__link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+          <div class="sidebar-ad-text-container">
+            <span class="sidebar-ad-text">Use Langflow in the cloud</span>
+            <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for DataStax Langflow</span>
+          </div>
+        </a>
+      `,
     },
   ],
 };

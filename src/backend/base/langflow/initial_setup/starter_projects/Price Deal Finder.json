@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-R0YLG",
+            "id": "AgentQL-SX5lE",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7PMCu",
+            "id": "Agent-6kg5B",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-R0YLG{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-R0YLGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-SX5lE{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-SX5lEœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-6kg5B{œfieldNameœ:œtoolsœ,œidœ:œAgent-6kg5Bœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-R0YLG",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-R0YLGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-SX5lE",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-SX5lEœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-6kg5B",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6kg5Bœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-K4joL",
+            "id": "TavilySearchComponent-rYJ93",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7PMCu",
+            "id": "Agent-6kg5B",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-K4joL{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-K4joLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-rYJ93{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-rYJ93œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-6kg5B{œfieldNameœ:œtoolsœ,œidœ:œAgent-6kg5Bœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-K4joL",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-K4joLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-rYJ93",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-rYJ93œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-6kg5B",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6kg5Bœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-M0lPa",
+            "id": "ChatInput-RjE2C",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-7PMCu",
+            "id": "Agent-6kg5B",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-M0lPa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-M0lPaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7PMCu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-RjE2C{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RjE2Cœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-6kg5B{œfieldNameœ:œinput_valueœ,œidœ:œAgent-6kg5Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-M0lPa",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-M0lPaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-RjE2C",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RjE2Cœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-6kg5B",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-6kg5Bœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-7PMCu",
+            "id": "Agent-6kg5B",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,27 +99,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-LyZb7",
+            "id": "ChatOutput-x7zHw",
             "inputTypes": [
               "Data",
               "DataFrame",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-7PMCu{œdataTypeœ:œAgentœ,œidœ:œAgent-7PMCuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-LyZb7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LyZb7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-6kg5B{œdataTypeœ:œAgentœ,œidœ:œAgent-6kg5Bœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-x7zHw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-x7zHwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-7PMCu",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-7PMCuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-LyZb7",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-LyZb7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-6kg5B",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-6kg5Bœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-x7zHw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-x7zHwœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-M0lPa",
+          "id": "ChatInput-RjE2C",
           "node": {
             "base_classes": [
               "Message"
@@ -232,7 +232,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -272,6 +272,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -416,27 +417,26 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-M0lPa",
+        "id": "ChatInput-RjE2C",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 32.99622536761149,
-          "y": 367.6878380048698
+          "x": 29.709503239241485,
+          "y": 315.10028395094986
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-LyZb7",
+          "id": "ChatOutput-x7zHw",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "outputs",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -452,13 +452,12 @@
               "data_template",
               "background_color",
               "chat_icon",
-              "text_color"
+              "text_color",
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
-            "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -478,7 +477,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.00012027401062119145,
             "template": {
               "_type": "Component",
               "background_color": {
@@ -587,7 +585,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Text",
                 "dynamic": false,
@@ -599,16 +597,13 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
@@ -728,7 +723,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-LyZb7",
+        "id": "ChatOutput-x7zHw",
         "measured": {
           "height": 66,
           "width": 192
@@ -742,7 +737,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-K4joL",
+          "id": "TavilySearchComponent-rYJ93",
           "node": {
             "base_classes": [
               "Data",
@@ -801,7 +796,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -809,7 +804,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "TAVILY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1075,7 +1070,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-K4joL",
+        "id": "TavilySearchComponent-rYJ93",
         "measured": {
           "height": 437,
           "width": 320
@@ -1084,14 +1079,14 @@
           "x": 345.9762510966062,
           "y": 500.79656821057074
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-R0YLG",
+          "id": "AgentQL-SX5lE",
           "node": {
             "base_classes": [
               "Data"
@@ -1099,16 +1094,21 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Uses AgentQL API to extract structured data from a given URL.",
-            "display_name": "AgentQL Query Data",
+            "description": "Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
+            "display_name": "Extract Web Data",
             "documentation": "https://docs.agentql.com/rest-api/api-reference",
             "edited": false,
             "field_order": [
               "api_key",
               "url",
               "query",
+              "prompt",
+              "is_stealth_mode_enabled",
               "timeout",
-              "params"
+              "mode",
+              "wait_for",
+              "is_scroll_to_bottom_enabled",
+              "is_screenshot_enabled"
             ],
             "frozen": false,
             "icon": "AgentQL",
@@ -1124,6 +1124,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -1139,13 +1140,13 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "AgentQL API Key",
+                "display_name": "API Key",
                 "dynamic": false,
-                "info": "Your AgentQL API key. Get one at https://dev.agentql.com.",
+                "info": "Your AgentQL API key from dev.agentql.com",
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1153,7 +1154,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "AGENTQL_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1171,37 +1172,117 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import (\n    BoolInput,\n    DropdownInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"Extract Web Data\"\n    description = \"Extracts structured data from a web page using an AgentQL query or a Natural Language description.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key from dev.agentql.com\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The URL of the public web page you want to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=False,\n            info=\"The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Prompt\",\n            required=False,\n            info=\"A Natural Language description of the data to extract from the page. Alternative to AgentQL query.\",\n            tool_mode=True,\n        ),\n        BoolInput(\n            name=\"is_stealth_mode_enabled\",\n            display_name=\"Enable Stealth Mode (Beta)\",\n            info=\"Enable experimental anti-bot evasion strategies. May not work for all websites at all times.\",\n            value=False,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Seconds to wait for a request.\",\n            value=900,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"mode\",\n            display_name=\"Request Mode\",\n            info=\"'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.\",\n            options=[\"fast\", \"standard\"],\n            value=\"fast\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"wait_for\",\n            display_name=\"Wait For\",\n            info=\"Seconds to wait for the page to load before extracting data.\",\n            value=0,\n            range_spec=RangeSpec(min=0, max=10, step_type=\"int\"),\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"is_scroll_to_bottom_enabled\",\n            display_name=\"Enable scroll to bottom\",\n            info=\"Scroll to bottom of the page before extracting data.\",\n            value=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"is_screenshot_enabled\",\n            display_name=\"Enable screenshot\",\n            info=\"Take a screenshot before extracting data. Returned in 'metadata' as a Base64 string.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"prompt\": self.prompt,\n            \"params\": {\n                \"mode\": self.mode,\n                \"wait_for\": self.wait_for,\n                \"is_scroll_to_bottom_enabled\": self.is_scroll_to_bottom_enabled,\n                \"is_screenshot_enabled\": self.is_screenshot_enabled,\n            },\n            \"metadata\": {\n                \"experimental_stealth_mode_enabled\": self.is_stealth_mode_enabled,\n            },\n        }\n\n        if not self.prompt and not self.query:\n            self.status = \"Either Query or Prompt must be provided.\"\n            raise ValueError(self.status)\n        if self.prompt and self.query:\n            self.status = \"Both Query and Prompt can't be provided at the same time.\"\n            raise ValueError(self.status)\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code == httpx.codes.UNAUTHORIZED:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
               },
-              "params": {
-                "_input_type": "DictInput",
+              "is_screenshot_enabled": {
+                "_input_type": "BoolInput",
                 "advanced": true,
-                "display_name": "Additional Params",
+                "display_name": "Enable screenshot",
                 "dynamic": false,
-                "info": "The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
-                "list": true,
+                "info": "Take a screenshot before extracting data. Returned in 'metadata' as a Base64 string.",
+                "list": false,
                 "list_add_label": "Add More",
-                "name": "params",
+                "name": "is_screenshot_enabled",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "is_scroll_to_bottom_enabled": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Enable scroll to bottom",
+                "dynamic": false,
+                "info": "Scroll to bottom of the page before extracting data.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "is_scroll_to_bottom_enabled",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "is_stealth_mode_enabled": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Enable Stealth Mode (Beta)",
+                "dynamic": false,
+                "info": "Enable experimental anti-bot evasion strategies. May not work for all websites at all times.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "is_stealth_mode_enabled",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "mode": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Request Mode",
+                "dynamic": false,
+                "info": "'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.",
+                "name": "mode",
+                "options": [
+                  "fast",
+                  "standard"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "fast"
+              },
+              "prompt": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Prompt",
+                "dynamic": false,
+                "info": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
                 "trace_as_input": true,
-                "type": "dict",
-                "value": {
-                  "is_screenshot_enabled": false,
-                  "is_scroll_to_bottom_enabled": false,
-                  "mode": "fast",
-                  "wait_for": 0
-                }
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "query": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "AgentQL Query",
                 "dynamic": false,
-                "info": "The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
+                "info": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
                 "input_types": [
                   "Message"
                 ],
@@ -1211,7 +1292,7 @@
                 "multiline": true,
                 "name": "query",
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": true,
@@ -1225,7 +1306,7 @@
                 "advanced": true,
                 "display_name": "Timeout",
                 "dynamic": false,
-                "info": "Timeout in seconds for the request. Increase if data extraction takes too long.",
+                "info": "Seconds to wait for a request.",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "timeout",
@@ -1310,6 +1391,19 @@
                       "name": "tags",
                       "sortable": false,
                       "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -1321,8 +1415,9 @@
                 "type": "table",
                 "value": [
                   {
-                    "description": "build_output(api_key: Message, query: Message, url: Message) - Uses AgentQL API to extract structured data from a given URL.",
+                    "description": "build_output(api_key: Message, url: Message) - Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
                     "name": "AgentQL-build_output",
+                    "status": true,
                     "tags": [
                       "AgentQL-build_output"
                     ]
@@ -1334,7 +1429,7 @@
                 "advanced": false,
                 "display_name": "URL",
                 "dynamic": false,
-                "info": "The public URL of the webpage to extract data from.",
+                "info": "The URL of the public web page you want to extract data from.",
                 "input_types": [
                   "Message"
                 ],
@@ -1351,6 +1446,30 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "wait_for": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Wait For",
+                "dynamic": false,
+                "info": "Seconds to wait for the page to load before extracting data.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "wait_for",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 10,
+                  "min": 0,
+                  "step": 0.1,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 0
               }
             },
             "tool_mode": true
@@ -1359,27 +1478,26 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-R0YLG",
+        "id": "AgentQL-SX5lE",
         "measured": {
-          "height": 499,
+          "height": 602,
           "width": 320
         },
         "position": {
-          "x": 329.8776020848543,
-          "y": -114.65601128197832
+          "x": 331.42030247682777,
+          "y": -359.7956260200852
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-7PMCu",
+          "id": "Agent-6kg5B",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -1396,6 +1514,8 @@
               "api_key",
               "temperature",
               "seed",
+              "max_retries",
+              "timeout",
               "system_prompt",
               "tools",
               "input_value",
@@ -1414,9 +1534,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1436,7 +1554,6 @@
               }
             ],
             "pinned": false,
-            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1502,7 +1619,35 @@
                   "SambaNova",
                   "Custom"
                 ],
-                "options_metadata": [],
+                "options_metadata": [
+                  {
+                    "icon": "Amazon"
+                  },
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "Azure"
+                  },
+                  {
+                    "icon": "GoogleGenerativeAI"
+                  },
+                  {
+                    "icon": "Groq"
+                  },
+                  {
+                    "icon": "NVIDIA"
+                  },
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "SambaNova"
+                  },
+                  {
+                    "icon": "brain"
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1522,7 +1667,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1530,7 +1675,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1921,7 +2066,7 @@
                 "name": "temperature",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 2,
+                  "max": 1,
                   "min": 0,
                   "step": 0.01,
                   "step_type": "float"
@@ -2023,7 +2168,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-7PMCu",
+        "id": "Agent-6kg5B",
         "measured": {
           "height": 624,
           "width": 320
@@ -2037,7 +2182,7 @@
       },
       {
         "data": {
-          "id": "note-1ajq3",
+          "id": "note-l316C",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2049,7 +2194,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-1ajq3",
+        "id": "note-l316C",
         "measured": {
           "height": 324,
           "width": 324
@@ -2063,7 +2208,7 @@
       },
       {
         "data": {
-          "id": "note-9nOJ2",
+          "id": "note-9uZJm",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2076,21 +2221,21 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-9nOJ2",
+        "id": "note-9uZJm",
         "measured": {
           "height": 346,
           "width": 324
         },
         "position": {
-          "x": 328.21954223681814,
-          "y": -160.4106577664784
+          "x": 338.27967602049426,
+          "y": -413.92602911511665
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-JxjIs",
+          "id": "note-X4Slm",
           "node": {
             "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
@@ -2101,7 +2246,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-JxjIs",
+        "id": "note-X4Slm",
         "measured": {
           "height": 674,
           "width": 467
@@ -2117,7 +2262,7 @@
       },
       {
         "data": {
-          "id": "note-VxmZ9",
+          "id": "note-s2MdP",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2130,14 +2275,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-VxmZ9",
+        "id": "note-s2MdP",
         "measured": {
           "height": 324,
           "width": 344
         },
         "position": {
-          "x": 331.0865722920669,
-          "y": 447.2225407807426
+          "x": 343.1587328324782,
+          "y": 449.2345675374778
         },
         "resizing": false,
         "selected": false,
@@ -2146,15 +2291,14 @@
       }
     ],
     "viewport": {
-      "x": 636.4185821740807,
-      "y": 225.96076866418508,
-      "zoom": 1.0499010256781385
+      "x": 424.9980860019988,
+      "y": 301.1687784963252,
+      "zoom": 0.6254645347553064
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "icon": "DollarSign",
-  "id": "675468b8-08ab-44b0-aef1-87d76a75570a",
+  "id": "44912ccb-acc0-4963-bdf6-1274bc455b63",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Price Deal Finder",

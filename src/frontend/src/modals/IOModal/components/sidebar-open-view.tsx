@@ -11,6 +11,7 @@ export const SidebarOpenView = ({
   handleDeleteSession,
   visibleSession,
   selectedViewField,
+  playgroundPage,
 }: SidebarOpenViewProps) => {
   return (
     <>
@@ -51,6 +52,7 @@ export const SidebarOpenView = ({
               selectedView={selectedViewField}
               key={index}
               session={session}
+              playgroundPage={playgroundPage}
               deleteSession={(session) => {
                 handleDeleteSession(session);
                 if (selectedViewField?.id === session) {
