@@ -115,18 +115,31 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         try:
+            logger.debug("Initializing core services...")
             await initialize_services(fix_migration=fix_migration)
+            logger.debug("Setting up LLM caching...")
             setup_llm_caching()
+            logger.debug("Initializing super user if needed...")
             await initialize_super_user_if_needed()
+            logger.debug("Loading component bundles...")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+            logger.info(f"Loaded bundles from: {bundles_components_paths}")
+            logger.debug("Extending component paths in settings...")
             get_settings_service().settings.components_path.extend(bundles_components_paths)
+            logger.debug("Building and caching component type metadata...")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            logger.debug(f"Cached {len(all_types_dict)} component types")
+            logger.debug("Creating or updating starter projects...")
             await create_or_update_starter_projects(all_types_dict)
+            logger.debug("Starting telemetry service...")
             telemetry_service.start()
+            logger.debug("Loading user flows from directory...")
             await load_flows_from_directory()
+            logger.debug("Starting queue service if not already running...")
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+                logger.info("Queue service started")
             logger.info("Startup sequence complete. Application is ready.")
             yield
 
