@@ -69,7 +69,7 @@ export default function NodeInputField({
   });
 
   const hasRefreshButton = useMemo(() => {
-    return data.node?.template[name].refresh_button;
+    return data.node?.template[name]?.refresh_button;
   }, [data.node?.template, name]);
 
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
