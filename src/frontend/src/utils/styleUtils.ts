@@ -296,6 +296,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { WatsonxAiIcon } from "../icons/IBMWatsonx";
 import { IFixIcon } from "../icons/IFixIt";
 import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
@@ -757,6 +758,7 @@ export const nodeIconsLucide: iconsType = {
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
+  WatsonxAI: WatsonxAiIcon,
   Share3: ShareIcon,
   Share4: Share2Icon,
   WikipediaAPIWrapper: SvgWikipedia,
