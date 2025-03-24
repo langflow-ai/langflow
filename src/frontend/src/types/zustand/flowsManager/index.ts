@@ -30,6 +30,7 @@ export type FlowsManagerStoreType = {
   setFlowToCanvas: (flowToCanvas: FlowType | null) => Promise<void>;
   IOModalOpen: boolean;
   setIOModalOpen: (IOModalOpen: boolean) => void;
+  resetStore: () => void;
 };
 
 export type UseUndoRedoOptions = {

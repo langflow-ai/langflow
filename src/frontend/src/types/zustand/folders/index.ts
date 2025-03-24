@@ -13,4 +13,5 @@ export type FoldersStoreType = {
   setStarterProjectId: (id: string) => void;
   folders: FolderType[];
   setFolders: (folders: FolderType[]) => void;
+  resetStore: () => void;
 };

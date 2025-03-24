@@ -137,6 +137,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       resolve();
     });
   },
+  resetStore: () => {
+    set({
+      flows: [],
+      currentFlow: undefined,
+      currentFlowId: "",
+      flowToCanvas: null,
+      searchFlowsComponents: "",
+      selectedFlowsComponentsCards: [],
+    });
+  },
 }));
 
 export default useFlowsManagerStore;

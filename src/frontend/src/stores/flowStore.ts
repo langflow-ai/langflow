@@ -970,6 +970,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setCurrentBuildingNodeId: (nodeIds) => {
     set({ currentBuildingNodeId: nodeIds });
   },
+  resetFlowState: () => {
+    set({
+      nodes: [],
+      edges: [],
+      flowState: undefined,
+      hasIO: false,
+      inputs: [],
+      outputs: [],
+      flowPool: {},
+      currentFlow: undefined,
+      reactFlowInstance: null,
+      lastCopiedSelection: null,
+      verticesBuild: null,
+      flowBuildStatus: {},
+      isBuilding: false,
+      isPending: true,
+      positionDictionary: {},
+      componentsToUpdate: [],
+    });
+  },
 }));
 
 export default useFlowStore;
