@@ -3,12 +3,10 @@ title: Build an application in Langflow
 slug: /build-application
 ---
 
-This guide walks you through the process of building and deploying an application using Langflow.
-You'll learn how to set up a project directory, manage dependencies, configure environment variables, 
-and package your Langflow application in a Docker container. 
+This guide walks you through the process of building an application using Langflow.
+You'll learn how to set up a project directory, manage dependencies, configure environment variables, and package your Langflow application in a Docker container, or run it locally.
 
-The guide also covers deployment options including Docker Hub and Kubernetes,
-as well as local development setup.
+To deploy your application to Docker or Kubernetes, see [Deployment](/deployment-overview).
 
 ## Create a project directory
 

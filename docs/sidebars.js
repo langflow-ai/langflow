@@ -86,7 +86,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Develop with Langflow",
+      label: "Develop",
       items: [
         "Develop/develop-overview",
         "Develop/build-application",
