@@ -11,7 +11,7 @@ The default logfile is called `langflow.log`, and its location depends on your o
 
 * Linux/WSL: `\~/.cache/langflow/`
 * macOS: `/Users/\<username\>/Library/Caches/langflow/`
-* Windows: `%LOCALAPPDATA%\\langflow\\langflow\\Cache`
+* Windows: `%LOCALAPPDATA%\langflow\langflow\Cache`
 
 The `LANGFLOW_LOG_ENV` controls log output and formatting. The `container` option outputs serialized JSON to stdout. The `container_csv` option outputs CSV-formatted plain text to stdout. The `default` (or not set) logging option outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
 
