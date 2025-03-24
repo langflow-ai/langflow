@@ -299,11 +299,16 @@ class DirectoryReader:
         return True, file_content
 
     async def abuild_component_menu_list(self, file_paths):
+        """Asynchronously build the component menu list from a list of file paths."""
         response = {"menu": []}
         logger.debug("-------------------- Async Building component menu list --------------------")
 
-        tasks = [self.process_file_async(file_path) for file_path in file_paths]
-        results = await asyncio.gather(*tasks)
+        try:
+            tasks = [self.process_file_async(file_path) for file_path in file_paths]
+            results = await asyncio.gather(*tasks)
+        except Exception as e:
+            logger.exception(f"Failed to process one or more files: {e}")
+            raise
 
         for file_path, (validation_result, result_content) in zip(file_paths, results, strict=True):
             file_path_ = Path(file_path)
@@ -311,7 +316,7 @@ class DirectoryReader:
             filename = file_path_.name
 
             if not validation_result:
-                logger.error(f"Error while processing file {file_path}")
+                logger.error(f"Validation failed for file: {file_path} | Error: {result_content}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
@@ -328,8 +333,8 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = await asyncio.to_thread(self.get_output_types_from_code, result_content)
-                except Exception:  # noqa: BLE001
-                    logger.exception("Error while getting output types from code")
+                except Exception as e:  # noqa: BLE001
+                    logger.exception(f"Failed to extract output types from code in '{filename}': {e}")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
