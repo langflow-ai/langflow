@@ -95,7 +95,7 @@ RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.
     && echo 'APT::Default-Release "bookworm";' > /etc/apt/apt.conf.d/99defaultrelease \
     && apt-get update \
     && apt-get upgrade -y \
-    && apt-get install tini=0.19.0-1 -y \
+    && apt-get install tini=0.19.0-1 git=1:2.39.5-0+deb12u2 -y \
     && apt-get install --no-install-recommends -y \
         libpq-dev=15.12-0+deb12u2 \
         postgresql-client=15+248 \
