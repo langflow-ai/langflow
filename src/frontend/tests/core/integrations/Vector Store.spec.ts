@@ -2,7 +2,12 @@ import { expect, test } from "@playwright/test";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+
+// Add this line to declare Node.js global variables
+declare const process: any;
+declare const __dirname: string;
 
 withEventDeliveryModes(
   "Vector Store RAG",
@@ -25,24 +30,13 @@ withEventDeliveryModes(
       .first()
       .click();
     await page.waitForSelector('[title="fit view"]', {
-      timeout: 100000,
+      timeout: 20000,
     });
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
-    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    while (filledApiKey > 0) {
-      await page.getByTestId("remove-icon-badge").first().click();
-      filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    }
+
+    await page.getByTestId("fit_view").click();
+
+    await initialGPTsetup(page);
+
     if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
       await page.getByTestId("title-Astra DB").first().click();
       await page.getByTestId("code-button-modal").click();
@@ -71,85 +65,206 @@ withEventDeliveryModes(
       await page.locator("textarea").last().fill(cleanCode);
       await page.locator('//*[@id="checkAndSaveBtn"]').click();
     }
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
-    await page
-      .getByTestId("popover-anchor-input-api_key") // input ID without "anchor-"
-      .nth(0)
-      .fill(process.env.OPENAI_API_KEY ?? "");
-    await page
-      .getByTestId("popover-anchor-input-openai_api_key")
-      .nth(1)
-      .fill(process.env.OPENAI_API_KEY ?? "");
-    await page
-      .getByTestId("popover-anchor-input-openai_api_key")
-      .nth(0)
-      .fill(process.env.OPENAI_API_KEY ?? "");
+
+    await page.waitForSelector('[data-testid="title-Astra DB"]', {
+      timeout: 3000,
+    });
+
+    await page.waitForTimeout(500);
+    await page.getByTestId("fit_view").click();
+
     // Astra DB tokens
     await page
       .getByTestId("popover-anchor-input-token")
       .nth(0)
       .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
+
+    await page
+      .locator('[data-testid="dropdown_str_database_name"]')
+      .nth(0)
+      .waitFor({
+        timeout: 15000,
+        state: "visible",
+      });
+
+    let databaseDropdownCount = await page
+      .locator('[data-testid="dropdown_str_database_name"]')
+      .nth(0)
+      .count();
+
+    while (databaseDropdownCount === 0) {
+      await page
+        .getByTestId("popover-anchor-input-token")
+        .nth(0)
+        .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
+
+      await page.waitForTimeout(2000);
+
+      await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(0)
+        .waitFor({
+          timeout: 15000,
+          state: "visible",
+        });
+
+      databaseDropdownCount = await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(0)
+        .count();
+    }
+
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("dropdown_str_database_name").nth(0).click();
+
+    await page.waitForTimeout(2000);
+
+    let langflowCount = await page
+      .locator('[data-testid="langflow-0-option"]')
+      .count();
+
+    while (langflowCount === 0) {
+      await page.waitForTimeout(1000);
+      await page.getByTestId("icon-RefreshCcw").click();
+
+      await page.getByTestId("dropdown_str_database_name").nth(0).click();
+
+      await page.waitForTimeout(1000);
+
+      langflowCount = await page
+        .locator('[data-testid="langflow-0-option"]')
+        .count();
+    }
+
+    await page.locator('[data-testid="langflow-0-option"]').nth(0).waitFor({
+      timeout: 15000,
+      state: "visible",
+    });
+
+    await page.getByTestId("langflow-0-option").nth(0).click();
+
+    await page
+      .locator('[data-testid="dropdown_str_collection_name"]')
+      .nth(0)
+      .waitFor({
+        timeout: 15000,
+        state: "visible",
+      });
+
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("dropdown_str_collection_name").nth(0).click();
+
+    await page.locator('[data-testid="fe_tests-0-option"]').nth(0).waitFor({
+      timeout: 15000,
+      state: "visible",
+    });
+
+    await page.getByTestId("fe_tests-0-option").nth(0).click();
+
     await page
       .getByTestId("popover-anchor-input-token")
       .nth(1)
       .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
 
     await page
-      .getByTestId("popover-anchor-input-collection_name_new")
-      .first()
-      .fill("fe_tests");
+      .locator('[data-testid="dropdown_str_database_name"]')
+      .nth(1)
+      .waitFor({
+        timeout: 15000,
+        state: "visible",
+      });
+
+    databaseDropdownCount = await page
+      .locator('[data-testid="dropdown_str_database_name"]')
+      .nth(0)
+      .count();
+
+    while (databaseDropdownCount === 0) {
+      await page
+        .getByTestId("popover-anchor-input-token")
+        .nth(0)
+        .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
+
+      await page.waitForTimeout(2000);
+
+      await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(1)
+        .waitFor({
+          timeout: 15000,
+          state: "visible",
+        });
+
+      databaseDropdownCount = await page
+        .locator('[data-testid="dropdown_str_database_name"]')
+        .nth(0)
+        .count();
+    }
+
+    await page.getByTestId("dropdown_str_database_name").nth(1).click();
+
+    await page.waitForTimeout(2000);
+
+    langflowCount = await page
+      .locator('[data-testid="langflow-0-option"]')
+      .count();
+
+    while (langflowCount === 0) {
+      await page.waitForTimeout(1000);
+      await page.getByTestId("icon-RefreshCcw").click();
+
+      const loadingOptions = page.getByText("Loading options...");
+      await loadingOptions.waitFor({ state: "visible", timeout: 30000 });
+
+      if (await loadingOptions.isVisible()) {
+        await expect(loadingOptions).toBeHidden({ timeout: 120000 });
+      }
+
+      await page.getByTestId("dropdown_str_database_name").nth(1).click();
+
+      await page.waitForTimeout(1000);
+
+      langflowCount = await page
+        .locator('[data-testid="langflow-0-option"]')
+        .count();
+    }
+
+    await page.getByTestId("langflow-0-option").nth(0).click();
+
+    await page.waitForTimeout(2000);
+
     await page
-      .getByTestId("popover-anchor-input-collection_name_new")
-      .last()
-      .fill("fe_tests");
+      .locator('[data-testid="dropdown_str_collection_name"]')
+      .nth(1)
+      .waitFor({
+        timeout: 15000 * 3,
+        state: "visible",
+      });
 
-    await page.waitForTimeout(500);
+    await page.getByTestId("dropdown_str_collection_name").nth(1).click();
 
-    // Click first refresh button and wait for disabled->enabled transition
-    await page.getByTestId("refresh-button-api_endpoint").first().click();
-    await expect(
-      page.getByTestId("refresh-button-api_endpoint").first(),
-    ).toHaveAttribute("disabled", "");
-    await expect(
-      page.getByTestId("refresh-button-api_endpoint").first(),
-    ).not.toHaveAttribute("disabled", "");
+    await page.waitForTimeout(2000);
 
-    // Click second refresh button and wait for disabled->enabled transition
-    await page.getByTestId("refresh-button-api_endpoint").last().click();
-    await expect(
-      page.getByTestId("refresh-button-api_endpoint").last(),
-    ).toHaveAttribute("disabled", "");
-    await expect(
-      page.getByTestId("refresh-button-api_endpoint").last(),
-    ).not.toHaveAttribute("disabled", "");
-
-    await page.getByTestId("dropdown_str_api_endpoint").first().click();
-
-    await page.waitForSelector('[data-testid="langflow-1-option"]', {
-      timeout: 100000,
+    await page.locator('[data-testid="fe_tests-0-option"]').nth(0).waitFor({
+      timeout: 15000,
+      state: "visible",
     });
 
-    await page.getByTestId("langflow-1-option").last().click();
+    await page.getByTestId("fe_tests-0-option").nth(0).click();
 
-    await page.getByTestId("dropdown_str_api_endpoint").last().click();
-
-    await page.waitForSelector('[data-testid="langflow-1-option"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("langflow-1-option").last().click();
-
-    const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("input-file-component").last().click();
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByTestId("drag-files-component").last().click();
+
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
       path.join(__dirname, "../../assets/test_file.txt"),
     );
-    await page.getByText("test_file.txt").isVisible();
+    await page.getByText("test_file.txt").last().isVisible();
+    await page.waitForTimeout(500);
+    await page.getByTestId("select-files-modal-button").click();
     await page.getByTestId("button_run_astra db").last().click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
@@ -167,7 +282,7 @@ withEventDeliveryModes(
 
     await page.getByText("Playground", { exact: true }).last().click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
+      timeout: 60000,
     });
     await page.getByTestId("input-chat-playground").last().fill("hello");
     await page.getByTestId("input-chat-playground").last().click();
@@ -191,8 +306,9 @@ withEventDeliveryModes(
     await page.getByRole("combobox").click();
     await page.getByLabel("Delete").click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
+      timeout: 60000,
     });
     await page.getByTestId("input-chat-playground").last().isVisible();
   },
+  { timeout: 60000 },
 );

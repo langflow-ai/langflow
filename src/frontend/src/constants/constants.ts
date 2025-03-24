@@ -654,6 +654,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "table",
   "link",
   "slider",
+  "tab",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -950,8 +951,8 @@ export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
-  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
-  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
+  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) -
+  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
@@ -1006,6 +1007,7 @@ export const DEFAULT_PLACEHOLDER = "Type something...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
 
+export const SAVE_API_KEY_ALERT = "API key saved successfully";
 export const PLAYGROUND_BUTTON_NAME = "Playground";
 export const POLLING_MESSAGES = {
   ENDPOINT_NOT_AVAILABLE: "Endpoint not available",
@@ -1020,3 +1022,18 @@ export const IS_AUTO_LOGIN =
 
 export const AUTO_LOGIN_RETRY_DELAY = 2000;
 export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;
+
+export const ALL_LANGUAGES = [
+  { value: "en-US", name: "English (US)" },
+  { value: "en-GB", name: "English (UK)" },
+  { value: "it-IT", name: "Italian" },
+  { value: "fr-FR", name: "French" },
+  { value: "es-ES", name: "Spanish" },
+  { value: "de-DE", name: "German" },
+  { value: "ja-JP", name: "Japanese" },
+  { value: "pt-BR", name: "Portuguese (Brazil)" },
+  { value: "zh-CN", name: "Chinese (Simplified)" },
+  { value: "ru-RU", name: "Russian" },
+  { value: "ar-SA", name: "Arabic" },
+  { value: "hi-IN", name: "Hindi" },
+];
