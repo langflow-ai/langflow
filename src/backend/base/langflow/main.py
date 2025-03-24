@@ -109,11 +109,9 @@ def get_lifespan(*, fix_migration=False, version=None):
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        # Startup message
-        if version:
-            rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
-        else:
-            rprint("[bold green]Starting Langflow...[/bold green]")
+        startup_msg = f"Starting Langflow v{version}" if version else "Starting Langflow"
+        logger.info(f"🚀 {startup_msg}")
+        rprint(f"[bold green]🚀 {startup_msg}...[/bold green]")
 
         temp_dirs: list[TemporaryDirectory] = []
         try:
@@ -129,11 +127,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+            logger.info("Startup sequence complete. Application is ready.")
             yield
 
         except Exception as exc:
+            logger.exception(f"Unhandled startup error: {exc}")
             if "langflow migration --fix" not in str(exc):
-                logger.exception(exc)
+                logger.error("Consider running 'langflow migration --fix' if this is a migration issue.")
             raise
         finally:
             # Clean shutdown
