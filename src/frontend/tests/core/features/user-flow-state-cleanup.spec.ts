@@ -96,11 +96,21 @@ test(
       ).isVisible(),
     );
 
-    await awaitBootstrapTest(page, { skipGoto: true });
-    // await page.getByTestId("new_project_btn_empty_page").click();
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+
+    try {
+      await page.getByTestId("new_project_btn_empty_page").click();
+    } catch (error) {
+      await page.getByText("New Flow", { exact: true }).click();
+    }
+
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
-    await page.getByTestId("fit_view").click();
     await page.getByTestId("flow_menu_trigger").click();
     await page.getByText("Edit Details", { exact: true }).last().click();
     await page.getByPlaceholder("Flow Name").fill(userAFlowName);
