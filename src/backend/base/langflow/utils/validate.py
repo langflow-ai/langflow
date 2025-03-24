@@ -187,32 +187,33 @@ def create_class(code, class_name):
 
     replacements = {
         "from langflow import CustomComponent": "from langflow.custom import CustomComponent",
-        "from langflow.interface.custom.custom_component import CustomComponent": "from langflow.custom import CustomComponent"
+        "from langflow.interface.custom.custom_component import CustomComponent": "from langflow.custom import CustomComponent",
     }
     for old, new in replacements.items():
         code = code.replace(old, new)
-    
+
     code = DEFAULT_IMPORT_STRING + "\n" + code
-    
+
     try:
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
-        
+
         class_code = extract_class_code(module, class_name)
         compiled_class = compile_class_code(class_code)
-        
+
         return build_class_constructor(compiled_class, exec_globals, class_name)
-    
+
     except SyntaxError as e:
-        raise ValueError(f"Syntax error in code: {str(e)}") from e
+        raise ValueError(f"Syntax error in code: {e!s}") from e
     except NameError as e:
-        raise ValueError(f"Name error (possibly undefined variable): {str(e)}") from e
+        raise ValueError(f"Name error (possibly undefined variable): {e!s}") from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
     except Exception as e:
-        raise ValueError(f"Error creating class: {str(e)}") from e
+        raise ValueError(f"Error creating class: {e!s}") from e
+
 
 def create_type_ignore_class():
     """Create a TypeIgnore class for AST module if it doesn't exist.
@@ -225,6 +226,7 @@ def create_type_ignore_class():
         _fields = ()
 
     return TypeIgnore
+
 
 def prepare_global_scope(module):
     """Prepares the global scope with necessary imports from the provided code module.
@@ -242,7 +244,7 @@ def prepare_global_scope(module):
     imports = []
     import_froms = []
     definitions = []
-    
+
     for node in module.body:
         if isinstance(node, ast.Import):
             imports.append(node)
@@ -250,7 +252,7 @@ def prepare_global_scope(module):
             import_froms.append(node)
         elif isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.Assign)):
             definitions.append(node)
-    
+
     for node in imports:
         for alias in node.names:
             try:
@@ -260,18 +262,18 @@ def prepare_global_scope(module):
             except ModuleNotFoundError as e:
                 msg = f"Module {alias.name} not found. Please install it and try again."
                 raise ModuleNotFoundError(msg) from e
-    
+
     for node in import_froms:
         try:
             module_name = node.module
             # Apply warning suppression only when needed
-            if 'langchain' in module_name:
+            if "langchain" in module_name:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", LangChainDeprecationWarning)
                     imported_module = importlib.import_module(module_name)
             else:
                 imported_module = importlib.import_module(module_name)
-                
+
             for alias in node.names:
                 try:
                     # First try getting it as an attribute
@@ -283,12 +285,12 @@ def prepare_global_scope(module):
         except ModuleNotFoundError as e:
             msg = f"Module {node.module} not found. Please install it and try again"
             raise ModuleNotFoundError(msg) from e
-    
+
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
         exec(compiled_code, exec_globals)
-    
+
     return exec_globals
 
 
