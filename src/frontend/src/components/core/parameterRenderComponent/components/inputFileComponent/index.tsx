@@ -143,7 +143,9 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
-  const { data: files } = useGetFilesV2();
+  const { data: files } = useGetFilesV2({
+    enabled: !!ENABLE_FILE_MANAGEMENT,
+  });
 
   const selectedFiles = (
     isList
@@ -244,27 +246,31 @@ export default function InputFileComponent({
                   isList={isList}
                 >
                   {(selectedFiles.length === 0 || isList) && (
-                    <Button
-                      disabled={isDisabled}
-                      variant={selectedFiles.length !== 0 ? "ghost" : "default"}
-                      size={selectedFiles.length !== 0 ? "iconMd" : "default"}
-                      className={cn(
-                        selectedFiles.length !== 0 &&
-                          "hit-area-icon absolute -top-8 right-0",
-                        "font-semibold",
-                      )}
-                      data-testid="button_open_file_management"
-                    >
-                      {selectedFiles.length !== 0 ? (
-                        <ForwardedIconComponent
-                          name="Plus"
-                          className="icon-size"
-                          strokeWidth={ICON_STROKE_WIDTH}
-                        />
-                      ) : (
-                        <div>Select file{isList ? "s" : ""}</div>
-                      )}
-                    </Button>
+                    <div data-testid="input-file-component" className="w-full">
+                      <Button
+                        disabled={isDisabled}
+                        variant={
+                          selectedFiles.length !== 0 ? "ghost" : "default"
+                        }
+                        size={selectedFiles.length !== 0 ? "iconMd" : "default"}
+                        className={cn(
+                          selectedFiles.length !== 0 &&
+                            "hit-area-icon absolute -top-8 right-0",
+                          "w-full font-semibold",
+                        )}
+                        data-testid="button_open_file_management"
+                      >
+                        {selectedFiles.length !== 0 ? (
+                          <ForwardedIconComponent
+                            name="Plus"
+                            className="icon-size"
+                            strokeWidth={ICON_STROKE_WIDTH}
+                          />
+                        ) : (
+                          <div>Select file{isList ? "s" : ""}</div>
+                        )}
+                      </Button>
+                    </div>
                   )}
                 </FileManagerModal>
               </div>

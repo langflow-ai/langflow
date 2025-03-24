@@ -2,96 +2,129 @@
   "data": {
     "edges": [
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-B3OZd",
+            "id": "ApifyActors-n0Tjo",
             "name": "tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-KXbzb",
-            "inputTypes": ["Tool"],
+            "id": "Agent-EePDq",
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ApifyActors-B3OZd{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-B3OZdœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-KXbzb{œfieldNameœ:œtoolsœ,œidœ:œAgent-KXbzbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ApifyActors-B3OZd",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-B3OZdœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-KXbzb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-KXbzbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ApifyActors-n0Tjo{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-n0Tjoœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-EePDq{œfieldNameœ:œtoolsœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ApifyActors-n0Tjo",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-n0Tjoœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-EePDq",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-0TUqW",
+            "id": "ApifyActors-t44sy",
             "name": "tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-KXbzb",
-            "inputTypes": ["Tool"],
+            "id": "Agent-EePDq",
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ApifyActors-0TUqW{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-0TUqWœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-KXbzb{œfieldNameœ:œtoolsœ,œidœ:œAgent-KXbzbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ApifyActors-0TUqW",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-0TUqWœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-KXbzb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-KXbzbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ApifyActors-t44sy{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-t44syœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-EePDq{œfieldNameœ:œtoolsœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ApifyActors-t44sy",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-t44syœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-EePDq",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-3C2ac",
+            "id": "ChatInput-9joxW",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-KXbzb",
-            "inputTypes": ["Message"],
+            "id": "Agent-EePDq",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-3C2ac{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3C2acœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-KXbzb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-KXbzbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-3C2ac",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3C2acœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-KXbzb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-KXbzbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-9joxW{œdataTypeœ:œChatInputœ,œidœ:œChatInput-9joxWœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EePDq{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-9joxW",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-9joxWœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-EePDq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-KXbzb",
+            "id": "Agent-EePDq",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-lTzgN",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "id": "ChatOutput-dWtqL",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "other"
           }
         },
-        "id": "xy-edge__Agent-KXbzb{œdataTypeœ:œAgentœ,œidœ:œAgent-KXbzbœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lTzgN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lTzgNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "Agent-KXbzb",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-KXbzbœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-lTzgN",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lTzgNœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-EePDq{œdataTypeœ:œAgentœ,œidœ:œAgent-EePDqœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-dWtqL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-dWtqLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-EePDq",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EePDqœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-dWtqL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-dWtqLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ApifyActors-0TUqW",
+          "id": "ApifyActors-t44sy",
           "node": {
-            "base_classes": ["Data", "Tool"],
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -123,7 +156,9 @@
                 "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -136,7 +171,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -168,8 +205,10 @@
                 "display_name": "Apify Token",
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -177,7 +216,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "APIFY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -203,7 +242,9 @@
                 "display_name": "Output fields",
                 "dynamic": false,
                 "info": "Fields to extract from the dataset, split by commas. Other fields will be ignored. Dots in nested structures will be replaced by underscores. Sample input: 'text, metadata.title'. Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, which is the content of the website in markdown format.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -243,7 +284,9 @@
                 "display_name": "Run input",
                 "dynamic": false,
                 "info": "The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: {\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -266,7 +309,7 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-0TUqW",
+        "id": "ApifyActors-t44sy",
         "measured": {
           "height": 628,
           "width": 320
@@ -280,9 +323,12 @@
       },
       {
         "data": {
-          "id": "ApifyActors-B3OZd",
+          "id": "ApifyActors-n0Tjo",
           "node": {
-            "base_classes": ["Data", "Tool"],
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -314,7 +360,9 @@
                 "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -327,7 +375,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -359,8 +409,10 @@
                 "display_name": "Apify Token",
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -368,7 +420,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "APIFY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -394,7 +446,9 @@
                 "display_name": "Output fields",
                 "dynamic": false,
                 "info": "Fields to extract from the dataset, split by commas. Other fields will be ignored. Dots in nested structures will be replaced by underscores. Sample input: 'text, metadata.title'. Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, which is the content of the website in markdown format.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -434,7 +488,9 @@
                 "display_name": "Run input",
                 "dynamic": false,
                 "info": "The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: {\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -457,7 +513,7 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-B3OZd",
+        "id": "ApifyActors-n0Tjo",
         "measured": {
           "height": 628,
           "width": 320
@@ -471,7 +527,7 @@
       },
       {
         "data": {
-          "id": "note-xXNfV",
+          "id": "note-QhVg5",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -483,7 +539,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-xXNfV",
+        "id": "note-QhVg5",
         "measured": {
           "height": 324,
           "width": 324
@@ -497,7 +553,7 @@
       },
       {
         "data": {
-          "id": "note-kRYk5",
+          "id": "note-JuSWo",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -510,7 +566,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-kRYk5",
+        "id": "note-JuSWo",
         "measured": {
           "height": 324,
           "width": 324
@@ -526,7 +582,7 @@
       },
       {
         "data": {
-          "id": "note-1r49Y",
+          "id": "note-yDKv9",
           "node": {
             "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
@@ -539,7 +595,7 @@
         },
         "dragging": false,
         "height": 657,
-        "id": "note-1r49Y",
+        "id": "note-yDKv9",
         "measured": {
           "height": 657,
           "width": 525
@@ -555,9 +611,11 @@
       },
       {
         "data": {
-          "id": "ChatInput-3C2ac",
+          "id": "ChatInput-9joxW",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -592,7 +650,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -605,7 +665,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -626,7 +688,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -734,7 +798,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -751,7 +818,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -772,7 +841,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -811,7 +882,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -833,7 +906,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-3C2ac",
+        "id": "ChatInput-9joxW",
         "measured": {
           "height": 66,
           "width": 192
@@ -847,9 +920,11 @@
       },
       {
         "data": {
-          "id": "ChatOutput-lTzgN",
+          "id": "ChatOutput-dWtqL",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -885,7 +960,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -898,7 +975,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -919,7 +998,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -976,7 +1057,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -997,7 +1080,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -1018,7 +1105,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1035,7 +1125,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1056,7 +1148,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1095,7 +1189,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1117,7 +1213,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-lTzgN",
+        "id": "ChatOutput-dWtqL",
         "measured": {
           "height": 66,
           "width": 192
@@ -1131,7 +1227,7 @@
       },
       {
         "data": {
-          "id": "note-xQRMd",
+          "id": "note-NYz05",
           "node": {
             "description": "### 💡 Add your OpenAI API key here ",
             "display_name": "",
@@ -1143,7 +1239,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-xQRMd",
+        "id": "note-NYz05",
         "measured": {
           "height": 324,
           "width": 324
@@ -1157,9 +1253,11 @@
       },
       {
         "data": {
-          "id": "Agent-KXbzb",
+          "id": "Agent-EePDq",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -1212,7 +1310,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1245,7 +1345,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1327,8 +1429,10 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1336,7 +1440,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1380,7 +1484,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1479,7 +1585,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1584,7 +1692,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1622,7 +1733,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1639,7 +1754,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1660,7 +1777,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1682,7 +1801,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1733,7 +1854,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1773,7 +1896,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1810,7 +1935,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-KXbzb",
+        "id": "Agent-EePDq",
         "measured": {
           "height": 624,
           "width": 320
@@ -1819,21 +1944,24 @@
           "x": 1023.5315500182937,
           "y": 280.6548808097231
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -37.341352016254405,
-      "y": -91.95251540726224,
-      "zoom": 0.8575366287284449
+      "x": 280.5777285013439,
+      "y": 153.83586264930773,
+      "zoom": 0.6859951115676428
     }
   },
   "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
   "endpoint_name": null,
-  "id": "23a735de-a049-4058-b4dd-89e5da601ed1",
+  "id": "6aa57fa5-c085-4a30-8654-b56b4944679a",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Social Media Agent",
-  "tags": ["agent", "assistants"]
+  "tags": [
+    "agent",
+    "assistants"
+  ]
 }
