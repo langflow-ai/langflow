@@ -141,9 +141,9 @@ const ListSelectionComponent = ({
 
         <div className="flex max-h-[80vh] flex-col gap-1 overflow-y-auto">
           {filteredList.length > 0 ? (
-            filteredList.map((item) => (
+            filteredList.map((item, index) => (
               <ListItem
-                key={item.name}
+                key={`${item.name}-${index}`}
                 item={item}
                 isSelected={
                   selectedList.some(

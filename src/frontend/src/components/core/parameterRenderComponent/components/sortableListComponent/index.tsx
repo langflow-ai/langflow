@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
@@ -27,7 +27,10 @@ const SortableListItem = memo(
     index: number;
     onRemove: () => void;
   }) => (
-    <li className="group inline-flex h-12 w-full cursor-grab items-center gap-2 text-sm font-medium text-gray-800">
+    <li
+      key={`${data?.name}-${index}`}
+      className="group inline-flex h-12 w-full cursor-grab items-center gap-2 text-sm font-medium text-gray-800"
+    >
       <ForwardedIconComponent
         name="grid-horizontal"
         className="h-5 w-5 fill-gray-300 text-gray-300"
@@ -61,18 +64,41 @@ const SortableListComponent = ({
   searchCategory = [],
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
-  const { placeholder, handleOnNewValue } = baseInputProps;
+  const { placeholder, handleOnNewValue, value } = baseInputProps;
   const [open, setOpen] = useState(false);
   const [listData, setListData] = useState<any[]>([]);
 
-  const createRemoveHandler = useCallback((index: number) => {
-    return () => {
-      setListData((current) => current.filter((_, i) => i !== index));
-    };
+  useEffect(() => {
+    if (value && Array.isArray(value)) {
+      setListData(value);
+    }
   }, []);
 
+  const createRemoveHandler = useCallback(
+    (index: number) => {
+      return () => {
+        const newList = listData.filter((_, i) => i !== index);
+        setListData(newList);
+        handleOnNewValue({ value: newList });
+      };
+    },
+    [listData, handleOnNewValue],
+  );
+
+  const setListDataHandler = useCallback(
+    (list: any[]) => {
+      setListData(list);
+      handleOnNewValue({ value: list });
+    },
+    [handleOnNewValue],
+  );
+
+  const handleCloseListSelectionDialog = useCallback(() => {
+    setOpen(false);
+    handleOnNewValue({ value: listData });
+  }, [listData, handleOnNewValue]);
+
   const handleOpenListSelectionDialog = useCallback(() => setOpen(true), []);
-  const handleCloseListSelectionDialog = useCallback(() => setOpen(false), []);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -101,12 +127,12 @@ const SortableListComponent = ({
         <div className="flex w-full flex-col">
           <ReactSortable
             list={listData}
-            setList={setListData}
+            setList={setListDataHandler}
             className="flex w-full flex-col"
           >
             {listData.map((data, index) => (
               <SortableListItem
-                key={data?.name || index}
+                key={`${data?.name}-${index}`}
                 data={data}
                 index={index}
                 onRemove={createRemoveHandler(index)}
