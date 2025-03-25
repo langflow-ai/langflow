@@ -39,7 +39,7 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="score_threshold",
             display_name="Score Threshold",
-            info="Minimum similarity score (0-1) for returned results (default: 0.6)",
+            info="Minimum similarity score (0-1) [default: 0.6]",
             required=True,
             value=0.6,
         ),
@@ -63,7 +63,7 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def _process_data_input(self, data_input: Data) -> Document:
-        """Process a single Data input into a Document with proper metadata.
+        """Process a single Data input into a Document.
 
         Args:
             data_input (Data): Input data object to process
