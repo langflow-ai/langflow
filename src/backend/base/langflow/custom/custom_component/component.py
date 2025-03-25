@@ -728,7 +728,10 @@ class Component(CustomComponent):
             Any: The value from the vertex if the output allows looping,
                  otherwise returns None.
         """
-        if hasattr(self, "_vertex") and any(
+        if not hasattr(self, "_vertex") or self._vertex is None:
+            return None
+
+        if any(
             getattr(output, "allows_loop", False) and output.name == name for output in getattr(self, "outputs", [])
         ):
             return self._vertex.get_value_from_output_names(name)
