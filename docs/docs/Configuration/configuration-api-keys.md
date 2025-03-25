@@ -110,12 +110,6 @@ To add component API keys as **Global variables** with the Langflow UI:
 3. Add new API keys as **Credential** type variables.
 4. Apply them to specific component fields.
 
+Component values set directly in a flow override values set in the UI **and** environment variables.
+
 For more information, see [Global variables](/configuration-global-variables).
-
-Component values set directly in a flow override values set in the UI *and* environment variables.
-
-
-
-
-
-
