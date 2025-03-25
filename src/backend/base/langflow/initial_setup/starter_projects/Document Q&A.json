@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-wBzNC",
+            "id": "ChatInput-A2yHP",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-Hdi88",
+            "id": "OpenAIModel-nLcKt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-wBzNC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-wBzNCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Hdi88{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Hdi88œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-A2yHP{œdataTypeœ:œChatInputœ,œidœ:œChatInput-A2yHPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nLcKt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-wBzNC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-wBzNCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-Hdi88",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Hdi88œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-A2yHP",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-A2yHPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-nLcKt",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-poUaR",
+            "id": "Prompt-ebOl0",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-Hdi88",
+            "id": "OpenAIModel-nLcKt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-poUaR{œdataTypeœ:œPromptœ,œidœ:œPrompt-poUaRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Hdi88{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-Hdi88œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-ebOl0{œdataTypeœ:œPromptœ,œidœ:œPrompt-ebOl0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nLcKt{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-poUaR",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-poUaRœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-Hdi88",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-Hdi88œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-ebOl0",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-ebOl0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-nLcKt",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Hdi88",
+            "id": "OpenAIModel-nLcKt",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-zD4dP",
+            "id": "ChatOutput-N1C0e",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-Hdi88{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Hdi88œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-zD4dP{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zD4dPœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-nLcKt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-nLcKtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-N1C0e{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N1C0eœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-Hdi88",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Hdi88œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-zD4dP",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-zD4dPœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-nLcKt",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-nLcKtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-N1C0e",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N1C0eœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-aqy2z",
+            "id": "File-PQR1u",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-4Do3H",
+            "id": "ParserComponent-5sHHY",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,12 +109,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__File-aqy2z{œdataTypeœ:œFileœ,œidœ:œFile-aqy2zœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-4Do3H{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-4Do3Hœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-PQR1u{œdataTypeœ:œFileœ,œidœ:œFile-PQR1uœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-5sHHY{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-5sHHYœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-aqy2z",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-aqy2zœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-4Do3H",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-4Do3Hœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "File-PQR1u",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-PQR1uœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ParserComponent-5sHHY",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-5sHHYœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-4Do3H",
+            "id": "ParserComponent-5sHHY",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -130,7 +130,7 @@
           },
           "targetHandle": {
             "fieldName": "Document",
-            "id": "Prompt-poUaR",
+            "id": "Prompt-ebOl0",
             "inputTypes": [
               "Message",
               "Text"
@@ -138,12 +138,12 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-4Do3H{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-4Do3Hœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-poUaR{œfieldNameœ:œDocumentœ,œidœ:œPrompt-poUaRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-5sHHY{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-5sHHYœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ebOl0{œfieldNameœ:œDocumentœ,œidœ:œPrompt-ebOl0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-4Do3H",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-4Do3Hœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-poUaR",
-        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-poUaRœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ParserComponent-5sHHY",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-5sHHYœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-ebOl0",
+        "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-ebOl0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -151,7 +151,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-wBzNC",
+          "id": "ChatInput-A2yHP",
           "node": {
             "base_classes": [
               "Message"
@@ -417,7 +417,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-wBzNC",
+        "id": "ChatInput-A2yHP",
         "measured": {
           "height": 234,
           "width": 320
@@ -438,7 +438,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-zD4dP",
+          "id": "ChatOutput-N1C0e",
           "node": {
             "base_classes": [
               "Message"
@@ -720,7 +720,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-zD4dP",
+        "id": "ChatOutput-N1C0e",
         "measured": {
           "height": 234,
           "width": 320
@@ -739,41 +739,9 @@
       },
       {
         "data": {
-          "id": "note-U0i0u",
+          "id": "note-zvZmx",
           "node": {
-            "description": "## Get Your OpenAI API Key\n\n**Steps**:\n\n1. **Visit** [OpenAI's API Key Page](https://platform.openai.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new OpenAI account.\n\n3. **Generate API Key**:\n   - Click \"Create New Secret Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the OpenAI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": true,
-        "height": 325,
-        "id": "note-U0i0u",
-        "measured": {
-          "height": 325,
-          "width": 326
-        },
-        "position": {
-          "x": 1253.2038187140245,
-          "y": -421.5721019678553
-        },
-        "positionAbsolute": {
-          "x": 1253.2038187140245,
-          "y": -421.5721019678553
-        },
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
-      },
-      {
-        "data": {
-          "id": "note-gnSwV",
-          "node": {
-            "description": "# Document Q&A\n\n**Purpose:**\nThis flow leverages a language model to answer questions based on content from a loaded document. It's ideal for obtaining quick insights from PDFs or other text files by asking direct questions.\n\n**Components**:\n1. **File Component**: Loads and processes your document in supported formats.\n2. **Parse Data**: Converts the loaded document into text using a specified template for consistent processing.\n3. **Prompt Component**: Forms a structured query by combining the parsed document content with user questions.\n4. **OpenAI Model**: Engages OpenAI's language model to generate responses to queries based on the document context.\n5. **Chat Input/Output**: Facilitates user queries and displays AI-generated answers seamlessly.\n\n**Steps to Use**:\n1. **Upload Document**: Use the \"File\" component to upload a document or text file you want to query.\n2. **Enter Question**: Through the \"Chat Input\" field, type your question related to the document content.\n3. **Run the Flow**: Activate the flow to process the input and generate an answer using the OpenAI model.\n4. **View Response**: Read the generated answer in the \"Chat Output\" field for immediate insights.\n\n**Benefits**:\n- Simplifies the process of extracting information from documents.\n- Provides a user-friendly interface for interactive document exploration using AI.\n",
+            "description": "# Document Q&A\n\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **OpenAI** model component.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -781,14 +749,14 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 452,
-        "id": "note-gnSwV",
+        "height": 509,
+        "id": "note-zvZmx",
         "measured": {
-          "height": 452,
-          "width": 325
+          "height": 509,
+          "width": 421
         },
         "position": {
-          "x": -338.7070086205371,
+          "x": -306.48794920240215,
           "y": -177.11912020709357
         },
         "positionAbsolute": {
@@ -802,11 +770,11 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 324
+        "width": 420
       },
       {
         "data": {
-          "id": "File-aqy2z",
+          "id": "File-PQR1u",
           "node": {
             "base_classes": [
               "Data"
@@ -1079,7 +1047,7 @@
         },
         "dragging": false,
         "height": 232,
-        "id": "File-aqy2z",
+        "id": "File-PQR1u",
         "measured": {
           "height": 232,
           "width": 320
@@ -1092,7 +1060,7 @@
           "x": 155.39382083637838,
           "y": -82.32805525710685
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
@@ -1100,7 +1068,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-poUaR",
+          "id": "Prompt-ebOl0",
           "node": {
             "base_classes": [
               "Message"
@@ -1235,7 +1203,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-poUaR",
+        "id": "Prompt-ebOl0",
         "measured": {
           "height": 347,
           "width": 320
@@ -1254,7 +1222,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-Hdi88",
+          "id": "OpenAIModel-nLcKt",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1333,7 +1301,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1622,7 +1590,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-Hdi88",
+        "id": "OpenAIModel-nLcKt",
         "measured": {
           "height": 525,
           "width": 320
@@ -1636,7 +1604,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-4Do3H",
+          "id": "ParserComponent-5sHHY",
           "node": {
             "base_classes": [
               "Message"
@@ -1668,8 +1636,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
+                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1795,7 +1766,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-4Do3H",
+        "id": "ParserComponent-5sHHY",
         "measured": {
           "height": 357,
           "width": 320
@@ -1809,14 +1780,14 @@
       }
     ],
     "viewport": {
-      "x": -53.6004722459528,
-      "y": 439.4357979848472,
-      "zoom": 0.7356838109584383
+      "x": 301.14401803662435,
+      "y": 436.6308475717798,
+      "zoom": 0.5934613024535994
     }
   },
   "description": "Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
   "endpoint_name": null,
-  "id": "ddf588db-7377-431a-810e-b3606b7de4c3",
+  "id": "08d073e2-f9f2-4299-93df-c45a154521b6",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Document Q&A",
