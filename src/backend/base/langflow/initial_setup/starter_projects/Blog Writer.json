@@ -26,9 +26,9 @@
         "id": "reactflow__edge-TextInput-9OncE{œdataTypeœ:œTextInputœ,œidœ:œTextInput-9OncEœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-8vAn5{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-8vAn5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-9OncE",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-9OncEœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-9OncEœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-8vAn5",
-        "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-8vAn5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-8vAn5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -54,9 +54,9 @@
         "id": "reactflow__edge-Prompt-8vAn5{œdataTypeœ:œPromptœ,œidœ:œPrompt-8vAn5œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-WqZXt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WqZXtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-8vAn5",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-8vAn5œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-8vAn5œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-WqZXt",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WqZXtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-WqZXtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-OpenAIModel-WqZXt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WqZXtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iTvwo{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iTvwoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-WqZXt",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WqZXtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-WqZXtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-iTvwo",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iTvwoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iTvwoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-URL-P8C9k{œdataTypeœ:œURLœ,œidœ:œURL-P8C9kœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-Epjcz{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Epjczœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-P8C9k",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-P8C9kœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-P8C9kœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-Epjcz",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Epjczœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-Epjczœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-ParserComponent-Epjcz{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Epjczœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-8vAn5{œfieldNameœ:œreferencesœ,œidœ:œPrompt-8vAn5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-Epjcz",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Epjczœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-Epjczœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-8vAn5",
-        "targetHandle": "{œfieldNameœ:œreferencesœ,œidœ:œPrompt-8vAn5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-8vAn5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1365,11 +1365,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

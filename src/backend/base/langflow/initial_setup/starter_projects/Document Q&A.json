@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-A2yHP{œdataTypeœ:œChatInputœ,œidœ:œChatInput-A2yHPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nLcKt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-A2yHP",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-A2yHPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-A2yHPœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-nLcKt",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-nLcKtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Prompt-ebOl0{œdataTypeœ:œPromptœ,œidœ:œPrompt-ebOl0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nLcKt{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-ebOl0",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-ebOl0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ebOl0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-nLcKt",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-nLcKtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-OpenAIModel-nLcKt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-nLcKtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-N1C0e{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N1C0eœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-nLcKt",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-nLcKtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-nLcKtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-N1C0e",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N1C0eœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N1C0eœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-File-PQR1u{œdataTypeœ:œFileœ,œidœ:œFile-PQR1uœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-5sHHY{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-5sHHYœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-PQR1u",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-PQR1uœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-PQR1uœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-5sHHY",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-5sHHYœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-5sHHYœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -141,9 +141,9 @@
         "id": "reactflow__edge-ParserComponent-5sHHY{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-5sHHYœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ebOl0{œfieldNameœ:œDocumentœ,œidœ:œPrompt-ebOl0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-5sHHY",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-5sHHYœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-5sHHYœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-ebOl0",
-        "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-ebOl0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-ebOl0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1636,11 +1636,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
