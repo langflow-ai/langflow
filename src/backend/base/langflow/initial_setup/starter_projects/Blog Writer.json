@@ -1590,7 +1590,7 @@
   "id": "a5e189e5-5236-415d-8aad-84f9fa703928",
   "is_component": false,
   "last_tested_version": "1.2.0",
-  "name": "Blog Writer (1)",
+  "name": "Blog Writer",
   "tags": [
     "chatbots",
     "content-generation"

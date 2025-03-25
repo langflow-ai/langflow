@@ -2831,7 +2831,7 @@
   "id": "a64f55de-87e4-4cf8-a142-55417c1a32a8",
   "is_component": false,
   "last_tested_version": "1.2.0",
-  "name": "Market Research (1)",
+  "name": "Market Research",
   "tags": [
     "assistants",
     "agents"
