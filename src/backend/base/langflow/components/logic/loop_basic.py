@@ -1,5 +1,3 @@
-from typing import Any
-
 from langflow.custom import Component
 from langflow.io import HandleInput, Output
 from langflow.schema import Data
