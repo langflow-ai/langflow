@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Kf5Vr",
+            "id": "ChatInput-06ywN",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-hza5w",
+            "id": "Agent-HvHpU",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Kf5Vr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Kf5Vrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-hza5w{œfieldNameœ:œinput_valueœ,œidœ:œAgent-hza5wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-06ywN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-06ywNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-HvHpU{œfieldNameœ:œinput_valueœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Kf5Vr",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Kf5Vrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-hza5w",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-hza5wœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-06ywN",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-06ywNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-HvHpU",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-hza5w",
+            "id": "Agent-HvHpU",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutputComponent-hInqO",
+            "id": "StructuredOutput-B2aUc",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-hza5w{œdataTypeœ:œAgentœ,œidœ:œAgent-hza5wœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-hInqO{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-hInqOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-HvHpU{œdataTypeœ:œAgentœ,œidœ:œAgent-HvHpUœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-B2aUc{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-hza5w",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-hza5wœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutputComponent-hInqO",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-hInqOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-HvHpU",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-HvHpUœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-B2aUc",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-gNipG",
+            "id": "TavilySearchComponent-MQ3OZ",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-hza5w",
+            "id": "Agent-HvHpU",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-gNipG{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-gNipGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-hza5w{œfieldNameœ:œtoolsœ,œidœ:œAgent-hza5wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-MQ3OZ{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-MQ3OZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-HvHpU{œfieldNameœ:œtoolsœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-gNipG",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-gNipGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-hza5w",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-hza5wœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-MQ3OZ",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-MQ3OZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-HvHpU",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-UHaZL",
+            "id": "OpenAIModel-fMH2t",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutputComponent-hInqO",
+            "id": "StructuredOutput-B2aUc",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-UHaZL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-UHaZLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-hInqO{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-hInqOœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-fMH2t{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fMH2tœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-B2aUc{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-UHaZL",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-UHaZLœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutputComponent-hInqO",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-hInqOœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-fMH2t",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fMH2tœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-B2aUc",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutputComponent-hInqO",
+            "id": "StructuredOutput-B2aUc",
             "name": "structured_output_dataframe",
             "output_types": [
               "DataFrame"
@@ -127,7 +127,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-buGH9",
+            "id": "ParserComponent-AGEtU",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -135,12 +135,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutputComponent-hInqO{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutputComponent-hInqOœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-buGH9{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-buGH9œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-B2aUc{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-B2aUcœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-AGEtU{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-AGEtUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutputComponent-hInqO",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutputComponent-hInqOœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-buGH9",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-buGH9œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-B2aUc",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-B2aUcœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ParserComponent-AGEtU",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-AGEtUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -148,7 +148,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-buGH9",
+            "id": "ParserComponent-AGEtU",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -156,7 +156,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-lAYA5",
+            "id": "ChatOutput-jb7Ju",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -165,12 +165,12 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-buGH9{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-buGH9œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lAYA5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lAYA5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-AGEtU{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-AGEtUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jb7Ju{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jb7Juœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-buGH9",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-buGH9œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-lAYA5",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lAYA5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParserComponent-AGEtU",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-AGEtUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-jb7Ju",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jb7Juœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -178,7 +178,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-Kf5Vr",
+          "id": "ChatInput-06ywN",
           "node": {
             "base_classes": [
               "Message"
@@ -453,7 +453,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-Kf5Vr",
+        "id": "ChatInput-06ywN",
         "measured": {
           "height": 234,
           "width": 320
@@ -474,7 +474,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-lAYA5",
+          "id": "ChatOutput-jb7Ju",
           "node": {
             "base_classes": [
               "Message"
@@ -756,7 +756,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-lAYA5",
+        "id": "ChatOutput-jb7Ju",
         "measured": {
           "height": 234,
           "width": 320
@@ -775,83 +775,9 @@
       },
       {
         "data": {
-          "id": "note-CgdL5",
+          "id": "note-q7oKh",
           "node": {
-            "description": "The StructuredOutputComponent, when utilized with our company information schema, performs the following functions:\n\n1. Accepts an input query regarding a company.\n2. Employs a Language Model (LLM) to analyze the query.\n3. Instructs the LLM to generate a structured response adhering to the predefined schema:\n   - Domain\n   - LinkedIn URL\n   - Cheapest Plan\n   - Has Free Trial\n   - Has Enterprise Plan\n   - Has API\n   - Market\n   - Pricing Tiers\n   - Key Features\n   - Target Industries\n\n4. Validates the LLM output against this schema.\n5. Returns a Data object containing the company information structured according to the schema.\n\nIn essence, this component transforms a free-text query about a company into a structured, consistent dataset, facilitating subsequent analysis and application of the information.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-CgdL5",
-        "measured": {
-          "height": 324,
-          "width": 325
-        },
-        "position": {
-          "x": 2130.958950603199,
-          "y": 421.74182837210094
-        },
-        "positionAbsolute": {
-          "x": 2089.5869930853464,
-          "y": 311.41660832449514
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 324,
-          "width": 324
-        },
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-BgCYP",
-          "node": {
-            "description": "PURPOSE:\nConverts unstructured company research into standardized JSON format\n\nKEY FUNCTIONS:\n- Extracts specific business data points\n- Validates and formats information\n- Ensures data consistency\n\nINPUT:\n- Raw company research data\n\nOUTPUT:\nStructured JSON with:\n- Domain information\n- Social links\n- Pricing details\n- Feature availability\n- Market classification\n- Product features\n- Industry focus\n\nRULES:\n1. Uses strict boolean values\n2. Standardizes pricing formats\n3. Validates market categories\n4. Handles missing data consistently",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-BgCYP",
-        "measured": {
-          "height": 324,
-          "width": 325
-        },
-        "position": {
-          "x": 1284.9450195065508,
-          "y": 158.82084648405578
-        },
-        "positionAbsolute": {
-          "x": 1237.6627823432912,
-          "y": 169.53860932079613
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 324,
-          "width": 324
-        },
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-JhBI3",
-          "node": {
-            "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Instructions\n\n1. Enter Company Name\n   - In the Chat Input node, type the name of the company you want to research\n   - Example inputs: \"Salesforce.com\", \"Shopify\", \"Zoom Video Communications\"\n\n2. Initiate Research\n   - The Agent will use the Tavily AI Search tool to gather information\n   - It will focus on key areas like pricing, features, and market positioning\n\n3. Review Structured Output\n   - The flow will generate a structured JSON output with standardized fields\n   - This includes domain, LinkedIn URL, pricing details, and key features\n\n4. Examine Formatted Results\n   - The Parse Data component will convert the JSON into a readable format\n   - You'll see a comprehensive company profile with organized sections\n\n5. Analyze and Use Data\n   - Use the generated information for sales prospecting, competitive analysis, or market research\n   - The structured format allows for easy comparison between different companies\n\nRemember: Always verify critical information from official sources before making business decisions! 🔍💼",
+            "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Prerequisites\n\n- **[Tavily API Key](https://docs.tavily.com/welcome)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your **OpenAI API key** to the **OpenAI** model and **Agent** components.\n2. Add your **Tavily API key** to the **Tavily Search** component.\n3. In the **Chat Input**, enter a company name you want to research.\n4. Open the **Playground** and research the company. The **Structured Output** component transforms the raw LLM response into structured data, and the **Parser** component presents the data as text for the **Chat output** component to present.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -861,15 +787,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 324,
-        "id": "note-JhBI3",
+        "height": 671,
+        "id": "note-q7oKh",
         "measured": {
-          "height": 324,
-          "width": 325
+          "height": 671,
+          "width": 660
         },
         "position": {
-          "x": 465.57341046298257,
-          "y": 459.2036503168611
+          "x": -226.74339309333172,
+          "y": 683.3969749619654
         },
         "positionAbsolute": {
           "x": 244.92297036777086,
@@ -882,13 +808,13 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 324
+        "width": 659
       },
       {
         "data": {
           "description": "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information or creating consistent outputs.",
           "display_name": "Structured Output",
-          "id": "StructuredOutputComponent-hInqO",
+          "id": "StructuredOutput-B2aUc",
           "node": {
             "base_classes": [
               "Data",
@@ -1229,7 +1155,7 @@
         },
         "dragging": false,
         "height": 541,
-        "id": "StructuredOutputComponent-hInqO",
+        "id": "StructuredOutput-B2aUc",
         "measured": {
           "height": 541,
           "width": 320
@@ -1250,7 +1176,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-hza5w",
+          "id": "Agent-HvHpU",
           "node": {
             "base_classes": [
               "Message"
@@ -1392,7 +1318,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1849,7 +1775,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-hza5w",
+        "id": "Agent-HvHpU",
         "measured": {
           "height": 650,
           "width": 320
@@ -1864,41 +1790,9 @@
       },
       {
         "data": {
-          "id": "note-CEmvd",
-          "node": {
-            "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "lime"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-CEmvd",
-        "measured": {
-          "height": 324,
-          "width": 325
-        },
-        "position": {
-          "x": 872.8795713635943,
-          "y": 628.4318648733362
-        },
-        "positionAbsolute": {
-          "x": 921.6062384772317,
-          "y": 642.1140062279873
-        },
-        "selected": false,
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
           "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
           "display_name": "Tavily AI Search",
-          "id": "TavilySearchComponent-gNipG",
+          "id": "TavilySearchComponent-MQ3OZ",
           "node": {
             "base_classes": [
               "Data",
@@ -2251,7 +2145,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-gNipG",
+        "id": "TavilySearchComponent-MQ3OZ",
         "measured": {
           "height": 437,
           "width": 320
@@ -2260,12 +2154,12 @@
           "x": 875.7686789989679,
           "y": 798.478848045035
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "OpenAIModel-UHaZL",
+          "id": "OpenAIModel-fMH2t",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2345,7 +2239,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2634,7 +2528,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-UHaZL",
+        "id": "OpenAIModel-fMH2t",
         "measured": {
           "height": 525,
           "width": 320
@@ -2648,7 +2542,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-buGH9",
+          "id": "ParserComponent-AGEtU",
           "node": {
             "base_classes": [
               "Message"
@@ -2680,8 +2574,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
+                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2807,7 +2704,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-buGH9",
+        "id": "ParserComponent-AGEtU",
         "measured": {
           "height": 357,
           "width": 320
@@ -2821,14 +2718,14 @@
       }
     ],
     "viewport": {
-      "x": -653.3925328643629,
-      "y": -126.49945223416682,
-      "zoom": 0.6993192540470027
+      "x": 143.99604036918106,
+      "y": -83.42517243196949,
+      "zoom": 0.45429162441901605
     }
   },
   "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
   "endpoint_name": null,
-  "id": "a64f55de-87e4-4cf8-a142-55417c1a32a8",
+  "id": "eace866f-7809-4dc0-b695-16dee5db8cb2",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Market Research",
