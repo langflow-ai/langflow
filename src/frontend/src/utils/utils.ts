@@ -47,9 +47,9 @@ export function toNormalCase(str: string): string {
     .split("_")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
     .join(" ");
 
@@ -57,9 +57,9 @@ export function toNormalCase(str: string): string {
     .split("-")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
     .join(" ");
 }
@@ -69,11 +69,11 @@ export function normalCaseToSnakeCase(str: string): string {
     .split(" ")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
-    .join("_");
+    ?.join("_");
 }
 
 export function toTitleCase(
@@ -82,41 +82,41 @@ export function toTitleCase(
 ): string {
   if (!str) return "";
   let result = str
-    .split("_")
-    .map((word, index) => {
+    ?.split("_")
+    ?.map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
     .join(" ");
 
   return result
-    .split("-")
-    .map((word, index) => {
+    ?.split("-")
+    ?.map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
-    .join(" ");
+    ?.join(" ");
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string): string {
-  const words = str.split(" ").map((word) => {
-    return upperCaseWords.includes(word.toLowerCase())
-      ? word.toUpperCase()
-      : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  const words = str?.split(" ")?.map((word) => {
+    return upperCaseWords.includes(word?.toLowerCase())
+      ? word?.toUpperCase()
+      : word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
   });
 
-  return words.join(" ");
+  return words?.join(" ");
 }
 
 export function buildInputs(): string {
