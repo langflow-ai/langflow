@@ -1,5 +1,10 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { getNodeIcon, nodeColors, nodeIconsLucide, nodeNames } from "@/utils/styleUtils";
+import {
+  getNodeIcon,
+  nodeColors,
+  nodeIconsLucide,
+  nodeNames,
+} from "@/utils/styleUtils";
 import { removeCountFromString } from "@/utils/utils";
 import DisclosureComponent from "../../DisclosureComponent";
 import SidebarDraggableComponent from "../sideBarDraggableComponent";
