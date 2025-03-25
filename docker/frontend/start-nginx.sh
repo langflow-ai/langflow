@@ -8,16 +8,31 @@ CONFIG_DIR="$(mktemp -d /tmp/nginx.XXXXXX)"
 JSON_LOG_FORMAT="log_format json_logs escape=json '{\"time_local\":\"\$time_local\",\"remote_addr\":\"\$remote_addr\",\"remote_user\":\"\$remote_user\",\"request\":\"\$request\",\"status\":\"\$status\",\"body_bytes_sent\":\"\$body_bytes_sent\",\"http_referer\":\"\$http_referer\",\"http_user_agent\":\"\$http_user_agent\",\"request_time\":\"\$request_time\",\"upstream_response_time\":\"\$upstream_response_time\",\"upstream_addr\":\"\$upstream_addr\",\"upstream_status\":\"\$upstream_status\",\"host\":\"\$host\"}';"
 DEFAULT_LOG_FORMAT="log_format main '\$remote_addr - \$remote_user [\$time_local] \"\$request\" \$status \$body_bytes_sent \"\$http_referer\" \"\$http_user_agent\"';"
 
+# Write probe filter if enabled
+PROBE_FILTER=""
+if [ "$SUPPRESS_PROBE_LOGS" = "true" ]; then
+  PROBE_FILTER=$(cat <<'EOF'
+map $http_user_agent $loggable {
+    default      1;
+    ~*kube-probe 0;
+}
+EOF
+)
+  LOGGABLE_CONFIG="if=\$loggable"
+else
+  LOGGABLE_CONFIG=""
+fi
+
 # Determine log format based on environment variable
 if [ -n "$NGINX_CUSTOM_LOG_FORMAT" ]; then
     LOG_FORMAT_CONF="log_format custom_logs $(printf '%s' "$NGINX_CUSTOM_LOG_FORMAT");"
-    ACCESS_LOG_FORMAT="access_log /var/log/nginx/access.log custom_logs;"
+    ACCESS_LOG_FORMAT="access_log /var/log/nginx/access.log custom_logs $LOGGABLE_CONFIG;"
 elif [ "$NGINX_LOG_FORMAT" = "json" ]; then
     LOG_FORMAT_CONF="$JSON_LOG_FORMAT"
-    ACCESS_LOG_FORMAT="access_log /var/log/nginx/access.log json_logs;"
+    ACCESS_LOG_FORMAT="access_log /var/log/nginx/access.log json_logs $LOGGABLE_CONFIG;"
 else
     LOG_FORMAT_CONF="$DEFAULT_LOG_FORMAT"
-    ACCESS_LOG_FORMAT="access_log /var/log/nginx/access.log main;"
+    ACCESS_LOG_FORMAT="access_log /var/log/nginx/access.log main $LOGGABLE_CONFIG;"
 fi
 
 if [ -z "$ERROR_LOG_LEVEL" ]; then
@@ -26,6 +41,12 @@ fi
 
 # Write logging configuration
 echo "$LOG_FORMAT_CONF" > /nginx-access-log/logging.conf
+
+# Add probe filter if enabled
+if [ -n "$PROBE_FILTER" ]; then
+  echo "$PROBE_FILTER" >> /nginx-access-log/logging.conf
+fi
+
 echo "$ACCESS_LOG_FORMAT" >> /nginx-access-log/logging.conf
 
 # Check and set environment variables
@@ -54,6 +75,8 @@ envsubst '${BACKEND_URL} ${FRONTEND_PORT} ${LOG_FORMAT} ${ERROR_LOG_LEVEL}' < /e
 if [ "$DEBUG" = "true" ]; then
   echo "NGINX Configuration:"
   cat $CONFIG_DIR/default.conf
+  echo "Logging Configuration:"
+  cat /nginx-access-log/logging.conf
 fi
 
 # Validate the configuration

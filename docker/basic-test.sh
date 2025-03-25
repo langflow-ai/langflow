@@ -46,5 +46,6 @@ docker run -d \
 -p ${FRONTEND_PORT}:${FRONTEND_PORT} \
 -e BACKEND_URL="http://langflow-backend:${BACKEND_PORT}" \
 -e DEBUG=true \
+-e SUPPRESS_PROBE_LOGS=true \
 --sysctl net.ipv6.conf.all.disable_ipv6=1 \
 "${FRONTEND_IMAGE}"
