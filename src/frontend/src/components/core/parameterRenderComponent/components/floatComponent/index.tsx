@@ -23,6 +23,9 @@ export default function FloatComponent({
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
 
+  // Local state for input value
+  const [localValue, setLocalValue] = useState<string>(value.toString());
+
   // Clear component state
   useEffect(() => {
     if (disabled && value !== 0) {
@@ -30,20 +33,29 @@ export default function FloatComponent({
     }
   }, [disabled, handleOnNewValue]);
 
+  // Update local value when prop changes
+  useEffect(() => {
+    setLocalValue(value.toString());
+  }, [value]);
+
   const [cursor, setCursor] = useState<number | null>(null);
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     ref.current?.setSelectionRange(cursor, cursor);
-  }, [ref, cursor, value]);
+  }, [ref, cursor, localValue]);
 
   const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: Number(e.target.value) });
+    setLocalValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    handleOnNewValue({ value: Number(localValue) });
   };
 
   const handleNumberChange = (newValue) => {
-    handleOnNewValue({ value: Number(newValue) });
+    setLocalValue(newValue);
   };
 
   const handleInputChange = (event) => {
@@ -79,17 +91,19 @@ export default function FloatComponent({
         min={min}
         max={max}
         onChange={handleNumberChange}
-        value={value ?? ""}
+        value={localValue ?? ""}
+        onBlur={handleBlur}
       >
         <NumberInputField
           className={getInputClassName()}
           onChange={handleChangeInput}
-          onKeyDown={(event) => handleKeyDown(event, value, "")}
+          onKeyDown={(event) => handleKeyDown(event, localValue, "")}
           onInput={handleInputChange}
           disabled={disabled}
           placeholder={editNode ? "Float number" : "Type a float number"}
           data-testid={id}
           ref={inputRef}
+          onBlur={handleBlur}
         />
         <NumberInputStepper className={stepperClassName}>
           <NumberIncrementStepper className={incrementStepperClassName}>
