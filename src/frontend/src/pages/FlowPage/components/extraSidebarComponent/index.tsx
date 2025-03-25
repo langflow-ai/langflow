@@ -13,7 +13,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { nodeIconsLucide } from "../../../../utils/styleUtils";
+import { getNodeIcon } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
 
@@ -253,7 +253,7 @@ export default function ExtraSidebar(): JSX.Element {
             key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
             button={{
               title: "Integrations",
-              Icon: nodeIconsLucide.unknown,
+              Icon: getNodeIcon("unknown"),
             }}
             testId="bundle-extended-disclosure"
           >
@@ -281,7 +281,7 @@ export default function ExtraSidebar(): JSX.Element {
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
           button={{
             title: "Experimental",
-            Icon: nodeIconsLucide.unknown,
+            Icon: getNodeIcon("unknown"),
             beta: true,
           }}
           testId="extended-disclosure"
