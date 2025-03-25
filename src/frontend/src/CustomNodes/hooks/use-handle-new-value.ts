@@ -10,6 +10,8 @@ import { cloneDeep, debounce } from "lodash";
 import { useCallback, useMemo, useRef } from "react";
 import { mutateTemplate } from "../helpers/mutate-template";
 
+const DEBOUNCE_TIME_1_SECOND = 1000;
+
 export type handleOnNewValueType = (
   changes: Partial<InputFieldType>,
   options?: {
@@ -129,7 +131,7 @@ const useHandleOnNewValue = ({
                 setErrorDataFn,
               );
             },
-            2000,
+            DEBOUNCE_TIME_1_SECOND,
           );
         }
         debouncedMutateRef.current(
