@@ -111,7 +111,11 @@ const useHandleOnNewValue = ({
         updateNodeState(newNodeClass);
       };
 
-      if (shouldUpdate && changes.value !== undefined) {
+      if (
+        shouldUpdate &&
+        changes.value !== undefined &&
+        changes.value?.length > 10
+      ) {
         if (!debouncedMutateRef.current) {
           debouncedMutateRef.current = debounce(
             async (
