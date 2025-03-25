@@ -338,3 +338,19 @@ class MCPToolsComponent(Component):
         if not self.tools:
             return await self.update_tools()
         return self.tools
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.stdio_client:
+            await self.stdio_client.cleanup()
+        if self.sse_client:
+            await self.sse_client.cleanup()
+
+    async def cleanup(self):
+        """Cleanup method to be called when the component is no longer needed."""
+        if self.stdio_client:
+            await self.stdio_client.cleanup()
+        if self.sse_client:
+            await self.sse_client.cleanup()
