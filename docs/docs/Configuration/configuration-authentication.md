@@ -41,6 +41,48 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 
 This environment variable holds a secret key used for encrypting sensitive data like API keys.
 Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for secret key encryption.
+
+```text
+LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
+```
+
+:::warning
+If no secret key is provided, Langflow automatically generates one. This is not recommended for production environments, especially in multi-instance deployments like Kubernetes, where auto-generated keys can't decrypt data encrypted by other instances.
+:::
+
+To generate a `LANGFLOW_SECRET_KEY`, follow these steps:
+
+1. Run the command to generate and copy a secret to the clipboard.
+
+<Tabs>
+<TabItem value="unix" label="macOS/Linux">
+
+```bash
+# Copy to clipboard (macOS)
+python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
+
+# Copy to clipboard (Linux)
+python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
+
+# Or just print
+python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+```
+</TabItem>
+
+<TabItem value="windows" label="Windows">
+
+```bash
+# Copy to clipboard
+python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
+
+# Or just print
+python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+```
+
+</TabItem>
+</Tabs>
+
+2. Paste the value into your `.env` file:
 ```text
 LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
 ```
@@ -75,12 +117,6 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
 2. Generate a secret key for encrypting sensitive data.
-
-The `LANGFLOW_SECRET_KEY` must be at least 32 bytes long, and URL-safe base64 encoded.
-
-:::warning
-If no secret key is provided, Langflow will automatically generate one. This is not recommended for production environments, especially in multi-instance deployments like Kubernetes, where auto-generated keys won't be able to decrypt data encrypted by other instances.
-:::
 
 Generate your secret key using one of these commands:
 

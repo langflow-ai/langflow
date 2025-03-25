@@ -14,7 +14,7 @@ Generate a user-specific token to use with Langflow.
 
 ### Generate an API key with the Langflow UI
 
-1. Click your user icon and select **Settings**.
+1. Click your user icon, and then select **Settings**.
 2. Click **Langflow API**, and then click **Add New**.
 3. Name your key, and then click **Create Secret Key**.
 4. Copy the API key and store it in a secure location.
@@ -67,11 +67,19 @@ curl -X POST \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
 
+## Generate a Langflow secret key
+
+Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for encrypting sensitive data.
+
+If no `LANGFLOW_SECRET_KEY` is provided, Langflow automatically generates one.
+
+For more information, see [Authentication](/configuration-authentication#langflow_secret_key).
+
 ## Revoke an API key
 
 To revoke an API key, delete it from the list of keys in the **Settings** menu.
 
-1. Click your user icon and select **Settings**.
+1. Click your user icon, and then select **Settings**.
 2. Click **Langflow API**.
 3. Select the keys you want to delete and click the trash can icon.
 
@@ -97,7 +105,7 @@ GOOGLE_API_KEY=...
 
 To add component API keys as **Global variables** with the Langflow UI:
 
-1. Click your user icon and select **Settings**.
+1. Click your user icon, and then select **Settings**.
 2. Click **Langflow API**.
 3. Add new API keys as **Credential** type variables.
 4. Apply them to specific component fields.
