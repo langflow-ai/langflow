@@ -3,7 +3,7 @@ from uuid import UUID
 import orjson
 import pytest
 from httpx import AsyncClient
-from langflow.components.logic.loop import LoopComponent
+from langflow.components.logic import BasicLoopComponent
 from langflow.memory import aget_messages
 from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
@@ -22,7 +22,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return LoopComponent
+        return BasicLoopComponent
 
     @pytest.fixture
     def file_names_mapping(self):
@@ -37,9 +37,9 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             "loop_input": [Data(text=TEXT)],
         }
 
-    def test_latest_version(self, default_kwargs) -> None:
+    def test_latest_version(self, component_class, default_kwargs) -> None:
         """Test that the component works with the latest version."""
-        result = LoopComponent(**default_kwargs)
+        result = component_class(**default_kwargs)
         assert result is not None, "Component returned None for the latest version."
 
     async def _create_flow(self, client, json_loop_test, logged_in_headers):
