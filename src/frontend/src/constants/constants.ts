@@ -1037,3 +1037,14 @@ export const ALL_LANGUAGES = [
   { value: "ar-SA", name: "Arabic" },
   { value: "hi-IN", name: "Hindi" },
 ];
+
+export const DEBOUNCE_FIELD_LIST = [
+  "SecretStrInput",
+  "MessageTextInput",
+  "TextInput",
+  "MultilineInput",
+  "SecretStrInput",
+  "IntInput",
+  "FloatInput",
+  "SliderInput",
+];

@@ -1,3 +1,4 @@
+import { DEBOUNCE_FIELD_LIST } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
@@ -10,7 +11,7 @@ import { cloneDeep, debounce } from "lodash";
 import { useCallback, useMemo, useRef } from "react";
 import { mutateTemplate } from "../helpers/mutate-template";
 
-const DEBOUNCE_TIME_2_SECONDS = 2000;
+const DEBOUNCE_TIME_1_SECOND = 1000;
 
 export type handleOnNewValueType = (
   changes: Partial<InputFieldType>,
@@ -100,6 +101,10 @@ const useHandleOnNewValue = ({
         return;
       }
 
+      const shouldDebounce = DEBOUNCE_FIELD_LIST.includes(
+        parameter?._input_type,
+      );
+
       if (!options?.skipSnapshot) takeSnapshot();
 
       Object.entries(changes).forEach(([key, value]) => {
@@ -131,7 +136,7 @@ const useHandleOnNewValue = ({
                 setErrorDataFn,
               );
             },
-            DEBOUNCE_TIME_2_SECONDS,
+            shouldDebounce ? DEBOUNCE_TIME_1_SECOND : 0,
           );
         }
         debouncedMutateRef.current(
