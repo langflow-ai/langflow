@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-06ywN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-06ywNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-HvHpU{œfieldNameœ:œinput_valueœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-06ywN",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-06ywNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-06ywNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-HvHpU",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-HvHpUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Agent-HvHpU{œdataTypeœ:œAgentœ,œidœ:œAgent-HvHpUœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-B2aUc{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-HvHpU",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-HvHpUœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-HvHpUœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-B2aUc",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-B2aUcœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-TavilySearchComponent-MQ3OZ{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-MQ3OZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-HvHpU{œfieldNameœ:œtoolsœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-MQ3OZ",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-MQ3OZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-MQ3OZœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-HvHpU",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-HvHpUœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-HvHpUœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-OpenAIModel-fMH2t{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fMH2tœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-B2aUc{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-fMH2t",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fMH2tœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-fMH2tœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-B2aUc",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-B2aUcœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-B2aUcœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -138,9 +138,9 @@
         "id": "reactflow__edge-StructuredOutput-B2aUc{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-B2aUcœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-AGEtU{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-AGEtUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-B2aUc",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-B2aUcœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-B2aUcœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-AGEtU",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-AGEtUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-AGEtUœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -168,9 +168,9 @@
         "id": "reactflow__edge-ParserComponent-AGEtU{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-AGEtUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jb7Ju{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jb7Juœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-AGEtU",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-AGEtUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-AGEtUœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-jb7Ju",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jb7Juœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-jb7Juœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -2574,11 +2574,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
