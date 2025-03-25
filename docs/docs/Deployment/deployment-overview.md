@@ -24,43 +24,15 @@ The **runtime** is a headless or backend-only mode. The server exposes your flow
 
 To package your flow as a Docker image, copy your flow's `.JSON` file with a command in the Dockerfile.
 
-For example, if you have your flow stored in a directory like this:
-
-```text
-LANGFLOW-APPLICATION/
-├── flows/
-│   ├── flow1.json
-│   └── flow2.json
-├── Dockerfile
-```
-
-Include the `COPY` command in your Dockerfile:
-
-```dockerfile
-FROM langflowai/langflow-backend
-RUN mkdir -p /app/flows
-COPY ./flows/*.json /app/flows/
-```
-
 An example [Dockerfile](https://github.com/langflow-ai/langflow-helm-charts/blob/main/examples/langflow-runtime/docker/Dockerfile) for bundling flows is hosted in the Langflow Helm Charts repository.
 
 For more on building the Langflow docker image and pushing it to Docker Hub, see [Package your flow as a docker image](/deployment-docker#package-your-flow-as-a-docker-image).
 
 ## Deploy to Kubernetes
 
-Override the values in the [langflow-runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/Chart.yaml) Helm chart to deploy the application.
-
-```text
-helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
-helm repo update
-helm install langflow-runtime langflow/langflow-runtime \
-    --set "image.repository=myuser/langflow-hello-world" \
-    --set "image.tag=1.0.0"\
-```
+After your flow is packaged as a Docker image and available on Docker Hub, deploy your application by overriding the values in the [langflow-runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/Chart.yaml) Helm chart.
 
 For more information, refer to [Deploy Langflow on Kubernetes](/deployment-kubernetes).
-
-For more detailed information about database configuration, see [Configure an external PostgreSQL database](/configuration-custom-database).
 
 
 
