@@ -19,7 +19,7 @@ It looks like `postgresql://user:password@host:port/dbname`.
 
 The hostname in your connection string will depend on how you're running PostgreSQL.
 - If you're running PostgreSQL directly on your machine, use `localhost`.
-- If you're running PostgreSQL in Docker Compose, use the service name (e.g., `postgres`).
+- If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
 - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
 
 2. Create a `.env` file for configuring Langflow.
@@ -176,7 +176,7 @@ langflow=# SELECT * FROM pg_stat_activity WHERE datname = 'langflow';
 
 6. Examine the query results for multiple connections with different `client_addr` values, for example `172.21.0.3` and `172.21.0.4`.
 
-Since each Langflow instance runs in its own container on the Docker network, different incoming IP addresses confirms that both instances are actively connected to the PostgreSQL database.
+Since each Langflow instance runs in its own container on the Docker network, using different incoming IP addresses confirms that both instances are actively connected to the PostgreSQL database.
 
 7. To quit psql, type `quit`.
 
