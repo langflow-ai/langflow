@@ -66,7 +66,7 @@ services:
       - postgres
     environment:
       - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
-      # This variable defines where the logs, file storage, monitor data and secret keys are stored.
+      # This variable defines where the logs, file storage, monitor data, and secret keys are stored.
       - LANGFLOW_CONFIG_DIR=app/langflow
     volumes:
       - langflow-data:/app/langflow
@@ -95,7 +95,7 @@ Docker Compose creates an isolated network for all services defined in the docke
 
 To configure multiple Langflow instances that share the same PostgreSQL database, modify your `docker-compose.yml` file to include multiple Langflow services.
 
-Use environment variables for better configuration management:
+Use environment variables for more centralized configuration management:
 
 1. Update your `.env` file with values for your PostgreSQL database:
 ```text
@@ -109,7 +109,6 @@ LANGFLOW_PORT_1=7860
 LANGFLOW_PORT_2=7861
 LANGFLOW_HOST=0.0.0.0
 ```
-
 2. Reference these variables in your `docker-compose.yml`:
 ```yaml
 services:
@@ -179,7 +178,3 @@ langflow=# SELECT * FROM pg_stat_activity WHERE datname = 'langflow';
 Since each Langflow instance runs in its own container on the Docker network, using different incoming IP addresses confirms that both instances are actively connected to the PostgreSQL database.
 
 7. To quit psql, type `quit`.
-
-
-
-
