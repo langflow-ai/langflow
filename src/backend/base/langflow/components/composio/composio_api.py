@@ -116,7 +116,7 @@ class ComposioAPIComponent(LCToolComponent):
                         build_config["actions"]["helper_text"] = "Please connect before selecting tools."
                         build_config["actions"]["helper_text_metadata"] = {
                             "icon": "OctagonAlert",
-                            "variant": "destructive"
+                            "variant": "destructive",
                         }
 
                         return build_config
@@ -127,7 +127,8 @@ class ComposioAPIComponent(LCToolComponent):
                     # Get the index of the selected tool in the list of options
                     selected_tool_index = next(
                         (
-                            ind for ind, tool in enumerate(build_config["tool_name"]["options"])
+                            ind
+                            for ind, tool in enumerate(build_config["tool_name"]["options"])
                             if tool["name"] == field_value["validate"]
                         ),
                         None,
@@ -138,10 +139,7 @@ class ComposioAPIComponent(LCToolComponent):
 
                     # Set the helper text and helper text metadata field of the actions now
                     build_config["actions"]["helper_text"] = ""
-                    build_config["actions"]["helper_text_metadata"] = {
-                        "icon": "Check",
-                        "variant": "success"
-                    }
+                    build_config["actions"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
                 else:
                     return build_config
 
@@ -177,7 +175,8 @@ class ComposioAPIComponent(LCToolComponent):
                 # Get the index of the selected tool in the list of options
                 selected_tool_index = next(
                     (
-                        ind for ind, tool in enumerate(build_config["tool_name"]["options"])
+                        ind
+                        for ind, tool in enumerate(build_config["tool_name"]["options"])
                         if tool["name"] == field_value
                     ),
                     None,
@@ -188,10 +187,7 @@ class ComposioAPIComponent(LCToolComponent):
 
                 # Set the helper text and helper text metadata field of the actions now
                 build_config["actions"]["helper_text"] = "Please connect before selecting tools."
-                build_config["actions"]["helper_text_metadata"] = {
-                    "icon": "OctagonAlert",
-                    "variant": "destructive"
-                }
+                build_config["actions"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
 
                 # Reset the list of actions selected too
                 build_config["actions"]["options"] = []
