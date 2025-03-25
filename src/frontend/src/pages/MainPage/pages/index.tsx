@@ -1,4 +1,3 @@
-import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
@@ -11,7 +10,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
-import useFileDrop from "../hooks/use-on-file-drop";
 import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
@@ -21,7 +19,6 @@ export default function CollectionPage(): JSX.Element {
   const navigate = useCustomNavigate();
   const flows = useFlowsManagerStore((state) => state.flows);
   const examples = useFlowsManagerStore((state) => state.examples);
-  const handleFileDrop = useFileDrop("flow");
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
@@ -70,6 +67,9 @@ export default function CollectionPage(): JSX.Element {
               setFolderToEdit(item);
               setOpenDeleteFolderModal(true);
             }}
+            handleFilesClick={() => {
+              navigate("files");
+            }}
           />
         )}
       <main className="flex h-full w-full overflow-hidden">
@@ -77,16 +77,11 @@ export default function CollectionPage(): JSX.Element {
           <div
             className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}
           >
-            <CardsWrapComponent
-              onFileDrop={handleFileDrop}
-              dragMessage={`Drop your file(s) here`}
-            >
-              {flows?.length !== examples?.length || folders?.length > 1 ? (
-                <Outlet />
-              ) : (
-                <EmptyPage setOpenModal={setOpenModal} />
-              )}
-            </CardsWrapComponent>
+            {flows?.length !== examples?.length || folders?.length > 1 ? (
+              <Outlet />
+            ) : (
+              <EmptyPage setOpenModal={setOpenModal} />
+            )}
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center">

@@ -90,6 +90,7 @@ export type InputFieldType = {
   [key: string]: any;
   icon?: string;
   text?: string;
+  temp_file?: boolean;
 };
 
 export type OutputFieldProxyType = {
@@ -244,13 +245,17 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
-export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+export type useQueryFunctionType<
+  T = undefined,
+  R = any,
+  O = {},
+> = T extends undefined
   ? (
-      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey"> & O,
     ) => UseQueryResult<R>
   : (
       params: T,
-      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey"> & O,
     ) => UseQueryResult<R>;
 
 export type QueryFunctionType = (

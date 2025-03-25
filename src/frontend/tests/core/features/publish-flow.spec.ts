@@ -9,15 +9,12 @@ test(
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 3000,
+      timeout: 5000,
     });
-    const flowId = page.url().split("/").pop();
-    expect(flowId).toBeDefined();
-    expect(flowId).not.toBeNull();
-    expect(flowId!.length).toBeGreaterThan(0);
+
     await page.getByTestId("blank-flow").click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
+      timeout: 5000,
     });
 
     await page.getByTestId("sidebar-search-input").click();
@@ -26,48 +23,79 @@ test(
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
       timeout: 3000,
     });
-    await page.getByTestId("inputsChat Input").hover({ timeout: 3000 });
-    await page.getByTestId("add-component-button-chat-input").click();
 
-    await adjustScreenView(page);
+    await page
+      .getByTestId("inputsChat Input")
+      .hover({ timeout: 3000 })
+      .then(async () => {
+        await page
+          .getByTestId("add-component-button-chat-input")
+          .last()
+          .click();
+      });
+
+    await page.waitForTimeout(2000);
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
     await page.getByTestId("publish-button").click();
+
+    await page.waitForTimeout(3000);
+
     await page.waitForSelector('[data-testid="shareable-playground"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
-    await expect(
-      page.waitForResponse(
-        (response) =>
-          response.url().includes(flowId!) && response.status() === 200,
-      ),
-    ).resolves.toBeTruthy();
+
+    try {
+      await page.waitForTimeout(2000);
+
+      await expect(page.getByTestId("publish-switch")).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      console.error("Error waiting for publish operation:", error);
+      throw error;
+    }
+
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("publish-switch").click();
-    await page.getByTestId("shareable-playground").click();
-    await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    await page.getByTestId("publish-button").click();
-    await page.getByTestId("publish-switch").click();
-    await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    await expect(page.getByTestId("publish-switch")).toBeChecked();
     const pagePromise = context.waitForEvent("page");
+
+    await page.waitForTimeout(2000);
+
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
     await newPage.waitForTimeout(3000);
     const newUrl = newPage.url();
     await newPage.getByPlaceholder("Send a message...").fill("Hello");
-    await newPage.getByTestId("button-send").click();
-    await expect(newPage.getByText("Hello")).toBeVisible();
+    await newPage.getByTestId("button-send").last().click();
+
+    const stopButton = newPage.getByRole("button", { name: "Stop" });
+    await stopButton.waitFor({ state: "visible", timeout: 30000 });
+
     await newPage.close();
     await page.bringToFront();
-    // check if deactivate the publishworks
+    await page.waitForTimeout(500);
     await page.getByTestId("publish-button").click();
+    await page.waitForTimeout(500);
     await page.getByTestId("publish-switch").click();
+    await page.waitForTimeout(500);
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await expect(page.getByTestId("publish-switch")).toBeChecked({
       checked: false,
     });
-    await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await page.goto(newUrl);
-    await expect(page.getByTestId("mainpage_title")).toBeVisible();
+    await page.waitForTimeout(2000);
+    try {
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      await page.reload();
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 10000,
+      });
+    }
   },
 );

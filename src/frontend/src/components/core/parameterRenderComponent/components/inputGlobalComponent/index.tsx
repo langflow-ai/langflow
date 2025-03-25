@@ -2,8 +2,10 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
+import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import DeleteConfirmationModal from "../../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../../stores/alertStore";
 import { cn } from "../../../../../utils/utils";
@@ -25,17 +27,15 @@ export default function InputGlobalComponent({
   editNode = false,
   placeholder,
   isToolMode = false,
+  hasRefreshButton = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
   const { data: globalVariables } = useGetGlobalVariables();
-  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );
 
   useEffect(() => {
-    if (globalVariables) {
+    if (globalVariables && !disabled) {
       if (
         load_from_db &&
         !globalVariables.find((variable) => variable.name === value)
@@ -57,33 +57,11 @@ export default function InputGlobalComponent({
         );
       }
     }
-  }, [globalVariables, unavailableFields]);
+  }, [globalVariables, unavailableFields, disabled]);
 
-  async function handleDelete(key: string) {
-    if (!globalVariables) return;
-    const id = globalVariables.find((variable) => variable.name === key)?.id;
-    if (id !== undefined) {
-      mutateDeleteGlobalVariable(
-        { id },
-        {
-          onSuccess: () => {
-            if (value === key && load_from_db) {
-              handleOnNewValue({ value: "", load_from_db: false });
-            }
-          },
-          onError: () => {
-            setErrorData({
-              title: "Error deleting variable",
-              list: [cn("ID not found for variable: ", key)],
-            });
-          },
-        },
-      );
-    } else {
-      setErrorData({
-        title: "Error deleting variable",
-        list: [cn("ID not found for variable: ", key)],
-      });
+  function handleDelete(key: string) {
+    if (value === key && load_from_db) {
+      handleOnNewValue({ value: "", load_from_db: false });
     }
   }
 
@@ -101,7 +79,7 @@ export default function InputGlobalComponent({
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
-        <GlobalVariableModal disabled={disabled}>
+        <GlobalVariableModal referenceField={display_name} disabled={disabled}>
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"
@@ -113,30 +91,10 @@ export default function InputGlobalComponent({
         </GlobalVariableModal>
       }
       optionButton={(option) => (
-        <DeleteConfirmationModal
-          onConfirm={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            handleDelete(option);
-          }}
-          description={'variable "' + option + '"'}
-          asChild
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            className="pr-1"
-          >
-            <ForwardedIconComponent
-              name="Trash2"
-              className={cn(
-                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
-              )}
-              aria-hidden="true"
-            />
-          </button>
-        </DeleteConfirmationModal>
+        <GeneralDeleteConfirmationModal
+          option={option}
+          onConfirmDelete={() => handleDelete(option)}
+        />
       )}
       selectedOption={
         load_from_db &&
@@ -158,6 +116,7 @@ export default function InputGlobalComponent({
         );
       }}
       isToolMode={isToolMode}
+      hasRefreshButton={hasRefreshButton}
     />
   );
 }

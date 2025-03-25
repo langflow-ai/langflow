@@ -72,6 +72,7 @@ export function ParameterRenderComponent({
       isToolMode,
       nodeId,
       nodeInformationMetadata,
+      hasRefreshButton: templateData.refresh_button,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
@@ -166,6 +167,9 @@ export function ParameterRenderComponent({
           <InputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
+            file_path={templateData.file_path}
+            isList={templateData.list ?? false}
+            tempFile={templateData.temp_file ?? false}
             id={`inputfile_${id}`}
           />
         );
