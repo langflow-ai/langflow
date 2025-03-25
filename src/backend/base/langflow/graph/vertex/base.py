@@ -270,32 +270,6 @@ class Vertex:
                     self.base_type = base_type
                     break
 
-    def __getattr__(self, name: str) -> Any:
-        """Get attribute from vertex.
-
-        Args:
-            name (str): Name of attribute.
-
-        Returns:
-            Any: Value of attribute.
-        """
-        # First check if this is a loop input
-        if name in self.output_names and any(
-            getattr(output, "allows_loop", False) and output.name == name for output in self.outputs
-        ):
-            # For loop inputs, we want to get the input value from params if it exists
-            if name in self.params:
-                return self.params[name]
-            # If not in params, try getting from connected edges
-            return self.get_value_from_output_names(name)
-
-        # Then check if it's a regular output
-        if name in self.output_names:
-            return self.get_value_from_output_names(name)
-
-        msg = f"Vertex {self.id} has no attribute {name}"
-        raise AttributeError(msg)
-
     def get_value_from_output_names(self, key: str) -> Any:
         """Get value from output names.
 

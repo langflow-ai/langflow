@@ -718,12 +718,24 @@ class Component(CustomComponent):
 
         return await self.build_results()
 
-    def __getattr__(self, name: str) -> Any:
+    def get_loop_output_value(self, name: str) -> Any:
+        """Get the value of an output that allows looping.
+
+        Args:
+            name (str): The name of the output to check.
+
+        Returns:
+            Any: The value from the vertex if the output allows looping,
+                 otherwise returns None.
+        """
         if hasattr(self, "_vertex") and any(
             getattr(output, "allows_loop", False) and output.name == name for output in getattr(self, "outputs", [])
         ):
-            # Get the value through the vertex
             return self._vertex.get_value_from_output_names(name)
+        return None
+
+    def __getattr__(self, name: str) -> Any:
+        # First check if it's a loop output
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             # It is a dict of attributes that are not inputs or outputs all the raw data it should have the loop input.
             return self.__dict__["_attributes"][name]
