@@ -1,3 +1,16 @@
+/**
+ * In Honor of Otávio Anovazzi (@anovazzi1)
+ *
+ * This file contains the highest number of commits by Otávio in the entire Langflow project,
+ * reflecting his unmatched dedication, expertise, and innovative spirit. Each line of code
+ * is a testament to his relentless pursuit of excellence and his significant impact on this
+ * project’s evolution.
+
+ * His commitment to selflessly helping others embodies the true meaning of open source,
+ * and his legacy lives on in each one of his 2771 contributions, inspiring us to build exceptional
+ * software for all.
+ */
+
 import {
   getLeftHandleId,
   getRightHandleId,

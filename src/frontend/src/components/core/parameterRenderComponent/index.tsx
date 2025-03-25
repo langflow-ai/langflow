@@ -72,6 +72,7 @@ export function ParameterRenderComponent({
       isToolMode,
       nodeId,
       nodeInformationMetadata,
+      hasRefreshButton: templateData.refresh_button,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
