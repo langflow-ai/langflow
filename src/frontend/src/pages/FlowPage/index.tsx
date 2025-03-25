@@ -33,8 +33,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     (currentFlow?.data?.nodes?.length ?? 0) > 0;
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const blocker = useBlocker(({currentLocation, nextLocation}) => (changesNotSaved || isBuilding) && 
-    !checkIsPlaygroundModalNavigation(currentLocation, nextLocation));
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      (changesNotSaved || isBuilding) &&
+      !checkIsPlaygroundModalNavigation(currentLocation, nextLocation),
+  );
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
@@ -86,8 +89,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   };
 
   const checkIsPlaygroundModalNavigation = (currentLocation, nextLocation) => {
-    return nextLocation.search.includes('playground') && 
-          currentLocation.pathname === nextLocation.pathname;
+    return (
+      nextLocation.search.includes("playground") &&
+      currentLocation.pathname === nextLocation.pathname
+    );
   };
 
   useEffect(() => {

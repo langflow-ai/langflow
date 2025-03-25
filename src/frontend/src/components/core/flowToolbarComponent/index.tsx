@@ -9,6 +9,7 @@ import { track } from "@/customization/utils/analytics";
 import { Panel } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useSearchParams } from "react-router-dom";
 import ApiModal from "../../../modals/apiModal";
 import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";
@@ -17,11 +18,9 @@ import { useStoreStore } from "../../../stores/storeStore";
 import { classNames, cn, isThereModal } from "../../../utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import FlowToolbarOptions from "./components/flow-toolbar-options";
-import { useSearchParams } from "react-router-dom";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
-  
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
@@ -30,12 +29,12 @@ export default function FlowToolbar(): JSX.Element {
     if (isThereModal() && !openCodeModal) return;
     setOpenCodeModal((oldOpen) => !oldOpen);
   }
-  
+
   const open = searchParams.get("playground") === "true";
 
-  function setOpen (isOpen: boolean) {
-    setSearchParams({playground: isOpen ? 'true':'false'})
-   }
+  function setOpen(isOpen: boolean) {
+    setSearchParams({ playground: isOpen ? "true" : "false" });
+  }
 
   function handleChatWShortcut(e: KeyboardEvent) {
     if (isThereModal() && !open) return;
