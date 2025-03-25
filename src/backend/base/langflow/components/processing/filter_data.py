@@ -9,6 +9,7 @@ class FilterDataComponent(Component):
     icon = "filter"
     beta = True
     name = "FilterData"
+    legacy = True
 
     inputs = [
         DataInput(
