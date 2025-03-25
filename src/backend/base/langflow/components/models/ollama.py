@@ -49,7 +49,7 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Seed",
             info="The seed controls the reproducibility of the job. (0 = disabled)",
             advanced=True,
-            value=0
+            value=0,
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
@@ -179,8 +179,8 @@ class ChatOllamaComponent(LCModelComponent):
             "template": self.template,
         }
         if self.seed != 0:
-           llm_params["seed"] = self.seed
-        
+            llm_params["seed"] = self.seed
+
         # Remove parameters with None values
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
 
