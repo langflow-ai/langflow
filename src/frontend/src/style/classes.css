@@ -18,8 +18,8 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 pre {
   font-family: inherit;
@@ -288,7 +288,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .markdown td {
-  min-width: 78px;
+  min-width: 100px;
 }
 
 .jse-group-button.jse-last,
