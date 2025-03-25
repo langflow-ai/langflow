@@ -25,9 +25,9 @@
         "id": "reactflow__edge-OpenAIModel-fzcOD{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fzcODœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-4Y6c6{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-4Y6c6œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-fzcOD",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fzcODœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-fzcODœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-4Y6c6",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-4Y6c6œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-4Y6c6œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-pqWo4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-pqWo4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-4Y6c6{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-4Y6c6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-pqWo4",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-pqWo4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-pqWo4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-4Y6c6",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-4Y6c6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-4Y6c6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "xy-edge__StructuredOutput-4Y6c6{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-4Y6c6œ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-54sQs{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-54sQsœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-4Y6c6",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-4Y6c6œ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-4Y6c6œ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-54sQs",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-54sQsœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-54sQsœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "xy-edge__ParserComponent-54sQs{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-54sQsœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-S5wVG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-S5wVGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-54sQs",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-54sQsœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-54sQsœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-S5wVG",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-S5wVGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-S5wVGœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1515,11 +1515,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

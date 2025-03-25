@@ -25,9 +25,9 @@
         "id": "reactflow__edge-TextInput-8LXxa{œdataTypeœ:œTextInputœ,œidœ:œTextInput-8LXxaœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-RAzrC{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-RAzrCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-8LXxa",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-8LXxaœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-8LXxaœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-RAzrC",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-RAzrCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-RAzrCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-AnthropicModel-EMQe4{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-EMQe4œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-noai8{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-noai8œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AnthropicModel-EMQe4",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-EMQe4œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-EMQe4œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-noai8",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-noai8œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-noai8œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "xy-edge__ParserComponent-NWDzf{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-NWDzfœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-noai8{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-noai8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-NWDzf",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-NWDzfœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-NWDzfœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-noai8",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-noai8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-noai8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "xy-edge__File-BcXVv{œdataTypeœ:œFileœ,œidœ:œFile-BcXVvœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-NWDzf{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-NWDzfœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-BcXVv",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-BcXVvœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-BcXVvœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-NWDzf",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-NWDzfœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-NWDzfœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -136,9 +136,9 @@
         },
         "id": "xy-edge__StructuredOutput-noai8{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-noai8œ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-ublKS{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ublKSœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "source": "StructuredOutput-noai8",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-noai8œ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-noai8œ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-ublKS",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ublKSœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-ublKSœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -161,9 +161,9 @@
         },
         "id": "xy-edge__ParserComponent-ublKS{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ublKSœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-RAzrC{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-RAzrCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ParserComponent-ublKS",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ublKSœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-ublKSœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-RAzrC",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-RAzrCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-RAzrCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -188,9 +188,9 @@
         },
         "id": "xy-edge__AnthropicModel-RAzrC{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-RAzrCœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PN9tg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PN9tgœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "AnthropicModel-RAzrC",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-RAzrCœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-RAzrCœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-PN9tg",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PN9tgœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-PN9tgœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -677,10 +677,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -693,10 +691,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],
@@ -1466,11 +1462,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Structured Output",
-                "hidden": null,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1482,11 +1475,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "hidden": null,
                 "method": "as_dataframe",
                 "name": "structured_output_dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2148,11 +2138,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2165,24 +2152,6 @@
             "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Clean Data",
-                "dynamic": false,
-                "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -2280,7 +2249,7 @@
                 "multiline": true,
                 "name": "template",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": false,
                 "title_case": false,
                 "tool_mode": false,
@@ -2342,11 +2311,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-vqIEv{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vqIEvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AT71j{œfieldNameœ:œquestionœ,œidœ:œPrompt-AT71jœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-vqIEv",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vqIEvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vqIEvœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-AT71j",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-AT71jœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-AT71jœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-File-lYDis{œdataTypeœ:œFileœ,œidœ:œFile-lYDisœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-SaZmq{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-SaZmqœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-lYDis",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-lYDisœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-lYDisœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "SplitText-SaZmq",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-SaZmqœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-SaZmqœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Prompt-AT71j{œdataTypeœ:œPromptœ,œidœ:œPrompt-AT71jœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Tql1w{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Tql1wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-AT71j",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-AT71jœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AT71jœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-Tql1w",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Tql1wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Tql1wœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-OpenAIModel-Tql1w{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Tql1wœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-THzTx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-THzTxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-Tql1w",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Tql1wœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Tql1wœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-THzTx",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-THzTxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-THzTxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -141,9 +141,9 @@
         "id": "reactflow__edge-OpenAIEmbeddings-GsM3H{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-GsM3Hœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-7xeiL{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-7xeiLœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIEmbeddings-GsM3H",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-GsM3Hœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-GsM3Hœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDB-7xeiL",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-7xeiLœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-7xeiLœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -170,9 +170,9 @@
         "id": "reactflow__edge-SplitText-SaZmq{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-SaZmqœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-7xeiL{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-7xeiLœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-SaZmq",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-SaZmqœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-SaZmqœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
         "target": "AstraDB-7xeiL",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-7xeiLœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-7xeiLœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -198,9 +198,9 @@
         "id": "reactflow__edge-OpenAIEmbeddings-fd83B{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-fd83Bœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-srnJH{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-srnJHœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIEmbeddings-fd83B",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-fd83Bœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-fd83Bœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDB-srnJH",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-srnJHœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-srnJHœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -226,9 +226,9 @@
         "id": "reactflow__edge-ChatInput-vqIEv{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vqIEvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-srnJH{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-srnJHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-vqIEv",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vqIEvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vqIEvœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-srnJH",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-srnJHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-srnJHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -255,9 +255,9 @@
         "id": "xy-edge__AstraDB-srnJH{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-srnJHœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-Sgm28{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Sgm28œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AstraDB-srnJH",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-srnJHœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-srnJHœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-Sgm28",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Sgm28œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-Sgm28œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -283,9 +283,9 @@
         "id": "xy-edge__ParserComponent-Sgm28{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Sgm28œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-AT71j{œfieldNameœ:œcontextœ,œidœ:œPrompt-AT71jœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-Sgm28",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Sgm28œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-Sgm28œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-AT71j",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-AT71jœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-AT71jœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -3203,10 +3203,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Search Results",
-                "hidden": null,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
                 "required_inputs": [
                   "collection_name",
                   "database_name",
@@ -3223,10 +3221,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "hidden": null,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
                 "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
@@ -3242,8 +3238,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -3590,9 +3584,7 @@
                 "dynamic": false,
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
-                "options": [
-                  "TestRAG"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "api_endpoint": "https://0c50eb2b-9bfe-4ba6-84d2-e76ac21baab2-us-east-2.apps.astra.datastax.com",
@@ -3657,7 +3649,7 @@
               },
               "embedding_model": {
                 "_input_type": "HandleInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
@@ -3942,10 +3934,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Search Results",
-                "hidden": null,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
                 "required_inputs": [
                   "collection_name",
                   "database_name",
@@ -3962,10 +3952,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "hidden": null,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
                 "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
@@ -3981,8 +3969,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -4316,9 +4302,7 @@
                 "dynamic": false,
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
-                "options": [
-                  "TestRAG"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "api_endpoint": "https://0c50eb2b-9bfe-4ba6-84d2-e76ac21baab2-us-east-2.apps.astra.datastax.com",
@@ -4654,11 +4638,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

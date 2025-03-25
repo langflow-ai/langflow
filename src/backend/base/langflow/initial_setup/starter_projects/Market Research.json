@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-Kf5Vr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Kf5Vrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-hza5w{œfieldNameœ:œinput_valueœ,œidœ:œAgent-hza5wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-Kf5Vr",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Kf5Vrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Kf5Vrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-hza5w",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-hza5wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-hza5wœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Agent-hza5w{œdataTypeœ:œAgentœ,œidœ:œAgent-hza5wœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-hInqO{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-hInqOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-hza5w",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-hza5wœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-hza5wœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutputComponent-hInqO",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-hInqOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-hInqOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-TavilySearchComponent-gNipG{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-gNipGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-hza5w{œfieldNameœ:œtoolsœ,œidœ:œAgent-hza5wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-gNipG",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-gNipGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-gNipGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-hza5w",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-hza5wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-hza5wœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-OpenAIModel-UHaZL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-UHaZLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-hInqO{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-hInqOœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-UHaZL",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-UHaZLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-UHaZLœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutputComponent-hInqO",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-hInqOœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-hInqOœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -138,9 +138,9 @@
         "id": "xy-edge__StructuredOutputComponent-hInqO{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutputComponent-hInqOœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-buGH9{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-buGH9œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutputComponent-hInqO",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutputComponent-hInqOœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutputComponent-hInqOœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-buGH9",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-buGH9œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-buGH9œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -168,9 +168,9 @@
         "id": "xy-edge__ParserComponent-buGH9{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-buGH9œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lAYA5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lAYA5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-buGH9",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-buGH9œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-buGH9œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-lAYA5",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lAYA5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lAYA5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -900,7 +900,7 @@
             "description": "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information or creating consistent outputs.",
             "display_name": "Structured Output",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "llm",
               "input_value",
@@ -921,11 +921,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Structured Output",
-                "hidden": null,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -937,11 +934,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "hidden": null,
                 "method": "as_dataframe",
                 "name": "structured_output_dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2686,11 +2680,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
