@@ -1,5 +1,5 @@
 ---
-title: Langflow deployment concepts
+title: Langflow deployment overview
 slug: /deployment-overview
 ---
 
