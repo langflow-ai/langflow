@@ -143,9 +143,9 @@ export default function PublishDropdown() {
                 !hasIO ? "cursor-not-allowed" : "",
                 "flex items-center",
               )}
+              data-testid="shareable-playground"
             >
               <DropdownMenuItem
-                data-testid="shareable-playground"
                 disabled={!hasIO || !isPublished}
                 className="deploy-dropdown-item group flex-1"
                 onClick={() => {

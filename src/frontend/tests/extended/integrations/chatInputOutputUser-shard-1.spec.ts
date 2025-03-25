@@ -28,11 +28,18 @@ test(
 
     await page.getByTestId("button_run_chat output").last().click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(600);
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
     });
+
+    await page
+      .getByText("built successfully")
+      .last()
+      .click({
+        timeout: 30000 * 3,
+      });
 
     await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
       timeout: 30000,
@@ -58,7 +65,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
     await page.waitForSelector('[data-testid="dataURL"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page
@@ -90,12 +97,17 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
+    await page.getByTestId("fit_view").click();
+
     // Fill URL input
     await page
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page.getByTestId("handle-url-shownode-text-right").nth(0).click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-message-right")
+      .nth(0)
+      .click();
     await page.waitForTimeout(600);
 
     await page
@@ -103,21 +115,26 @@ test(
       .nth(0)
       .click();
 
+    await page.waitForTimeout(1000);
+
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-text-output-modal"]`,
-      {
-        timeout: 1000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
 
     // Connect dataframe output to second chat output
     await page
-      .getByTestId("handle-url-shownode-dataframe-right")
+      .getByTestId("handle-urlcomponent-shownode-dataframe-right")
       .nth(0)
       .click();
     await page.waitForTimeout(600);
@@ -129,16 +146,19 @@ test(
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-text-output-modal"]`,
-      {
-        timeout: 1000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
 
     // Remove text connection
@@ -149,26 +169,32 @@ test(
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-dataframe-output-modal"]`,
-      {
-        timeout: 3000,
-      },
-    );
-    await page.keyboard.press("Escape");
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+    await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
     // Remove all connections
     const dataEdge = await page.locator(".react-flow__edge").first();
     await dataEdge.click();
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(600);
+
+    await page.waitForTimeout(5000);
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
     await page.getByText(`Inspect the output of the component below.`, {

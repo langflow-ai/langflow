@@ -1,5 +1,5 @@
 ---
-title:  Integrate Nvidia Ingest with Langflow
+title:  Integrate NVIDIA Ingest with Langflow
 slug: /integrations-nvidia-ingest
 ---
 
