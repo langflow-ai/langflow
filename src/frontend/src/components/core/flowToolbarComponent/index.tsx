@@ -17,21 +17,30 @@ import { useStoreStore } from "../../../stores/storeStore";
 import { classNames, cn, isThereModal } from "../../../utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import FlowToolbarOptions from "./components/flow-toolbar-options";
+import { useSearchParams } from "react-router-dom";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
-  const [open, setOpen] = useState<boolean>(false);
+  
+
+  const [searchParams, setSearchParams] = useSearchParams();
   const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
   const [openShareModal, setOpenShareModal] = useState<boolean>(false);
   function handleAPIWShortcut(e: KeyboardEvent) {
     if (isThereModal() && !openCodeModal) return;
     setOpenCodeModal((oldOpen) => !oldOpen);
   }
+  
+  const open = searchParams.get("playground") === "true";
+
+  function setOpen (isOpen: boolean) {
+    setSearchParams({playground: isOpen ? 'true':'false'})
+   }
 
   function handleChatWShortcut(e: KeyboardEvent) {
     if (isThereModal() && !open) return;
     if (useFlowStore.getState().hasIO) {
-      setOpen((oldState) => !oldState);
+      setOpen(!open);
     }
   }
 
