@@ -5,7 +5,7 @@ import { getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 import Loading from "../../ui/loading";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export const ForwardedIconComponent = memo(
   forwardRef(
@@ -28,7 +28,7 @@ export const ForwardedIconComponent = memo(
       useEffect(() => {
         // Reset error state when icon name changes
         setIconError(false);
-        
+
         const timer = setTimeout(() => {
           setShowFallback(true);
         }, 30);
@@ -38,9 +38,9 @@ export const ForwardedIconComponent = memo(
 
       // Get the lazy-loaded icon component
       let TargetIcon;
-      
+
       // Only try to load an icon if we have a name
-      if (name && typeof name === 'string') {
+      if (name && typeof name === "string") {
         try {
           TargetIcon = getNodeIcon(name);
         } catch (error) {
@@ -63,9 +63,15 @@ export const ForwardedIconComponent = memo(
       if (!TargetIcon || iconError) {
         // Return a placeholder div or null depending on settings
         return skipFallback ? null : (
-          <div 
+          <div
             className={cn(className, "flex items-center justify-center")}
-            data-testid={dataTestId ? dataTestId : id ? `${id}-placeholder` : `icon-placeholder`}
+            data-testid={
+              dataTestId
+                ? dataTestId
+                : id
+                  ? `${id}-placeholder`
+                  : `icon-placeholder`
+            }
           />
         );
       }
