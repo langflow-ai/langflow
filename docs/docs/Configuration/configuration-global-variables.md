@@ -163,7 +163,7 @@ LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false
 
 :::
 
-### Default environment variables
+## Default environment variables
 
 Langflow automatically detects and converts some environment variables into global variables of the type **Credential**, which are applied to the specific fields in components that require them. Currently, the following variables are supported:
 
