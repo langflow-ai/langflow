@@ -6,8 +6,8 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { AllNodeType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { useCallback, useMemo } from "react";
+import { cloneDeep, debounce } from "lodash";
+import { useCallback, useMemo, useRef } from "react";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 export type handleOnNewValueType = (
@@ -72,7 +72,8 @@ const useHandleOnNewValue = ({
     [nodeId, setNode, updateNodeInternals],
   );
 
-  // Memoize the handleOnNewValue function
+  const debouncedMutateRef = useRef<any>(null);
+
   const handleOnNewValue: handleOnNewValueType = useCallback(
     async (changes, options?) => {
       const newNode = cloneDeep(node);
@@ -111,7 +112,27 @@ const useHandleOnNewValue = ({
       };
 
       if (shouldUpdate && changes.value !== undefined) {
-        await mutateTemplate(
+        if (!debouncedMutateRef.current) {
+          debouncedMutateRef.current = debounce(
+            async (
+              value,
+              node,
+              setNodeClassFn,
+              postTemplateFn,
+              setErrorDataFn,
+            ) => {
+              await mutateTemplate(
+                value,
+                node,
+                setNodeClassFn,
+                postTemplateFn,
+                setErrorDataFn,
+              );
+            },
+            2000,
+          );
+        }
+        debouncedMutateRef.current(
           changes.value,
           newNode,
           setNodeClass,
