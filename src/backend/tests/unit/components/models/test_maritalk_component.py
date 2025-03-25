@@ -1,13 +1,12 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from typing import Dict, Any, List
-
-
 from langflow.components.models import MaritalkModelComponent
 from langflow.components.models.maritalk import DEFAULT_MODELS, MARITACA_API_URL, REQUEST_TIMEOUT
-from tests.base import ComponentTestBaseWithClient, SUPPORTED_VERSIONS, DID_NOT_EXIST
+
+from tests.base import DID_NOT_EXIST, SUPPORTED_VERSIONS, ComponentTestBaseWithClient
 
 
 @pytest.mark.usefixtures("client")
@@ -37,11 +36,7 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
 
     @pytest.mark.parametrize("version", SUPPORTED_VERSIONS)
     def test_component_versions(
-        self,
-        version: str,
-        default_kwargs: Dict[str, Any],
-        file_names_mapping: List[Dict[str, str]],
-        component_class
+        self, version: str, default_kwargs: dict[str, Any], file_names_mapping: list[dict[str, str]], component_class
     ) -> None:
         """Test if the component works across different versions, with minimal validation."""
         version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
@@ -74,9 +69,7 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
 
         # Assertions
         mock_get.assert_called_once_with(
-            MARITACA_API_URL,
-            headers={"Authorization": f"Key {default_kwargs['api_key']}"},
-            timeout=REQUEST_TIMEOUT
+            MARITACA_API_URL, headers={"Authorization": f"Key {default_kwargs['api_key']}"}, timeout=REQUEST_TIMEOUT
         )
         # Modelos são ordenados do mais recente para o mais antigo
         assert models == ["new-model", "sabiazinho-3", "sabia-3"]
@@ -95,9 +88,7 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
 
         # Assertions
         mock_get.assert_called_once_with(
-            MARITACA_API_URL,
-            headers={"Authorization": f"Key {default_kwargs['api_key']}"},
-            timeout=REQUEST_TIMEOUT
+            MARITACA_API_URL, headers={"Authorization": f"Key {default_kwargs['api_key']}"}, timeout=REQUEST_TIMEOUT
         )
         assert models == DEFAULT_MODELS
 
@@ -113,9 +104,7 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
 
         # Assertions
         mock_get.assert_called_once_with(
-            MARITACA_API_URL,
-            headers={"Authorization": f"Key {default_kwargs['api_key']}"},
-            timeout=REQUEST_TIMEOUT
+            MARITACA_API_URL, headers={"Authorization": f"Key {default_kwargs['api_key']}"}, timeout=REQUEST_TIMEOUT
         )
         assert models == DEFAULT_MODELS
 
@@ -123,25 +112,27 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
         """Test update_build_config method."""
         # Patch fetch_models
         with patch.object(
-            MaritalkModelComponent, 
-            "fetch_models", 
-            return_value=["new-model", "sabia-3", "sabiazinho-3"]
+            MaritalkModelComponent, "fetch_models", return_value=["new-model", "sabia-3", "sabiazinho-3"]
         ):
             # Create component
             component = component_class(**default_kwargs)
-            
+
             # Create build config
             build_config = {
                 "model_name": {"options": [], "value": ""},
                 "api_key": {"display_name": "API Key"},
             }
-            
+
             # Test update_build_config
             updated_config = await component.update_build_config(build_config, None, "api_key")
-            
+
             # Verify model options were updated
             assert set(updated_config["model_name"]["options"]) == {
-                "new-model", "sabia-3", "sabiazinho-3", DEFAULT_MODELS[0], DEFAULT_MODELS[1]
+                "new-model",
+                "sabia-3",
+                "sabiazinho-3",
+                DEFAULT_MODELS[0],
+                DEFAULT_MODELS[1],
             }
             assert updated_config["model_name"]["value"] in updated_config["model_name"]["options"]
 
@@ -149,25 +140,27 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
         """Test update_build_config method with existing value."""
         # Patch fetch_models
         with patch.object(
-            MaritalkModelComponent, 
-            "fetch_models", 
-            return_value=["new-model", "sabia-3", "sabiazinho-3"]
+            MaritalkModelComponent, "fetch_models", return_value=["new-model", "sabia-3", "sabiazinho-3"]
         ):
             # Create component
             component = component_class(**default_kwargs)
-            
+
             # Create build config with existing valid value
             build_config = {
                 "model_name": {"options": [], "value": "sabia-3"},
                 "api_key": {"display_name": "API Key"},
             }
-            
+
             # Test update_build_config
             updated_config = await component.update_build_config(build_config, None, "api_key")
-            
+
             # Verify model options were updated but value preserved
             assert set(updated_config["model_name"]["options"]) == {
-                "new-model", "sabia-3", "sabiazinho-3", DEFAULT_MODELS[0], DEFAULT_MODELS[1]
+                "new-model",
+                "sabia-3",
+                "sabiazinho-3",
+                DEFAULT_MODELS[0],
+                DEFAULT_MODELS[1],
             }
             assert updated_config["model_name"]["value"] == "sabia-3"
 
@@ -183,10 +176,10 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
             "system_message": "You are a helpful assistant.",
         }
         component = component_class(**full_kwargs)
-        
+
         # Call build_model
         model = component.build_model()
-        
+
         # Verify ChatMaritalk was constructed with correct params
         mock_chat_maritalk.assert_called_once_with(
             max_tokens=512,
@@ -202,7 +195,7 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
         # Create component without model_name
         component = component_class(api_key="test-key")
         component.model_name = None
-        
+
         # Verify ValueError is raised when model_name is missing
         with pytest.raises(ValueError, match="Model name is required"):
             component.build_model()
