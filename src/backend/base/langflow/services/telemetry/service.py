@@ -124,7 +124,7 @@ class TelemetryService(Service):
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
 
-    def start(self) -> None:
+    def start(self, fastapi_version: str, langflow_version: str) -> None:
         """Start the telemetry service."""
         if self.running:
             logger.info("TelemetryService already running; skipping telemetry startup")
@@ -136,6 +136,11 @@ class TelemetryService(Service):
                 and os.getenv("LANGFLOW_METRICS_PORT_MODE") == "separate"
                 and not self._metrics_server_started
             ):
+                # Add metrics for fastapi and langflow versions
+                self.ot.update_gauge(metric_name="fastapi_version", value=1.0, labels={"version": fastapi_version})
+                self.ot.update_gauge(metric_name="langflow_version", value=1.0, labels={"version": langflow_version})
+
+                # Start metrics server
                 logger.debug("Starting metrics server")
                 self.start_metrics_server()
 

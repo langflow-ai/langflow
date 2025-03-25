@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 import anyio
+import fastapi
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -136,7 +137,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.debug("Creating or updating starter projects...")
             await create_or_update_starter_projects(all_types_dict)
             logger.debug("Starting telemetry service...")
-            telemetry_service.start()
+            telemetry_service.start(fastapi_version=fastapi.__version__, langflow_version=version)
             logger.debug("Loading user flows from directory...")
             await load_flows_from_directory()
             logger.debug("Starting queue service if not already running...")

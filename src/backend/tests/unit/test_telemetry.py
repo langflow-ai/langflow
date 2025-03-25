@@ -6,80 +6,85 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import httpx
 import pytest
-from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from langflow.services.telemetry.opentelemetry import MetricType, OpenTelemetry
 from langflow.services.telemetry.service import TelemetryService
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
 
 
-@pytest.fixture
-def opentelemetry_instance():
+@pytest.fixture(name="fixture_opentelemetry_instance")
+def opentelemetry_instance() -> OpenTelemetry:
+    """Get the OpenTelemetry instance."""
     return OpenTelemetry()
 
 
-def test_init(opentelemetry_instance):
-    assert isinstance(opentelemetry_instance, OpenTelemetry)
-    assert len(opentelemetry_instance._metrics) > 1
-    assert len(opentelemetry_instance._metrics) == len(opentelemetry_instance._metrics_registry) == 2
-    assert "file_uploads" in opentelemetry_instance._metrics
+def test_init(fixture_opentelemetry_instance):
+    assert isinstance(fixture_opentelemetry_instance, OpenTelemetry)
+    assert len(fixture_opentelemetry_instance._metrics) > 1
+    assert len(fixture_opentelemetry_instance._metrics) == len(fixture_opentelemetry_instance._metrics_registry) == 4
+    assert "file_uploads" in fixture_opentelemetry_instance._metrics
 
 
-def test_gauge(opentelemetry_instance):
-    opentelemetry_instance.update_gauge("file_uploads", 1024, fixed_labels)
+def test_gauge(fixture_opentelemetry_instance):
+    fixture_opentelemetry_instance.update_gauge("file_uploads", 1024, fixed_labels)
 
 
-def test_gauge_with_counter_method(opentelemetry_instance):
+def test_gauge_with_counter_method(fixture_opentelemetry_instance):
     with pytest.raises(TypeError, match="Metric 'file_uploads' is not a counter"):
-        opentelemetry_instance.increment_counter(metric_name="file_uploads", value=1, labels=fixed_labels)
+        fixture_opentelemetry_instance.increment_counter(metric_name="file_uploads", value=1, labels=fixed_labels)
 
 
-def test_gauge_with_historgram_method(opentelemetry_instance):
+def test_gauge_with_historgram_method(fixture_opentelemetry_instance):
     with pytest.raises(TypeError, match="Metric 'file_uploads' is not a histogram"):
-        opentelemetry_instance.observe_histogram("file_uploads", 1, fixed_labels)
+        fixture_opentelemetry_instance.observe_histogram("file_uploads", 1, fixed_labels)
 
 
-def test_gauge_with_up_down_counter_method(opentelemetry_instance):
+def test_gauge_with_up_down_counter_method(fixture_opentelemetry_instance):
     with pytest.raises(TypeError, match="Metric 'file_uploads' is not an up down counter"):
-        opentelemetry_instance.up_down_counter("file_uploads", 1, labels=fixed_labels)
+        fixture_opentelemetry_instance.up_down_counter("file_uploads", 1, labels=fixed_labels)
 
 
-def test_increment_counter(opentelemetry_instance):
-    opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels=fixed_labels)
+def test_increment_counter(fixture_opentelemetry_instance):
+    fixture_opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels=fixed_labels)
 
 
-def test_increment_counter_empty_label(opentelemetry_instance):
+def test_increment_counter_empty_label(fixture_opentelemetry_instance):
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels={})
+        fixture_opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels={})
 
 
-def test_increment_counter_missing_mandatory_label(opentelemetry_instance):
+def test_increment_counter_missing_mandatory_label(fixture_opentelemetry_instance):
     with pytest.raises(ValueError, match=re.escape("Missing required labels: {'flow_id'}")):
-        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels={"service": "one"})
+        fixture_opentelemetry_instance.increment_counter(
+            metric_name="num_files_uploaded", value=5, labels={"service": "one"}
+        )
 
 
-def test_increment_counter_unregisted_metric(opentelemetry_instance):
+def test_increment_counter_unregisted_metric(fixture_opentelemetry_instance):
     with pytest.raises(ValueError, match="Metric 'num_files_uploaded_1' is not registered"):
-        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded_1", value=5, labels=fixed_labels)
+        fixture_opentelemetry_instance.increment_counter(
+            metric_name="num_files_uploaded_1", value=5, labels=fixed_labels
+        )
 
 
-def test_opentelementry_singleton(opentelemetry_instance):
-    opentelemetry_instance_2 = OpenTelemetry()
-    assert opentelemetry_instance is opentelemetry_instance_2
+def test_opentelementry_singleton(fixture_opentelemetry_instance):
+    fixture_opentelemetry_instance_2 = OpenTelemetry()
+    assert fixture_opentelemetry_instance is fixture_opentelemetry_instance_2
 
-    opentelemetry_instance_3 = OpenTelemetry(prometheus_enabled=False)
-    assert opentelemetry_instance is opentelemetry_instance_3
-    assert opentelemetry_instance.prometheus_enabled == opentelemetry_instance_3.prometheus_enabled
+    fixture_opentelemetry_instance_3 = OpenTelemetry(prometheus_enabled=False)
+    assert fixture_opentelemetry_instance is fixture_opentelemetry_instance_3
+    assert fixture_opentelemetry_instance.prometheus_enabled == fixture_opentelemetry_instance_3.prometheus_enabled
 
 
-def test_missing_labels(opentelemetry_instance):
+def test_missing_labels(fixture_opentelemetry_instance):
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", labels=None, value=1.0)
+        fixture_opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", labels=None, value=1.0)
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.up_down_counter("num_files_uploaded", 1, None)
+        fixture_opentelemetry_instance.up_down_counter("num_files_uploaded", 1, None)
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.update_gauge(metric_name="num_files_uploaded", value=1.0, labels={})
+        fixture_opentelemetry_instance.update_gauge(metric_name="num_files_uploaded", value=1.0, labels={})
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.observe_histogram("num_files_uploaded", 1, {})
+        fixture_opentelemetry_instance.observe_histogram("num_files_uploaded", 1, {})
 
 
 def test_multithreaded_singleton():
@@ -115,6 +120,95 @@ def test_multithreaded_singleton_race_condition():
     first_instance = instances[0]
     for instance in instances[1:]:
         assert instance is first_instance
+
+
+# Used by tests below
+fastapi_version_labels = {"version": "0.111.5"}
+langflow_version_labels = {"version": "1.2.0"}
+
+
+def test_fastapi_version_metric_exists(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the fastapi_version metric is registered and can be updated."""
+    assert "fastapi_version" in fixture_opentelemetry_instance._metrics_registry
+    metric = fixture_opentelemetry_instance._metrics_registry["fastapi_version"]
+    assert metric.name == "fastapi_version"
+    assert metric.type == MetricType.OBSERVABLE_GAUGE
+    assert metric.unit == ""
+    assert metric.labels == {"version": True}
+
+
+def test_langflow_version_metric_exists(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the langflow_version metric is registered and can be updated."""
+    assert "langflow_version" in fixture_opentelemetry_instance._metrics_registry
+    metric = fixture_opentelemetry_instance._metrics_registry["langflow_version"]
+    assert metric.name == "langflow_version"
+    assert metric.type == MetricType.OBSERVABLE_GAUGE
+    assert metric.unit == ""
+    assert metric.labels == {"version": True}
+
+
+def test_fastapi_version_update(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the fastapi_version metric can be updated."""
+    fixture_opentelemetry_instance.update_gauge("fastapi_version", 5.0, fastapi_version_labels)
+
+    gauge = fixture_opentelemetry_instance._metrics["fastapi_version"]
+    assert gauge is not None, "FastAPI version gauge not found"
+
+    label_tuple = tuple(fastapi_version_labels.items())
+    assert label_tuple in gauge._values, "FastAPI version gauge not found in _values"
+    assert gauge._values[label_tuple] == 5.0
+
+
+def test_langflow_version_update(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the langflow_version metric can be updated."""
+    fixture_opentelemetry_instance.update_gauge("langflow_version", 5.0, langflow_version_labels)
+
+    gauge = fixture_opentelemetry_instance._metrics["langflow_version"]
+    assert gauge is not None, "Langflow version gauge not found"
+
+    label_tuple = tuple(langflow_version_labels.items())
+    assert label_tuple in gauge._values, "Langflow version gauge not found in _values"
+    assert gauge._values[label_tuple] == 5.0
+
+
+def test_fastapi_version_gauge_with_counter_method(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the fastapi_version metric is not a counter."""
+    with pytest.raises(TypeError, match="Metric 'fastapi_version' is not a counter"):
+        fixture_opentelemetry_instance.increment_counter(
+            metric_name="fastapi_version", value=1, labels=fastapi_version_labels
+        )
+
+
+def test_fastapi_version_gauge_with_historgram_method(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the fastapi_version metric is not a histogram."""
+    with pytest.raises(TypeError, match="Metric 'fastapi_version' is not a histogram"):
+        fixture_opentelemetry_instance.observe_histogram("fastapi_version", 1, fastapi_version_labels)
+
+
+def test_fastapi_version_gauge_with_up_down_counter_method(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the fastapi_version metric is not an up down counter."""
+    with pytest.raises(TypeError, match="Metric 'fastapi_version' is not an up down counter"):
+        fixture_opentelemetry_instance.up_down_counter("fastapi_version", 1, labels=fastapi_version_labels)
+
+
+def test_langflow_version_gauge_with_counter_method(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the langflow_version metric is not a counter."""
+    with pytest.raises(TypeError, match="Metric 'langflow_version' is not a counter"):
+        fixture_opentelemetry_instance.increment_counter(
+            metric_name="langflow_version", value=1, labels=langflow_version_labels
+        )
+
+
+def test_langflow_version_gauge_with_historgram_method(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the langflow_version metric is not a histogram."""
+    with pytest.raises(TypeError, match="Metric 'langflow_version' is not a histogram"):
+        fixture_opentelemetry_instance.observe_histogram("langflow_version", 1, langflow_version_labels)
+
+
+def test_langflow_version_gauge_with_up_down_counter_method(fixture_opentelemetry_instance: OpenTelemetry):
+    """Test that the langflow_version metric is not an up down counter."""
+    with pytest.raises(TypeError, match="Metric 'langflow_version' is not an up down counter"):
+        fixture_opentelemetry_instance.up_down_counter("langflow_version", 1, labels=langflow_version_labels)
 
 
 class MockSettings:

@@ -143,6 +143,21 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.COUNTER,
             labels={"flow_id": mandatory_label},
         )
+        logger.debug("System metrics registered")
+        self._add_metric(
+            name="fastapi_version",
+            description="The FastAPI version.",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"version": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_version",
+            description="The Langflow app version.",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"version": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         logger.debug("OpenTelemetry init called")
