@@ -117,7 +117,7 @@ export const AccountMenu = () => {
                 />
               </>
             ) : (
-              <HeaderMenuItemLink newPage href="https://docs.langflow.org">
+              <HeaderMenuItemLink newPage href="https://docs.deeptern.ai">
                 <span data-testid="menu_docs_button" id="menu_docs_button">
                   Docs
                 </span>
@@ -128,7 +128,7 @@ export const AccountMenu = () => {
             {ENABLE_DATASTAX_LANGFLOW ? (
               <HeaderMenuItemLink
                 newPage
-                href="https://github.com/langflow-ai/langflow"
+                href="https://github.com/deeptern-ai/deeptern"
               >
                 <div className="-my-2 mr-2 flex w-full items-center justify-between">
                   <div className="text-sm">Star the repo</div>
@@ -138,19 +138,19 @@ export const AccountMenu = () => {
             ) : (
               <HeaderMenuItemLink
                 newPage
-                href="https://github.com/langflow-ai/langflow/discussions"
+                href="https://github.com/deeptern-ai/deeptern/discussions"
               >
                 <span data-testid="menu_github_button" id="menu_github_button">
                   Share Feedback on Github
                 </span>
               </HeaderMenuItemLink>
             )}
-            <HeaderMenuItemLink newPage href="https://twitter.com/langflow_ai">
+            <HeaderMenuItemLink newPage href="https://twitter.com/deeptern">
               <span data-testid="menu_twitter_button" id="menu_twitter_button">
                 Follow Langflow on X
               </span>
             </HeaderMenuItemLink>
-            <HeaderMenuItemLink newPage href="https://discord.gg/EqksyE2EX9">
+            <HeaderMenuItemLink newPage href="https://discord.gg/hghghg">
               <span data-testid="menu_discord_button" id="menu_discord_button">
                 Join the Langflow Discord
               </span>

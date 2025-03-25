@@ -118,9 +118,9 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         # Startup message
         if version:
-            rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
+            rprint(f"[bold green]Starting Deeptern v{version}...[/bold green]")
         else:
-            rprint("[bold green]Starting Langflow...[/bold green]")
+            rprint("[bold green]Starting Deeptern...[/bold green]")
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
@@ -173,7 +173,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             yield
 
         except Exception as exc:
-            if "langflow migration --fix" not in str(exc):
+            if "deeptern migration --fix" not in str(exc):
                 logger.exception(exc)
             raise
         finally:
@@ -187,7 +187,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
             # Final message
-            rprint("[bold red]Langflow shutdown complete[/bold red]")
+            rprint("[bold red]Deeptern shutdown complete[/bold red]")
 
     return lifespan
 
@@ -201,7 +201,7 @@ def create_app():
     rprint("configuring")
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(lifespan=lifespan, title="Deeptern", version=__version__)
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -348,7 +348,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
 
 def get_static_files_dir():
-    """Get the static files directory relative to Langflow's main.py file."""
+    """Get the static files directory relative to Deeptern's main.py file."""
     frontend_path = Path(__file__).parent
     return frontend_path / "frontend"
 
