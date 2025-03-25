@@ -109,8 +109,8 @@ class BasicLoopComponent(Component):
         # Get data list and aggregated list
         data_list = self.ctx.get(f"{self._id}_data", [])
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
-
-        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):
-            aggregated.append(self.item)
+        loop_input = self.get_loop_output_value("item")
+        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):
+            aggregated.append(loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
