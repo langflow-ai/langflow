@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ParseData-uKULv{œdataTypeœ:œParseDataœ,œidœ:œParseData-uKULvœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-vog1V{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-vog1Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseData-uKULv",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-uKULvœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-uKULvœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-vog1V",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-vog1Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-vog1Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-TextInput-FRxv5{œdataTypeœ:œTextInputœ,œidœ:œTextInput-FRxv5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-vog1V{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-vog1Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-FRxv5",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-FRxv5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-FRxv5œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-vog1V",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-vog1Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-vog1Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-AnthropicModel-vog1V{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-vog1Vœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vpJbx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vpJbxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "AnthropicModel-vog1V",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-vog1Vœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-vog1Vœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-vpJbx",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vpJbxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vpJbxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-AnthropicModel-5piN6{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-5piN6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-ApbKx{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-ApbKxœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AnthropicModel-5piN6",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-5piN6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-5piN6œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-ApbKx",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-ApbKxœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-ApbKxœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-ParseData-sbo55{œdataTypeœ:œParseDataœ,œidœ:œParseData-sbo55œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-ApbKx{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-ApbKxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseData-sbo55",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-sbo55œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-sbo55œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-ApbKx",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-ApbKxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-ApbKxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-File-u0H8v{œdataTypeœ:œFileœ,œidœ:œFile-u0H8vœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-sbo55{œfieldNameœ:œdataœ,œidœ:œParseData-sbo55œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-u0H8v",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-u0H8vœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-u0H8vœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-sbo55",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-sbo55œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-sbo55œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "reactflow__edge-StructuredOutput-ApbKx{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-ApbKxœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-uKULv{œfieldNameœ:œdataœ,œidœ:œParseData-uKULvœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-ApbKx",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-ApbKxœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-ApbKxœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-uKULv",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-uKULvœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-uKULvœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1008,10 +1008,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -1024,10 +1022,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],

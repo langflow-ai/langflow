@@ -17,7 +17,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from requests.exceptions import RequestException
 
-from langflow.components.tools.mcp_stdio import create_input_schema_from_json_schema
+from langflow.base.mcp.util import create_input_schema_from_json_schema
 from langflow.services.cache.utils import CacheMiss
 
 client_lock = threading.Lock()
