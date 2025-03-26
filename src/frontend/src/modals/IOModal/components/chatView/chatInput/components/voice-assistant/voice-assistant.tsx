@@ -88,6 +88,8 @@ export function VoiceAssistant({
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { data: globalVariables } = useGetGlobalVariables();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlowId = currentFlow?.id;
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
@@ -211,7 +213,7 @@ export function VoiceAssistant({
   const handleGetMessagesMutation = () => {
     getMessagesMutation.mutate({
       mode: "union",
-      id: currentSessionId,
+      id: currentFlowId,
     });
   };
 
