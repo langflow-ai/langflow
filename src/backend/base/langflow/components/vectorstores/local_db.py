@@ -1,46 +1,50 @@
 from copy import deepcopy
 from pathlib import Path
 
+from chromadb.config import Settings
 from langchain_chroma import Chroma
 from loguru import logger
+from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, Output
+from langflow.inputs.inputs import MultilineInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
 from langflow.schema import Data, DataFrame
 
 
 class LocalDBComponent(LCVectorStoreComponent):
-    """Local Vector Store with search capabilities."""
+    """Chroma Vector Store with search capabilities."""
 
     display_name: str = "Local DB"
-    description: str = (
-        "Local Vector Store for data storage and retrieval. "
-        "Create local collections and search them using semantic similarity."
-    )
+    description: str = "Local Vector Store with search capabilities"
     name = "LocalDB"
     icon = "database"
-    ingest_data: list[Data] | DataFrame = []
-
-    outputs = [
-        Output(display_name="Search Results", name="dataframe", method="as_dataframe"),
-    ]
 
     inputs = [
-        DropdownInput(
+        TabInput(
             name="mode",
             display_name="Mode",
             options=["Ingest", "Retrieve"],
             info="Select the operation mode",
+            value="Ingest",
             real_time_refresh=True,
+            show=True,
         ),
         MessageTextInput(
             name="collection_name",
-            display_name="Name Your Collection",
+            display_name="Collection Name",
             value="langflow",
-            info="Create a named collection to store your data.",
-            show=False,
+        ),
+        MessageTextInput(
+            name="persist_directory",
+            display_name="Persist Directory",
+            info=(
+                "Custom base directory to save the vector store. "
+                "Collections will be stored under '{directory}/vector_stores/{collection_name}'. "
+                "If not specified, it will use your system's cache folder."
+            ),
+            advanced=True,
         ),
         DropdownInput(
             name="existing_collections",
@@ -48,28 +52,46 @@ class LocalDBComponent(LCVectorStoreComponent):
             options=[],  # Will be populated dynamically
             info="Select a previously created collection to search through its stored data.",
             show=False,
+            combobox=True,
         ),
-        BoolInput(
-            name="persist",
-            display_name="Persist",
-            info=(
-                "Save the vector store to disk so it can be reused in future sessions. "
-                "If enabled, data will be stored in the cache directory or a custom directory."
-            ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        MessageTextInput(
+            name="chroma_server_cors_allow_origins",
+            display_name="Server CORS Allow Origins",
             advanced=True,
-            value=True,
-            show=False,
         ),
         MessageTextInput(
-            name="persist_directory",
-            display_name="Persist Directory",
-            info=(
-                "Custom directory to save the vector store. "
-                "If not specified, it will use a default directory in your system's cache folder "
-                "under 'langflow/vector_stores/your_collection_name'."
-            ),
+            name="chroma_server_host",
+            display_name="Server Host",
             advanced=True,
-            show=False,
+        ),
+        IntInput(
+            name="chroma_server_http_port",
+            display_name="Server HTTP Port",
+            advanced=True,
+        ),
+        IntInput(
+            name="chroma_server_grpc_port",
+            display_name="Server gRPC Port",
+            advanced=True,
+        ),
+        BoolInput(
+            name="chroma_server_ssl_enabled",
+            display_name="Server SSL Enabled",
+            advanced=True,
+        ),
+        BoolInput(
+            name="allow_duplicates",
+            display_name="Allow Duplicates",
+            advanced=True,
+            info="If false, will not add documents that are already in the Vector Store.",
+        ),
+        DropdownInput(
+            name="search_type",
+            display_name="Search Type",
+            options=["Similarity", "MMR"],
+            value="Similarity",
+            advanced=True,
         ),
         HandleInput(
             name="ingest_data",
@@ -77,7 +99,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             input_types=["Data", "DataFrame"],
             is_list=True,
             info="Data to store. It will be embedded and indexed for semantic search.",
-            show=False,
+            show=True,
         ),
         MultilineInput(
             name="search_query",
@@ -86,74 +108,43 @@ class LocalDBComponent(LCVectorStoreComponent):
             info="Enter text to search for similar content in the selected collection.",
             show=False,
         ),
-        BoolInput(
-            name="should_cache_vector_store",
-            display_name="Cache Vector Store",
-            value=True,
-            advanced=True,
-            info=(
-                "Cache the vector store in memory during the session. "
-                "This improves performance when performing multiple operations on the same collection."
-            ),
-            show=False,
-        ),
-        HandleInput(
-            name="embedding",
-            display_name="Embedding",
-            input_types=["Embeddings"],
-            info=(
-                "The embedding model to use for converting your data into vectors. "
-                "Required for both storing and searching."
-            ),
-            show=False,
-        ),
-        BoolInput(
-            name="allow_duplicates",
-            display_name="Allow Duplicates",
-            advanced=True,
-            info=(
-                "If false, data that is identical to existing entries will not be added to the vector store. "
-                "This helps prevent duplicate content."
-            ),
-            show=False,
-        ),
-        DropdownInput(
-            name="search_type",
-            display_name="Search Type",
-            options=["Similarity", "MMR"],
-            value="Similarity",
-            info=(
-                "Similarity: Find the most similar entries. "
-                "MMR (Maximal Marginal Relevance): Balance similarity with diversity in results."
-            ),
-            advanced=True,
-            show=False,
-        ),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
-            info="Maximum number of similar entries to return in the search results.",
+            info="Number of results to return.",
             advanced=True,
             value=10,
-            show=False,
         ),
         IntInput(
             name="limit",
             display_name="Limit",
             advanced=True,
-            info=(
-                "Maximum number of entries to compare when checking for duplicates. "
-                "Only applies when Allow Duplicates is False."
-            ),
-            show=False,
+            info="Limit the number of records to compare when Allow Duplicates is False.",
         ),
     ]
+
+    def get_vector_store_directory(self, base_dir: str | Path) -> Path:
+        """Get the full directory path for a collection."""
+        # Ensure base_dir is a Path object
+        base_dir = Path(base_dir)
+        # Create the full path: base_dir/vector_stores/collection_name
+        full_path = base_dir / "vector_stores" / self.collection_name
+        # Create the directory if it doesn't exist
+        full_path.mkdir(parents=True, exist_ok=True)
+        return full_path
+
+    def get_default_persist_dir(self) -> str:
+        """Get the default persist directory from cache."""
+        from langflow.services.cache.utils import CACHE_DIR
+        return str(self.get_vector_store_directory(CACHE_DIR))
 
     def list_existing_collections(self) -> list[str]:
         """List existing vector store collections from the persist directory."""
         from langflow.services.cache.utils import CACHE_DIR
-
-        vector_stores_dir = Path(CACHE_DIR) / "vector_stores"
+        # Get the base directory (either custom or cache)
+        base_dir = Path(self.persist_directory) if self.persist_directory else Path(CACHE_DIR)
+        # Get the vector_stores subdirectory
+        vector_stores_dir = base_dir / "vector_stores"
         if not vector_stores_dir.exists():
             return []
 
@@ -170,8 +161,6 @@ class LocalDBComponent(LCVectorStoreComponent):
                 "number_of_results",
                 "existing_collections",
                 "collection_name",
-                "persist",
-                "persist_directory",
                 "embedding",
                 "allow_duplicates",
                 "limit",
@@ -198,21 +187,18 @@ class LocalDBComponent(LCVectorStoreComponent):
                 if "limit" in build_config:
                     build_config["limit"]["show"] = True
             elif field_value == "Retrieve":
+                if "persist" in build_config:
+                    build_config["persist"]["show"] = False
                 build_config["search_query"]["show"] = True
                 build_config["search_type"]["show"] = True
                 build_config["number_of_results"]["show"] = True
                 build_config["embedding"]["show"] = True
+                build_config["collection_name"]["show"] = False
                 # Show existing collections dropdown and update its options
                 if "existing_collections" in build_config:
                     build_config["existing_collections"]["show"] = True
                     build_config["existing_collections"]["options"] = self.list_existing_collections()
                 # Hide collection_name in Retrieve mode since we use existing_collections
-                if "collection_name" in build_config:
-                    build_config["collection_name"]["show"] = False
-        elif field_name == "persist":
-            # Show/hide persist_directory based on persist value
-            if "persist_directory" in build_config:
-                build_config["persist_directory"]["show"] = field_value
         elif field_name == "existing_collections":
             # Update collection_name when an existing collection is selected
             if "collection_name" in build_config:
@@ -220,48 +206,61 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         return build_config
 
-    def get_default_persist_dir(self) -> str:
-        """Get the default persist directory."""
-        from langflow.services.cache.utils import CACHE_DIR
-
-        # Use the existing vector_stores directory
-        persist_dir = Path(CACHE_DIR) / "vector_stores" / self.collection_name
-        persist_dir.mkdir(parents=True, exist_ok=True)
-
-        return str(persist_dir)
-
+    @override
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
-        """Builds the vector store object."""
-        # Only use persist_directory if persist is True
-        persist_directory = None
-        if getattr(self, "persist", False):
-            # Use user-provided directory or default
-            if self.persist_directory:
-                persist_directory = self.resolve_path(self.persist_directory)
-            else:
-                persist_directory = self.get_default_persist_dir()
-                logger.debug(f"Using default persist directory: {persist_directory}")
+        """Builds the Chroma object."""
+        try:
+            from chromadb import Client
+            from langchain_chroma import Chroma
+        except ImportError as e:
+            msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
+            raise ImportError(msg) from e
+        # Chroma settings
+        chroma_settings = None
+        client = None
+        if self.existing_collections:
+            self.collection_name = self.existing_collections
+
+        if self.chroma_server_host:
+            chroma_settings = Settings(
+                chroma_server_cors_allow_origins=self.chroma_server_cors_allow_origins or [],
+                chroma_server_host=self.chroma_server_host,
+                chroma_server_http_port=self.chroma_server_http_port or None,
+                chroma_server_grpc_port=self.chroma_server_grpc_port or None,
+                chroma_server_ssl_enabled=self.chroma_server_ssl_enabled,
+            )
+            client = Client(settings=chroma_settings)
+
+        # Use user-provided directory or default cache directory
+        if self.persist_directory:
+            base_dir = self.resolve_path(self.persist_directory)
+            persist_directory = str(self.get_vector_store_directory(base_dir))
+            logger.debug(f"Using custom persist directory: {persist_directory}")
+        else:
+            persist_directory = self.get_default_persist_dir()
+            logger.debug(f"Using default persist directory: {persist_directory}")
 
         chroma = Chroma(
             persist_directory=persist_directory,
+            client=client,
             embedding_function=self.embedding,
             collection_name=self.collection_name,
         )
 
         self._add_documents_to_vector_store(chroma)
         self.status = chroma_collection_to_data(chroma.get(limit=self.limit))
-
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
         """Adds documents to the Vector Store."""
-        if not self.ingest_data:
+        ingest_data: list | Data | DataFrame = self.ingest_data
+        if not ingest_data:
             self.status = ""
             return
 
         # Convert DataFrame to Data if needed using parent's method
-        self.ingest_data = self._prepare_ingest_data()
+        ingest_data = self._prepare_ingest_data()
 
         stored_documents_without_id = []
         if self.allow_duplicates:
@@ -273,7 +272,7 @@ class LocalDBComponent(LCVectorStoreComponent):
                 stored_documents_without_id.append(value)
 
         documents = []
-        for _input in self.ingest_data or []:
+        for _input in ingest_data or []:
             if isinstance(_input, Data):
                 if _input not in stored_documents_without_id:
                     documents.append(_input.to_lc_document())
@@ -282,34 +281,7 @@ class LocalDBComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         if documents and self.embedding is not None:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             vector_store.add_documents(documents)
         else:
-            logger.debug("No documents to add to the Vector Store.")
-
-    def search_documents(self) -> list[Data]:
-        """Search for documents in the vector store."""
-        vector_store = self.build_vector_store()
-
-        if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
-            self.status = ""
-            return []
-
-        logger.debug(f"Search input: {self.search_query}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
-
-        if self.search_type == "Similarity":
-            docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
-            )
-        else:  # MMR
-            docs = vector_store.max_marginal_relevance_search(
-                query=self.search_query,
-                k=self.number_of_results,
-            )
-
-        data = docs_to_data(docs)
-        self.status = data
-        return data
+            self.log("No documents to add to the Vector Store.")
