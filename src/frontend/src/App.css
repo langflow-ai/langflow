@@ -220,32 +220,6 @@ code {
   border-radius: 0px !important;
 }
 
-.jse-space {
-  border-radius: var(--radius) !important;
-}
-.jse-button.jse-first {
-  border-radius: 5px !important;
-  border-top-right-radius: 0px !important;
-  border-bottom-right-radius: 0px !important;
-}
-.jse-group-button.jse-button:not(.jse-first) {
-  border-radius: 5px !important;
-  border-top-left-radius: 0px !important;
-  border-bottom-left-radius: 0px !important;
-  border-right: solid !important;
-}
-.jse-group-button.jse-button.jse-selected:not(.jse-first) {
-  border-right: none !important;
-}
-
-.jse-menu .jse-button.jse-group-button {
-  border: 1px solid var(--jse-menu-color, var(--jse-text-color-inverse, #fff)) !important;
-}
-
-.jse-menu .jse-separator {
-  margin-left: 10px !important;
-}
-
 .cm-gutters {
   display: none !important;
 }
