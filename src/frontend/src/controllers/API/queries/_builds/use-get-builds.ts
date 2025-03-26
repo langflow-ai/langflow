@@ -6,6 +6,7 @@ import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useParams } from "react-router-dom";
 
 interface BuildsQueryParams {
   flowId?: string;
@@ -16,13 +17,14 @@ export const useGetBuildsQuery: useQueryFunctionType<
   AxiosResponse<{ vertex_builds: FlowPoolType }>
 > = (params) => {
   const { query } = UseRequestProcessor();
-
+  const { id: routeFlowId} = useParams();
+  
   const setFlowPool = useFlowStore((state) => state.setFlowPool);
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
   const responseFn = async () => {
     const config = {};
-    config["params"] = { flow_id: params.flowId };
+    config["params"] = { flow_id: (!params.flowId || params.flowId === '') ? routeFlowId : params.flowId };
 
     const response = await api.get<any>(`${getURL("BUILDS")}`, config);
 
