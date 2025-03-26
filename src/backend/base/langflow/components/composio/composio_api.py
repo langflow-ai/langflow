@@ -79,9 +79,8 @@ class ComposioAPIComponent(LCToolComponent):
             (
                 ind
                 for ind, tool in enumerate(build_config["tool_name"]["options"])
-                if tool["name"] == field_value or (
-                    "validate" in field_value and tool["name"] == field_value["validate"]
-                )
+                if tool["name"] == field_value
+                or ("validate" in field_value and tool["name"] == field_value["validate"])
             ),
             None,
         )
@@ -99,8 +98,7 @@ class ComposioAPIComponent(LCToolComponent):
             [
                 action
                 for action in all_actions
-                if action.app.lower() in list(connected_app_names)
-                and action.app.lower() == self.tool_name.lower()
+                if action.app.lower() in list(connected_app_names) and action.app.lower() == self.tool_name.lower()
             ],
             key=lambda x: x.name,
         )
@@ -187,11 +185,7 @@ class ComposioAPIComponent(LCToolComponent):
 
             # Get the index of the selected tool in the list of options
             selected_tool_index = next(
-                (
-                    ind
-                    for ind, tool in enumerate(build_config["tool_name"]["options"])
-                    if tool["name"] == field_value
-                ),
+                (ind for ind, tool in enumerate(build_config["tool_name"]["options"]) if tool["name"] == field_value),
                 None,
             )
 
