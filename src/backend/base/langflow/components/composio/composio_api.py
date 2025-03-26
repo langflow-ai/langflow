@@ -202,7 +202,7 @@ class ComposioAPIComponent(LCToolComponent):
             Sequence[Tool]: List of configured Composio tools.
         """
         composio_toolset = self._build_wrapper()
-        return composio_toolset.get_tools(actions=self.actions)
+        return composio_toolset.get_tools(actions=[action["name"] for action in self.actions])
 
     def _build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper.
