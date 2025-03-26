@@ -62,9 +62,9 @@ class CustomComponent(BaseComponent):
     """The description of the component. Defaults to None."""
     icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
-    custom_trace_name : str | None = None
+    custom_trace_name: str | None = None
     """The customised trace name . Defaults to None."""
-    
+
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.
 
@@ -109,7 +109,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def trace_name(self) -> str:
-        if hasattr(self,"custom_trace_name"):
+        if hasattr(self, "custom_trace_name"):
             return self.custom_trace_name
         if hasattr(self, "_id") and self._id is None:
             msg = "Component id is not set"
