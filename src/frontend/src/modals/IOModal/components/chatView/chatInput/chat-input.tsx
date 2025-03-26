@@ -50,10 +50,6 @@ export default function ChatInput({
     (state) => state.newSessionCloseVoiceAssistant,
   );
 
-  const setNewSessionCloseVoiceAssistant = useVoiceStore(
-    (state) => state.setNewSessionCloseVoiceAssistant,
-  );
-
   useEffect(() => {
     if (showAudioInput) {
       setIsVoiceAssistantActive(true);
