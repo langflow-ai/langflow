@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        
+
   - type: textarea
     id: description
     attributes:
@@ -55,14 +55,13 @@ body:
         Specific Areas:
 
           Frontend:
-            - @anovazzi1
             - @Cristhianzl
             - @lucaseduoli
             - @igorrCarvalho
-            
+
           Backend:
             - @italojohnny
-            
+
           Full Stack:
             - @ogabrielluiz
             - @nicoloboschi
@@ -76,7 +75,7 @@ body:
   - type: markdown
     attributes:
       value: '## Environment'
-      
+
   - type: input
     id: os
     attributes:
@@ -84,7 +83,7 @@ body:
       placeholder: ex. Ubuntu Linux 22.04
     validations:
       required: true
-      
+
   - type: input
     id: langflow-version
     attributes:
