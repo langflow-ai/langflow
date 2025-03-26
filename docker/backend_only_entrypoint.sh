@@ -1,20 +1,31 @@
 #!/bin/sh
 set -e
 
+log() {
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] $1"
+}
+
 # Default settings for Langflow
 if [ -z "$LANGFLOW_HOST" ]; then
-  echo "Warning: LANGFLOW_HOST is not set. Defaulting to 0.0.0.0"
+  log "WARNING: LANGFLOW_HOST is not set. Defaulting to 0.0.0.0"
   LANGFLOW_HOST="0.0.0.0"
 fi
 
 if [ -z "$LANGFLOW_PORT" ]; then
-  echo "Warning: LANGFLOW_PORT is not set. Defaulting to 7860"
+  log "WARNING: LANGFLOW_PORT is not set. Defaulting to 7860"
   LANGFLOW_PORT=7860
+fi
+
+# Validate port is a number
+if ! echo "$LANGFLOW_PORT" | grep -q '^[0-9]\+$'; then
+    log "ERROR: LANGFLOW_PORT must be a number"
+    exit 1
 fi
 
 # Set up logging environment
 if [ -z "$LANGFLOW_LOG_ENV" ]; then
-  echo "Setting container logging mode"
+  log "Setting container logging mode"
   export LANGFLOW_LOG_ENV="container_json"
 fi
 
@@ -26,7 +37,7 @@ if [ $# -gt 0 ]; then
   CMD="$CMD $@"
 fi
 
-echo "Executing command: $CMD"
+log "Executing command: $CMD"
 
 # Execute the command
 exec $CMD

@@ -5,12 +5,8 @@
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
 ################################
-
-# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
-# 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
-# Use a Python image with uv pre-installed
-
-ARG PYTHON_IMAGE=python:3.12.9-slim-bookworm
+ARG PYTHON_VERSION=3.12.9
+ARG PYTHON_IMAGE=python:${PYTHON_VERSION}-slim-bookworm
 ARG BUILDER_BASE_IMAGE=ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 FROM --platform=$BUILDPLATFORM ${BUILDER_BASE_IMAGE} AS builder
@@ -27,64 +23,66 @@ ENV UV_COMPILE_BYTECODE=1 \
 # Install system dependencies
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
     build-essential=12.9 \
     ca-certificates=20230311 \
     gcc=4:12.2.0-3 \
+    git=1:2.39.5-0+deb12u2 \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* /var/tmp/*
+
+# Copy only the files needed for dependency installation
+COPY ./uv.lock ./uv.lock
+COPY ./README.md ./README.md
+COPY ./pyproject.toml ./pyproject.toml
+COPY ./src/backend/base/README.md ./src/backend/base/README.md
+COPY ./src/backend/base/uv.lock ./src/backend/base/uv.lock
+COPY ./src/backend/base/pyproject.toml ./src/backend/base/pyproject.toml
 
 # Install the project dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=README.md,target=README.md \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
-    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
     cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable --extra postgresql
 
-# Copy only the backend src code into the image
+# Copy src code into the image
 COPY ./src /app/src
-COPY ./pyproject.toml /app/pyproject.toml
-COPY ./uv.lock /app/uv.lock
-COPY ./README.md /app/README.md
 
 # Install the project's dependencies in non-editable mode
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --extra postgresql
 
 ################################
-# NETWORK-TOOLS
-# Build stage for network troubleshooting
-################################
-FROM ${PYTHON_IMAGE} AS network-tools
-
-WORKDIR /app
-
-################################
 # RUNTIME
-# Setup user, utilities and copy the virtual environment only
 ################################
 FROM ${PYTHON_IMAGE} AS runtime
 
 # Set the working directory
 WORKDIR /app
 
-# Define the default environment variables
+# Build arguments
 ARG DEFAULT_BACKEND_PORT=7860
 ARG DEFAULT_BACKEND_HOST=0.0.0.0
 ### USING HIGHER UID AND GID TO AVOID CONFLICTS WITH HOST USERS (10k not 1k)
 ARG UID=10000
 ARG GID=10000
+ARG APP_USER=langflow
+ARG APP_GROUP=langflow
 
 # Set the environment variables
 ENV LANGFLOW_HOST=${DEFAULT_BACKEND_HOST} \
     LANGFLOW_PORT=${DEFAULT_BACKEND_PORT} \
     PATH="/app/.venv/bin:$PATH" \
+    # Don't create .pyc files
     PYTHONDONTWRITEBYTECODE=1 \
+    # Disable Python's buffering of stdout and stderr
     PYTHONUNBUFFERED=1 \
-    LANGFLOW_LOG_ENV="container_json"
+    # Set Python to run in production mode
+    PYTHON_ENV=production \
+    # Set timezone
+    TZ=UTC \
+    LANGFLOW_LOG_ENV="container_json" \
+    XDG_CACHE_HOME="/app/cache" \
+    PLATFORMDIRS_CACHE_DIR="/app/cache/langflow"
 
 # Copy the entrypoint script
 COPY ./docker/backend_only_entrypoint.sh /entrypoint.sh
@@ -95,22 +93,45 @@ RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.
     && echo 'APT::Default-Release "bookworm";' > /etc/apt/apt.conf.d/99defaultrelease \
     && apt-get update \
     && apt-get upgrade -y \
-    && apt-get install tini=0.19.0-1 git=1:2.39.5-0+deb12u2 -y \
-    && apt-get install --no-install-recommends -y \
-        libpq-dev=15.12-0+deb12u2 \
-        postgresql-client=15+248 \
-    && apt-get -t trixie install -y zlib1g=1:1.3.dfsg+really1.3.1-1+b1 \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+        tini=0.19.0-1 \
+        git=1:2.39.5-0+deb12u2 -y \
+        # PostgreSQL libs
+        libpq5=15.12-0+deb12u2 \
+        # Add for healthcheck
+        curl=7.88.1-10+deb12u12 \
+    # Install zlib1g from trixie for CVE-2023-45853
+    && apt-get -t trixie install --no-install-recommends --no-install-suggests -y zlib1g=1:1.3.dfsg+really1.3.1-1+b1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* /var/tmp/* \
     && rm -f /etc/apt/sources.list.d/trixie.list \
-    && addgroup --gid ${GID} langflow \
-    && useradd langflow --uid ${UID} --gid ${GID} --no-create-home --home-dir /app/data \
-    && mkdir -p /app/data \
-    && chown -R ${UID}:${GID} /app/data \
+    # Create non-root user
+    && groupadd --gid ${GID} ${APP_GROUP} \
+    && useradd ${APP_USER} --uid ${UID} --gid ${GID} --no-create-home --home-dir /app/data \
+    # Create necessary directories
+    && mkdir -p \
+        /app/data \
+        /app/cache/langflow \
+        /app/flows \
+        /app/db \
+    # Set correct permissions
+    && chown -R ${UID}:${GID} \
+        /app/data \
+        /app/cache \
+        /app/flows \
+        /app/db \
     && chmod +x /entrypoint.sh
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=${UID}:${GID} /app/.venv /app/.venv
+
+# Health check that resolves the port at runtime
+HEALTHCHECK --interval=30s \
+    --timeout=30s \
+    --start-period=20s \
+    --retries=3 \
+    CMD curl -f -s http://localhost:${LANGFLOW_PORT}/health | grep -q '"status":"ok"' || exit 1
 
 # Add metadata
 LABEL org.opencontainers.image.title=langflow
@@ -119,14 +140,16 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
-USER langflow
+# Add these volumes for persistence
+VOLUME [ "/app/data", "/app/flows", "/app/db", "/app/cache"]
 
-VOLUME [ "/app/data", "/app/flows", "/app/db" ]
+# Switch to non-root user
+USER ${APP_USER}
 
 EXPOSE ${DEFAULT_BACKEND_PORT}
 
 # Use tini as the entrypoint to ensure signals are passed correctly
 ENTRYPOINT [ "tini", "--","/entrypoint.sh" ]
 
-# Base command to run the langflow backend (overridden kubernetes)
+# Default command (can be overridden)
 CMD []
