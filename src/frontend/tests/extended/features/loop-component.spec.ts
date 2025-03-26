@@ -9,6 +9,14 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+    await page.getByTestId("sidebar-options-trigger").click();
+
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
       {
@@ -146,13 +154,23 @@ test(
       .first()
       .click();
 
+    await zoomOut(page, 4);
+
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
 
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 100000,
+    });
+
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="expand-button-modal"]', {
+      timeout: 100000,
+    });
 
     await page.getByTestId("expand-button-modal").click();
 

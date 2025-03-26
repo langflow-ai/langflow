@@ -17,6 +17,15 @@ test(
     await page.getByTestId("blank-flow").click();
 
     //first component
+
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+    await page.getByTestId("sidebar-options-trigger").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
     await page.waitForSelector("text=OpenAI Embeddings", {
