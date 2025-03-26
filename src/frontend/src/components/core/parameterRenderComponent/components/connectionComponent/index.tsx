@@ -48,7 +48,7 @@ const ConnectionComponent = ({
   // Store access
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  // State management
+  // State management for tracking connection status and UI states
   const [isAuthenticated, setIsAuthenticated] = useState(
     connectionLink === "validated",
   );
@@ -57,18 +57,18 @@ const ConnectionComponent = ({
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
 
-  // Refs for polling management
+  // Refs for managing polling timers to prevent memory leaks
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // API hooks
+  // API hook for handling template value updates
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
     nodeId: nodeId,
     node: nodeClass,
   });
 
-  // Effects
+  // Initialize selected item from value on component mount
   useEffect(() => {
     if (value) {
       const selectedOption = options.find((option) => option.name === value);
@@ -78,90 +78,79 @@ const ConnectionComponent = ({
         ]);
       }
     }
-  }, [value, options]);
-
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    if (link === "loading") {
-      timeoutId = setTimeout(() => setLink(""), 5000);
-    }
-    return () => timeoutId && clearTimeout(timeoutId);
-  }, [link]);
-
-  useEffect(() => {
-    if (connectionLink !== "") {
-      setLink(connectionLink);
-      setIsAuthenticated(connectionLink === "validated");
-      handleConnectionButtonClick(false);
-    }
-  }, [connectionLink]);
-
-  // Cleanup effect for polling
-  useEffect(() => {
-    return () => {
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
-      if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
-    };
   }, []);
 
-  // Event handlers
-  const handleConnectionButtonClick = (checkConnection: boolean = true) => {
+  useEffect(() => {
+    setLink(connectionLink || "");
+  }, [connectionLink]);
+
+  // Handles the connection button click to open connection in new tab and start polling
+  const handleConnectionButtonClick = () => {
     if (selectedItem?.length === 0) return;
 
-    if (checkConnection) {
-      window.open(link, "_blank");
-    }
+    window.open(link, "_blank");
+
+    startPolling();
+  };
+
+  // Initiates polling to check connection status periodically
+  const startPolling = () => {
+    if (!selectedItem[0]?.name) return;
+
+    setLink("loading");
 
     // Initialize polling
     setIsPolling(true);
-    let attempts = 0;
-    const maxAttempts = 5;
 
     // Clear existing timers
-    if (pollingInterval.current) clearInterval(pollingInterval.current);
-    if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
+    stopPolling();
 
-    // Set up polling interval
+    // Set up polling interval - check connection status every 3 seconds
     pollingInterval.current = setInterval(() => {
-      attempts++;
       mutateTemplate(
         { validate: selectedItem[0]?.name || "" },
         nodeClass,
         handleNodeClass,
         postTemplateValue,
-        () => {},
+        setErrorData,
         name,
-        () => {},
+        () => {
+          // Check if the connection was successful
+          if (connectionLink === "validated") {
+            stopPolling();
+            setIsAuthenticated(true);
+          }
+        },
         nodeClass.tool_mode,
       );
+    }, 3000);
 
-      if (connectionLink === "validated" || link === "validated") {
-        if (pollingInterval.current) clearInterval(pollingInterval.current);
-        setIsPolling(false);
-        setIsAuthenticated(true);
-        return;
-      }
-
-      if (attempts >= maxAttempts) {
-        if (pollingInterval.current) clearInterval(pollingInterval.current);
-        setIsPolling(false);
-      }
-    }, 7000);
-
-    // Set timeout to stop polling
+    // Set timeout to stop polling after 30 seconds to prevent indefinite polling
     pollingTimeout.current = setTimeout(() => {
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
-      setIsPolling(false);
-    }, 35000);
+      stopPolling(link !== "");
+      // If we timed out and link is still loading, reset it
+    }, 9000);
   };
 
+  // Cleans up polling timers to prevent memory leaks
+  const stopPolling = (resetLink = false) => {
+    setIsPolling(false);
+    if (resetLink) {
+      setLink(connectionLink || "");
+    }
+
+    if (pollingInterval.current) clearInterval(pollingInterval.current);
+    if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
+  };
+
+  // Updates selected item and triggers parent component update
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
-    setLink("loading");
     setSelectedItem([{ name: item.name }]);
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 
+  // Dialog control handlers
   const handleOpenListSelectionDialog = () => setOpen(true);
   const handleCloseListSelectionDialog = () => setOpen(false);
 
@@ -169,7 +158,6 @@ const ConnectionComponent = ({
   return (
     <div className="flex w-full flex-col gap-2">
       <div className="flex w-full flex-row items-center gap-2">
-        {/* Selection Button */}
         <Button
           variant="primary"
           size="xs"
@@ -194,21 +182,17 @@ const ConnectionComponent = ({
           </div>
         </Button>
 
-        {/* Connection Button */}
         {!isAuthenticated && (
           <Button
             size="icon"
             variant="ghost"
-            loading={
-              selectedItem?.length > 0 &&
-              ((value && link === "loading") || isPolling)
-            }
+            loading={link === "loading" || isPolling}
             disabled={!selectedItem[0]?.name || link === ""}
             className={cn(
               "h-9 w-10 rounded-md border disabled:opacity-50",
               buttonMetadata.variant && `border-${buttonMetadata.variant}`,
             )}
-            onClick={() => handleConnectionButtonClick(true)}
+            onClick={() => handleConnectionButtonClick()}
           >
             <ForwardedIconComponent
               name={buttonMetadata.icon || "unplug"}
@@ -221,7 +205,6 @@ const ConnectionComponent = ({
         )}
       </div>
 
-      {/* Helper Text */}
       {helperText && (
         <HelperTextComponent
           helperText={helperText}
@@ -229,7 +212,6 @@ const ConnectionComponent = ({
         />
       )}
 
-      {/* List Selection Dialog */}
       <ListSelectionComponent
         open={open}
         onSelection={handleSelection}
