@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -16,15 +17,9 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    //first component
+    await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
-    await page.getByTestId("sidebar-legacy-switch").click();
-    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
-    await page.getByTestId("sidebar-options-trigger").click();
+    //first component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
