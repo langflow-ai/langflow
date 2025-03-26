@@ -53,8 +53,20 @@ def python_function(text: str) -> str:
 
 PYTHON_BASIC_TYPES = [str, bool, int, float, tuple, list, dict, set]
 DIRECT_TYPES = [
-    "str", "bool", "dict", "int", "float", "Any", "prompt", "code",
-    "NestedDict", "table", "slider", "tab", "sortableList", "connect",
+    "str",
+    "bool",
+    "dict",
+    "int",
+    "float",
+    "Any",
+    "prompt",
+    "code",
+    "NestedDict",
+    "table",
+    "slider",
+    "tab",
+    "sortableList",
+    "connect",
 ]
 
 
