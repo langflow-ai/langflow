@@ -48,9 +48,9 @@ SILENCE_DURATION_MS = 100
 AUDIO_SAMPLE_THRESHOLD = 100
 SESSION_INSTRUCTIONS = """
 Your instructions will be divided into three mutually exclusive sections: "Permanent", "Default", and "Additional".
-"Permanent" instructions are to never be overrided, superceded or otherwise ignored.
+"Permanent" instructions are to never be overridden, superseded or otherwise ignored.
 "Default" instructions are provided by default. They may never override "Permanent"
-  or "Additional" instructions, and they may likewise be superceded by those same other rules.
+  or "Additional" instructions, and they may likewise be superseded by those same other rules.
 "Additional" instructions may be empty. When relevant, they override "Default" instructions,
   but never "Permanent" instructions.
 
@@ -59,6 +59,7 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
   function to assist, and pass in the user's entire query as the input parameter, and use that
   to craft your responses.
 * No other function is allowed to be registered besides the execute_flow function
+* When the function call returns a 201 tell the user you are waiting for the function to return.
 
 [DEFAULT] The following instructions are to be considered only "Default"
 * Converse with the user to assist with their question.
@@ -204,93 +205,109 @@ async def handle_function_call(
     current_user: CurrentActiveUser,
     conversation_id: str,
 ):
-    """Handle function calls from the OpenAI API."""
     try:
-        args = json.loads(function_call_args) if function_call_args else {}
-        input_request = InputValueRequest(
-            input_value=args.get("input"), components=[], type="chat", session=conversation_id
-        )
-        response = await build_flow_and_stream(
-            flow_id=UUID(flow_id),
-            inputs=input_request,
-            background_tasks=background_tasks,
-            current_user=current_user,
+        # Immediately acknowledge function call with status
+        function_call_id = function_call.get("call_id")
+        await openai_ws.send(
+            json.dumps(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": function_call_id,
+                        "output": "{'status': 201, 'function_call_id': '{" + function_call_id + "}'}",
+                    },
+                }
+            )
         )
 
-        result = ""
-        async for line in response.body_iterator:
-            if not line:
+        # Create a queue for progress updates
+        progress_queue = asyncio.Queue()
+
+        # Start flow execution in background
+        flow_task = asyncio.create_task(
+            build_flow_and_stream(
+                flow_id=UUID(flow_id),
+                inputs=InputValueRequest(
+                    input_value=json.loads(function_call_args).get("input") if function_call_args else None,
+                    components=[],
+                    type="chat",
+                    session=conversation_id,
+                ),
+                background_tasks=background_tasks,
+                current_user=current_user,
+            )
+        )
+
+        # Process progress updates asynchronously
+        async def process_progress():
+            async for line in flow_task.result().body_iterator:
+                if not line:
+                    continue
+                await progress_queue.put(line)
+
+        progress_task = asyncio.create_task(process_progress())
+
+        # Handle progress updates without blocking audio processing
+        while True:
+            try:
+                line = await asyncio.wait_for(progress_queue.get(), timeout=0.1)
+                event_data = json.loads(line)
+                await websocket.send_json({"type": "flow.build.progress", "data": event_data})
+
+                if event_data.get("event") == "end_vertex":
+                    text = (
+                        event_data.get("data", {})
+                        .get("build_data", "")
+                        .get("data", {})
+                        .get("results", {})
+                        .get("message", {})
+                        .get("text", "")
+                    )
+                    if text:
+                        await openai_ws.send(
+                            json.dumps(
+                                {
+                                    "type": "conversation.item.create",
+                                    "item": {
+                                        "type": "message",
+                                        "role": "system",
+                                        "content": [
+                                            {
+                                                "type": "input_text",
+                                                "text": f"progress update for "
+                                                f"function_call_id {function_call_id}: \n{text}",
+                                            }
+                                        ],
+                                    },
+                                }
+                            )
+                        )
+            except asyncio.TimeoutError:
+                if flow_task.done():
+                    break
                 continue
-            event_data = json.loads(line)
-            await websocket.send_json({"type": "flow.build.progress", "data": event_data})
-            if event_data.get("event") == "end_vertex":
-                text_part = (
-                    event_data.get("data", {})
-                    .get("build_data", "")
-                    .get("data", {})
-                    .get("results", {})
-                    .get("message", {})
-                    .get("text", "")
-                )
-                result += text_part
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": str(result),
-            },
-        }
-        await openai_ws.send(json.dumps(function_output))
+
+        await progress_task
         await openai_ws.send(json.dumps({"type": "response.create"}))
-    except json.JSONDecodeError as e:
-        trace = traceback.format_exc()
-        logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Error parsing arguments: {e!s}",
-            },
-        }
-        await openai_ws.send(json.dumps(function_output))
-    except ValueError as e:
-        trace = traceback.format_exc()
-        logger.error(f"Value error: {e!s}\ntrace: {trace}")
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Error with input values: {e!s}",
-            },
-        }
-        await openai_ws.send(json.dumps(function_output))
-    except (ConnectionError, websockets.exceptions.WebSocketException) as e:
-        trace = traceback.format_exc()
-        logger.error(f"Connection error: {e!s}\ntrace: {trace}")
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Connection error: {e!s}",
-            },
-        }
-        await openai_ws.send(json.dumps(function_output))
-    except (KeyError, AttributeError, TypeError) as e:
-        logger.error(f"Error executing flow: {e}")
+
+    except Exception as e:  # noqa: BLE001
+        error_message = str(e)
+        error_type = type(e).__name__
+        logger.error(f"{error_type}: {error_message}")
         logger.error(traceback.format_exc())
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Error executing flow: {e}",
-            },
-        }
-        await openai_ws.send(json.dumps(function_output))
+        await openai_ws.send(
+            json.dumps(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": function_call.get("call_id"),
+                        "output": f"{error_type}: {error_message}",
+                    },
+                }
+            )
+        )
 
 
 # --- Synchronous text chunker using a standard queue ---
@@ -743,7 +760,8 @@ async def flow_as_tool_websocket(
                                 logger.error(f"Error saving message to database: {e}")
                                 logger.error(traceback.format_exc())
                         elif event_type == "error":
-                            pass
+                            msg = f"Error from from OPENAI realtime: {data}"
+                            logger.error(msg)
                         else:
                             await client_websocket.send_text(data)
                         log_event(event, "↓")
