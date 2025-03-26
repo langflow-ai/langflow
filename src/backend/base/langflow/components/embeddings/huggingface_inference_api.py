@@ -9,7 +9,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import MessageTextInput, Output, SecretStrInput
+from langflow.io import MessageTextInput, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
@@ -40,10 +40,6 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             info="The name of the model to use for text embeddings.",
             required=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def validate_inference_endpoint(self, inference_endpoint: str) -> bool:
