@@ -147,6 +147,12 @@ Replace the values for `ASTRA_TOKEN` and `ASTRA_ENDPOINT` with the values from y
 env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcpnpx -y @datastax/astra-db-mcp
 ```
 
+:::important
+Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
+To add the values for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` as global variables, add them to Langflow's `.env` file at startup.
+For more information, see [global variables](/global-variables).
+:::
+
 8. In the **Agent** component, add your **OpenAI API key**.
 9. Open the **Playground**, and then ask the agent, `What collections are available?`
 
@@ -158,7 +164,23 @@ hardware_requirements
 load_collection
 nvidia_collection
 software_requirements
-If you need more information or want to perform any actions on these collections, feel free to ask!
 ```
 
+## MCP SSE mode
+
+1. In the **MCP Server** component, select **SSE**.
+2. A default address the **MCP SSE URL** field.
+3. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+The default value is `http://localhost:7860/api/v1/mcp/sse`.
+4. In the **MCP Server** component, click the **Refresh** icon to register your flows as tools.
+5. Click the **Tools** field.
+Your flows are listed as tools
+6. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
+7. 
 ## Debug flows with the MCP inspector
+
+[MCP inspector](https://modelcontextprotocol.io/docs/tools/inspector) is the standard tool for testing and debugging MCP servers.
+
+To install MCP inspector:
+
+```npx -y 

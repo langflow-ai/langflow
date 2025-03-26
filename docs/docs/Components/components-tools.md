@@ -278,7 +278,7 @@ uvx mcp-server-fetch
 `uvx` is included with `uv` in the Langflow package. To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 For an example of using `npx` MCP servers, see [MCP integrations](integrations-mcp#connect-an-astra-db-mcp-server-to-langflow).
 
-3. Click the <Icon name="RefreshCw" aria-label="Refresh"/> icon to get the server's list of **Tools**.
+3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
 4. In the **Tool** field, select the server tool you want the component to use.
 The available fields change based on the selected tool.
 For information on the parameters, see the MCP server's documentation.
@@ -295,6 +295,19 @@ This confirms the MCP server is connected, and its tools are being used in Langf
 For more information, see [MCP integrations](/integrations-mcp).
 
 ### MCP Server-Sent Events (SSE) mode
+
+1. In the **MCP Server** component, select **SSE**.
+2. A default address the **MCP SSE URL** field.
+3. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+The default value is `http://localhost:7860/api/v1/mcp/sse`.
+4. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+5. Click the **Tools** field.
+All of your flows are listed as tools.
+6. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
+The flow looks like this:
+![MCP server component](/img/mcp-server-component-sse.png)
+7. Open the **Playground** and chat with your tool.
+The agent chooses the correct tool based on your query.
 
 ### Inputs
 
