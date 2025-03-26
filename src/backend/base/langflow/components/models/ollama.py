@@ -151,11 +151,15 @@ class ChatOllamaComponent(LCModelComponent):
         else:
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
-        
+
         # Determine which model name to use
         # If external_model_name is provided and not empty, use it
-        model_to_use = self.external_model_name if hasattr(self, 'external_model_name') and self.external_model_name else self.model_name
-        
+        model_to_use = (
+            self.external_model_name
+            if hasattr(self, "external_model_name") and self.external_model_name
+            else self.model_name
+        )
+
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": self.base_url,
