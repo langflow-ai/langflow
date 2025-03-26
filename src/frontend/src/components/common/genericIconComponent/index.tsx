@@ -6,6 +6,7 @@ import { cn } from "../../../utils/utils";
 import Loading from "../../ui/loading";
 
 import { useCallback, useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const ForwardedIconComponent = memo(
   forwardRef(
@@ -78,7 +79,8 @@ export const ForwardedIconComponent = memo(
 
       const fallback = showFallback ? (
         <div className={cn(className, "flex items-center justify-center")}>
-          <Loading />
+          {/* <Loading /> */}
+          <Skeleton className="h-4 w-4" />
         </div>
       ) : (
         <div className={className}></div>
