@@ -1,3 +1,6 @@
+from typing import override
+
+import requests
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -42,6 +45,7 @@ class OpenAIModelComponent(LCModelComponent):
             options=OPENAI_MODEL_NAMES,
             value=OPENAI_MODEL_NAMES[1],
             combobox=True,
+            refresh_button=True,
         ),
         StrInput(
             name="openai_api_base",
@@ -58,6 +62,7 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=False,
             value="OPENAI_API_KEY",
             required=True,
+            real_time_refresh=True,
         ),
         SliderInput(
             name="temperature",
@@ -88,6 +93,29 @@ class OpenAIModelComponent(LCModelComponent):
             value=700,
         ),
     ]
+
+    def get_models(self) -> list[str]:
+        if not self.api_key:
+            return OPENAI_MODEL_NAMES
+
+        url = f"{self.openai_api_base or 'https://api.openai.com/v1'}/models"
+        headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
+
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            model_list = response.json()
+            return [model["id"] for model in model_list.get("data", [])]
+        except requests.RequestException as e:
+            self.status = f"Error fetching models: {e}"
+            return OPENAI_MODEL_NAMES
+
+    @override
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        if field_name in {"api_key", "openai_api_base", "model_name"}:
+            models = self.get_models()
+            build_config["model_name"]["options"] = models
+        return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         openai_api_key = self.api_key
