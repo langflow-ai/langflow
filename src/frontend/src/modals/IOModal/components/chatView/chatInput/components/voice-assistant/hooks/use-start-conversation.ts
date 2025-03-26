@@ -13,6 +13,7 @@ export const useStartConversation = (
   const currentPort = window.location.port;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_tts/${flowId}/${currentSessionId}`;
+  //const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId}`;
 
   try {
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
