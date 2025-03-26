@@ -43,7 +43,7 @@ class ComposioAPIComponent(LCToolComponent):
             placeholder="Select a tool...",
             button_metadata={"icon": "unplug", "variant": "destructive"},
             options=[],
-            search_category=["All", "Analytics & Data", "Collaboration"],  # TODO: Add more categories
+            search_category=[],
             value="",
             connection_link="",
             info="The name of the tool to use",
