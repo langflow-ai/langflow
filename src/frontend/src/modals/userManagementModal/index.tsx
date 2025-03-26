@@ -10,7 +10,7 @@ import {
   UserManagementType,
   inputHandlerEventType,
 } from "../../types/components";
-import { nodeIconsLucide } from "../../utils/styleUtils";
+import { getNodeIcon } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
 export default function UserManagementModal({
@@ -25,7 +25,7 @@ export default function UserManagementModal({
   onConfirm,
   asChild,
 }: UserManagementType) {
-  const Icon: any = nodeIconsLucide[icon];
+  const Icon: any = getNodeIcon(icon);
   const [pwdVisible, setPwdVisible] = useState(false);
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
   const [open, setOpen] = useState(false);
