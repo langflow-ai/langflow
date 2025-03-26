@@ -92,6 +92,7 @@ const ConnectionComponent = ({
     if (connectionLink !== "") {
       setLink(connectionLink);
       setIsAuthenticated(connectionLink === "validated");
+      handleConnectionButtonClick(false);
     }
   }, [connectionLink]);
 
@@ -104,9 +105,12 @@ const ConnectionComponent = ({
   }, []);
 
   // Event handlers
-  const handleConnectionButtonClick = () => {
+  const handleConnectionButtonClick = (checkConnection: boolean = true) => {
     if (selectedItem?.length === 0) return;
-    window.open(link, "_blank");
+
+    if (checkConnection) {
+      window.open(link, "_blank");
+    }
 
     // Initialize polling
     setIsPolling(true);
@@ -204,7 +208,7 @@ const ConnectionComponent = ({
               "h-9 w-10 rounded-md border disabled:opacity-50",
               buttonMetadata.variant && `border-${buttonMetadata.variant}`,
             )}
-            onClick={handleConnectionButtonClick}
+            onClick={() => handleConnectionButtonClick(true)}
           >
             <ForwardedIconComponent
               name={buttonMetadata.icon || "unplug"}
