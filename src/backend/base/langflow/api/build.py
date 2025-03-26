@@ -88,7 +88,7 @@ async def get_flow_events_response(
 ):
     """Get events for a specific build job, either as a stream or single event."""
     try:
-        main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
+        main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
         if stream:
             if event_task is None:
                 raise HTTPException(status_code=404, detail="No event task found for job")
@@ -463,7 +463,7 @@ async def cancel_flow_build(
         asyncio.CancelledError: If the task cancellation failed
     """
     # Get the event task and event manager for the job
-    _, _, event_task = queue_service.get_queue_data(job_id)
+    _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
         logger.warning(f"No event task found for job_id {job_id}")
