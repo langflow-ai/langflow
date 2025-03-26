@@ -5,7 +5,7 @@ import {
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import DeleteConfirmationModal from "../../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../../stores/alertStore";
 import { cn } from "../../../../../utils/utils";
@@ -27,6 +27,7 @@ export default function InputGlobalComponent({
   editNode = false,
   placeholder,
   isToolMode = false,
+  hasRefreshButton = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const { data: globalVariables } = useGetGlobalVariables();
   const unavailableFields = useGlobalVariablesStore(
@@ -115,6 +116,7 @@ export default function InputGlobalComponent({
         );
       }}
       isToolMode={isToolMode}
+      hasRefreshButton={hasRefreshButton}
     />
   );
 }

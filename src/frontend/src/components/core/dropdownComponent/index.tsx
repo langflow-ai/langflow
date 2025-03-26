@@ -62,6 +62,12 @@ export default function Dropdown({
   const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
 
+  value = useMemo(() => {
+    if (!options.includes(value)) {
+      return null;
+    }
+    return value;
+  }, [value, options]);
   // Initialize utilities and constants
   const placeholderName = name
     ? formatPlaceholderName(name)
