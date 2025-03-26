@@ -3,6 +3,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -40,6 +41,16 @@ export default function ChatInput({
   const chatValue = useUtilityStore((state) => state.chatValueStore);
 
   const [showAudioInput, setShowAudioInput] = useState(false);
+
+  const setIsVoiceAssistantActive = useVoiceStore(
+    (state) => state.setIsVoiceAssistantActive,
+  );
+
+  useEffect(() => {
+    if (showAudioInput) {
+      setIsVoiceAssistantActive(true);
+    }
+  }, [showAudioInput]);
 
   useFocusOnUnlock(isBuilding, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
