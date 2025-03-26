@@ -136,11 +136,13 @@ class LocalDBComponent(LCVectorStoreComponent):
     def get_default_persist_dir(self) -> str:
         """Get the default persist directory from cache."""
         from langflow.services.cache.utils import CACHE_DIR
+
         return str(self.get_vector_store_directory(CACHE_DIR))
 
     def list_existing_collections(self) -> list[str]:
         """List existing vector store collections from the persist directory."""
         from langflow.services.cache.utils import CACHE_DIR
+
         # Get the base directory (either custom or cache)
         base_dir = Path(self.persist_directory) if self.persist_directory else Path(CACHE_DIR)
         # Get the vector_stores subdirectory
