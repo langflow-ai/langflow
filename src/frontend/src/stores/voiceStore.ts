@@ -40,4 +40,7 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   isVoiceAssistantActive: false,
   setIsVoiceAssistantActive: (isVoiceAssistantActive: boolean) =>
     set({ isVoiceAssistantActive }),
+  newSessionCloseVoiceAssistant: false,
+  setNewSessionCloseVoiceAssistant: (newSessionCloseVoiceAssistant: boolean) =>
+    set({ newSessionCloseVoiceAssistant }),
 }));
