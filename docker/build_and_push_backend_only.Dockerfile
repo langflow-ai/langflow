@@ -82,7 +82,11 @@ ENV LANGFLOW_HOST=${DEFAULT_BACKEND_HOST} \
     TZ=UTC \
     LANGFLOW_LOG_ENV="container_json" \
     XDG_CACHE_HOME="/app/cache" \
-    PLATFORMDIRS_CACHE_DIR="/app/cache/langflow"
+    PLATFORMDIRS_CACHE_DIR="/app/cache/langflow" \
+    # Set temporary directory
+    TMPDIR="/app/tmp" \
+    TEMP="/app/tmp" \
+    TMP="/app/tmp"
 
 # Copy the entrypoint script
 COPY ./docker/backend_only_entrypoint.sh /entrypoint.sh
@@ -115,12 +119,14 @@ RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.
         /app/cache/langflow \
         /app/flows \
         /app/db \
+        /app/tmp \
     # Set correct permissions
     && chown -R ${UID}:${GID} \
         /app/data \
         /app/cache \
         /app/flows \
         /app/db \
+        /app/tmp \
     && chmod +x /entrypoint.sh
 
 # Copy the virtual environment from the builder stage
