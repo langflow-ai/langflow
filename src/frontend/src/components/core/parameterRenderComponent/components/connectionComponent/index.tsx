@@ -81,7 +81,13 @@ const ConnectionComponent = ({
   }, []);
 
   useEffect(() => {
-    setLink(connectionLink || "");
+    console.log("connectionLink", connectionLink);
+    if (connectionLink !== "") {
+      setLink(connectionLink);
+      if (connectionLink === "validated") {
+        setIsAuthenticated(true);
+      }
+    }
   }, [connectionLink]);
 
   // Handles the connection button click to open connection in new tab and start polling
