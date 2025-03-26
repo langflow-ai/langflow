@@ -136,20 +136,29 @@ Use the [MCP server component](/components-tools#mcp-server) to connect Langflow
 2. Create an [OpenAI](https://platform.openai.com/) API key.
 3. Create an [Astra DB Serverless (Vector) database](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html#create-vector-database), if you don't already have one.
 4. Get your database's **Astra DB API endpoint** and an **Astra DB application token** with the Database Administrator role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
-5. Add your **Astra DB application token** and **Astra API endpoint** to Langflow as [global variables](/configuration-global-variables).
-6. Create a [Simple agent starter project](/starter-projects-simple-agent).
-7. Remove the **URL** tool and replace it with an [MCP server component](/components-tools#mcp-server) component.
+5. Create a [Simple agent starter project](/starter-projects-simple-agent).
+6. Remove the **URL** tool and replace it with an [MCP server component](/components-tools#mcp-server) component.
 The flow should look like this:
 ![MCP stdio component](/img/mcp-server-component.png)
-8. In the **MCP server** component, in the **MCP command** field, add the following code:
+7. In the **MCP server** component, in the **MCP command** field, add the following code.
+Replace the values for `ASTRA_TOKEN` and `ASTRA_ENDPOINT` with the values from your Astra database.
 
 ```plain
-npx -y @datastax/astra-db-mcp
+env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcpnpx -y @datastax/astra-db-mcp
 ```
 
-9. In the **Agent** component, add your **OpenAI API key**.
-10. Open the **Playground**.
-Langflow is now connected to your Astra DB database through the MCP.
-You can use the MCP to create, read, update, and delete data from your database.
+8. In the **Agent** component, add your **OpenAI API key**.
+9. Open the **Playground**, and then ask the agent, `What collections are available?`
+
+Since Langflow is connected to your Astra DB database through the MCP, the agent chooses the correct tool and connects to your database to retrieve the answer.
+```text
+The available collections in your database are:
+collection_002
+hardware_requirements
+load_collection
+nvidia_collection
+software_requirements
+If you need more information or want to perform any actions on these collections, feel free to ask!
+```
 
 ## Debug flows with the MCP inspector
