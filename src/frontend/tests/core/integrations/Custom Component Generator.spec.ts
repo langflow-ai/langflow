@@ -52,6 +52,13 @@ withEventDeliveryModes(
 
     await page.getByTestId("playground-btn-flow-io").click();
 
+    await page
+      .getByTestId("input-chat-playground")
+      .last()
+      .fill(
+        "Create a custom component that can generate a random number between 1 and 100 and is called Langflow Random Number",
+      );
+
     await page.getByTestId("button-send").last().click();
 
     await page.waitForTimeout(1000);
@@ -64,6 +71,6 @@ withEventDeliveryModes(
     expect(await page.getByTestId("chat-code-tab").last().isVisible()).toBe(
       true,
     );
-    expect(textContents).toContain("langflow");
+    expect(textContents.toLowerCase()).toContain("langflow");
   },
 );
