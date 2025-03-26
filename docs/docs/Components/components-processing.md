@@ -220,6 +220,35 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 |------|--------------|------|
 | output | Cleaned JSON String | The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
+## Lambda filter
+
+This component uses an LLM to generate a lambda function for filtering or transforming structured data.
+
+To use the **Lambda filter** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+
+This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
+The **Instructions** field in the **Lambda filter** component specifies the task `extract emails`.
+The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
+
+![](/img/component-lambda-filter.png)
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The structured data to filter or transform using a lambda function. |
+| llm | Language Model | The connection port for a [Model](/components-models) component. |
+| filter_instruction | Instructions | Natural language instructions for how to filter or transform the data using a lambda function, such as `Filter the data to only include items where the 'status' is 'active'.` |
+| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
+| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | The filtered or transformed [Data](/concepts-objects#data-object). |
+| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
+
 ## LLM router
 
 This component routes requests to the most appropriate LLM based on OpenRouter model specifications.

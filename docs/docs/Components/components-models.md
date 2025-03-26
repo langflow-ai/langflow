@@ -247,7 +247,7 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 |-------|---------------|------------------------------------------------------------------|
 | model | LanguageModel | An instance of HuggingFaceHub configured with the specified parameters. |
 
-## Language Model
+## Language model
 
 This component generates text using either OpenAI or Anthropic language models.
 
