@@ -70,6 +70,17 @@ const ConnectionComponent = ({
 
   // Effects
   useEffect(() => {
+    if (value) {
+      const selectedOption = options.find((option) => option.name === value);
+      if (selectedOption) {
+        setSelectedItem([
+          { name: selectedOption.name, icon: selectedOption.icon },
+        ]);
+      }
+    }
+  }, [value, options]);
+
+  useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     if (link === "loading") {
       timeoutId = setTimeout(() => setLink(""), 5000);
@@ -143,7 +154,7 @@ const ConnectionComponent = ({
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
     setLink("loading");
-    setSelectedItem([item]);
+    setSelectedItem([{ name: item.name }]);
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 
