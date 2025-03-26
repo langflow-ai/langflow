@@ -1,5 +1,7 @@
 # Standard library imports
+import os
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -369,7 +371,17 @@ class ComposioAPIComponent(LCToolComponent):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)
+
+            # Use COMPOSIO_TMP_DIR environment variable or default to /app/tmp
+            tmp_dir = Path(os.environ.get("COMPOSIO_TMP_DIR", "/app/tmp"))
+
+            # Make sure the directory exists
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+
+            # Set path for lockfile
+            lockfile_path = tmp_dir / ".composio.lock"
+
+            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id, lockfile=lockfile_path)
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
             msg = "Please provide a valid Composio API Key in the component settings"

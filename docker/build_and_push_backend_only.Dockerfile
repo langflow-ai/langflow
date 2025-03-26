@@ -86,7 +86,10 @@ ENV LANGFLOW_HOST=${DEFAULT_BACKEND_HOST} \
     # Set temporary directory
     TMPDIR="/app/tmp" \
     TEMP="/app/tmp" \
-    TMP="/app/tmp"
+    TMP="/app/tmp" \
+    # Set Composio temporary directory location to prevent
+    # lock file creation in read-only filesystem
+    COMPOSIO_TMP_DIR="/app/tmp"
 
 # Copy the entrypoint script
 COPY ./docker/backend_only_entrypoint.sh /entrypoint.sh
@@ -98,11 +101,12 @@ RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.
     && apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends --no-install-suggests -y \
+        # Process supervisor for proper signal handling
         tini=0.19.0-1 \
         git=1:2.39.5-0+deb12u2 -y \
-        # PostgreSQL libs
+        # PostgreSQL client libraries
         libpq5=15.12-0+deb12u2 \
-        # Add for healthcheck
+        # Required for healthcheck
         curl=7.88.1-10+deb12u12 \
     # Install zlib1g from trixie for CVE-2023-45853
     && apt-get -t trixie install --no-install-recommends --no-install-suggests -y zlib1g=1:1.3.dfsg+really1.3.1-1+b1 \
@@ -110,7 +114,7 @@ RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/* /var/tmp/* \
     && rm -f /etc/apt/sources.list.d/trixie.list \
-    # Create non-root user
+    # Create non-root user for running the application
     && groupadd --gid ${GID} ${APP_GROUP} \
     && useradd ${APP_USER} --uid ${UID} --gid ${GID} --no-create-home --home-dir /app/data \
     # Create necessary directories
@@ -132,7 +136,8 @@ RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=${UID}:${GID} /app/.venv /app/.venv
 
-# Health check that resolves the port at runtime
+# Health check: Dynamic port detection with content validation
+# Verifies not just HTTP 200 response but actual content indicating healthy service
 HEALTHCHECK --interval=30s \
     --timeout=30s \
     --start-period=20s \
@@ -140,22 +145,26 @@ HEALTHCHECK --interval=30s \
     CMD curl -f -s http://localhost:${LANGFLOW_PORT}/health | grep -q '"status":"ok"' || exit 1
 
 # Add metadata
-LABEL org.opencontainers.image.title=langflow
-LABEL org.opencontainers.image.authors=['Langflow']
-LABEL org.opencontainers.image.licenses=MIT
-LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
-LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
+LABEL org.opencontainers.image.title=="Langflow Backend Service" \
+    org.opencontainers.image.description="Production-ready backend service for Langflow" \
+    org.opencontainers.image.authors=['Langflow Team'] \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.url="https://github.com/langflow-ai/langflow" \
+    org.opencontainers.image.source="https://github.com/langflow-ai/langflow"
 
-# Add these volumes for persistence
-VOLUME [ "/app/data", "/app/flows", "/app/db", "/app/cache"]
+# Define persistent volumes for data that should survive container restarts
+# Separating different types of data for better management
+VOLUME [ "/app/data", "/app/flows", "/app/db", "/app/cache", "/app/tmp" ]
 
 # Switch to non-root user
 USER ${APP_USER}
 
+# Expose API port
 EXPOSE ${DEFAULT_BACKEND_PORT}
 
-# Use tini as the entrypoint to ensure signals are passed correctly
+# Use tini as an init system to properly handle signals and prevent zombie processes
 ENTRYPOINT [ "tini", "--","/entrypoint.sh" ]
 
-# Default command (can be overridden)
+# Default command (intentionally empty to allow override at runtime)
+# This will be executed by the entrypoint script
 CMD []
