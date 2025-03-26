@@ -69,10 +69,14 @@ const SortableListComponent = ({
   const [listData, setListData] = useState<any[]>([]);
 
   useEffect(() => {
+    let listValue: any[] = [];
+
     if (value && Array.isArray(value)) {
-      setListData(value);
+      listValue = value;
     }
-  }, []);
+
+    setListData(listValue);
+  }, [value]);
 
   const createRemoveHandler = useCallback(
     (index: number) => {
