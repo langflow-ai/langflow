@@ -47,6 +47,7 @@ class CustomComponent(BaseComponent):
         repr_value (Optional[Any]): The representation value of the custom component.
         user_id (Optional[Union[UUID, str]]): The user ID associated with the custom component.
         status (Optional[Any]): The status of the custom component.
+        custom_trace_name (Optional[str]) : customised trace name
         _tree (Optional[dict]): The code tree of the custom component.
     """
 
@@ -61,7 +62,9 @@ class CustomComponent(BaseComponent):
     """The description of the component. Defaults to None."""
     icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
-
+    custom_trace_name : str | None = None
+    """The customised trace name . Defaults to None."""
+    
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.
 
@@ -106,6 +109,8 @@ class CustomComponent(BaseComponent):
 
     @property
     def trace_name(self) -> str:
+        if hasattr(self,"custom_trace_name"):
+            return self.custom_trace_name
         if hasattr(self, "_id") and self._id is None:
             msg = "Component id is not set"
             raise ValueError(msg)
