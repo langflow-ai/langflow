@@ -259,8 +259,12 @@ function GenericNode({
     return data.node?.description && data.node?.description !== "";
   }, [data.node?.description]);
 
+  const selectedNodes = useFlowStore((state) =>
+    state.nodes.filter((node) => node.selected),
+  );
+
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return selected ? (
+    return selected && selectedNodes.length === 1 ? (
       <>
         <div
           className={cn(
@@ -341,6 +345,7 @@ function GenericNode({
     editNameDescription,
     hasChangedNodeDescription,
     toggleEditNameDescription,
+    selectedNodes,
   ]);
 
   useEffect(() => {
