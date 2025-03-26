@@ -46,6 +46,14 @@ export default function ChatInput({
     (state) => state.setIsVoiceAssistantActive,
   );
 
+  const newSessionCloseVoiceAssistant = useVoiceStore(
+    (state) => state.newSessionCloseVoiceAssistant,
+  );
+
+  const setNewSessionCloseVoiceAssistant = useVoiceStore(
+    (state) => state.setNewSessionCloseVoiceAssistant,
+  );
+
   useEffect(() => {
     if (showAudioInput) {
       setIsVoiceAssistantActive(true);
@@ -195,7 +203,7 @@ export default function ChatInput({
 
   return (
     <AnimatePresence mode="wait">
-      {showAudioInput ? (
+      {showAudioInput && !newSessionCloseVoiceAssistant ? (
         <motion.div
           key="voice-assistant"
           initial={{ opacity: 0 }}
