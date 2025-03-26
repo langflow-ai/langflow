@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
@@ -27,10 +27,7 @@ const SortableListItem = memo(
     index: number;
     onRemove: () => void;
   }) => (
-    <li
-      key={`${data?.name}-${index}`}
-      className="group inline-flex h-12 w-full cursor-grab items-center gap-2 text-sm font-medium text-gray-800"
-    >
+    <li className="group inline-flex h-12 w-full cursor-grab items-center gap-2 text-sm font-medium text-gray-800">
       <ForwardedIconComponent
         name="grid-horizontal"
         className="h-5 w-5 fill-gray-300 text-gray-300"
@@ -66,43 +63,32 @@ const SortableListComponent = ({
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
   const [open, setOpen] = useState(false);
-  const [listData, setListData] = useState<any[]>([]);
 
-  useEffect(() => {
-    let listValue: any[] = [];
-
-    if (value && Array.isArray(value)) {
-      listValue = value;
-    }
-
-    setListData(listValue);
-  }, [value]);
+  // Convert value to an array if it exists, otherwise use empty array
+  const listData = useMemo(() => (Array.isArray(value) ? value : []), [value]);
 
   const createRemoveHandler = useCallback(
-    (index: number) => {
-      return () => {
-        const newList = listData.filter((_, i) => i !== index);
-        setListData(newList);
-        handleOnNewValue({ value: newList });
-      };
+    (index: number) => () => {
+      const newList = listData.filter((_, i) => i !== index);
+      handleOnNewValue({ value: newList });
     },
     [listData, handleOnNewValue],
   );
 
   const setListDataHandler = useCallback(
-    (list: any[]) => {
-      setListData(list);
-      handleOnNewValue({ value: list });
+    (newList: any[]) => {
+      handleOnNewValue({ value: newList });
     },
     [handleOnNewValue],
   );
 
   const handleCloseListSelectionDialog = useCallback(() => {
     setOpen(false);
-    handleOnNewValue({ value: listData });
-  }, [listData, handleOnNewValue]);
+  }, []);
 
-  const handleOpenListSelectionDialog = useCallback(() => setOpen(true), []);
+  const handleOpenListSelectionDialog = useCallback(() => {
+    setOpen(true);
+  }, []);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -136,7 +122,7 @@ const SortableListComponent = ({
           >
             {listData.map((data, index) => (
               <SortableListItem
-                key={`${data?.name}-${index}`}
+                key={`${data?.name || "item"}-${index}`}
                 data={data}
                 index={index}
                 onRemove={createRemoveHandler(index)}
@@ -150,7 +136,7 @@ const SortableListComponent = ({
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
-        setSelectedList={setListData}
+        setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}
         type="multiple"
