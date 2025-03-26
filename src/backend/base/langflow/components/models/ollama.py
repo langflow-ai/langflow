@@ -163,7 +163,7 @@ class ChatOllamaComponent(LCModelComponent):
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": self.base_url,
-            "model": self.model_name,
+            "model": model_to_use,
             "mirostat": mirostat_value,
             "format": self.format,
             "metadata": self.metadata,
