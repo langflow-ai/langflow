@@ -963,6 +963,7 @@ class TTSConfig:
     def __init__(self, session_id: str, openai_key: str):
         self.session_id = session_id
         self.barge_in_enabled = False
+        self.openai_voice = "echo"  # Default voice
 
         self.default_tts_session = {
             "type": "transcription_session.update",
@@ -1126,6 +1127,7 @@ async def flow_tts_websocket(
 
             async def forward_to_openai() -> None:
                 """Forward client messages to OpenAI WebSocket."""
+                nonlocal tts_config  # Add this to access the tts_config
                 try:
                     while True:
                         message_text = await client_websocket.receive_text()
@@ -1144,6 +1146,11 @@ async def flow_tts_websocket(
                                 await vad_queue.put(base64_data)
                         elif event.get("type") == "input_audio_buffer.commit":
                             await openai_ws.send(message_text)
+                        elif event.get("type") == "voice.settings":
+                            # Store the voice setting
+                            if event.get("voice"):
+                                tts_config.openai_voice = event.get("voice")
+                                logger.info(f"Updated OpenAI voice to: {tts_config.openai_voice}")
 
                 except Exception as e:  # noqa: BLE001
                     logger.error(f"Error in WebSocket communication: {e}")
@@ -1199,7 +1206,7 @@ async def flow_tts_websocket(
                                     oai_client = tts_config.get_openai_client()
                                     response = oai_client.audio.speech.create(
                                         model="gpt-4o-mini-tts",
-                                        voice="coral",
+                                        voice=tts_config.openai_voice,  # Use the configured voice
                                         input=result,
                                         response_format="pcm",
                                     )

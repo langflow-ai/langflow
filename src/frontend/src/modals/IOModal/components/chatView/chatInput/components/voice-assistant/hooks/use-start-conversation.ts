@@ -45,14 +45,14 @@ export const useStartConversation = (
                 : "",
           }),
         );
+
+        // For flow_tts endpoint, we need to use the proper session update format
         if (audioSettings.provider !== "elevenlabs") {
           wsRef.current.send(
             JSON.stringify({
-              type: "transcription_session.update",
-              session: {
-                voice: audioSettings.voice,
-                language: audioLanguage,
-              },
+              type: "voice.settings",
+              voice: audioSettings.voice || "echo",
+              provider: audioSettings.provider || "openai",
             }),
           );
         }
