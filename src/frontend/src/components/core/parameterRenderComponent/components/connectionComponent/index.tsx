@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
@@ -46,8 +47,8 @@ const ConnectionComponent = ({
   } = baseInputProps;
 
   // Store access
+  const errorData = useAlertStore((state) => state.errorData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-
   // State management for tracking connection status and UI states
   const [isAuthenticated, setIsAuthenticated] = useState(
     connectionLink === "validated",
@@ -56,6 +57,7 @@ const ConnectionComponent = ({
   const [isPolling, setIsPolling] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
+  const [showErrorTooltip, setShowErrorTooltip] = useState(false);
 
   // Refs for managing polling timers to prevent memory leaks
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -81,7 +83,13 @@ const ConnectionComponent = ({
   }, []);
 
   useEffect(() => {
-    console.log("connectionLink", connectionLink);
+    if (errorData) {
+      setLink("error");
+      setShowErrorTooltip(true);
+    }
+  }, [errorData]);
+
+  useEffect(() => {
     if (connectionLink !== "") {
       setLink(connectionLink);
       if (connectionLink === "validated") {
@@ -153,6 +161,7 @@ const ConnectionComponent = ({
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
     setSelectedItem([{ name: item.name }]);
+    setLink("loading");
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 
@@ -193,15 +202,19 @@ const ConnectionComponent = ({
             size="icon"
             variant="ghost"
             loading={link === "loading" || isPolling}
-            disabled={!selectedItem[0]?.name || link === ""}
+            disabled={!selectedItem[0]?.name || link === "" || link === "error"}
             className={cn(
               "h-9 w-10 rounded-md border disabled:opacity-50",
               buttonMetadata.variant && `border-${buttonMetadata.variant}`,
             )}
-            onClick={() => handleConnectionButtonClick()}
+            onClick={link === "error" ? undefined : handleConnectionButtonClick}
           >
             <ForwardedIconComponent
-              name={buttonMetadata.icon || "unplug"}
+              name={
+                link === "error"
+                  ? "triangle-alert"
+                  : buttonMetadata.icon || "unplug"
+              }
               className={cn(
                 "h-5 w-5",
                 buttonMetadata.variant && `text-${buttonMetadata.variant}`,
