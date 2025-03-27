@@ -3,7 +3,7 @@ pid /tmp/nginx.pid;
 
 # Worker connections - determines how many clients can be served simultaneously
 events {
-    worker_connections 1024;
+    worker_connections ${WORKER_CONNECTIONS};
     multi_accept on;
 }
 
@@ -32,9 +32,10 @@ http {
 
     # Timeouts
     keepalive_timeout 65;
-    client_body_timeout 12;
-    client_header_timeout 12;
+    client_body_timeout ${CLIENT_TIMEOUT};
+    client_header_timeout ${CLIENT_TIMEOUT};
     send_timeout 10;
+    client_max_body_size ${CLIENT_MAX_BODY_SIZE};
 
     # Caching settings
     open_file_cache max=1000 inactive=20s;
@@ -44,7 +45,7 @@ http {
 
     # Compression settings
     gzip on;
-    gzip_comp_level 5;
+    gzip_comp_level ${GZIP_COMPRESSION_LEVEL};
     gzip_min_length 256;
     gzip_proxied any;
     gzip_vary on;
@@ -126,9 +127,27 @@ http {
             proxy_buffering off;
             proxy_cache off;
             proxy_read_timeout 300s;
+
+            # Add error intercept for better debugging
+            proxy_intercept_errors on;
+            error_page 502 504 = @api_down;
+        }
+
+        # API down fallback
+        location @api_down {
+            default_type application/json;
+            return 503 '{"error": "API service unavailable", "status": 503}';
         }
 
         # Health check endpoints
+        # Frontend-only health check for container health monitoring
+        location = /nginx_health {
+            access_log off;
+            add_header Content-Type application/json;
+            return 200 '{"status":"ok","service":"nginx"}';
+        }
+
+        # Health check endpoints for the backend service
         location /health_check {
             proxy_pass ${BACKEND_URL};
             proxy_set_header Host $host;
@@ -150,6 +169,12 @@ http {
 
         # Deny access to hidden files
         location ~ /\. {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
+
+        location ~ ~$ {
             deny all;
             access_log off;
             log_not_found off;
