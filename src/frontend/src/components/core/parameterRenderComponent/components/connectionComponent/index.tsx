@@ -79,6 +79,11 @@ const ConnectionComponent = ({
         ? { name: selectedOption.name, icon: selectedOption.icon }
         : { name: "", icon: "" },
     ]);
+
+    // Update authentication status based on selected option
+    if (!selectedOption) {
+      setIsAuthenticated(false);
+    }
   }, [value, options]);
 
   useEffect(() => {
