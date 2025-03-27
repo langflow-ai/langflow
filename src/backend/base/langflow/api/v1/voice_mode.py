@@ -398,8 +398,9 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
 
 
 def pcm16_to_float_array(pcm_data):
-    values = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32)
-    return values / 32768.0
+    # Use the same buffer for float conversion to save memory
+    values = np.frombuffer(pcm_data, dtype=np.int16)
+    return values.astype(np.float32, order="C", copy=False) / 32768.0
 
 
 async def text_chunker_with_timeout(chunks, timeout=0.3):
@@ -643,6 +644,11 @@ async def flow_as_tool_websocket(
                             log_event(event, "↑")
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
+                        elif msg.get("type") == "response.create":
+                            if voice_config.use_elevenlabs:
+                                response = msg.setdefault("response", {})
+                                response["modalities"] = ["text"]
+                            await openai_ws.send(json.dumps(msg))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
                                 await openai_ws.send(message_text)
