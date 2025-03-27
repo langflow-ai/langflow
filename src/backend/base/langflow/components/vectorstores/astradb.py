@@ -3,8 +3,9 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
 from astrapy import DataAPIClient, Database
-from astrapy.info import CollectionDefinition, CollectionDescriptor
+from astrapy.info import CollectionDescriptor
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
+from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
@@ -360,19 +361,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
     ):
-        # Create the data API client
-        client = DataAPIClient(environment=environment)
-
-        # Get the database object
-        database = client.get_async_database(api_endpoint, token=token)
-
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
+            providers = cls.get_vectorize_providers(
+                token=token, environment=environment or "prod", api_endpoint=api_endpoint
+            )
             vectorize_options = VectorServiceOptions(
-                provider=cls.get_vectorize_providers(
-                    token=token, environment=environment, api_endpoint=api_endpoint
-                ).get(embedding_generation_provider, [None, []])[0],
+                provider=providers.get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
             )
 
@@ -381,17 +377,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = "Collection name is required to create a new collection."
             raise ValueError(msg)
 
-        # Create the collection
-        collection_definition = (
-            CollectionDefinition.builder()
-            .set_vector_dimension(dimension or None)  # guard against dimension=0
-            .set_vector_service(vectorize_options)
-            .build()
-        )
-        return await database.create_collection(
-            name=new_collection_name,
+        _AstraDBCollectionEnvironment(
+            new_collection_name,
+            token=token,
+            api_endpoint=api_endpoint,
             keyspace=keyspace,
-            definition=collection_definition,
+            environment=environment or "prod",
+            embedding_dimension=dimension,
+            collection_vector_service_options=vectorize_options,
         )
 
     @classmethod
@@ -403,11 +396,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get the list of databases
         db_list = admin_client.list_databases()
-
-        # Set the environment properly
-        env_string = ""
-        if environment and environment != "prod":
-            env_string = f"-{environment}"
 
         # Generate the api endpoint for each database
         db_info_dict = {}
@@ -554,12 +542,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the provider name from the collection
         provider_name = provider_name or (
             collection.definition.vector.service.provider
-            if collection and collection.definition and collection.definition.vector and collection.definition.vector.service
+            if (
+                collection
+                and collection.definition
+                and collection.definition.vector
+                and collection.definition.vector.service
+            )
             else None
         )
 
         # If there is no provider, use the vector store icon
-        if not provider_name or provider_name == "Bring your own":
+        if not provider_name or provider_name.lower() == "bring your own":
             return "vectorstores"
 
         # Map provider casings
@@ -749,95 +742,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        # Callback for database creation
-        if field_name == "database_name" and isinstance(field_value, dict) and "new_database_name" in field_value:
-            try:
-                await self.create_database_api(
-                    new_database_name=field_value["new_database_name"],
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                    environment=self.environment or "prod",
-                    cloud_provider=field_value["cloud_provider"],
-                    region=field_value["region"],
-                )
-            except Exception as e:
-                msg = f"Error creating database: {e}"
-                raise ValueError(msg) from e
-
-            # Add the new database to the list of options
-            build_config["database_name"]["options"] += [field_value["new_database_name"]]
-            build_config["database_name"]["options_metadata"] += [{"status": "PENDING"}]
-
-            return self.reset_collection_list(build_config)
-
-        # This is the callback required to update the list of regions for a cloud provider
-        if field_name == "database_name" and isinstance(field_value, dict) and "new_database_name" not in field_value:
-            cloud_provider = field_value["cloud_provider"]
-            build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
-                "options"
-            ] = self.map_cloud_providers()[cloud_provider]["regions"]
-
-            return build_config
-
-        # Callback for the creation of collections
-        if field_name == "collection_name" and isinstance(field_value, dict) and "new_collection_name" in field_value:
-            try:
-                # Get the dimension if its a BYO provider
-                dimension = (
-                    field_value["dimension"]
-                    if field_value["embedding_generation_provider"] == "Bring your own"
-                    else None
-                )
-
-                # Create the collection
-                await self.create_collection_api(
-                    new_collection_name=field_value["new_collection_name"],
-                    token=self.token,
-                    api_endpoint=build_config["api_endpoint"]["value"],
-                    environment=self.environment or "prod",
-                    keyspace=self.get_keyspace(),
-                    dimension=dimension,
-                    embedding_generation_provider=field_value["embedding_generation_provider"],
-                    embedding_generation_model=field_value["embedding_generation_model"],
-                )
-            except Exception as e:
-                msg = f"Error creating collection: {e}"
-                raise ValueError(msg) from e
-
-            # Add the new collection to the list of options
-            build_config["collection_name"]["value"] = field_value["new_collection_name"]
-            build_config["collection_name"]["options"].append(field_value["new_collection_name"])
-
-            # Get the provider and model for the new collection
-            generation_provider = field_value["embedding_generation_provider"]
-            provider = generation_provider if generation_provider != "Bring your own" else None
-            generation_model = field_value["embedding_generation_model"]
-            model = generation_model if generation_model and generation_model != "Bring your own" else None
-
-            # Set the embedding choice
-            build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
-            build_config["embedding_model"]["advanced"] = bool(provider)
-
-            # Add the new collection to the list of options
-            icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
-            build_config["collection_name"]["options_metadata"] += [
-                {"records": 0, "provider": provider, "icon": icon, "model": model}
-            ]
-
-            return build_config
-
-        # Callback to update the model list based on the embedding provider
-        if (
-            field_name == "collection_name"
-            and isinstance(field_value, dict)
-            and "new_collection_name" not in field_value
-        ):
-            return self.reset_provider_options(build_config)
-
-        # When the component first executes, this is the update refresh call
-        first_run = field_name == "collection_name" and not field_value and not build_config["database_name"]["options"]
-
-        # If the token has not been provided, simply return the empty build config
+        """Update build configuration based on field name and value."""
+        # Early return if no token provided
         if not self.token:
             return self.reset_build_config(build_config)
 
@@ -949,7 +855,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             {
                 "records": 0,
                 "provider": provider,
-                "icon": self.get_provider_icon(provider_name=embedding_provider),
+                "icon": self.get_provider_icon(provider_name=provider),
                 "model": field_value.get("03_embedding_generation_model"),
             }
         )

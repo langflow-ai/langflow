@@ -395,18 +395,19 @@ wheels = [
 
 [[package]]
 name = "astrapy"
-version = "2.0.0rc1"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
     { name = "httpx", extra = ["http2"] },
     { name = "pymongo" },
     { name = "toml" },
+    { name = "typing-extensions" },
     { name = "uuid6" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/87/2a/182cffa7c1e0c622a77ad53e8ad15266111e3f5ca6b03d35fdab1975555d/astrapy-2.0.0rc1.tar.gz", hash = "sha256:925d19a58be53f4f8714fbe4fd5e5f702a80fbdbdc67ac44a29631f1c54ab43d", size = 225467 }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/c9/5c9488664f99f2b9738d8e4823f8a0474897f39a17c0676430f548834adb/astrapy-2.0.1.tar.gz", hash = "sha256:3a35ebd7af5c24f0abe400f9b2778dc5e8812c78ae247f97704be27e6cb9dc5a", size = 252460 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/ef/bccc9e8ed846ce8aa5f0fb76f98986f88b9e4c31d8a900758b787722fe58/astrapy-2.0.0rc1-py3-none-any.whl", hash = "sha256:d61a23338a27f7d9fb8974effd0888ac7cb3652d323a9d4d062fb0ae9d73d278", size = 268268 },
+    { url = "https://files.pythonhosted.org/packages/90/6d/1481615ec3b97e1b8c9058c43c804e02612642d5114a26812894e42fb9b4/astrapy-2.0.1-py3-none-any.whl", hash = "sha256:4fa37f2955e7543a29e78565833de0dc8e39316ccc2f66263a4665b5871b7739", size = 300495 },
 ]
 
 [[package]]
@@ -1968,38 +1969,6 @@ wheels = [
 ]
 
 [[package]]
-name = "e2b"
-version = "1.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "httpcore" },
-    { name = "httpx" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "python-dateutil" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/23/de/d051c7f6d762e2f743a4d5efebe6b30181c866bb499ec99ac06d3897ff6e/e2b-1.1.0.tar.gz", hash = "sha256:bd054fbaa9baed48919500ba853bdb72c750b04e0bac8365bde75cdfbdf80d18", size = 45977 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/da/c0aea566943a85ab8660e1dd69668769c5a092ae69e957b682000fb63bde/e2b-1.1.0-py3-none-any.whl", hash = "sha256:5d99c675e155cf124f457d77f91c4cb32b286d241ca6cd37ac8d6c0711fc272e", size = 83132 },
-]
-
-[[package]]
-name = "e2b-code-interpreter"
-version = "1.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "e2b" },
-    { name = "httpx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/a0/aa992090fc02ea7eeafce9b4fc122546c8dd81e85810c0d06bfd4c29a6a2/e2b_code_interpreter-1.1.1.tar.gz", hash = "sha256:b13091f75fc127ad3a268b8746e5da996c6734f432e606fcd4f3897a5b1c2bf0", size = 9288 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/40/dcdc47d039dd85e74df2532a01e9d47031fbfdfdc20c0b2de4e42b557271/e2b_code_interpreter-1.1.1-py3-none-any.whl", hash = "sha256:f56450b192456f24df89b9159d1067d50c7133d587ab12116144638969409578", size = 12049 },
-]
-
-[[package]]
 name = "ecdsa"
 version = "0.19.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2832,6 +2801,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/24/8a/e2d52d4111d3ef48e0a8b2324e80b600f6c5339dae9827744b94325a0b6a/google_crc32c-1.7.0-cp313-cp313-macosx_12_0_x86_64.whl", hash = "sha256:6a40522958040051c755a173eb98c05ad4d64a6dd898888c3e5ccca2d1cbdcdc", size = 30149 },
     { url = "https://files.pythonhosted.org/packages/da/60/8cd1605391da56c55db67ef64660e72b89787755a271ebe04f9418320b19/google_crc32c-1.7.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f714fe5cdf5007d7064c57cf7471a99e0cbafda24ddfa829117fc3baafa424f7", size = 32972 },
     { url = "https://files.pythonhosted.org/packages/3d/65/065ffe1bb324709e7704205261b429588ed17bbde8b7940eb12b140a6082/google_crc32c-1.7.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f04e58dbe1bf0c9398e603a9be5aaa09e0ba7eb022a3293195d8749459a01069", size = 32616 },
+    { url = "https://files.pythonhosted.org/packages/16/b8/95e6a189f5764abd643e3df5ab06e291d379f26ff77ea97bbcb12ac9207b/google_crc32c-1.7.0-cp313-cp313-win_amd64.whl", hash = "sha256:e545b51ddf97f604d30114f7c23eecaf4c06cd6c023ff1ae0b80dcd99af32833", size = 33496 },
     { url = "https://files.pythonhosted.org/packages/1b/30/51b10f995be9bd09551d050117c571f9749297717fcc2e7946e242eb4830/google_crc32c-1.7.0-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:364067b063664dd8d1fec75a3fe85edf05c46f688365269beccaf42ef5dfe889", size = 33080 },
     { url = "https://files.pythonhosted.org/packages/4d/ec/a7ca773559c7ab6919ac0255d84c74571c8cecf0e8891036705f6861c04d/google_crc32c-1.7.0-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e1b0d6044799f6ac51d1cc2decb997280a83c448b3bef517a54b57a3b71921c0", size = 32708 },
     { url = "https://files.pythonhosted.org/packages/35/9e/0fca77ec4a5d4651e33662c62d44418cb1c37bd04b22f6368a0f7a7abefa/google_crc32c-1.7.0-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1b8f48dddd1451026a517d7eb1f8c4ee2491998bfa383abb5fdebf32b0aa333e", size = 28080 },
@@ -4078,7 +4048,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "astrapy", specifier = "==2.0.0rc1" },
+    { name = "astrapy", specifier = ">=2.0.1,<3.0.0" },
     { name = "langchain-community", specifier = ">=0.3.1" },
     { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
 ]
