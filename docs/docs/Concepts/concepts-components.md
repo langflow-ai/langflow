@@ -23,7 +23,7 @@ Use the component controls to do the following:
 
 - **Code** — Modify the component's Python code and save your changes.
 - **Controls** — Adjust all component parameters.
-- **Freeze Path** — After a component runs, lock its previous output state to prevent it from re-running.
+- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
 
 Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
@@ -140,17 +140,13 @@ When used in a flow, this component:
 3. Processes data using the configured parameters.
 4. Passes results to the next component.
 
-## Freeze path
+## Freeze
 
-After a component runs, **Freeze Path** locks the component's previous output state to prevent it from re-running.
+After a component runs, **Freeze** locks the component's previous output state to prevent it from re-running.
 
-If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**. 
+If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze**.
 
-Enabling **Freeze Path** freezes all components upstream of the selected component.
-
-If you only want to freeze a single component, select **Freeze** instead.
-
-A <Icon name="Snowflake" aria-label="Snowflake"/> icon appears on all frozen components.
+Enabling **Freeze** freezes all components upstream of the selected component.
 
 ## Additional component options
 
@@ -174,8 +170,7 @@ The following keyboard shortcuts are available when a component is selected.
 | Paste | Ctrl + V | ⌘ + V | Pastes the copied/cut component. |
 | Docs | Ctrl + Shift + D | ⌘ + Shift + D | Opens related documentation. |
 | Minimize | Ctrl + . | ⌘ + . | Minimizes the current component. |
-| Freeze | Ctrl + F | ⌘ + F | Freezes the current component state. |
-| Freeze Path | Ctrl + Shift + F | ⌘ + Shift + F | Freezes component state and upstream components. |
+| Freeze| Ctrl + Shift + F | ⌘ + Shift + F | Freezes component state and upstream components. |
 | Download | Ctrl + J | ⌘ + J | Downloads the component as JSON. |
 | Delete | Backspace | Backspace | Deletes the component. |
 | Group | Ctrl + G | ⌘ + G | Groups selected components. |
