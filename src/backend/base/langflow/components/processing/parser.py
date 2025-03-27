@@ -34,7 +34,7 @@ class ParserComponent(Component):
             real_time_refresh=True,
         ),
         MultilineInput(
-            name="format",
+            name="pattern",
             display_name="Template",
             info=(
                 "Use variables within curly brackets to extract column values for DataFrames "
@@ -74,8 +74,8 @@ class ParserComponent(Component):
     def update_build_config(self, build_config, field_value, field_name=None):
         """Dynamically hide/show `template` and enforce requirement based on `stringify`."""
         if field_name == "mode":
-            build_config["format"]["show"] = self.mode == "Parser"
-            build_config["format"]["required"] = self.mode == "Parser"
+            build_config["pattern"]["show"] = self.mode == "Parser"
+            build_config["pattern"]["required"] = self.mode == "Parser"
             if field_value:
                 clean_data = BoolInput(
                     name="clean_data",
@@ -130,10 +130,10 @@ class ParserComponent(Component):
         lines = []
         if df is not None:
             for _, row in df.iterrows():
-                formatted_text = self.format.format(**row.to_dict())
+                formatted_text = self.pattern.format(**row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-            formatted_text = self.format.format(**data.data)
+            formatted_text = self.pattern.format(**data.data)
             lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)

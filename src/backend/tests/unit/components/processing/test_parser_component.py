@@ -17,7 +17,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "input_data": DataFrame({"Name": ["John"], "Age": [30], "Country": ["USA"]}),
-            "format": "Name: {Name}, Age: {Age}, Country: {Country}",
+            "pattern": "Name: {Name}, Age: {Age}, Country: {Country}",
             "sep": "\n",
             "stringify": False,
             "clean_data": False,
@@ -44,7 +44,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data = Data(text="Hello World")
         kwargs = {
             "input_data": data,
-            "format": "text: {text}",
+            "pattern": "text: {text}",
             "sep": "\n",
             "stringify": False,
         }
@@ -150,7 +150,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Arrange
         kwargs = {
             "input_data": 123,  # Invalid input type
-            "template": "{value}",
+            "pattern": "{value}",
             "sep": "\n",
         }
         component = component_class(**kwargs)
@@ -163,7 +163,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Arrange
         kwargs = {
             "input_data": None,
-            "template": "{value}",
+            "pattern": "{value}",
             "sep": "\n",
         }
         component = component_class(**kwargs)
@@ -177,7 +177,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data_frame = DataFrame({"Name": ["John"]})
         kwargs = {
             "input_data": data_frame,
-            "template": "{InvalidColumn}",  # Invalid column name
+            "pattern": "{InvalidColumn}",  # Invalid column name
             "sep": "\n",
             "stringify": False,
         }
@@ -197,7 +197,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         )
         kwargs = {
             "input_data": data_frame,
-            "format": "{Name} is {Age} years old",
+            "pattern": "{Name} is {Age} years old",
             "sep": " | ",
             "mode": "Parser",
         }
