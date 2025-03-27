@@ -9,12 +9,16 @@
             "dataType": "YouTubeCommentsComponent",
             "id": "YouTubeCommentsComponent-1B3Fv",
             "name": "comments",
-            "output_types": ["DataFrame"]
+            "output_types": [
+              "DataFrame"
+            ]
           },
           "targetHandle": {
             "fieldName": "df",
             "id": "BatchRunComponent-gNH2h",
-            "inputTypes": ["DataFrame"],
+            "inputTypes": [
+              "DataFrame"
+            ],
             "type": "other"
           }
         },
@@ -33,12 +37,16 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-05xLQ",
             "name": "model_output",
-            "output_types": ["LanguageModel"]
+            "output_types": [
+              "LanguageModel"
+            ]
           },
           "targetHandle": {
             "fieldName": "model",
             "id": "BatchRunComponent-gNH2h",
-            "inputTypes": ["LanguageModel"],
+            "inputTypes": [
+              "LanguageModel"
+            ],
             "type": "other"
           }
         },
@@ -57,12 +65,16 @@
             "dataType": "BatchRunComponent",
             "id": "BatchRunComponent-gNH2h",
             "name": "batch_results",
-            "output_types": ["DataFrame"]
+            "output_types": [
+              "DataFrame"
+            ]
           },
           "targetHandle": {
             "fieldName": "df",
             "id": "ParseDataFrame-OIHSx",
-            "inputTypes": ["DataFrame"],
+            "inputTypes": [
+              "DataFrame"
+            ],
             "type": "other"
           }
         },
@@ -81,12 +93,16 @@
             "dataType": "ParseDataFrame",
             "id": "ParseDataFrame-OIHSx",
             "name": "text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "analysis",
             "id": "Prompt-aWbxe",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -105,12 +121,16 @@
             "dataType": "Prompt",
             "id": "Prompt-aWbxe",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-3FPSt",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -129,12 +149,18 @@
             "dataType": "Agent",
             "id": "Agent-3FPSt",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-i5hlZ",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -153,12 +179,16 @@
             "dataType": "YouTubeTranscripts",
             "id": "YouTubeTranscripts-nSvJC",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-3FPSt",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -177,12 +207,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-aeyrx",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_text",
             "id": "ConditionalRouter-DNDns",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -201,12 +235,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-aeyrx",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "message",
             "id": "ConditionalRouter-DNDns",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -225,12 +263,16 @@
             "dataType": "ConditionalRouter",
             "id": "ConditionalRouter-DNDns",
             "name": "true_result",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "video_url",
             "id": "YouTubeCommentsComponent-1B3Fv",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -249,12 +291,16 @@
             "dataType": "ConditionalRouter",
             "id": "ConditionalRouter-DNDns",
             "name": "true_result",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "url",
             "id": "Prompt-aWbxe",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -271,7 +317,9 @@
         "data": {
           "id": "BatchRunComponent-gNH2h",
           "node": {
-            "base_classes": ["DataFrame"],
+            "base_classes": [
+              "DataFrame"
+            ],
             "beta": true,
             "category": "helpers",
             "conditional_paths": [],
@@ -280,7 +328,12 @@
             "display_name": "Batch Run",
             "documentation": "",
             "edited": false,
-            "field_order": ["model", "system_message", "df", "column_name"],
+            "field_order": [
+              "model",
+              "system_message",
+              "df",
+              "column_name"
+            ],
             "frozen": false,
             "icon": "List",
             "key": "BatchRunComponent",
@@ -298,7 +351,9 @@
                 "name": "batch_results",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -322,7 +377,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING, Any\nimport toml\n\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    DataFrameInput,\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    StrInput\n)\nfrom langflow.schema import DataFrame\n\nif TYPE_CHECKING:\n    from langchain_core.runnables import Runnable\n\n\nclass BatchRunComponent(Component):\n    display_name = \"Batch Run\"\n    description = (\n        \"Runs an LLM over each row of a DataFrame's column. If no column is set, the entire row is passed.\"\n    )\n    icon = \"List\"\n    beta = True\n\n    inputs = [\n        HandleInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Connect the 'Language Model' output from your LLM component here.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"Instructions\",\n            info=\"Multi-line system instruction for all rows in the DataFrame.\",\n            required=False,\n        ),\n        DataFrameInput(\n            name=\"df\",\n            display_name=\"DataFrame\",\n            info=\"The DataFrame whose column (specified by 'column_name') we'll treat as text messages.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"column_name\",\n            display_name=\"Column Name\",\n            info=\"The name of the DataFrame column to treat as text messages. If empty, all columns will be formatted in TOML.\",\n            required=False,\n            advanced=False,\n        ),\n        StrInput(\n            name=\"output_column_name\",\n            display_name=\"Output Column Name\",\n            info=\"Name of the column where the model's response will be stored.\",\n            value=\"model_response\",\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"enable_metadata\",\n            display_name=\"Enable Metadata\",\n            info=\"If True, add metadata to the output DataFrame.\",\n            value=False,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"DataFrame\",\n            name=\"batch_results\",\n            method=\"run_batch\",\n            info=\"A DataFrame with all original columns plus the model's response column.\",\n        ),\n    ]\n\n    def _format_row_as_toml(self, row: dict[str, Any]) -> str:\n        \"\"\"Convert a dictionary (row) into a TOML-formatted string.\"\"\"\n        formatted_dict = {col: {\"value\": str(val)} for col, val in row.items()}\n        return toml.dumps(formatted_dict)\n\n    def _create_base_row(self, original_row: dict[str, Any], model_response: str = \"\", batch_index: int = -1) -> dict[str, Any]:\n        \"\"\"Create a base row with original columns and additional metadata.\"\"\"\n        row = original_row.copy()\n        row[self.output_column_name] = model_response\n        row[\"batch_index\"] = batch_index\n        return row\n\n    def _add_metadata(\n        self, row: dict[str, Any], *, success: bool = True, system_msg: str = \"\", error: str | None = None\n    ) -> None:\n        \"\"\"Add metadata to a row if enabled.\"\"\"\n        if not self.enable_metadata:\n            return\n\n        if success:\n            row[\"metadata\"] = {\n                \"has_system_message\": bool(system_msg),\n                \"input_length\": len(row.get(\"text_input\", \"\")),\n                \"response_length\": len(row[self.output_column_name]),\n                \"processing_status\": \"success\",\n            }\n        else:\n            row[\"metadata\"] = {\n                \"error\": error,\n                \"processing_status\": \"failed\",\n            }\n\n    async def run_batch(self) -> DataFrame:\n        \"\"\"Process each row in df[column_name] with the language model asynchronously.\n\n        Returns:\n            DataFrame: A new DataFrame containing:\n                - All original columns\n                - The model's response column (customizable name)\n                - 'batch_index' column for processing order\n                - 'metadata' (optional)\n\n        Raises:\n            ValueError: If the specified column is not found in the DataFrame\n            TypeError: If the model is not compatible or input types are wrong\n        \"\"\"\n        model: Runnable = self.model\n        system_msg = self.system_message or \"\"\n        df: DataFrame = self.df\n        col_name = self.column_name or \"\"\n        output_col_name = self.output_column_name or \"model_response\"\n\n        # Validate inputs first\n        if not isinstance(df, DataFrame):\n            msg = f\"Expected DataFrame input, got {type(df)}\"\n            raise TypeError(msg)\n\n        if col_name and col_name not in df.columns:\n            msg = f\"Column '{col_name}' not found in the DataFrame. Available columns: {', '.join(df.columns)}\"\n            raise ValueError(msg)\n\n        try:\n            # Determine text input for each row\n            if col_name:\n                user_texts = df[col_name].astype(str).tolist()\n            else:\n                user_texts = [self._format_row_as_toml(row) for row in df.to_dict(orient=\"records\")]\n\n            total_rows = len(user_texts)\n            logger.info(f\"Processing {total_rows} rows with batch run\")\n\n            # Prepare the batch of conversations\n            conversations = [\n                [{\"role\": \"system\", \"content\": system_msg}, {\"role\": \"user\", \"content\": text}]\n                if system_msg\n                else [{\"role\": \"user\", \"content\": text}]\n                for text in user_texts\n            ]\n\n            # Configure the model with project info and callbacks\n            model = model.with_config(\n                {\n                    \"run_name\": self.display_name,\n                    \"project_name\": self.get_project_name(),\n                    \"callbacks\": self.get_langchain_callbacks(),\n                }\n            )\n\n            # Process batches and track progress\n            responses_with_idx = [\n                (idx, response)\n                for idx, response in zip(\n                    range(len(conversations)), await model.abatch(list(conversations)), strict=True\n                )\n            ]\n\n            # Sort by index to maintain order\n            responses_with_idx.sort(key=lambda x: x[0])\n\n            # Build the final data with enhanced metadata\n            rows: list[dict[str, Any]] = []\n            for idx, (original_row, response) in enumerate(zip(df.to_dict(orient=\"records\"), responses_with_idx)):\n                response_text = response[1].content if hasattr(response[1], \"content\") else str(response[1])\n                row = self._create_base_row(original_row, model_response=response_text, batch_index=idx)\n                self._add_metadata(row, success=True, system_msg=system_msg)\n                rows.append(row)\n\n                # Log progress\n                if (idx + 1) % max(1, total_rows // 10) == 0:\n                    logger.info(f\"Processed {idx + 1}/{total_rows} rows\")\n\n            logger.info(\"Batch processing completed successfully\")\n            return DataFrame(rows)\n\n        except (KeyError, AttributeError) as e:\n            # Handle data structure and attribute access errors\n            logger.error(f\"Data processing error: {e!s}\")\n            error_row = self._create_base_row({col: \"\" for col in df.columns}, model_response=\"\", batch_index=-1)\n            self._add_metadata(error_row, success=False, error=str(e))\n            return DataFrame([error_row])"
+                "value": "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING, Any\n\nimport toml\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output, StrInput\nfrom langflow.schema import DataFrame\n\nif TYPE_CHECKING:\n    from langchain_core.runnables import Runnable\n\n\nclass BatchRunComponent(Component):\n    display_name = \"Batch Run\"\n    description = \"Runs an LLM over each row of a DataFrame's column. If no column is set, the entire row is passed.\"\n    icon = \"List\"\n    beta = True\n\n    inputs = [\n        HandleInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Connect the 'Language Model' output from your LLM component here.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"Instructions\",\n            info=\"Multi-line system instruction for all rows in the DataFrame.\",\n            required=False,\n        ),\n        DataFrameInput(\n            name=\"df\",\n            display_name=\"DataFrame\",\n            info=\"The DataFrame whose column (specified by 'column_name') we'll treat as text messages.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"column_name\",\n            display_name=\"Column Name\",\n            info=\"The name of the DataFrame column to treat as text messages. If empty, all columns will be formatted in TOML.\",\n            required=False,\n            advanced=False,\n        ),\n        StrInput(\n            name=\"output_column_name\",\n            display_name=\"Output Column Name\",\n            info=\"Name of the column where the model's response will be stored.\",\n            value=\"model_response\",\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"enable_metadata\",\n            display_name=\"Enable Metadata\",\n            info=\"If True, add metadata to the output DataFrame.\",\n            value=False,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"DataFrame\",\n            name=\"batch_results\",\n            method=\"run_batch\",\n            info=\"A DataFrame with all original columns plus the model's response column.\",\n        ),\n    ]\n\n    def _format_row_as_toml(self, row: dict[str, Any]) -> str:\n        \"\"\"Convert a dictionary (row) into a TOML-formatted string.\"\"\"\n        formatted_dict = {col: {\"value\": str(val)} for col, val in row.items()}\n        return toml.dumps(formatted_dict)\n\n    def _create_base_row(\n        self, original_row: dict[str, Any], model_response: str = \"\", batch_index: int = -1\n    ) -> dict[str, Any]:\n        \"\"\"Create a base row with original columns and additional metadata.\"\"\"\n        row = original_row.copy()\n        row[self.output_column_name] = model_response\n        row[\"batch_index\"] = batch_index\n        return row\n\n    def _add_metadata(\n        self, row: dict[str, Any], *, success: bool = True, system_msg: str = \"\", error: str | None = None\n    ) -> None:\n        \"\"\"Add metadata to a row if enabled.\"\"\"\n        if not self.enable_metadata:\n            return\n\n        if success:\n            row[\"metadata\"] = {\n                \"has_system_message\": bool(system_msg),\n                \"input_length\": len(row.get(\"text_input\", \"\")),\n                \"response_length\": len(row[self.output_column_name]),\n                \"processing_status\": \"success\",\n            }\n        else:\n            row[\"metadata\"] = {\n                \"error\": error,\n                \"processing_status\": \"failed\",\n            }\n\n    async def run_batch(self) -> DataFrame:\n        \"\"\"Process each row in df[column_name] with the language model asynchronously.\n\n        Returns:\n            DataFrame: A new DataFrame containing:\n                - All original columns\n                - The model's response column (customizable name)\n                - 'batch_index' column for processing order\n                - 'metadata' (optional)\n\n        Raises:\n            ValueError: If the specified column is not found in the DataFrame\n            TypeError: If the model is not compatible or input types are wrong\n        \"\"\"\n        model: Runnable = self.model\n        system_msg = self.system_message or \"\"\n        df: DataFrame = self.df\n        col_name = self.column_name or \"\"\n        output_col_name = self.output_column_name or \"model_response\"\n\n        # Validate inputs first\n        if not isinstance(df, DataFrame):\n            msg = f\"Expected DataFrame input, got {type(df)}\"\n            raise TypeError(msg)\n\n        if col_name and col_name not in df.columns:\n            msg = f\"Column '{col_name}' not found in the DataFrame. Available columns: {', '.join(df.columns)}\"\n            raise ValueError(msg)\n\n        try:\n            # Determine text input for each row\n            if col_name:\n                user_texts = df[col_name].astype(str).tolist()\n            else:\n                user_texts = [self._format_row_as_toml(row) for row in df.to_dict(orient=\"records\")]\n\n            total_rows = len(user_texts)\n            logger.info(f\"Processing {total_rows} rows with batch run\")\n\n            # Prepare the batch of conversations\n            conversations = [\n                [{\"role\": \"system\", \"content\": system_msg}, {\"role\": \"user\", \"content\": text}]\n                if system_msg\n                else [{\"role\": \"user\", \"content\": text}]\n                for text in user_texts\n            ]\n\n            # Configure the model with project info and callbacks\n            model = model.with_config(\n                {\n                    \"run_name\": self.display_name,\n                    \"project_name\": self.get_project_name(),\n                    \"callbacks\": self.get_langchain_callbacks(),\n                }\n            )\n\n            # Process batches and track progress\n            responses_with_idx = [\n                (idx, response)\n                for idx, response in zip(\n                    range(len(conversations)), await model.abatch(list(conversations)), strict=True\n                )\n            ]\n\n            # Sort by index to maintain order\n            responses_with_idx.sort(key=lambda x: x[0])\n\n            # Build the final data with enhanced metadata\n            rows: list[dict[str, Any]] = []\n            for idx, (original_row, response) in enumerate(\n                zip(df.to_dict(orient=\"records\"), responses_with_idx, strict=False)\n            ):\n                response_text = response[1].content if hasattr(response[1], \"content\") else str(response[1])\n                row = self._create_base_row(original_row, model_response=response_text, batch_index=idx)\n                self._add_metadata(row, success=True, system_msg=system_msg)\n                rows.append(row)\n\n                # Log progress\n                if (idx + 1) % max(1, total_rows // 10) == 0:\n                    logger.info(f\"Processed {idx + 1}/{total_rows} rows\")\n\n            logger.info(\"Batch processing completed successfully\")\n            return DataFrame(rows)\n\n        except (KeyError, AttributeError) as e:\n            # Handle data structure and attribute access errors\n            logger.error(f\"Data processing error: {e!s}\")\n            error_row = self._create_base_row({col: \"\" for col in df.columns}, model_response=\"\", batch_index=-1)\n            self._add_metadata(error_row, success=False, error=str(e))\n            return DataFrame([error_row])\n"
               },
               "column_name": {
                 "_input_type": "StrInput",
@@ -349,7 +404,9 @@
                 "display_name": "DataFrame",
                 "dynamic": false,
                 "info": "The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
-                "input_types": ["DataFrame"],
+                "input_types": [
+                  "DataFrame"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "df",
@@ -387,7 +444,9 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Connect the 'Language Model' output from your LLM component here.",
-                "input_types": ["LanguageModel"],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "model",
@@ -424,7 +483,9 @@
                 "display_name": "Instructions",
                 "dynamic": false,
                 "info": "Multi-line system instruction for all rows in the DataFrame.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -463,7 +524,9 @@
         "data": {
           "id": "YouTubeCommentsComponent-1B3Fv",
           "node": {
-            "base_classes": ["DataFrame"],
+            "base_classes": [
+              "DataFrame"
+            ],
             "beta": false,
             "category": "youtube",
             "conditional_paths": [],
@@ -497,7 +560,9 @@
                 "name": "comments",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -511,7 +576,9 @@
                 "display_name": "YouTube API Key",
                 "dynamic": false,
                 "info": "Your YouTube Data API key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -603,7 +670,10 @@
                 "dynamic": false,
                 "info": "Sort comments by time or relevance.",
                 "name": "sort_by",
-                "options": ["time", "relevance"],
+                "options": [
+                  "time",
+                  "relevance"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -620,7 +690,9 @@
                 "display_name": "Video URL",
                 "dynamic": false,
                 "info": "The URL of the YouTube video to get comments from.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -658,7 +730,10 @@
         "data": {
           "id": "OpenAIModel-05xLQ",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -698,7 +773,9 @@
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -707,10 +784,14 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": ["api_key"],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -724,7 +805,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -759,7 +842,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -941,7 +1026,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1026,7 +1113,9 @@
         "data": {
           "id": "ParseDataFrame-OIHSx",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "processing",
             "conditional_paths": [],
@@ -1035,7 +1124,11 @@
             "display_name": "Parse DataFrame",
             "documentation": "",
             "edited": false,
-            "field_order": ["df", "template", "sep"],
+            "field_order": [
+              "df",
+              "template",
+              "sep"
+            ],
             "frozen": false,
             "icon": "braces",
             "key": "ParseDataFrame",
@@ -1053,7 +1146,9 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1085,7 +1180,9 @@
                 "display_name": "DataFrame",
                 "dynamic": false,
                 "info": "The DataFrame to convert to text rows.",
-                "input_types": ["DataFrame"],
+                "input_types": [
+                  "DataFrame"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "df",
@@ -1124,7 +1221,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template for formatting each row. Use placeholders matching column names in the DataFrame, for example '{col1}', '{col2}'.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1163,7 +1262,9 @@
         "data": {
           "id": "Agent-3FPSt",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -1215,7 +1316,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1247,7 +1350,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1301,7 +1406,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1354,7 +1461,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1453,7 +1562,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1558,7 +1669,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1596,7 +1710,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1613,7 +1731,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1634,7 +1754,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1655,7 +1777,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1705,7 +1829,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1745,7 +1871,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1798,18 +1926,26 @@
         "data": {
           "id": "Prompt-aWbxe",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": ["url", "analysis"]
+              "template": [
+                "url",
+                "analysis"
+              ]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": ["template", "tool_placeholder"],
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -1831,7 +1967,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1846,7 +1984,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1900,7 +2040,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1923,7 +2065,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1958,7 +2102,9 @@
         "data": {
           "id": "ChatOutput-i5hlZ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -1995,7 +2141,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2009,7 +2157,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2030,7 +2180,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2087,7 +2239,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2108,7 +2262,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2132,7 +2290,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2149,7 +2310,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2170,7 +2333,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2209,7 +2374,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2247,7 +2414,11 @@
         "data": {
           "id": "YouTubeTranscripts-nSvJC",
           "node": {
-            "base_classes": ["Data", "DataFrame", "Message"],
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2255,7 +2426,11 @@
             "display_name": "YouTube Transcripts",
             "documentation": "",
             "edited": false,
-            "field_order": ["url", "chunk_size_seconds", "translation"],
+            "field_order": [
+              "url",
+              "chunk_size_seconds",
+              "translation"
+            ],
             "frozen": false,
             "icon": "YouTube",
             "legacy": false,
@@ -2274,7 +2449,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2342,7 +2519,10 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
@@ -2412,17 +2592,23 @@
                   {
                     "description": "get_dataframe_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
                     "name": "YouTubeTranscripts-get_dataframe_output",
-                    "tags": ["YouTubeTranscripts-get_dataframe_output"]
+                    "tags": [
+                      "YouTubeTranscripts-get_dataframe_output"
+                    ]
                   },
                   {
                     "description": "get_message_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
                     "name": "YouTubeTranscripts-get_message_output",
-                    "tags": ["YouTubeTranscripts-get_message_output"]
+                    "tags": [
+                      "YouTubeTranscripts-get_message_output"
+                    ]
                   },
                   {
                     "description": "get_data_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
                     "name": "YouTubeTranscripts-get_data_output",
-                    "tags": ["YouTubeTranscripts-get_data_output"]
+                    "tags": [
+                      "YouTubeTranscripts-get_data_output"
+                    ]
                   }
                 ]
               },
@@ -2466,7 +2652,9 @@
                 "display_name": "Video URL",
                 "dynamic": false,
                 "info": "Enter the YouTube video URL to get transcripts from.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2505,7 +2693,9 @@
         "data": {
           "id": "ChatInput-aeyrx",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -2542,7 +2732,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2556,7 +2748,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2577,7 +2771,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2685,7 +2881,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2702,7 +2901,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2723,7 +2924,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2762,7 +2965,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2887,7 +3092,9 @@
         "data": {
           "id": "ConditionalRouter-DNDns",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "logic",
             "conditional_paths": [],
@@ -2922,7 +3129,9 @@
                 "name": "true_result",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2933,7 +3142,9 @@
                 "name": "false_result",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2986,7 +3197,10 @@
                 "dynamic": false,
                 "info": "The default route to take when max iterations are reached.",
                 "name": "default_route",
-                "options": ["true_result", "false_result"],
+                "options": [
+                  "true_result",
+                  "false_result"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -3003,7 +3217,9 @@
                 "display_name": "Text Input",
                 "dynamic": false,
                 "info": "The primary text input for the operation.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3024,7 +3240,9 @@
                 "display_name": "Match Text",
                 "dynamic": false,
                 "info": "The text input to compare against.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3063,7 +3281,9 @@
                 "display_name": "Message",
                 "dynamic": false,
                 "info": "The message to pass through either route.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3138,5 +3358,8 @@
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Youtube Analysis",
-  "tags": ["agents", "assistants"]
+  "tags": [
+    "agents",
+    "assistants"
+  ]
 }
