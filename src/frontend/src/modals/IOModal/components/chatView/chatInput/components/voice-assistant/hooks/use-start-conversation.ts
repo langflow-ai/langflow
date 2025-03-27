@@ -12,11 +12,8 @@ export const useStartConversation = (
   const currentHost = window.location.hostname;
   const currentPort = window.location.port;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-  // Uncomment this line to use flow_as_tool instead of flow_tts
-  // This endpoint provides better voice recognition in many cases
-  // const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId?.toString()}`;
   const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_tts/${flowId}/${currentSessionId?.toString()}`;
+  //const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId?.toString()}`;
 
   try {
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
@@ -30,7 +27,8 @@ export const useStartConversation = (
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
     );
-    const audioLanguage = getLocalStorage("lf_preferred_language") || "en-US";
+    const audioLanguage =
+      getLocalStorage("lf_audio_language_playground") || "en-US";
 
     wsRef.current = new WebSocket(url);
 
@@ -47,29 +45,17 @@ export const useStartConversation = (
                 : "",
           }),
         );
-
-        wsRef.current.send(
-          JSON.stringify({
-            type: "session.update",
-            session: {
-              voice: audioSettings.voice,
-              input_audio_transcription: {
-                model: "whisper-1",
+        if (audioSettings.provider !== "elevenlabs") {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "transcription_session.update",
+              session: {
+                voice: audioSettings.voice,
                 language: audioLanguage,
               },
-              turn_detection: {
-                type: "server_vad",
-                threshold: 0.2,
-                prefix_padding_ms: 150,
-                silence_duration_ms: 700,
-              },
-              input_audio_noise_reduction: {
-                type: "near_field",
-              },
-            },
-          }),
-        );
-
+            }),
+          );
+        }
         startRecording();
       }
     };

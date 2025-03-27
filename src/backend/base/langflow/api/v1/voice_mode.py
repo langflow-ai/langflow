@@ -972,6 +972,7 @@ class TTSConfig:
                     "model": "gpt-4o-mini-transcribe",
                     # "prompt": "expect words in english",
                     "language": "en",
+                    "voice": "coral",
                 },
                 "turn_detection": {
                     "type": "server_vad",
@@ -1199,7 +1200,7 @@ async def flow_tts_websocket(
                                     oai_client = tts_config.get_openai_client()
                                     response = oai_client.audio.speech.create(
                                         model="gpt-4o-mini-tts",
-                                        voice="coral",
+                                        voice=tts_config.voice,
                                         input=result,
                                         response_format="pcm",
                                     )
