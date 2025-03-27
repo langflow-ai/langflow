@@ -56,7 +56,9 @@ export const useStartConversation = (
             }),
           );
         }
-        startRecording();
+        setTimeout(() => {
+          startRecording();
+        }, 300);
       }
     };
 
