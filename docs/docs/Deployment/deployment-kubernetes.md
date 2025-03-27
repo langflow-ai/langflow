@@ -353,7 +353,7 @@ resources:
     cpu: "1000m"
 ```
 
-## Deploy Langflow on AWS EKS, Google GKE, or Azure AKS and other examples
+##  Deploy Langflow on AWS EKS, Google GKE, or Azure AKS and other examples
 
 For more information, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
 

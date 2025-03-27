@@ -117,7 +117,22 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-render",
           label: "Render"
-        }
+        },
+	{
+          type: "doc",
+          id: "Deployment/deployment-prod-best-practices",
+          label: "Production Best Practices"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes-dev",
+          label: "Kubernetes - Langflow Development"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes-prod",
+          label: "Kubernetes - Langflow Production"
+        },
       ],
     },
     {
