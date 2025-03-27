@@ -30,7 +30,7 @@ Answer the question
 {user_question}
 ```
 
-When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/tutorials-sequential-agent).
+When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/sequential-agent).
 
 ### Inputs
 
