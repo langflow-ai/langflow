@@ -36,6 +36,7 @@ import {
   StickyNote,
   Store,
   TerminalSquare,
+  Trash2,
   Upload,
   Wand2,
   ZoomIn,
@@ -778,6 +779,8 @@ export const eagerLoadedIconsMap = {
   LayoutGrid: LayoutGrid,
   Menu: Menu,
   MoreHorizontal: MoreHorizontal,
+  Trash2: Trash2,
+  
   // other icons
   FaApple: FaApple,
   FaDiscord: FaDiscord,
