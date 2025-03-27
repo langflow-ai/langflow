@@ -71,15 +71,15 @@ const ConnectionComponent = ({
 
   // Initialize selected item from value on component mount
   useEffect(() => {
-    if (value) {
-      const selectedOption = options.find((option) => option.name === value);
-      if (selectedOption) {
-        setSelectedItem([
-          { name: selectedOption.name, icon: selectedOption.icon },
-        ]);
-      }
-    }
-  }, []);
+    const selectedOption = value
+      ? options.find((option) => option.name === value)
+      : null;
+    setSelectedItem([
+      selectedOption
+        ? { name: selectedOption.name, icon: selectedOption.icon }
+        : { name: "", icon: "" },
+    ]);
+  }, [value, options]);
 
   useEffect(() => {
     if (errorData || connectionLink === "error") {
