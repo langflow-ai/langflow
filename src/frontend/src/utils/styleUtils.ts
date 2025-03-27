@@ -41,6 +41,7 @@ import {
   Ellipsis,
   LayoutGrid,
   Menu,
+  MoreHorizontal,
 } from "lucide-react";
 import { GradientSave } from "@/icons/GradientSparkles";
 
@@ -776,7 +777,7 @@ export const eagerLoadedIconsMap = {
   Ellipsis: Ellipsis,
   LayoutGrid: LayoutGrid,
   Menu: Menu,
-
+  MoreHorizontal: MoreHorizontal,
   // other icons
   "FaApple": FaApple,
   "FaDiscord": FaDiscord,
