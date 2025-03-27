@@ -90,10 +90,10 @@ module.exports = {
       items: [
         "Develop/develop-overview",
         "Develop/develop-application",
+        "Develop/install-custom-dependencies",
+        "Develop/memory",
         "Develop/session-id",
         "Develop/logging",
-        "Develop/memory",
-        "Develop/install-custom-dependencies",
       ],
     },
     {

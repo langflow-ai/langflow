@@ -11,7 +11,7 @@ This page details memory configuration in Langflow.
 - [Store messages in local memory](#store-messages-in-local-memory)
 - [Configure external memory](#configure-external-memory)
 - [Configure the external database connection](#configure-the-external-database-connection)
-- [Configure cache memory](#cache-memory)
+- [Configure cache memory](#configure-cache-memory)
 
 ## Local Langflow database tables
 
