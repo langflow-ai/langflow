@@ -49,19 +49,11 @@ class ComposioAPIComponent(LCToolComponent):
             info="The name of the tool to use",
             real_time_refresh=True,
         ),
-        StrInput(
-            name="use_case",
-            display_name="Use Case",
-            placeholder="Create a new repository",
-            info="The use case for the tool",
-            real_time_refresh=True,
-            advanced=True,
-        ),
         SortableListInput(
             name="actions",
             display_name="Actions",
             placeholder="Select action",
-            helper_text="Please connect before selecting tools",
+            helper_text="Please connect before selecting tools.",
             helper_text_metadata={"icon": "OctagonAlert", "variant": "destructive"},
             options=[],
             value="",
@@ -145,6 +137,10 @@ class ComposioAPIComponent(LCToolComponent):
 
             # Get the unique list of appName from the connected apps
             connected_app_names = [app.appName.lower() for app in connected_apps]
+
+            # Clear out the list of selected actions
+            build_config["actions"]["options"] = []
+            build_config["actions"]["value"] = ""
 
             # If it's a dictionary, we need to do validation
             if isinstance(field_value, dict):
