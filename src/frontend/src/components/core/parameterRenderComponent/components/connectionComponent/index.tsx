@@ -57,7 +57,6 @@ const ConnectionComponent = ({
   const [isPolling, setIsPolling] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
-  const [showErrorTooltip, setShowErrorTooltip] = useState(false);
 
   // Refs for managing polling timers to prevent memory leaks
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -83,9 +82,8 @@ const ConnectionComponent = ({
   }, []);
 
   useEffect(() => {
-    if (errorData) {
+    if (errorData || connectionLink === "error") {
       setLink("error");
-      setShowErrorTooltip(true);
     }
   }, [errorData]);
 
