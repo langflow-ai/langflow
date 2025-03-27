@@ -247,6 +247,44 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 |-------|---------------|------------------------------------------------------------------|
 | model | LanguageModel | An instance of HuggingFaceHub configured with the specified parameters. |
 
+## IBM watsonx.ai
+
+This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
+
+To use **IBM watsonx.ai** model components, replace a model component with the IBM watsonx.ai component in a flow.
+
+An example flow looks like this:
+
+![IBM watsonx model component in a basic prompting flow](/img/component-watsonx-model.png)
+
+The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
+For more information, see the [IBM watsonx.ai documentation](https://www.ibm.com/watsonx).
+
+### Inputs
+
+| Name                | Type          | Description                                                      |
+|---------------------|---------------|------------------------------------------------------------------|
+| url                 | String        | The base URL of the watsonx API. |
+| project_id          | String        | Your watsonx Project ID.                                         |
+| api_key             | SecretString  | Your IBM watsonx API Key.                                        |
+| model_name          | String        | The name of the watsonx model to use. Options are dynamically fetched from the API. |
+| max_tokens          | Integer       | The maximum number of tokens to generate. Default: `1000`. |
+| stop_sequence       | String        | The sequence where generation should stop.                 |
+| temperature         | Float         | Controls randomness in the output. Default: `0.1`. |
+| top_p               | Float         | Controls nucleus sampling, which limits the model to tokens whose probability is below the `top_p` value. Range: Default: `0.9`.       |
+| frequency_penalty   | Float         | Controls frequency penalty. A positive value decreases the probability of repeating tokens, and a negative value increases the probability. Range: Default: `0.5`.     |
+| presence_penalty    | Float         | Controls presence penalty. A positive value increases the likelihood of new topics being introduced. Default: `0.3`.      |
+| seed                | Integer       | A random seed for the model. Default: `8`.                       |
+| logprobs            | Boolean       | Whether to return log probabilities of output tokens or not. Default: `True`. |
+| top_logprobs        | Integer       | The number of most likely tokens to return at each position. Default: `3`. |
+| logit_bias          | String        | A JSON string of token IDs to bias or suppress.        |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatWatsonx configured with the specified parameters. |
+
 ## Language model
 
 This component generates text using either OpenAI or Anthropic language models.
