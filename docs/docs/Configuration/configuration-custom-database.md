@@ -17,7 +17,7 @@ To connect Langflow to PostgreSQL, follow these steps.
 1. Find your PostgreSQL database's connection string.
 It looks like `postgresql://user:password@host:port/dbname`.
 
-The hostname in your connection string will depend on how you're running PostgreSQL.
+The hostname in your connection string depends on how you're running PostgreSQL.
 - If you're running PostgreSQL directly on your machine, use `localhost`.
 - If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
 - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
@@ -28,7 +28,7 @@ touch .env
 ```
 
 3. To set the database URL environment variable, add it to your `.env` file:
-```plaintext
+```text
 LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
 ```
 
@@ -88,7 +88,7 @@ volumes:
 ```
 
 :::note
-Docker Compose creates an isolated network for all services defined in the docker-compose.yml file. This ensures that the services can communicate with each other using their service names as hostnames (for example, `postgres` in the database URL). If you were to run PostgreSQL separately using `docker run`, it would be in a different network and Langflow wouldn't be able to connect to it using the service name.
+Docker Compose creates an isolated network for all services defined in the docker-compose.yml file. This ensures that the services can communicate with each other using their service names as hostnames, for example, `postgres` in the database URL. If you were to run PostgreSQL separately using `docker run`, it would be in a different network and Langflow wouldn't be able to connect to it using the service name.
 :::
 
 ## Deploy multiple Langflow instances with a shared database
