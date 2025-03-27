@@ -332,7 +332,8 @@ def create_event_logger(session_id: str):
     Args:
         session_id: The session ID to include in log messages
     """
-    state = {"last_event_type": None, "event_count": 0}
+    last_event_type = None
+    event_count = 0
 
     def log_event(event: dict, direction: str) -> None:
         """Log WebSocket events with deduplication and counting.
@@ -341,15 +342,15 @@ def create_event_logger(session_id: str):
             event: The event dictionary to log
             direction: The direction of the event (e.g., "Client → OpenAI")
         """
-        event_type = event["type"]
+        nonlocal last_event_type, event_count
+        event_type = event.get("type")
 
-        if event_type != state["last_event_type"]:
+        if event_type != last_event_type:
             logger.debug(f"Event (session - {session_id}): {direction} {event_type}")
-            state["last_event_type"] = event_type
-            state["event_count"] = 0
+            last_event_type = event_type
+            event_count = 0
 
-        current_count = int(state["event_count"]) if state["event_count"] is not None else 0
-        state["event_count"] = current_count + 1
+        event_count += 1
 
     return log_event
 
@@ -625,6 +626,11 @@ async def flow_as_tool_websocket(
                             log_event(event, "↑")
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
+                        elif msg.get("type") == "response.create":
+                            if voice_config.use_elevenlabs:
+                                response = msg.setdefault("response", {})
+                                response["modalities"] = ["text"]
+                            await openai_ws.send(json.dumps(msg))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
                                 await openai_ws.send(message_text)
