@@ -167,3 +167,17 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         Returns:
             True if the key is in the cache, False otherwise.
         """
+
+
+class ExternalAsyncBaseCacheService(AsyncBaseCacheService):
+    """Abstract base class for an external async cache."""
+
+    name = "cache_service"
+
+    @abc.abstractmethod
+    async def is_connected(self) -> bool:
+        """Check if the cache is connected.
+
+        Returns:
+            True if the cache is connected, False otherwise.
+        """
