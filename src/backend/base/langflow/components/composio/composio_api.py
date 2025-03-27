@@ -107,6 +107,15 @@ class ComposioAPIComponent(LCToolComponent):
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         # If the list of tools is not available, always update it
         if field_name == "api_key":
+            if not field_value:
+                # Reset the list of tools
+                build_config["tool_name"]["options"] = []
+                build_config["tool_name"]["value"] = ""
+                build_config["actions"]["options"] = []
+                build_config["actions"]["value"] = ""
+
+                return build_config
+
             # Initialize the Composio ToolSet with your API key
             toolset = ComposioToolSet(api_key=self.api_key)
 
@@ -140,6 +149,10 @@ class ComposioAPIComponent(LCToolComponent):
             # Clear out the list of selected actions
             build_config["actions"]["options"] = []
             build_config["actions"]["value"] = ""
+
+            # Clear out any helper text
+            build_config["tool_name"]["helper_text"] = ""
+            build_config["tool_name"]["helper_text_metadata"] = {}
 
             # If it's a dictionary, we need to do validation
             if isinstance(field_value, dict):
@@ -190,7 +203,11 @@ class ComposioAPIComponent(LCToolComponent):
             except Exception as _:  # noqa: BLE001
                 # Indicate that there was an error connecting to the tool
                 build_config["tool_name"]["options"][selected_tool_index]["link"] = "error"
-                build_config["actions"]["helper_text"] = f"Error connecting to {field_value}"
+                build_config["tool_name"]["helper_text"] = f"Error connecting to {field_value}"
+                build_config["tool_name"]["helper_text_metadata"] = {
+                    "icon": "OctagonAlert",
+                    "variant": "destructive",
+                }
 
                 return build_config
 
