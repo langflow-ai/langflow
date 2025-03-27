@@ -849,10 +849,7 @@ async def flow_tts_websocket(
                             base64_data = event.get("audio", "")
                             if not base64_data:
                                 continue
-                            out_event = {
-                                "type": "input_audio_buffer.append",
-                                "audio": base64_data
-                            }
+                            out_event = {"type": "input_audio_buffer.append", "audio": base64_data}
                             await openai_ws.send(json.dumps(out_event))
                             if tts_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
