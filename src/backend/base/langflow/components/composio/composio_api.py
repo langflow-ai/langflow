@@ -358,7 +358,7 @@ class ComposioAPIComponent(LCToolComponent):
         composio_toolset = self._build_wrapper()
         return composio_toolset.get_tools(actions=self.action_names)
 
-    def _build_wrapper(self) -> ComposioToolSet:
+    def build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper.
 
         Returns:
@@ -381,6 +381,13 @@ class ComposioAPIComponent(LCToolComponent):
             # Set path for lockfile
             lockfile_path = tmp_dir / ".composio.lock"
 
+            # Debug information
+            logger.info(f"Using tmp_dir: {tmp_dir}")
+            logger.info(f"Lockfile path: {lockfile_path}")
+            logger.info(f"Directory exists: {tmp_dir.exists()}")
+            logger.info(f"Directory is writable: {os.access(tmp_dir, os.W_OK)}")
+
+            # Pass the lockfile explicitly
             return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id, lockfile=lockfile_path)
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
