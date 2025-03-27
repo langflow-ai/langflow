@@ -21,6 +21,7 @@ import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs.client import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks, Security
+from openai import OpenAI
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
@@ -64,7 +65,7 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
 * Converse with the user to assist with their question.
 * Never provide URLs in repsonses, but you may use URLs in tool calls or when processing those
   URLs' content.
-* Always (and I mean *always*) let the user know before you call a function that you will be
+* Always (and I mean *always*) let the user know before you will be
   doing so.
 * Always update the user with the required information, when the function returns.
 * Unless otherwise requested, only summarize the return results. Do not repeat everything.
@@ -325,6 +326,34 @@ def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
         yield buffer + " "
 
 
+def create_event_logger(session_id: str):
+    """Create an event logger with its own state.
+
+    Args:
+        session_id: The session ID to include in log messages
+    """
+    state = {"last_event_type": None, "event_count": 0}
+
+    def log_event(event: dict, direction: str) -> None:
+        """Log WebSocket events with deduplication and counting.
+
+        Args:
+            event: The event dictionary to log
+            direction: The direction of the event (e.g., "Client → OpenAI")
+        """
+        event_type = event["type"]
+
+        if event_type != state["last_event_type"]:
+            logger.debug(f"Event (session - {session_id}): {direction} {event_type}")
+            state["last_event_type"] = event_type
+            state["event_count"] = 0
+
+        current_count = int(state["event_count"]) if state["event_count"] is not None else 0
+        state["event_count"] = current_count + 1
+
+    return log_event
+
+
 @router.websocket("/ws/flow_as_tool/{flow_id}")
 async def flow_as_tool_websocket_no_session(
     client_websocket: WebSocket,
@@ -354,6 +383,10 @@ async def flow_as_tool_websocket(
     try:
         await client_websocket.accept()
         voice_config = get_voice_config(session_id)
+
+        # Create event logger instance with session_id
+        log_event = create_event_logger(session_id)
+
         token = client_websocket.cookies.get("access_token_lf")
         current_user = None
         if token:
@@ -462,27 +495,6 @@ async def flow_as_tool_websocket(
                         time_since_speech = (datetime.now(tz=timezone.utc) - last_speech_time).total_seconds()
                         if time_since_speech >= 1.0:
                             logger.trace("_", end="")
-
-            shared_state = {"last_event_type": None, "event_count": 0}
-
-            def log_event(event, _direction: str) -> None:
-                event_type = event["type"]
-
-                # Ensure shared_state has necessary keys initialized
-                if "last_event_type" not in shared_state:
-                    shared_state["last_event_type"] = None
-                if "event_count" not in shared_state:
-                    shared_state["event_count"] = 0
-
-                if event_type != shared_state["last_event_type"]:
-                    logger.debug(f"Event (session - {session_id}): {_direction} {event_type}")
-                    shared_state["last_event_type"] = event_type
-                    shared_state["event_count"] = 0
-
-                # Explicitly convert to integer if needed
-                current_count = int(shared_state["event_count"]) if shared_state["event_count"] is not None else 0
-
-                shared_state["event_count"] = current_count + 1
 
             def send_event(websocket, event, loop, direction) -> None:
                 asyncio.run_coroutine_threadsafe(
@@ -748,8 +760,8 @@ async def flow_as_tool_websocket(
                             await client_websocket.send_text(data)
                         log_event(event, "↓")
 
-                except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error in WebSocket communication: {e}")
 
             # Fix for storing references to asyncio tasks
             vad_task = None
@@ -892,7 +904,7 @@ async def add_message_to_db(message, session, flow_id, session_id, sender, sende
         flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
         properties=Properties().model_dump(),
         content_blocks=[],
-        category="audio",
+        category="message",
     )
 
     await message_queues[queue_key].put(message_obj)
@@ -945,3 +957,279 @@ def extract_transcript(json_data):
     else:
         # This is now properly in the else block
         return ""
+
+
+class TTSConfig:
+    def __init__(self, session_id: str, openai_key: str):
+        self.session_id = session_id
+        self.barge_in_enabled = False
+
+        self.default_tts_session = {
+            "type": "transcription_session.update",
+            "session": {
+                "input_audio_format": "pcm16",
+                "input_audio_transcription": {
+                    "model": "gpt-4o-mini-transcribe",
+                    # "prompt": "expect words in english",
+                    "language": "en",
+                },
+                "turn_detection": {
+                    "type": "server_vad",
+                    "threshold": SILENCE_THRESHOLD,
+                    "prefix_padding_ms": PREFIX_PADDING_MS,
+                    "silence_duration_ms": SILENCE_DURATION_MS,
+                },
+                "input_audio_noise_reduction": {"type": "near_field"},
+                "include": [],
+            },
+        }
+
+        self.tts_session: dict[str, Any] = {}
+        self.oai_client = OpenAI(api_key=openai_key)
+
+    def get_session_dict(self):
+        """Return a copy of the default session dictionary with current settings."""
+        return dict(self.default_tts_session)
+
+    def get_openai_client(self):
+        return self.oai_client
+
+
+# Create a cache for TTS configs
+tts_config_cache: dict[str, TTSConfig] = {}
+
+
+def get_tts_config(session_id: str, openai_key: str) -> TTSConfig:
+    """Get or create a TTSConfig instance for the given session_id."""
+    if session_id is None:
+        msg = "session_id cannot be None"
+        raise ValueError(msg)
+
+    if session_id not in tts_config_cache:
+        tts_config_cache[session_id] = TTSConfig(session_id, openai_key)
+    return tts_config_cache[session_id]
+
+
+@router.websocket("/ws/flow_tts/{flow_id}")
+async def flow_tts_websocket_no_session(
+    client_websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
+):
+    session_id = str(uuid4())
+    await flow_tts_websocket(
+        client_websocket=client_websocket,
+        flow_id=flow_id,
+        background_tasks=background_tasks,
+        session=session,
+        session_id=session_id,
+    )
+
+
+@router.websocket("/ws/flow_tts/{flow_id}/{session_id}")
+async def flow_tts_websocket(
+    client_websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
+    session_id: str,
+):
+    """WebSocket endpoint for direct flow text-to-speech interaction."""
+    try:
+        await client_websocket.accept()
+        log_event = create_event_logger(session_id)
+        token = client_websocket.cookies.get("access_token_lf")
+        current_user = None
+        if token:
+            current_user = await get_current_user_by_jwt(token, session)
+
+        if current_user is None:
+            current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
+            if current_user is None:
+                await client_websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "langflow_auth",
+                        "message": "You must pass a valid Langflow token or cookie.",
+                    }
+                )
+                return
+
+        variable_service = get_variable_service()
+        try:
+            openai_key_value = await variable_service.get_variable(
+                user_id=current_user.id, name="OPENAI_API_KEY", field="openai_api_key", session=session
+            )
+            openai_key = openai_key_value if openai_key_value is not None else os.getenv("OPENAI_API_KEY", "")
+            if not openai_key or openai_key == "dummy":
+                await client_websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "api_key_missing",
+                        "key_name": "OPENAI_API_KEY",
+                        "message": "OpenAI API key not found. "
+                        "Please set your API key as an env var or a global variable.",
+                    }
+                )
+                return
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error with API key: {e}")
+            logger.error(traceback.format_exc())
+            return
+
+        url = "wss://api.openai.com/v1/realtime?intent=transcription"
+        headers = {
+            "Authorization": f"Bearer {openai_key}",
+            "OpenAI-Beta": "realtime=v1",
+        }
+
+        tts_config = get_tts_config(session_id, openai_key)
+        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+            tts_realtime_session = tts_config.get_session_dict()
+            await openai_ws.send(json.dumps(tts_realtime_session))
+
+            vad_queue: asyncio.Queue = asyncio.Queue()
+            vad_audio_buffer = bytearray()
+            bot_speaking_flag = [False]
+            vad = webrtcvad.Vad(mode=3)
+
+            async def process_vad_audio() -> None:
+                nonlocal vad_audio_buffer
+                last_speech_time = datetime.now(tz=timezone.utc)
+                while True:
+                    base64_data = await vad_queue.get()
+                    raw_chunk_24k = base64.b64decode(base64_data)
+                    vad_audio_buffer.extend(raw_chunk_24k)
+                    has_speech = False
+                    while len(vad_audio_buffer) >= BYTES_PER_24K_FRAME:
+                        frame_24k = vad_audio_buffer[:BYTES_PER_24K_FRAME]
+                        del vad_audio_buffer[:BYTES_PER_24K_FRAME]
+                        try:
+                            frame_16k = resample_24k_to_16k(frame_24k)
+                            is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
+                            if is_speech:
+                                has_speech = True
+                                if bot_speaking_flag[0]:
+                                    await openai_ws.send(json.dumps({"type": "response.cancel"}))
+                                    bot_speaking_flag[0] = False
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"[ERROR] VAD processing failed: {e}")
+                            continue
+
+                    if has_speech:
+                        last_speech_time = datetime.now(tz=timezone.utc)
+                    else:
+                        time_since_speech = (datetime.now(tz=timezone.utc) - last_speech_time).total_seconds()
+                        if time_since_speech >= 1.0:
+                            pass
+
+            async def forward_to_openai() -> None:
+                """Forward client messages to OpenAI WebSocket."""
+                try:
+                    while True:
+                        message_text = await client_websocket.receive_text()
+                        event = json.loads(message_text)
+                        log_event(event, "Client → OpenAI")
+                        if "conversation" in event.get("type") or "error" in event.get("type"):
+                            logger.debug(event)
+
+                        if event.get("type") == "input_audio_buffer.append":
+                            base64_data = event.get("audio", "")
+                            if not base64_data:
+                                continue
+                            out_event = {"type": "input_audio_buffer.append", "audio": base64_data}
+                            await openai_ws.send(json.dumps(out_event))
+                            if tts_config.barge_in_enabled:
+                                await vad_queue.put(base64_data)
+                        elif event.get("type") == "input_audio_buffer.commit":
+                            await openai_ws.send(message_text)
+
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error in WebSocket communication: {e}")
+
+            async def forward_to_client() -> None:
+                """Forward OpenAI responses to client and handle flow execution."""
+                try:
+                    while True:
+                        data = await openai_ws.recv()
+                        event = json.loads(data)
+                        log_event(event, "OpenAI → Client")
+                        await client_websocket.send_text(data)
+
+                        if "conversation" in event.get("type") or "error" in event.get("type"):
+                            logger.debug(data)
+
+                        if event.get("type") == "conversation.item.input_audio_transcription.completed":
+                            transcript = event.get("transcript")
+                            if transcript is not None and transcript != "":
+                                # await add_message_to_db(transcript, session, flow_id, session_id, "User", "User")
+                                # Execute flow with the message content
+                                input_request = InputValueRequest(
+                                    input_value=transcript, components=[], type="chat", session=session_id
+                                )
+                                response = await build_flow_and_stream(
+                                    flow_id=UUID(flow_id),
+                                    inputs=input_request,
+                                    background_tasks=background_tasks,
+                                    current_user=current_user,
+                                )
+
+                                result = ""
+                                async for line in response.body_iterator:
+                                    if not line:
+                                        continue
+                                    event_data = json.loads(line)
+                                    await client_websocket.send_json(
+                                        {"type": "flow.build.progress", "data": event_data}
+                                    )
+                                    if event_data.get("event") == "end_vertex":
+                                        text = (
+                                            event_data.get("data", {})
+                                            .get("build_data", "")
+                                            .get("data", {})
+                                            .get("results", {})
+                                            .get("message", {})
+                                            .get("text", "")
+                                        )
+                                        if text:
+                                            result = text
+
+                                if result != "":
+                                    oai_client = tts_config.get_openai_client()
+                                    response = oai_client.audio.speech.create(
+                                        model="gpt-4o-mini-tts",
+                                        voice="coral",
+                                        input=result,  # Use result instead of undefined input variable
+                                        instructions="be cheerful",
+                                        response_format="pcm",
+                                    )
+
+                                    base64_audio = base64.b64encode(response.content).decode("utf-8")
+                                    audio_event = {"type": "response.audio.delta", "delta": base64_audio}
+                                    await client_websocket.send_json(audio_event)
+
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error in WebSocket communication: {e}")
+
+            vad_task = asyncio.create_task(process_vad_audio())
+            forward_to_openai_task = asyncio.create_task(forward_to_openai())
+            forward_to_client_task = asyncio.create_task(forward_to_client())
+
+            try:
+                await asyncio.gather(
+                    vad_task,
+                    forward_to_openai_task,
+                    forward_to_client_task,
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Error in WebSocket communication: {e}")
+                logger.error(traceback.format_exc())
+            finally:
+                vad_task.cancel()
+                forward_to_openai_task.cancel()
+
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"WebSocket error: {e}")
+        logger.error(traceback.format_exc())
+        await client_websocket.close()
