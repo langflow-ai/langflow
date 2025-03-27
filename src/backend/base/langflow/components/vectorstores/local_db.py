@@ -1,7 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
 
-from chromadb.config import Settings
 from langchain_chroma import Chroma
 from loguru import logger
 from typing_extensions import override
@@ -11,6 +10,7 @@ from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
 from langflow.schema import Data, DataFrame
+from langflow.template.field.base import Output
 
 
 class LocalDBComponent(LCVectorStoreComponent):
@@ -55,31 +55,6 @@ class LocalDBComponent(LCVectorStoreComponent):
             combobox=True,
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        MessageTextInput(
-            name="chroma_server_cors_allow_origins",
-            display_name="Server CORS Allow Origins",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="chroma_server_host",
-            display_name="Server Host",
-            advanced=True,
-        ),
-        IntInput(
-            name="chroma_server_http_port",
-            display_name="Server HTTP Port",
-            advanced=True,
-        ),
-        IntInput(
-            name="chroma_server_grpc_port",
-            display_name="Server gRPC Port",
-            advanced=True,
-        ),
-        BoolInput(
-            name="chroma_server_ssl_enabled",
-            display_name="Server SSL Enabled",
-            advanced=True,
-        ),
         BoolInput(
             name="allow_duplicates",
             display_name="Allow Duplicates",
@@ -121,6 +96,9 @@ class LocalDBComponent(LCVectorStoreComponent):
             advanced=True,
             info="Limit the number of records to compare when Allow Duplicates is False.",
         ),
+    ]
+    outputs = [
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def get_vector_store_directory(self, base_dir: str | Path) -> Path:
@@ -213,26 +191,14 @@ class LocalDBComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
         try:
-            from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError as e:
             msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
             raise ImportError(msg) from e
         # Chroma settings
-        chroma_settings = None
-        client = None
+        # chroma_settings = None
         if self.existing_collections:
             self.collection_name = self.existing_collections
-
-        if self.chroma_server_host:
-            chroma_settings = Settings(
-                chroma_server_cors_allow_origins=self.chroma_server_cors_allow_origins or [],
-                chroma_server_host=self.chroma_server_host,
-                chroma_server_http_port=self.chroma_server_http_port or None,
-                chroma_server_grpc_port=self.chroma_server_grpc_port or None,
-                chroma_server_ssl_enabled=self.chroma_server_ssl_enabled,
-            )
-            client = Client(settings=chroma_settings)
 
         # Use user-provided directory or default cache directory
         if self.persist_directory:
@@ -245,7 +211,7 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         chroma = Chroma(
             persist_directory=persist_directory,
-            client=client,
+            client=None,
             embedding_function=self.embedding,
             collection_name=self.collection_name,
         )
