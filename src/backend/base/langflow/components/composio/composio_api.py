@@ -175,8 +175,8 @@ class ComposioAPIComponent(LCToolComponent):
             # Get the entity (e.g., "default" for your user)
             entity = toolset.get_entity(id=self.entity_id)
 
-            # Initiate a GitHub connection and get the redirect URL
-            connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))
+            # Set the metadata for the actions
+            build_config["actions"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
 
             # Get the index of the selected tool in the list of options
             selected_tool_index = next(
@@ -184,12 +184,21 @@ class ComposioAPIComponent(LCToolComponent):
                 None,
             )
 
+            # Initiate a GitHub connection and get the redirect URL
+            try:
+                connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))
+            except Exception as _:  # noqa: BLE001
+                # Indicate that there was an error connecting to the tool
+                build_config["tool_name"]["options"][selected_tool_index]["link"] = "error"
+                build_config["actions"]["helper_text"] = f"Error connecting to {field_value}"
+
+                return build_config
+
             # Print the direct HTTP link for authentication
             build_config["tool_name"]["options"][selected_tool_index]["link"] = connection_request.redirectUrl
 
             # Set the helper text and helper text metadata field of the actions now
             build_config["actions"]["helper_text"] = "Please connect before selecting tools."
-            build_config["actions"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
 
         return build_config
 
