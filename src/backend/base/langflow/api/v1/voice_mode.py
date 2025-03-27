@@ -963,7 +963,7 @@ class TTSConfig:
     def __init__(self, session_id: str, openai_key: str):
         self.session_id = session_id
         self.barge_in_enabled = False
-
+        self.voice = "coral"
         self.default_tts_session = {
             "type": "transcription_session.update",
             "session": {
@@ -972,7 +972,6 @@ class TTSConfig:
                     "model": "gpt-4o-mini-transcribe",
                     # "prompt": "expect words in english",
                     "language": "en",
-                    "voice": "coral",
                 },
                 "turn_detection": {
                     "type": "server_vad",
