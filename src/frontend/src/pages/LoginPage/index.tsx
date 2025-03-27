@@ -7,7 +7,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useKeycloakAuth } from "@/hooks/useKeycloakAuth";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
@@ -26,12 +25,12 @@ import {
 
 /**
  * Login page component that supports both traditional and SSO authentication.
- * 
+ *
  * This component handles:
  * 1. Traditional username/password authentication
  * 2. Keycloak/SSO authentication when enabled
  * 3. Force SSO mode that hides username/password form when configured
- * 
+ *
  * @returns The login page JSX element
  */
 export default function LoginPage(): JSX.Element {
@@ -42,13 +41,13 @@ export default function LoginPage(): JSX.Element {
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  
+
   // Get Keycloak configuration and functions from the hook
-  const { 
+  const {
     isKeycloakEnabled,  // Whether Keycloak is enabled
     isForceSSO,         // Whether to hide username/password login
     redirectToKeycloakLogin,  // Function to redirect to Keycloak
-    isLoading: isKeycloakLoading 
+    isLoading: isKeycloakLoading
   } = useKeycloakAuth();
 
   /**
@@ -127,18 +126,14 @@ export default function LoginPage(): JSX.Element {
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           {/* Logo section */}
-          {ENABLE_NEW_LOGO ? (
-            <LangflowLogo
-              title="Langflow logo"
-              className="mb-4 h-10 w-10 scale-[1.5]"
-            />
-          ) : (
-            <span className="mb-4 text-5xl">⛓️</span>
-          )}
+          <LangflowLogo
+            title="Langflow logo"
+            className="mb-4 h-10 w-10 scale-[1.5]"
+          />
           <span className="mb-6 text-2xl font-semibold text-primary">
             Sign in to Langflow
           </span>
-          
+
           {/* Username/password login form - conditionally rendered based on forceSSO setting */}
           {(!isKeycloakEnabled || !isForceSSO) && (
             <>

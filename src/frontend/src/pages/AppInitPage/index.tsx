@@ -10,7 +10,6 @@ import { Outlet, useLocation } from "react-router-dom";
 import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
-  const dark = useDarkStore((state) => state.dark);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const location = useLocation();
@@ -19,8 +18,8 @@ export function AppInitPage() {
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
   // Only enable auto login if we're not in the Keycloak callback flow
-  const { isFetched } = useGetAutoLogin({ 
-    enabled: isLoaded && !isKeycloakCallback 
+  const { isFetched } = useGetAutoLogin({
+    enabled: isLoaded && !isKeycloakCallback
   });
 
   useGetVersionQuery({ enabled: isFetched });
@@ -31,14 +30,6 @@ export function AppInitPage() {
       refreshStars();
     }
   }, [isFetched]);
-
-  useEffect(() => {
-    if (!dark) {
-      document.getElementById("body")!.classList.remove("dark");
-    } else {
-      document.getElementById("body")!.classList.add("dark");
-    }
-  }, [dark]);
 
   // Always allow rendering of children when in Keycloak callback
   const shouldRenderOutlet = isFetched || isKeycloakCallback;

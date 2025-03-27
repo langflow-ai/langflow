@@ -76,52 +76,22 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    const urlOutput = await page
-      .getByTestId("handle-url-shownode-data-right")
-      .nth(0);
-    await urlOutput.hover();
-    await page.mouse.down();
-    const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-input documents-left",
-    );
-    await splitTextInputData.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-urlcomponent-shownode-data-right").click();
+    await page
+      .getByTestId("handle-splittext-shownode-data or dataframe-left")
+      .click();
 
     //connection 2
-    const textOutput = await page
-      .getByTestId("handle-textinput-shownode-message-right")
-      .nth(0);
-    await textOutput.hover();
-    await page.mouse.down();
-    const splitTextInput = await page.getByTestId(
-      "handle-splittext-shownode-separator-left",
-    );
-    await splitTextInput.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-textinput-shownode-message-right").click();
+    await page.getByTestId("handle-splittext-shownode-separator-left").click();
 
     //connection 3
-    const splitTextOutput = await page
-      .getByTestId("handle-splittext-shownode-chunks-right")
-      .nth(0);
-    await splitTextOutput.hover();
-    await page.mouse.down();
-    const parseDataInput = await page.getByTestId(
-      "handle-parsedata-shownode-data-left",
-    );
-    await parseDataInput.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-splittext-shownode-chunks-right").click();
+    await page.getByTestId("handle-parsedata-shownode-data-left").click();
 
     //connection 4
-    const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(0);
-    await parseDataOutput.hover();
-    await page.mouse.down();
-    const chatOutputInput = await page.getByTestId(
-      "handle-chatoutput-noshownode-text-target",
-    );
-    await chatOutputInput.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-parsedata-shownode-message-right").click();
+    await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
 
     await page.getByTestId("fit_view").click();
 
