@@ -192,10 +192,6 @@ class ComposioAPIComponent(LCToolComponent):
             build_config["actions"]["helper_text"] = "Please connect before selecting tools."
             build_config["actions"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
 
-            # Reset the list of actions selected too
-            build_config["actions"]["options"] = []
-            build_config["actions"]["value"] = ""
-
         return build_config
 
     def build_tool(self) -> Sequence[Tool]:
