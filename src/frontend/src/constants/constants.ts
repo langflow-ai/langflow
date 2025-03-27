@@ -659,7 +659,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 
 export const FLEX_VIEW_TYPES = ["bool"];
 
-export const priorityFields = new Set(["code", "template"]);
+export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
