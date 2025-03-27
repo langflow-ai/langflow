@@ -17,7 +17,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "input_data": DataFrame({"Name": ["John"], "Age": [30], "Country": ["USA"]}),
-            "template": "Name: {Name}, Age: {Age}, Country: {Country}",
+            "format": "Name: {Name}, Age: {Age}, Country: {Country}",
             "sep": "\n",
             "stringify": False,
             "clean_data": False,
@@ -44,7 +44,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data = Data(text="Hello World")
         kwargs = {
             "input_data": data,
-            "template": "text: {text}",
+            "format": "text: {text}",
             "sep": "\n",
             "stringify": False,
         }
@@ -62,7 +62,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data_frame = DataFrame({"Name": ["John", "Jane"], "Age": [30, 25]})
         kwargs = {
             "input_data": data_frame,
-            "stringify": True,
+            "mode": "Stringify",
             "clean_data": False,
         }
         component = component_class(**kwargs)
@@ -101,7 +101,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         message = Message(text="Test message content")
         kwargs = {
             "input_data": message,
-            "stringify": True,
+            "mode": "Stringify",
         }
         component = component_class(**kwargs)
 
@@ -119,7 +119,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         )
         kwargs = {
             "input_data": data_frame,
-            "stringify": True,
+            "mode": "Stringify",
             "clean_data": True,
         }
         component = component_class(**kwargs)
@@ -197,9 +197,9 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         )
         kwargs = {
             "input_data": data_frame,
-            "template": "{Name} is {Age} years old",
+            "format": "{Name} is {Age} years old",
             "sep": " | ",
-            "stringify": False,
+            "mode": "Parser",
         }
         component = component_class(**kwargs)
 
