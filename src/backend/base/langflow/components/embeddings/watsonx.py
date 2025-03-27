@@ -7,26 +7,20 @@ from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.model import LCEmbeddingsModel
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import (
-    DropdownInput,
-    IntInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.dotdict import dotdict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class IBMEmbeddingsComponent(LCEmbeddingsModel):
+class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "IBM watsonx.ai Embeddings"
     description = "Generate embeddings using IBM watsonx.ai models."
-    # icon = "IBM"
-    icon = "brain"
-    name = "IBMEmbeddingsComponent"
+    icon = "IBMwatsonxModel"
+    name = "WatsonxEmbeddingsComponent"
 
     # models present in all the regions
     _default_models = [
@@ -76,6 +70,12 @@ class IBMEmbeddingsComponent(LCEmbeddingsModel):
             advanced=True,
             value=200,
         ),
+        BoolInput(
+            name="input_text",
+            display_name="Include the original text in the output",
+            value=True,
+            advanced=True,
+        ),
     ]
 
     @staticmethod
@@ -83,7 +83,10 @@ class IBMEmbeddingsComponent(LCEmbeddingsModel):
         """Fetch available models from the watsonx.ai API."""
         try:
             endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {"version": "2024-09-16", "filters": "function_embedding,!lifecycle_withdrawn:and"}
+            params = {
+                "version": "2024-09-16",
+                "filters": "function_embedding,!lifecycle_withdrawn:and",
+            }
             response = requests.get(endpoint, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
@@ -91,11 +94,15 @@ class IBMEmbeddingsComponent(LCEmbeddingsModel):
             return sorted(models)
         except Exception:
             logger.exception("Error fetching models")
-            return IBMEmbeddingsComponent._default_models
+            return WatsonxEmbeddingsComponent._default_models
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""
-        logger.info("Updating build config. Field name: %s, Field value: %s", field_name, field_value)
+        logger.info(
+            "Updating build config. Field name: %s, Field value: %s",
+            field_name,
+            field_value,
+        )
 
         if field_name == "url" and field_value:
             try:
@@ -113,9 +120,17 @@ class IBMEmbeddingsComponent(LCEmbeddingsModel):
             api_key=SecretStr(self.api_key).get_secret_value(),
             url=self.url,
         )
+
         api_client = APIClient(credentials)
+
         params = {
             EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS: self.truncate_input_tokens,
             EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
         }
-        return WatsonxEmbeddings(model_id=self.model_name, params=params, watsonx_client=api_client)
+
+        return WatsonxEmbeddings(
+            model_id=self.model_name,
+            params=params,
+            watsonx_client=api_client,
+            project_id=self.project_id,
+        )
