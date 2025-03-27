@@ -358,7 +358,7 @@ class ComposioAPIComponent(LCToolComponent):
         composio_toolset = self._build_wrapper()
         return composio_toolset.get_tools(actions=self.action_names)
 
-    def build_wrapper(self) -> ComposioToolSet:
+    def _build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper.
 
         Returns:
