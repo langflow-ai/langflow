@@ -15,7 +15,6 @@ from langflow.inputs import (
     MessageTextInput,
     SecretStrInput,
     SortableListInput,
-    StrInput,
 )
 from langflow.io import Output
 
