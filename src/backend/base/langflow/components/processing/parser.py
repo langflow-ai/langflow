@@ -73,10 +73,9 @@ class ParserComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Dynamically hide/show `template` and enforce requirement based on `stringify`."""
-
         if field_name == "mode":
-            build_config["format"]["show"] = True if self.mode == "Parser" else False
-            build_config["format"]["required"] = True if self.mode == "Parser" else False
+            build_config["format"]["show"] = self.mode == "Parser"
+            build_config["format"]["required"] = self.mode == "Parser"
             if field_value:
                 clean_data = BoolInput(
                     name="clean_data",
