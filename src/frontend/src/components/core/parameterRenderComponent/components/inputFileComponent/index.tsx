@@ -246,7 +246,7 @@ export default function InputFileComponent({
                   isList={isList}
                 >
                   {(selectedFiles.length === 0 || isList) && (
-                    <div data-testid="input-file-component">
+                    <div data-testid="input-file-component" className="w-full">
                       <Button
                         disabled={isDisabled}
                         variant={
@@ -254,8 +254,9 @@ export default function InputFileComponent({
                         }
                         size={selectedFiles.length !== 0 ? "iconMd" : "default"}
                         className={cn(
-                          selectedFiles.length !== 0 &&
-                            "hit-area-icon absolute -top-8 right-0",
+                          selectedFiles.length !== 0
+                            ? "hit-area-icon absolute -top-8 right-0"
+                            : "w-full",
                           "font-semibold",
                         )}
                         data-testid="button_open_file_management"

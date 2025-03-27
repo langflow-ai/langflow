@@ -659,7 +659,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 
 export const FLEX_VIEW_TYPES = ["bool"];
 
-export const priorityFields = new Set(["code", "template"]);
+export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
@@ -1022,3 +1022,18 @@ export const IS_AUTO_LOGIN =
 
 export const AUTO_LOGIN_RETRY_DELAY = 2000;
 export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;
+
+export const ALL_LANGUAGES = [
+  { value: "en-US", name: "English (US)" },
+  { value: "en-GB", name: "English (UK)" },
+  { value: "it-IT", name: "Italian" },
+  { value: "fr-FR", name: "French" },
+  { value: "es-ES", name: "Spanish" },
+  { value: "de-DE", name: "German" },
+  { value: "ja-JP", name: "Japanese" },
+  { value: "pt-BR", name: "Portuguese (Brazil)" },
+  { value: "zh-CN", name: "Chinese (Simplified)" },
+  { value: "ru-RU", name: "Russian" },
+  { value: "ar-SA", name: "Arabic" },
+  { value: "hi-IN", name: "Hindi" },
+];
