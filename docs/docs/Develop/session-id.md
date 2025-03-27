@@ -18,13 +18,14 @@ Custom session IDs can be set as part of the payload in API calls, or as advance
 If you set a custom session ID in a payload, all downstream components use the upstream component's session ID value.
 
 ```
-curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "session_id": "my_custom_session_value",
-    "input_value": "message",
-    "input_type": "chat",
-    "output_type": "chat"
+curl --request POST \
+  --url 'http://127.0.0.1:7860/api/v1/run/$FLOW_ID' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "input_value": "Hello",
+  "output_type": "chat",
+  "input_type": "chat",
+  "session_id": "my_custom_session_value"
 }'
 ```
 

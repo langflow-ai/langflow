@@ -1,10 +1,10 @@
 ---
-title: Build an application in Langflow
-slug: /build-application
+title: Develop an application in Langflow
+slug: /develop-application
 ---
 
 This guide walks you through the process of building an application using Langflow.
-You'll learn how to set up a project directory, manage dependencies, configure environment variables, and package your Langflow application in a Docker container, or run it locally.
+You'll learn how to set up a project directory, manage dependencies, configure environment variables, and package your Langflow application in a Docker image.
 
 To deploy your application to Docker or Kubernetes, see [Deployment](/deployment-docker).
 
@@ -56,9 +56,15 @@ LANGFLOW_BASE_URL=http://0.0.0.0:7860
 OPENAI_API_KEY=sk-...
 ```
 
+This example uses Langflow's default [SQLite](https://www.sqlite.org/) database for storage, and configures no authentication.
+
+To modify Langflow's default memory behavior, see [Memory](/memory).
+
+To add authentication to your server, see [Authentication](/configuration-authentication).
+
 ## Add flows and components
 
-Add your flows `.JSON` files to the `/flows` folder.
+Add your flow's `.JSON` files to the `/flows` folder.
 
 To export your flows from Langflow, see [Flows](/concepts-flows).
 
@@ -97,7 +103,7 @@ EXPOSE 7860
 CMD ["langflow", "run", "--backend-only", "--env-file","/app/.env","--host", "0.0.0.0", "--port", "7860"]
 ```
 
-The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`. For more information on configuring logs, see [Logging](/logging).
+The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`, for tracking your application's behavior in a containerized environment. For more information on configuring logs, see [Logging](/logging).
 
 :::note
 Optionally, remove the `--backend-only` flag from the startup command to start Langflow with the frontend enabled.
@@ -125,16 +131,22 @@ Open a `.JSON` file in your `/flows` folder and find the file's `id` value. It's
 "id": "e4167236-938f-4aca-845b-21de3f399858",
 ```
 
-6. Add this value as the `flow-id` to a POST request to the `/run` endpoint:
+6. Add the file's `id` value as the `flow-id` to a POST request to the `/run` endpoint.
+
+This command also uses a custom `session_id` value of `charizard_test_request`.
+By default, session IDs use the `flow-id` value.
+A custom session ID maintains a unique conversation thread, which keeps LLM contexts clean and can make debugging easier.
+For more information, see [Session ID](/session-id).
 
 ```bash
-curl -X POST \
-    "http://localhost:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=true" \
-    -H 'Content-Type: application/json' \
-    -d '{
+curl --request POST \
+  --url 'http://127.0.0.1:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=false' \
+  --header 'Content-Type: application/json' \
+  --data '{
     "input_value": "Tell me about Charizard please",
     "output_type": "chat",
-    "input_type": "chat"
+    "input_type": "chat",
+    "session_id": "charizard_test_request"
 }'
 ```
 
@@ -149,31 +161,5 @@ The test application returns a large amount of text, so the example command used
 For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
 
 To deploy your application to Kubernetes, see [Kubernetes](/deployment-kubernetes).
-
-## Local Development
-
-If you prefer to run the application locally without Docker, follow these steps:
-
-1. Create a Python virtual environment (Python 3.10-3.13 required):
-```bash
-uv venv
-source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
-```
-
-2. Install the project dependencies:
-```bash
-uv pip install langflow
-```
-
-If your application requires additional dependencies, see [Install custom dependencies](/install-custom-dependencies).
-
-3. To set up your environment variables, create a `.env` file, and add your required API keys and configurations.
-
-4. Start the Langflow server with the values from your `.env` file:
-```bash
-uv run langflow run --env-file .env
-```
-
-The Langflow server is available by default at `http://localhost:7860`.
 
 

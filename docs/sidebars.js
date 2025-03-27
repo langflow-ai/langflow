@@ -89,7 +89,7 @@ module.exports = {
       label: "Develop",
       items: [
         "Develop/develop-overview",
-        "Develop/build-application",
+        "Develop/develop-application",
         "Develop/session-id",
         "Develop/logging",
         "Develop/memory",
