@@ -5,8 +5,8 @@ import { getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 import Loading from "../../ui/loading";
 
-import { useCallback, useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCallback, useEffect, useState } from "react";
 
 export const ForwardedIconComponent = memo(
   forwardRef(
