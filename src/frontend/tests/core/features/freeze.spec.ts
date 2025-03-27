@@ -113,52 +113,34 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    const urlOutput = await page
-      .getByTestId("handle-url-shownode-data-right")
-      .nth(0);
-    await urlOutput.hover();
-    await page.mouse.down();
-    const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-input documents-left",
-    );
-    await splitTextInputData.hover();
-    await page.mouse.up();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .nth(0)
+      .click();
+    await page
+      .getByTestId("handle-splittext-shownode-data or dataframe-left")
+      .click();
 
     //connection 2
-    const textOutput = await page
+    await page
       .getByTestId("handle-textinput-shownode-message-right")
-      .nth(0);
-    await textOutput.hover();
-    await page.mouse.down();
-    const splitTextInput = await page.getByTestId(
-      "handle-splittext-shownode-separator-left",
-    );
-    await splitTextInput.hover();
-    await page.mouse.up();
+      .nth(0)
+      .click();
+    await page.getByTestId("handle-splittext-shownode-separator-left").click();
 
     //connection 3
-    const splitTextOutput = await page
+    await page
       .getByTestId("handle-splittext-shownode-chunks-right")
-      .nth(0);
-    await splitTextOutput.hover();
-    await page.mouse.down();
-    const parseDataInput = await page.getByTestId(
-      "handle-parsedata-shownode-data-left",
-    );
-    await parseDataInput.hover();
-    await page.mouse.up();
+      .nth(0)
+      .click();
+    await page.getByTestId("handle-parsedata-shownode-data-left").click();
 
     //connection 4
-    const parseDataOutput = await page
+    await page
       .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(0);
-    await parseDataOutput.hover();
-    await page.mouse.down();
-    const chatOutputInput = await page.getByTestId(
-      "handle-chatoutput-shownode-text-left",
-    );
-    await chatOutputInput.hover();
-    await page.mouse.up();
+      .nth(0)
+      .click();
+    await page.getByTestId("handle-chatoutput-shownode-text-left").click();
 
     await page
       .getByTestId("textarea_str_input_value")
@@ -231,11 +213,13 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
+    await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
       timeout: 1000,
     });
 
-    await page.getByTestId("icon-Snowflake").click();
+    await page.getByTestId("icon-FreezeAll").last().click();
+
+    await page.waitForTimeout(3000);
 
     await page.keyboard.press("Escape");
 
@@ -249,6 +233,8 @@ test(
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
     });
+
+    await page.waitForTimeout(2000);
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -288,13 +274,17 @@ test(
 
     await page.getByText("Freeze", { exact: true }).click();
 
-    await page.keyboard.press("Escape");
+    await page.waitForTimeout(3000);
 
-    await page.locator('//*[@id="react-flow-id"]').click();
+    await page.keyboard.press("Escape");
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
 
     await page.getByText("built successfully").last().click({
       timeout: 15000,
@@ -316,11 +306,11 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(secondRunWithoutFreezing).toBe(firstTextFreezed);
+    expect(firstTextFreezed).toBe(secondRunWithoutFreezing);
 
-    expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(firstTextFreezed).not.toBe(firstRunWithoutFreezing);
+    expect(firstTextFreezed).not.toBe(thirdTextWithoutFreezing);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-    expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
-    expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   },
 );

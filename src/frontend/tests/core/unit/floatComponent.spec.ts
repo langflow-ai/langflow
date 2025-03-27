@@ -22,8 +22,17 @@ test(
       .getByTestId("modelsNVIDIA")
       .hover()
       .then(async () => {
+        // Wait for the API request to complete after clicking the add button
+        const responsePromise = page.waitForResponse(
+          (response) =>
+            response.url().includes("/api/v1/custom_component/update") &&
+            response.status() === 200,
+        );
         await page.getByTestId("add-component-button-nvidia").click();
+        await responsePromise; // Wait for the request to complete
       });
+
+    //add
 
     await page.getByTestId("title-NVIDIA").click();
 
@@ -32,6 +41,8 @@ test(
     await page.getByTestId("showseed").click();
 
     await page.getByText("Close").last().click();
+
+    await page.getByTestId("fit_view").click();
 
     await page.locator('//*[@id="int_int_seed"]').click();
     await page.locator('//*[@id="int_int_seed"]').fill("");
