@@ -3,14 +3,21 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from dotenv import load_dotenv
 from langflow.base.models.model_input_constants import MODEL_PROVIDERS_DICT
+from langflow.base.models.openai_constants import (
+    OPENAI_MODEL_NAMES,
+    OPENAI_REASONING_MODEL_NAMES,
+)
 from langflow.components.agents.agent import AgentComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
-from tests.base import ComponentTestBaseWithoutClient
+from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
+
+# Load environment variables from .env file
 
 
 class TestAgentComponent(ComponentTestBaseWithoutClient):
@@ -95,26 +102,60 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "model_name" not in updated_config
 
 
-@pytest.mark.usefixtures("client")
-@pytest.mark.api_key_required
-async def test_agent_component_with_calculator():
-    # Mock inputs
-    tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
-    input_value = "What is 2 + 2?"
+class TestAgentComponentWithClient(ComponentTestBaseWithClient):
+    @pytest.fixture
+    def component_class(self):
+        return AgentComponent
 
-    api_key = os.environ["OPENAI_API_KEY"]
-    temperature = 0.1
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
 
-    # Initialize the AgentComponent with mocked inputs
-    agent = AgentComponent(
-        tools=tools,
-        input_value=input_value,
-        api_key=api_key,
-        model_name="gpt-4o",
-        llm_type="OpenAI",
-        temperature=temperature,
-        _session_id=str(uuid4()),
-    )
+    @pytest.mark.api_key_required
+    async def test_agent_component_with_calculator(self):
+        # Mock inputs
+        load_dotenv()
 
-    response = await agent.message_response()
-    assert "4" in response.data.get("text")
+        # Now you can access the environment variables
+        api_key = os.getenv("OPENAI_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
+        input_value = "What is 2 + 2?"
+
+        temperature = 0.1
+
+        # Initialize the AgentComponent with mocked inputs
+        agent = AgentComponent(
+            tools=tools,
+            input_value=input_value,
+            api_key=api_key,
+            model_name="gpt-4o",
+            llm_type="OpenAI",
+            temperature=temperature,
+            _session_id=str(uuid4()),
+        )
+
+        response = await agent.message_response()
+        assert "4" in response.data.get("text")
+
+    @pytest.mark.api_key_required
+    async def test_agent_component_with_all_openai_models(self):
+        # Mock inputs
+        load_dotenv()
+        api_key = os.getenv("OPENAI_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
+        input_value = "What is 2 + 2?"
+
+        # Iterate over all OpenAI models
+        for model_name in OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+            # Initialize the AgentComponent with mocked inputs
+            agent = AgentComponent(
+                tools=tools,
+                input_value=input_value,
+                api_key=api_key,
+                model_name=model_name,
+                llm_type="OpenAI",
+                _session_id=str(uuid4()),
+            )
+
+            response = await agent.message_response()
+            assert "4" in response.data.get("text"), f"Failed for model: {model_name}"
