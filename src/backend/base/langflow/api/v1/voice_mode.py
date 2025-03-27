@@ -1199,7 +1199,7 @@ async def flow_tts_websocket(
                                     oai_client = tts_config.get_openai_client()
                                     response = oai_client.audio.speech.create(
                                         model="gpt-4o-mini-tts",
-                                        voice=tts_config.voice,
+                                        voice="coral",
                                         input=result,
                                         response_format="pcm",
                                     )
