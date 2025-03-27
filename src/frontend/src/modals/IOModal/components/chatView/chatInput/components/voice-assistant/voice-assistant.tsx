@@ -437,6 +437,7 @@ export function VoiceAssistant({
               handleClickSaveOpenAIApiKey={handleClickSaveOpenAIApiKey}
               isEditingOpenAIKey={isEditingOpenAIKey}
               setIsEditingOpenAIKey={setIsEditingOpenAIKey}
+              isPlayingRef={isPlayingRef}
             >
               {hasOpenAIAPIKey ? (
                 <>
