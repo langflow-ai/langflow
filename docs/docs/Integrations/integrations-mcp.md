@@ -6,13 +6,17 @@ slug: /integrations-mcp
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). This allows you to use your Langflow flows as tools in other applications that support the MCP, or extend Langflow with the [MCP stdio component](/components-tools#mcp-tools-stdio) to access MCP servers.
+Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). This allows you to use your Langflow flows as tools in client applications that support the MCP, or extend Langflow with the [MCP server component](/components-tools#mcp-tools-stdio) to access MCP servers.
 
 You can use Langflow as an MCP server with any [MCP client](https://modelcontextprotocol.io/clients).
 For example purposes, this guide presents two ways to interact with the MCP:
 
 * [Access all of your flows as tools](#access-all-of-your-flows-as-tools)
-* [Use the MCP stdio component to connect Langflow to a Datastax Astra DB MCP server](#connect-an-astra-db-mcp-server-to-langflow)
+* [Use the MCP server component to connect Langflow to a Datastax Astra DB MCP server](#connect-an-astra-db-mcp-server-to-langflow)
+
+For configuring interactions between Langflow flows and MCP tools, see [Name and describe your flows for agentic use](#name-and-describe-your-flows-for-agentic-use).
+
+To connect [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) to Langflow for testing and debugging flows, see [Install MCP Inspector to test and debug flows](#install-mcp-inspector-to-test-and-debug-flows)
 
 ## Access all of your flows as tools
 
@@ -170,10 +174,40 @@ nvidia_collection
 software_requirements
 ```
 
-## Debug flows with the MCP inspector
+## Install MCP Inspector to test and debug flows
 
 [MCP inspector](https://modelcontextprotocol.io/docs/tools/inspector) is the standard tool for testing and debugging MCP servers.
 
-To install MCP inspector:
+Use MCP Inspector to monitor your Langflow server's flows, and understand how they are being consumed by the MCP.
 
-```npx -y 
+To install and run MCP inspector, follow these steps:
+
+1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+2. To install and start MCP inspector, in a terminal window, run the following command:
+```
+npx @modelcontextprotocol/inspector
+```
+
+MCP inspector starts by default at `http://localhost:5173`.
+
+:::tip
+Optionally, specify a proxy port when starting MCP Inspector:
+```
+SERVER_PORT=9000 npx -y @modelcontextprotocol/inspector
+```
+:::
+
+3. In the browser, navigate to MCP Inspector.
+4. To inspect the Langflow server, enter the values for the Langflow server.
+
+* In the **Transport Type** field, select **SSE**.
+* In the **URL** field, enter the Langflow server's `/mcp/sse` endpoint.
+For a default deployment, the URL is `http://127.0.0.1:7860/api/v1/mcp/sse`.
+
+5. Click **Connect**.
+MCP Inspector connects to the Langflow server.
+6. To confirm the connection, click the **Tools** tab.
+The Langflow server's flows are listed as tools, which confirms MCP Inspector is connected.
+In the **Tools** tab, you can monitor how your flows are being registered as tools by MCP, and run flows with input values.
+
+To quit MCP Inspector, in the terminal where it's running, enter `Ctrl+C`.
