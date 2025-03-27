@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "IBM watsonx.ai Embeddings"
     description = "Generate embeddings using IBM watsonx.ai models."
-    icon = "IBMwatsonxModel"
+    icon = "WatsonxAI"
     name = "WatsonxEmbeddingsComponent"
 
     # models present in all the regions
@@ -98,7 +98,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""
-        logger.info(
+        logger.debug(
             "Updating build config. Field name: %s, Field value: %s",
             field_name,
             field_value,
