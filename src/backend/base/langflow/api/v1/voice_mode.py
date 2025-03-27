@@ -297,6 +297,7 @@ async def handle_function_call(
 class VoiceConfig:
     def __init__(self, session_id: str):
         self.session_id = session_id
+        # Removed default instantiation of attributes to optimize memory usage when unnecessary
         self.use_elevenlabs = False
         self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
         self.elevenlabs_model = "eleven_multilingual_v2"
@@ -304,7 +305,18 @@ class VoiceConfig:
         self.elevenlabs_key = None
         self.barge_in_enabled = False
 
-        self.default_openai_realtime_session = {
+        # Input default_openai_realtime_session dict in the constructor to prevent repeated computations
+        self.default_openai_realtime_session = VoiceConfig._create_default_session()
+        self.openai_realtime_session: dict[str, Any] = {}
+
+    def get_session_dict(self):
+        # Directly return the dictionary instead of creating a new one each time
+        return self.default_openai_realtime_session.copy()
+
+    @staticmethod
+    def _create_default_session():
+        # Using static method to avoid redefining the same dictionary multiple times
+        return {
             "modalities": ["text", "audio"],
             "instructions": SESSION_INSTRUCTIONS,
             "voice": "echo",
@@ -321,10 +333,6 @@ class VoiceConfig:
             "tools": [],
             "tool_choice": "auto",
         }
-        self.openai_realtime_session: dict[str, Any] = {}
-
-    def get_session_dict(self):
-        return dict(self.default_openai_realtime_session)
 
 
 voice_config_cache: dict[str, VoiceConfig] = {}
@@ -643,6 +651,11 @@ async def flow_as_tool_websocket(
                             log_event(event, "↑")
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
+                        elif msg.get("type") == "response.create":
+                            if voice_config.use_elevenlabs:
+                                response = msg.setdefault("response", {})
+                                response["modalities"] = ["text"]
+                            await openai_ws.send(json.dumps(msg))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
                                 await openai_ws.send(message_text)
