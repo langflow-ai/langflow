@@ -18,6 +18,9 @@ from langflow.inputs import (
 )
 from langflow.io import Output
 
+# TODO: We get the list from the API but we need to filter it
+enabled_tools = ["confluence", "discord", "dropbox", "github", "gmail", "linkedin", "notion", "slack", "youtube"]
+
 
 class ComposioAPIComponent(LCToolComponent):
     display_name: str = "Composio Tools"
@@ -116,23 +119,25 @@ class ComposioAPIComponent(LCToolComponent):
 
                 return build_config
 
+            # TODO: Re-enable dynamic tool list
             # Initialize the Composio ToolSet with your API key
-            toolset = ComposioToolSet(api_key=self.api_key)
+            # toolset = ComposioToolSet(api_key=self.api_key)
 
             # Get the entity (e.g., "default" for your user)
-            entity = toolset.get_entity(self.entity_id)
+            # entity = toolset.get_entity(self.entity_id)
 
             # Get all available apps
-            all_apps = entity.client.apps.get()
+            # all_apps = entity.client.apps.get()
 
             # Build an object with name, icon, link
             build_config["tool_name"]["options"] = [
                 {
-                    "name": app.name.title(),
-                    "icon": app.name,
+                    "name": app.title(),  # TODO: Switch to app.name
+                    "icon": app,  # TODO: Switch to app.name
                     "link": "",
                 }
-                for app in sorted(all_apps, key=lambda x: x.name)
+                #for app in sorted(all_apps, key=lambda x: x.name)
+                for app in enabled_tools
             ]
 
             return build_config
