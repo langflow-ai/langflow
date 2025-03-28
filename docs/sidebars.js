@@ -79,6 +79,7 @@ module.exports = {
         "Configuration/configuration-auto-saving",
         "Configuration/configuration-backend-only",
         "Configuration/configuration-cli",
+        "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         "Configuration/configuration-security-best-practices"
@@ -101,9 +102,19 @@ module.exports = {
       label: "Deployment",
       items: [
         {
+          type:"doc",
+          id: "Deployment/deployment-overview",
+          label: "Deployment overview"
+        },
+        {
           type: "doc",
           id: "Deployment/deployment-docker",
           label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes",
+          label: "Kubernetes"
         },
         {
           type: "doc",
@@ -114,11 +125,6 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-hugging-face-spaces",
           label: "Hugging Face Spaces"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
         },
         {
           type: "doc",
