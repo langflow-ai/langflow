@@ -87,10 +87,10 @@ const ConnectionComponent = ({
   }, [value, options]);
 
   useEffect(() => {
-    if (errorData || connectionLink === "error") {
+    if (connectionLink === "error") {
       setLink("error");
     }
-  }, [errorData]);
+  }, [connectionLink]);
 
   useEffect(() => {
     if (connectionLink !== "") {
