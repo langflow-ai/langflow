@@ -12,6 +12,7 @@ from pydantic import Field, create_model
 from sqlmodel import select
 
 from langflow.helpers.base_model import BaseModel
+from langflow.logging import logger
 from langflow.services.database.models import Flow
 
 
@@ -117,6 +118,10 @@ class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
+        self._cleanup_lock = asyncio.Lock()
+        self._is_cleaning = False
+        self.stdio = None
+        self.write = None
 
     async def connect_to_server(self, command_str: str):
         command = command_str.split(" ")
@@ -125,12 +130,47 @@ class MCPStdioClient:
             args=command[1:],
             env={"DEBUG": "true", "PATH": os.environ["PATH"]},
         )
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-        self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-        await self.session.initialize()
-        response = await self.session.list_tools()
-        return response.tools
+        try:
+            # First close any existing connections
+            await self.cleanup()
+
+            stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+            self.stdio, self.write = stdio_transport
+            self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+            await self.session.initialize()
+            if self.session is None:
+                msg = "Session not initialized"
+                raise ValueError(msg)
+            response = await self.session.list_tools()
+        except (asyncio.CancelledError, GeneratorExit):
+            await self.cleanup()
+            raise
+        except Exception as e:
+            await self.cleanup()
+            msg = f"Error connecting to server: {e}"
+            raise ValueError(msg) from e
+        else:
+            return response.tools
+
+    async def cleanup(self):
+        async with self._cleanup_lock:
+            if not self._is_cleaning:
+                self._is_cleaning = True
+                try:
+                    if self.session:
+                        try:
+                            await self.session.shutdown()
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"Error during session shutdown: {e}")
+                    await self.exit_stack.aclose()
+                except Exception as e:
+                    logger.error(f"Error during exit stack cleanup: {e}")
+                    raise
+                finally:
+                    self._is_cleaning = False
+                    self.session = None
+                    self.stdio = None
+                    self.write = None
 
 
 class MCPSseClient:
@@ -139,6 +179,8 @@ class MCPSseClient:
         self.sse = None
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
+        self._cleanup_lock = asyncio.Lock()
+        self._is_cleaning = False
 
     async def pre_check_redirect(self, url: str):
         async with httpx.AsyncClient(follow_redirects=False) as client:
@@ -164,6 +206,9 @@ class MCPSseClient:
             headers = {}
         url = await self.pre_check_redirect(url)
         try:
+            # First close any existing connections
+            await self.cleanup()
+
             await asyncio.wait_for(
                 self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
                 timeout=timeout_seconds,
@@ -172,7 +217,32 @@ class MCPSseClient:
                 msg = "Session not initialized"
                 raise ValueError(msg)
             response = await self.session.list_tools()
-        except asyncio.TimeoutError as err:
-            msg = f"Connection to {url} timed out after {timeout_seconds} seconds"
-            raise TimeoutError(msg) from err
-        return response.tools
+        except (asyncio.CancelledError, GeneratorExit):
+            await self.cleanup()
+            raise
+        except Exception as e:
+            await self.cleanup()
+            msg = f"Error connecting to server: {e}"
+            raise ValueError(msg) from e
+        else:
+            return response.tools
+
+    async def cleanup(self):
+        async with self._cleanup_lock:
+            if not self._is_cleaning:
+                self._is_cleaning = True
+                try:
+                    if self.session:
+                        try:
+                            await self.session.shutdown()
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"Error during session shutdown: {e}")
+                    await self.exit_stack.aclose()
+                except Exception as e:
+                    logger.error(f"Error during exit stack cleanup: {e}")
+                    raise
+                finally:
+                    self._is_cleaning = False
+                    self.session = None
+                    self.sse = None
+                    self.write = None
