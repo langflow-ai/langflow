@@ -330,9 +330,9 @@ For an example flow, see the **Graph RAG** template.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| embedding_model | Embedding Model | Specify the Embedding Model. This is not required for Astra Vectorize collections. |
+| embedding_model | Embedding Model | Specify the embedding model. This is not required for collections embedded with [Astra vectorize](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
 | vector_store | Vector Store Connection | Connection to the vector store. |
-| edge_definition | Edge Definition | Edge definition for the graph traversal. |
+| edge_definition | Edge Definition | Edge definition for the graph traversal. For more information, see the [GraphRAG documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/). |
 | strategy | Traversal Strategies | The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
 | search_query | Search Query | The query to search for in the vector store. |
 | graphrag_strategy_kwargs | Strategy Parameters | Optional dictionary of additional parameters for the retrieval strategy. For more information, see the [strategy documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
@@ -341,7 +341,7 @@ For an example flow, see the **Graph RAG** template.
 
 | Name | Type | Description |
 |------|------|-------------|
-| search_results | List[Data] | Results of the graph-based document retrieval as a list of Data objects. |
+| search_results | List[Data] | Results of the graph-based document retrieval as a list of [Data](/concepts-objects#data-object) objects. |
 
 ## Hyper-Converged Database (HCD) Vector Store
 

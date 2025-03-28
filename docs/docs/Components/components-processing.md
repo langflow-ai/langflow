@@ -53,7 +53,7 @@ This component concatenates two text sources into a single text chunk using a sp
 |message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
 
 
-## Create Data
+## Create data
 
 :::important
 This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
@@ -246,7 +246,7 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data](/concepts-objects#data-object). |
+| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
 | dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
 
 ## LLM router
@@ -290,7 +290,7 @@ This component converts [Message](/concepts-objects#message-object) objects to [
 ## Parser
 
 :::important
-This component is in **Beta** as of Langflow version 1.3.
+This component is in **Beta** as of Langflow version 1.3, and is not yet fully supported.
 :::
 
 This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
@@ -321,15 +321,15 @@ This component converts DataFrames into plain text using templates.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| df | DataFrame | The DataFrame to convert to text rows |
-| template | Template | Template for formatting (use `{column_name}` placeholders) |
-| sep | Separator | String to join rows in output |
+| df | DataFrame | The DataFrame to convert to text rows. |
+| template | Template | Template for formatting (use `{column_name}` placeholders). |
+| sep | Separator | String to join rows in output. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| text | Text | All rows combined into single text |
+| text | Text | All rows combined into single text. |
 
 ## Parse JSON
 
