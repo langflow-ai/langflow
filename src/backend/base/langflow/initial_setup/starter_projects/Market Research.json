@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-b4sJc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-b4sJcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-bjWdX{œfieldNameœ:œinput_valueœ,œidœ:œAgent-bjWdXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-b4sJc",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-b4sJcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-b4sJcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-bjWdX",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-bjWdXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-bjWdXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Agent-bjWdX{œdataTypeœ:œAgentœ,œidœ:œAgent-bjWdXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-5OFKk{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-5OFKkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-bjWdX",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-bjWdXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-bjWdXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-5OFKk",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-5OFKkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-5OFKkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-TavilySearchComponent-vpPJd{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-vpPJdœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-bjWdX{œfieldNameœ:œtoolsœ,œidœ:œAgent-bjWdXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-vpPJd",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-vpPJdœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-vpPJdœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-bjWdX",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-bjWdXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-bjWdXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-OpenAIModel-2q7JZ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2q7JZœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-5OFKk{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-5OFKkœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-2q7JZ",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2q7JZœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-2q7JZœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-5OFKk",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-5OFKkœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-5OFKkœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "xy-edge__StructuredOutput-5OFKk{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-5OFKkœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-7JQpB{œfieldNameœ:œinput_dataœ,œidœ:œparser-7JQpBœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-5OFKk",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-5OFKkœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-5OFKkœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "parser-7JQpB",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-7JQpBœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-7JQpBœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -164,9 +164,9 @@
         },
         "id": "xy-edge__parser-7JQpB{œdataTypeœ:œparserœ,œidœ:œparser-7JQpBœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-CFSA4{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CFSA4œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "parser-7JQpB",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-7JQpBœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-7JQpBœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-CFSA4",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CFSA4œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-CFSA4œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [

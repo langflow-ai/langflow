@@ -26,9 +26,9 @@
         "id": "reactflow__edge-TextInput-3OSew{œdataTypeœ:œTextInputœ,œidœ:œTextInput-3OSewœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-1l6Me{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-1l6Meœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-3OSew",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-3OSewœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-3OSewœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-1l6Me",
-        "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-1l6Meœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-1l6Meœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -54,9 +54,9 @@
         "id": "reactflow__edge-Prompt-1l6Me{œdataTypeœ:œPromptœ,œidœ:œPrompt-1l6Meœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-TOE5z{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-TOE5zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-1l6Me",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-1l6Meœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-1l6Meœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-TOE5z",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-TOE5zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-TOE5zœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-OpenAIModel-TOE5z{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-TOE5zœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8AUxp{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8AUxpœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-TOE5z",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-TOE5zœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-TOE5zœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-8AUxp",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8AUxpœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8AUxpœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "xy-edge__URL-MjSj8{œdataTypeœ:œURLœ,œidœ:œURL-MjSj8œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-Sbhw7{œfieldNameœ:œinput_dataœ,œidœ:œparser-Sbhw7œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-MjSj8",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-MjSj8œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-MjSj8œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "parser-Sbhw7",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-Sbhw7œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-Sbhw7œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "xy-edge__parser-Sbhw7{œdataTypeœ:œparserœ,œidœ:œparser-Sbhw7œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-1l6Me{œfieldNameœ:œreferencesœ,œidœ:œPrompt-1l6Meœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-Sbhw7",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-Sbhw7œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-Sbhw7œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-1l6Me",
-        "targetHandle": "{œfieldNameœ:œreferencesœ,œidœ:œPrompt-1l6Meœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-1l6Meœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [

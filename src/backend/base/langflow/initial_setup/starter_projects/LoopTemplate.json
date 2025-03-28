@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AnthropicModel-VobAp{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-VobApœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-8vLbf{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-8vLbfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "AnthropicModel-VobAp",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-VobApœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-VobApœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "MessagetoData-8vLbf",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-8vLbfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-8vLbfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-MessagetoData-8vLbf{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-8vLbfœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-0aBsp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-0aBspœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "MessagetoData-8vLbf",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-8vLbfœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-8vLbfœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-0aBsp",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-0aBspœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-0aBspœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-LoopComponent-0aBsp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-0aBspœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-J2Axc{œfieldNameœ:œdataœ,œidœ:œParseData-J2Axcœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-0aBsp",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-0aBspœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-0aBspœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-J2Axc",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-J2Axcœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-J2Axcœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-ParseData-J2Axc{œdataTypeœ:œParseDataœ,œidœ:œParseData-J2Axcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-01dLy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-01dLyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseData-J2Axc",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-J2Axcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-J2Axcœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-01dLy",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-01dLyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-01dLyœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-ChatInput-HBlBP{œdataTypeœ:œChatInputœ,œidœ:œChatInput-HBlBPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-sSqo4{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-sSqo4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-HBlBP",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-HBlBPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-HBlBPœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-sSqo4",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-sSqo4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-sSqo4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -166,9 +166,9 @@
         "id": "xy-edge__ArXivComponent-sSqo4{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-sSqo4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-0aBsp{œfieldNameœ:œdataœ,œidœ:œLoopComponent-0aBspœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-sSqo4",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-sSqo4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-sSqo4œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-0aBsp",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-0aBspœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-0aBspœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -193,9 +193,9 @@
         "id": "xy-edge__parser-lOwhH{œdataTypeœ:œparserœ,œidœ:œparser-lOwhHœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-VobAp{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-VobApœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-lOwhH",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-lOwhHœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-lOwhHœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-VobAp",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-VobApœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-VobApœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -221,9 +221,9 @@
         "id": "xy-edge__LoopComponent-0aBsp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-0aBspœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-parser-lOwhH{œfieldNameœ:œinput_dataœ,œidœ:œparser-lOwhHœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-0aBsp",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-0aBspœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-0aBspœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-lOwhH",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-lOwhHœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-lOwhHœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -546,10 +546,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -562,10 +560,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],
@@ -1821,11 +1817,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": null,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1838,24 +1831,6 @@
             "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Clean Data",
-                "dynamic": false,
-                "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1932,7 +1907,7 @@
                 "multiline": true,
                 "name": "pattern",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": false,
                 "title_case": false,
                 "tool_mode": false,
