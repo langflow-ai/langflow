@@ -45,7 +45,7 @@ The waveform in the voice mode pane should register your input, and the agent sh
 The agent describes its search process, including accessing the **URL** tool to fetch recent news.
 The agent summarizes the recent news in speech and in the **Playground**.
 
-Some considerations to be aware of when using voice mode:
+Be aware of the following considerations when using voice mode:
 
 * Name and describe your tools accurately, so the **Agent** chooses tools correctly.
 * Voice mode does not use the instructions in the Agent component's **Agent Instructions** field, because your spoken instructions override this value.
