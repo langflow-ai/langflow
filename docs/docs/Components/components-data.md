@@ -208,30 +208,6 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | doc_titles | List[str] | Titles of the found documents                   |
 | Data       | Data      | Document titles and URLs in a structured format |
 
-## S3 Bucket Uploader
-
-This component uploads files to an S3 bucket using AWS credentials. It supports storing data directly or storing the original file.
-
-For more information, see the [AWS documentation](hhttps://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html).
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| aws_access_key_id | AWS Access Key ID | AWS Access key ID (required). |
-| aws_secret_access_key | AWS Secret Key | AWS Secret Key (required). |
-| bucket_name | Bucket Name | Name of the S3 bucket to upload to. |
-| strategy | Strategy for file upload | Choose between "Store Data" or "Store Original File". Store Data parses and stores the source file as Langflow data, while Store Original File uploads the source file as-is. |
-| data_inputs | Data Inputs | The data to upload (required). |
-| s3_prefix | S3 Prefix | Prefix for all files in S3 (advanced). |
-| strip_path | Strip Path | Removes path from file path (advanced). |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Writes to AWS Bucket | Confirmation of files written to the S3 bucket. |
-
 ## SQL Query
 
 This component executes SQL queries on a specified database.
