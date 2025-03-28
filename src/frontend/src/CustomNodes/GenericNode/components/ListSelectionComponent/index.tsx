@@ -32,7 +32,11 @@ const ListItem = ({
     key={item.id}
     unstyled
     size="sm"
-    className={cn("w-full py-3 pr-3", className)}
+    className={cn(
+      "w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted",
+      isSelected && "bg-muted",
+      className,
+    )}
     onClick={onClick}
   >
     <div className="flex items-center gap-2">
