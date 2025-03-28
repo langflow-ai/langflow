@@ -148,7 +148,7 @@ This component is in **Legacy**, which means it is no longer in active developme
 This component transforms the output of a language model into a specified format. It supports CSV format parsing, which converts LLM responses into comma-separated lists using Langchain's `CommaSeparatedListOutputParser`.
 
 :::note
-This component only provides formatting instructions and parsing functionality - it does not include a prompt. You'll need to connect it to a separate Prompt component to create the actual prompt template for the LLM to use.
+This component only provides formatting instructions and parsing functionality. It does not include a prompt. You'll need to connect it to a separate Prompt component to create the actual prompt template for the LLM to use.
 :::
 
 Both the **Output Parser** and **Structured Output** components format LLM responses, but they have different use cases.
