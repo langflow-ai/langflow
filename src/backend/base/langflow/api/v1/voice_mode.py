@@ -530,7 +530,8 @@ def create_event_logger(session_id: str):
             logger.debug(f"Event (session - {session_id}): {direction} {event_type}")
             state["last_event_type"] = event_type
             state["event_count"] = 0
-        state["event_count"] = int(state["event_count"]) + 1
+        current_count = 0 if state["event_count"] is None else state["event_count"]
+        state["event_count"] = current_count + 1
 
     return log_event
 
