@@ -1,6 +1,7 @@
 import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -23,11 +24,7 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
-    await page.getByTestId("sidebar-legacy-switch").click();
+    await addLegacyComponents(page);
 
     //---------------------------------- CHAT INPUT
     await page.getByTestId("sidebar-search-input").click();
