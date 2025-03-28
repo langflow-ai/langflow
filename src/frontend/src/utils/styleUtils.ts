@@ -780,7 +780,7 @@ export const eagerLoadedIconsMap = {
   Menu: Menu,
   MoreHorizontal: MoreHorizontal,
   Trash2: Trash2,
-  
+
   // other icons
   FaApple: FaApple,
   FaDiscord: FaDiscord,
