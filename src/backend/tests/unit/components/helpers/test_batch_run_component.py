@@ -251,6 +251,8 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, DataFrame)
         assert all(isinstance(text, int) for text in result["text"])
-        assert all(str(num) in response for num, response in zip(test_df["text"], result["model_response"], strict=False))
+        assert all(
+            str(num) in response for num, response in zip(test_df["text"], result["model_response"], strict=False)
+        )
         result_dicts = result.to_dict("records")
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)
