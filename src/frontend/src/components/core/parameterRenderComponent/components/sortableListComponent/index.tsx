@@ -139,7 +139,7 @@ const SortableListComponent = ({
         setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}
-        type="multiple"
+        limit={5}
       />
     </div>
   );

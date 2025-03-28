@@ -5,9 +5,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { cn } from "@/utils/utils";
 import { useCallback, useMemo, useState } from "react";
 
-// Define a union type for selection mode
-type SelectionMode = "multiple" | "single";
-
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
@@ -15,9 +12,9 @@ interface ListSelectionComponentProps {
   onClose: () => void;
   setSelectedList: (action: any[]) => void;
   selectedList: any[];
-  type: SelectionMode;
   searchCategories?: string[];
   onSelection?: (action: any) => void;
+  limit?: number;
 }
 
 const ListItem = ({
@@ -68,8 +65,8 @@ const ListSelectionComponent = ({
   onSelection,
   setSelectedList = () => {},
   selectedList = [],
-  type,
   options,
+  limit = 1,
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
 
@@ -85,7 +82,7 @@ const ListSelectionComponent = ({
 
   const handleSelectAction = useCallback(
     (action: any) => {
-      if (type === "multiple") {
+      if (limit !== 1) {
         // Multiple selection mode
         const isAlreadySelected = selectedList.some(
           (selectedItem) => selectedItem.name === action.name,
@@ -98,7 +95,10 @@ const ListSelectionComponent = ({
             ),
           );
         } else {
-          setSelectedList([...selectedList, action]);
+          // Check if we've reached the selection limit
+          if (selectedList.length < limit) {
+            setSelectedList([...selectedList, action]);
+          }
         }
       } else {
         // Single selection mode
@@ -113,7 +113,7 @@ const ListSelectionComponent = ({
         setSearch("");
       }
     },
-    [type, selectedList, setSelectedList, onClose],
+    [selectedList, setSelectedList, onClose, limit],
   );
 
   const handleCloseDialog = useCallback(() => {

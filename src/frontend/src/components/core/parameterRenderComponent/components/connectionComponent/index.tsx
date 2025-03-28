@@ -243,7 +243,6 @@ const ConnectionComponent = ({
         setSelectedList={setSelectedItem}
         selectedList={selectedItem}
         options={options}
-        type="single"
       />
     </div>
   );
