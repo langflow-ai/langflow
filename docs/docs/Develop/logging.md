@@ -1,5 +1,5 @@
 ---
-title: Logging
+title: Logging options in Langflow
 slug: /logging
 ---
 

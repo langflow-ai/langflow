@@ -1,5 +1,5 @@
 ---
-title: Session ID
+title: Use session ID to manage communication between components
 slug: /session-id
 ---
 

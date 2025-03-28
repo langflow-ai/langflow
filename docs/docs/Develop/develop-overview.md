@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: About developing and configuring Langflow applications
 slug: /develop-overview
 ---
 

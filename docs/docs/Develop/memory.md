@@ -1,5 +1,5 @@
 ---
-title: Memory
+title: Memory management options
 slug: /memory
 ---
 
