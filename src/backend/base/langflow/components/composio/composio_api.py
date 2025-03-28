@@ -70,6 +70,9 @@ class ComposioAPIComponent(LCToolComponent):
     ]
 
     def sanitize_action_name(self, action_name: str) -> str:
+        # TODO: Maybe restore
+        return action_name
+
         # We want to use title case, and replace underscores with spaces
         sanitized_name = action_name.replace("_", " ").title()
 
@@ -77,6 +80,9 @@ class ComposioAPIComponent(LCToolComponent):
         return sanitized_name.replace(self.tool_name.title() + " ", "")
 
     def desanitize_action_name(self, action_name: str) -> str:
+        # TODO: Maybe restore
+        return action_name
+
         # We want to reverse what we did above
         unsanitized_name = action_name.replace(" ", "_").upper()
 
