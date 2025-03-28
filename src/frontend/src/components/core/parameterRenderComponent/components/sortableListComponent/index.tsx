@@ -139,13 +139,6 @@ const SortableListComponent = ({
         )}
       </div>
 
-      {helperText && (
-        <HelperTextComponent
-          helperText={helperText}
-          helperMetadata={helperMetadata}
-        />
-      )}
-
       {listData.length > 0 && (
         <div className="flex w-full flex-col">
           <ReactSortable
@@ -163,6 +156,15 @@ const SortableListComponent = ({
               />
             ))}
           </ReactSortable>
+        </div>
+      )}
+
+      {helperText && (
+        <div className="pt-2">
+          <HelperTextComponent
+            helperText={helperText}
+            helperMetadata={helperMetadata}
+          />
         </div>
       )}
 
