@@ -1,5 +1,4 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
@@ -11,7 +10,6 @@ import { memo, useEffect, useRef, useState } from "react";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
-// Type definitions for component props
 type ConnectionComponentProps = {
   tooltip?: string;
   name: string;
@@ -36,7 +34,6 @@ const ConnectionComponent = ({
   connectionLink = "",
   ...baseInputProps
 }: InputProps<any, ConnectionComponentProps>) => {
-  // Destructure base props
   const {
     value,
     handleOnNewValue,
@@ -46,10 +43,8 @@ const ConnectionComponent = ({
     placeholder,
   } = baseInputProps;
 
-  // Store access
-  const errorData = useAlertStore((state) => state.errorData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  // State management for tracking connection status and UI states
+
   const [isAuthenticated, setIsAuthenticated] = useState(
     connectionLink === "validated",
   );
@@ -58,11 +53,9 @@ const ConnectionComponent = ({
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
 
-  // Refs for managing polling timers to prevent memory leaks
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // API hook for handling template value updates
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
     nodeId: nodeId,
@@ -140,7 +133,7 @@ const ConnectionComponent = ({
       );
     }, 3000);
 
-    // Set timeout to stop polling after 30 seconds to prevent indefinite polling
+    // Set timeout to stop polling after 9 seconds to prevent indefinite polling
     pollingTimeout.current = setTimeout(() => {
       stopPolling(link !== "");
       // If we timed out and link is still loading, reset it
