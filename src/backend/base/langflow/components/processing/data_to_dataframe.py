@@ -27,7 +27,6 @@ class DataToDataFrameComponent(Component):
             display_name="DataFrame",
             name="dataframe",
             method="build_dataframe",
-            info="A DataFrame built from each Data object's fields plus a 'text' column.",
         ),
     ]
 

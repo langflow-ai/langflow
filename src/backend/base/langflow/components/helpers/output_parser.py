@@ -26,7 +26,6 @@ class OutputParserComponent(Component):
         Output(
             display_name="Format Instructions",
             name="format_instructions",
-            info="Pass to a prompt template to include formatting instructions for LLM responses.",
             method="format_instructions",
         ),
         Output(display_name="Output Parser", name="output_parser", method="build_parser"),

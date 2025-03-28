@@ -106,7 +106,6 @@ class DataFrameOperationsComponent(Component):
             display_name="DataFrame",
             name="output",
             method="perform_operation",
-            info="The resulting DataFrame after the operation.",
         )
     ]
 

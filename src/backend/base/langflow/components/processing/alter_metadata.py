@@ -46,13 +46,11 @@ class AlterMetadataComponent(Component):
         Output(
             name="data",
             display_name="Data",
-            info="List of Input objects each with added Metadata",
             method="process_output",
         ),
         Output(
             display_name="DataFrame",
             name="dataframe",
-            info="Data objects as a DataFrame, with metadata as columns",
             method="as_dataframe",
         ),
     ]
