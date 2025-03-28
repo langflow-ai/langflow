@@ -1,9 +1,7 @@
-import dynamicIconImports from "lucide-react/dynamicIconImports";
 import React, { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
 import { getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
-import Loading from "../../ui/loading";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCallback, useEffect, useState } from "react";
@@ -79,7 +77,6 @@ export const ForwardedIconComponent = memo(
 
       const fallback = showFallback ? (
         <div className={cn(className, "flex items-center justify-center")}>
-          {/* <Loading /> */}
           <Skeleton className="h-4 w-4" />
         </div>
       ) : (
