@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-A2yHP",
+            "id": "ChatInput-82ow1",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-nLcKt",
+            "id": "OpenAIModel-Xctjl",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-A2yHP{œdataTypeœ:œChatInputœ,œidœ:œChatInput-A2yHPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nLcKt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-82ow1{œdataTypeœ:œChatInputœ,œidœ:œChatInput-82ow1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Xctjl{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Xctjlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-A2yHP",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-A2yHPœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-nLcKt",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-nLcKtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-82ow1",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-82ow1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-Xctjl",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Xctjlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-ebOl0",
+            "id": "Prompt-yAr8f",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-nLcKt",
+            "id": "OpenAIModel-Xctjl",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-ebOl0{œdataTypeœ:œPromptœ,œidœ:œPrompt-ebOl0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nLcKt{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-nLcKtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-yAr8f{œdataTypeœ:œPromptœ,œidœ:œPrompt-yAr8fœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Xctjl{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-Xctjlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-ebOl0",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ebOl0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-nLcKt",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-nLcKtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-yAr8f",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-yAr8fœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-Xctjl",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-Xctjlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-nLcKt",
+            "id": "OpenAIModel-Xctjl",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-N1C0e",
+            "id": "ChatOutput-hSEAB",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,20 +80,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-nLcKt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-nLcKtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-N1C0e{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N1C0eœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-Xctjl{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Xctjlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-hSEAB{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hSEABœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-nLcKt",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-nLcKtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-N1C0e",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N1C0eœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-Xctjl",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Xctjlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-hSEAB",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hSEABœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-PQR1u",
+            "id": "File-3BeiJ",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -101,7 +100,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-5sHHY",
+            "id": "parser-mO32W",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,20 +108,19 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-PQR1u{œdataTypeœ:œFileœ,œidœ:œFile-PQR1uœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-5sHHY{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-5sHHYœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__File-3BeiJ{œdataTypeœ:œFileœ,œidœ:œFile-3BeiJœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-mO32W{œfieldNameœ:œinput_dataœ,œidœ:œparser-mO32Wœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-PQR1u",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-PQR1uœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-5sHHY",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-5sHHYœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "File-3BeiJ",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-3BeiJœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "parser-mO32W",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-mO32Wœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ParserComponent",
-            "id": "ParserComponent-5sHHY",
+            "dataType": "parser",
+            "id": "parser-mO32W",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -130,7 +128,7 @@
           },
           "targetHandle": {
             "fieldName": "Document",
-            "id": "Prompt-ebOl0",
+            "id": "Prompt-yAr8f",
             "inputTypes": [
               "Message",
               "Text"
@@ -138,12 +136,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParserComponent-5sHHY{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-5sHHYœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ebOl0{œfieldNameœ:œDocumentœ,œidœ:œPrompt-ebOl0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__parser-mO32W{œdataTypeœ:œparserœ,œidœ:œparser-mO32Wœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-yAr8f{œfieldNameœ:œDocumentœ,œidœ:œPrompt-yAr8fœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-5sHHY",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-5sHHYœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ebOl0",
-        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-ebOl0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-mO32W",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-mO32Wœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-yAr8f",
+        "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-yAr8fœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -151,7 +149,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-A2yHP",
+          "id": "ChatInput-82ow1",
           "node": {
             "base_classes": [
               "Message"
@@ -417,7 +415,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-A2yHP",
+        "id": "ChatInput-82ow1",
         "measured": {
           "height": 234,
           "width": 320
@@ -438,7 +436,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-N1C0e",
+          "id": "ChatOutput-hSEAB",
           "node": {
             "base_classes": [
               "Message"
@@ -720,7 +718,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-N1C0e",
+        "id": "ChatOutput-hSEAB",
         "measured": {
           "height": 234,
           "width": 320
@@ -739,7 +737,7 @@
       },
       {
         "data": {
-          "id": "note-zvZmx",
+          "id": "note-7pTJx",
           "node": {
             "description": "# Document Q&A\n\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **OpenAI** model component.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
@@ -750,7 +748,7 @@
         },
         "dragging": false,
         "height": 509,
-        "id": "note-zvZmx",
+        "id": "note-7pTJx",
         "measured": {
           "height": 509,
           "width": 421
@@ -774,7 +772,7 @@
       },
       {
         "data": {
-          "id": "File-PQR1u",
+          "id": "File-3BeiJ",
           "node": {
             "base_classes": [
               "Data"
@@ -1047,7 +1045,7 @@
         },
         "dragging": false,
         "height": 232,
-        "id": "File-PQR1u",
+        "id": "File-3BeiJ",
         "measured": {
           "height": 232,
           "width": 320
@@ -1060,7 +1058,7 @@
           "x": 155.39382083637838,
           "y": -82.32805525710685
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
@@ -1068,7 +1066,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-ebOl0",
+          "id": "Prompt-yAr8f",
           "node": {
             "base_classes": [
               "Message"
@@ -1203,7 +1201,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-ebOl0",
+        "id": "Prompt-yAr8f",
         "measured": {
           "height": 347,
           "width": 320
@@ -1222,7 +1220,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-nLcKt",
+          "id": "OpenAIModel-Xctjl",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1301,7 +1299,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1590,7 +1588,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-nLcKt",
+        "id": "OpenAIModel-Xctjl",
         "measured": {
           "height": 525,
           "width": 320
@@ -1604,12 +1602,12 @@
       },
       {
         "data": {
-          "id": "ParserComponent-5sHHY",
+          "id": "parser-mO32W",
           "node": {
             "base_classes": [
               "Message"
             ],
-            "beta": true,
+            "beta": false,
             "category": "processing",
             "conditional_paths": [],
             "custom_fields": {},
@@ -1618,16 +1616,15 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "stringify",
-              "template",
+              "mode",
+              "pattern",
               "input_data",
               "sep"
             ],
             "frozen": false,
             "icon": "braces",
-            "key": "ParserComponent",
+            "key": "parser",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1666,7 +1663,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = (\n        \"Format a DataFrame or Data object into text using a template. \"\n        \"Enable 'Stringify' to convert input into a readable string instead.\"\n    )\n    icon = \"braces\"\n    beta = True\n\n    inputs = [\n        BoolInput(\n            name=\"stringify\",\n            display_name=\"Stringify\",\n            info=\"Enable to convert input to a string instead of using a template.\",\n            value=False,\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Data or DataFrame\",\n            input_types=[\"DataFrame\", \"Data\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"stringify\":\n            build_config[\"template\"][\"show\"] = not field_value\n            build_config[\"template\"][\"required\"] = not field_value\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.stringify:\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.template.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            formatted_text = self.template.format(text=data.get_text())\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if hasattr(self, \"clean_data\") and self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([self._safe_convert(item) for item in self.input_data])\n        else:\n            result = self._safe_convert(self.input_data)\n        self.log(f\"Converted to string with length: {len(result)}\")\n        return Message(text=result)\n"
+                "value": "import json\nfrom typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TabInput,\n)\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\n\nclass ParserComponent(Component):\n    name = \"parser\"\n    display_name = \"Parser\"\n    description = (\n        \"Format a DataFrame or Data object into text using a template. \"\n        \"Enable 'Stringify' to convert input into a readable string instead.\"\n    )\n    icon = \"braces\"\n\n    inputs = [\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Data or DataFrame\",\n            input_types=[\"DataFrame\", \"Data\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            formatted_text = self.pattern.format(**data.data)\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                return json.dumps(data.data)\n            if isinstance(data, DataFrame):\n                if hasattr(self, \"clean_data\") and self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([self._safe_convert(item) for item in self.input_data])\n        else:\n            result = self._safe_convert(self.input_data)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
               },
               "input_data": {
                 "_input_type": "HandleInput",
@@ -1688,6 +1685,52 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Convert into raw string instead of using a template.",
+                "name": "mode",
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Parser"
+              },
+              "pattern": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": true,
+                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "pattern",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Text: {text}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
@@ -1711,80 +1754,36 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "\n"
-              },
-              "stringify": {
-                "_input_type": "BoolInput",
-                "advanced": false,
-                "display_name": "Stringify",
-                "dynamic": false,
-                "info": "Enable to convert input to a string instead of using a template.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stringify",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": true,
-                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Text: {text}"
               }
             },
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ParserComponent"
+          "type": "parser"
         },
         "dragging": false,
-        "id": "ParserComponent-5sHHY",
+        "id": "parser-mO32W",
         "measured": {
-          "height": 357,
+          "height": 395,
           "width": 320
         },
         "position": {
-          "x": 510.54606157042645,
-          "y": -156.90952589327625
+          "x": 517.4341822104063,
+          "y": -211.09448665229442
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 301.14401803662435,
-      "y": 436.6308475717798,
-      "zoom": 0.5934613024535994
+      "x": 201.52975647724884,
+      "y": 410.819941953365,
+      "zoom": 0.6386710713834723
     }
   },
   "description": "Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
   "endpoint_name": null,
-  "id": "08d073e2-f9f2-4299-93df-c45a154521b6",
+  "id": "e088aa15-23da-4839-b3f0-eb733b973a8b",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Document Q&A",

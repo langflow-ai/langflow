@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-fzcOD",
+            "id": "OpenAIModel-7hzeM",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-4Y6c6",
+            "id": "StructuredOutput-XPbNI",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-fzcOD{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-fzcODœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-4Y6c6{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-4Y6c6œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-7hzeM{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-7hzeMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-XPbNI{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-XPbNIœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-fzcOD",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-fzcODœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-4Y6c6",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-4Y6c6œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-7hzeM",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-7hzeMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-XPbNI",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-XPbNIœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-pqWo4",
+            "id": "ChatInput-dKvV3",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,27 +43,26 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-4Y6c6",
+            "id": "StructuredOutput-XPbNI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-pqWo4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-pqWo4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-4Y6c6{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-4Y6c6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-dKvV3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dKvV3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-XPbNI{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-XPbNIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-pqWo4",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-pqWo4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-4Y6c6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-4Y6c6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-dKvV3",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dKvV3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-XPbNI",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-XPbNIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-4Y6c6",
+            "id": "StructuredOutput-XPbNI",
             "name": "structured_output_dataframe",
             "output_types": [
               "DataFrame"
@@ -71,7 +70,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-54sQs",
+            "id": "parser-s4Kz6",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -79,20 +78,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-4Y6c6{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-4Y6c6œ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-54sQs{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-54sQsœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__StructuredOutput-XPbNI{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-XPbNIœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-s4Kz6{œfieldNameœ:œinput_dataœ,œidœ:œparser-s4Kz6œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-4Y6c6",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-4Y6c6œ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-54sQs",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-54sQsœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-XPbNI",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-XPbNIœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "parser-s4Kz6",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-s4Kz6œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ParserComponent",
-            "id": "ParserComponent-54sQs",
+            "dataType": "parser",
+            "id": "parser-s4Kz6",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -100,7 +97,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-S5wVG",
+            "id": "ChatOutput-meCWe",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -109,18 +106,17 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-54sQs{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-54sQsœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-S5wVG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-S5wVGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ParserComponent-54sQs",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-54sQsœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-S5wVG",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-S5wVGœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__parser-s4Kz6{œdataTypeœ:œparserœ,œidœ:œparser-s4Kz6œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-meCWe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-meCWeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "parser-s4Kz6",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-s4Kz6œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-meCWe",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-meCWeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenAIModel-fzcOD",
+          "id": "OpenAIModel-7hzeM",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -491,7 +487,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-fzcOD",
+        "id": "OpenAIModel-7hzeM",
         "measured": {
           "height": 525,
           "width": 320
@@ -505,7 +501,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-S5wVG",
+          "id": "ChatOutput-meCWe",
           "node": {
             "base_classes": [
               "Message"
@@ -802,7 +798,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-S5wVG",
+        "id": "ChatOutput-meCWe",
         "measured": {
           "height": 66,
           "width": 192
@@ -816,7 +812,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-pqWo4",
+          "id": "ChatInput-dKvV3",
           "node": {
             "base_classes": [
               "Message"
@@ -1114,7 +1110,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-pqWo4",
+        "id": "ChatInput-dKvV3",
         "measured": {
           "height": 66,
           "width": 192
@@ -1128,7 +1124,7 @@
       },
       {
         "data": {
-          "id": "note-3eQAA",
+          "id": "note-noWIg",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -1140,7 +1136,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-3eQAA",
+        "id": "note-noWIg",
         "measured": {
           "height": 324,
           "width": 324
@@ -1154,7 +1150,7 @@
       },
       {
         "data": {
-          "id": "note-mRhVk",
+          "id": "note-1vbDd",
           "node": {
             "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the OpenAI model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **OpenAI** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Data to Message** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
@@ -1165,7 +1161,7 @@
         },
         "dragging": false,
         "height": 688,
-        "id": "note-mRhVk",
+        "id": "note-1vbDd",
         "measured": {
           "height": 688,
           "width": 620
@@ -1181,7 +1177,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-4Y6c6",
+          "id": "StructuredOutput-XPbNI",
           "node": {
             "base_classes": [
               "Data",
@@ -1469,7 +1465,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-4Y6c6",
+        "id": "StructuredOutput-XPbNI",
         "measured": {
           "height": 447,
           "width": 320
@@ -1483,12 +1479,12 @@
       },
       {
         "data": {
-          "id": "ParserComponent-54sQs",
+          "id": "parser-s4Kz6",
           "node": {
             "base_classes": [
               "Message"
             ],
-            "beta": true,
+            "beta": false,
             "category": "processing",
             "conditional_paths": [],
             "custom_fields": {},
@@ -1497,16 +1493,15 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "stringify",
-              "template",
+              "mode",
+              "pattern",
               "input_data",
               "sep"
             ],
             "frozen": false,
             "icon": "braces",
-            "key": "ParserComponent",
+            "key": "parser",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1526,7 +1521,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.001,
+            "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
               "code": {
@@ -1545,7 +1540,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = (\n        \"Format a DataFrame or Data object into text using a template. \"\n        \"Enable 'Stringify' to convert input into a readable string instead.\"\n    )\n    icon = \"braces\"\n    beta = True\n\n    inputs = [\n        BoolInput(\n            name=\"stringify\",\n            display_name=\"Stringify\",\n            info=\"Enable to convert input to a string instead of using a template.\",\n            value=False,\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Data or DataFrame\",\n            input_types=[\"DataFrame\", \"Data\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"stringify\":\n            build_config[\"template\"][\"show\"] = not field_value\n            build_config[\"template\"][\"required\"] = not field_value\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.stringify:\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.template.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            formatted_text = self.template.format(text=data.get_text())\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if hasattr(self, \"clean_data\") and self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([self._safe_convert(item) for item in self.input_data])\n        else:\n            result = self._safe_convert(self.input_data)\n        self.log(f\"Converted to string with length: {len(result)}\")\n        return Message(text=result)\n"
+                "value": "import json\nfrom typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TabInput,\n)\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\n\nclass ParserComponent(Component):\n    name = \"parser\"\n    display_name = \"Parser\"\n    description = (\n        \"Format a DataFrame or Data object into text using a template. \"\n        \"Enable 'Stringify' to convert input into a readable string instead.\"\n    )\n    icon = \"braces\"\n\n    inputs = [\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Data or DataFrame\",\n            input_types=[\"DataFrame\", \"Data\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            formatted_text = self.pattern.format(**data.data)\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                return json.dumps(data.data)\n            if isinstance(data, DataFrame):\n                if hasattr(self, \"clean_data\") and self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([self._safe_convert(item) for item in self.input_data])\n        else:\n            result = self._safe_convert(self.input_data)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
               },
               "input_data": {
                 "_input_type": "HandleInput",
@@ -1567,6 +1562,52 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Convert into raw string instead of using a template.",
+                "name": "mode",
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Parser"
+              },
+              "pattern": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": true,
+                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "pattern",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "EBITIDA: {EBITIDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
@@ -1590,80 +1631,36 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "\n"
-              },
-              "stringify": {
-                "_input_type": "BoolInput",
-                "advanced": false,
-                "display_name": "Stringify",
-                "dynamic": false,
-                "info": "Enable to convert input to a string instead of using a template.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stringify",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": true,
-                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "EBITIDA: {EBITIDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
               }
             },
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ParserComponent"
+          "type": "parser"
         },
         "dragging": false,
-        "id": "ParserComponent-54sQs",
+        "id": "parser-s4Kz6",
         "measured": {
-          "height": 357,
+          "height": 395,
           "width": 320
         },
         "position": {
-          "x": 1795.32961297192,
-          "y": 235.85928335077983
+          "x": 1765.290752395121,
+          "y": 164.78283431885177
         },
         "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -92.06922665631191,
-      "y": 443.1875788717053,
-      "zoom": 0.6054984103207762
+      "x": -17.069750343754663,
+      "y": 450.3545210238955,
+      "zoom": 0.5500905440229726
     }
   },
   "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
   "endpoint_name": null,
-  "id": "5ef1b58e-02bf-4793-a282-a1f386858383",
+  "id": "43308dc6-b08e-4366-8fac-18cee79db1c5",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Financial Report Parser",
