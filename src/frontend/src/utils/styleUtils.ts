@@ -739,13 +739,12 @@ export const getNodeIcon = (name: string) => {
   );
 };
 
-
 export const iconExists = (name: string): boolean => {
   const iconName = nodeIconToDisplayIconMap[name] || name;
-  
+
   return !!(
-    eagerLoadedIconsMap[iconName] || 
-    nodeIconsMapping[iconName] || 
+    eagerLoadedIconsMap[iconName] ||
+    nodeIconsMapping[iconName] ||
     dynamicIconImports[getLucideIconName(iconName)]
   );
 };
