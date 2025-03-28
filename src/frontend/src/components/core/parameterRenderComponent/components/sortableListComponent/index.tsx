@@ -15,6 +15,7 @@ type SortableListComponentProps = {
   options?: any[];
   searchCategory?: string[];
   icon?: string;
+  limit?: number;
 };
 
 const SortableListItem = memo(
@@ -22,31 +23,57 @@ const SortableListItem = memo(
     data,
     index,
     onRemove,
+    limit = 1,
   }: {
     data: any;
     index: number;
     onRemove: () => void;
+    limit?: number;
   }) => (
-    <li className="group inline-flex h-12 w-full cursor-grab items-center gap-2 text-sm font-medium text-gray-800">
-      <ForwardedIconComponent
-        name="grid-horizontal"
-        className="h-5 w-5 fill-gray-300 text-gray-300"
-      />
+    <li
+      className={cn(
+        "group inline-flex h-12 w-full items-center gap-2 text-sm font-medium text-gray-800",
+        limit === 1 ? "h-8 rounded-md bg-muted" : "cursor-grab",
+      )}
+    >
+      {limit !== 1 && (
+        <ForwardedIconComponent
+          name="grid-horizontal"
+          className="h-5 w-5 fill-gray-300 text-gray-300"
+        />
+      )}
 
       <div className="flex w-full items-center gap-x-2">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-center text-white">
-          {index + 1}
-        </div>
+        {limit !== 1 && (
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-center text-white">
+            {index + 1}
+          </div>
+        )}
 
-        <span className="max-w-48 truncate text-primary">{data.name}</span>
+        <span
+          className={cn(
+            "truncate text-primary",
+            limit === 1 ? "max-w-full px-2" : "max-w-48",
+          )}
+        >
+          {data.name}
+        </span>
       </div>
       <Button
         size="icon"
-        variant="outline"
-        className="ml-auto h-7 w-7 opacity-0 transition-opacity duration-200 hover:border hover:border-destructive hover:bg-transparent hover:opacity-100"
+        variant={limit !== 1 ? "outline" : "ghost"}
+        className={cn(
+          "ml-auto h-7 w-7 opacity-0 transition-opacity duration-200",
+          limit === 1
+            ? "pr-2 opacity-100"
+            : "hover:border hover:border-destructive hover:bg-transparent hover:opacity-100",
+        )}
         onClick={onRemove}
       >
-        <ForwardedIconComponent name="x" className="h-6 w-6 text-red-500" />
+        <ForwardedIconComponent
+          name="x"
+          className={cn("h-6 w-6 text-red-500", limit === 1 && "text-gray-500")}
+        />
       </Button>
     </li>
   ),
@@ -59,6 +86,7 @@ const SortableListComponent = ({
   helperMetadata = { icon: undefined, variant: "muted-foreground" },
   options = [],
   searchCategory = [],
+  limit,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
@@ -91,19 +119,21 @@ const SortableListComponent = ({
   }, []);
 
   return (
-    <div className="flex w-full flex-col gap-2">
+    <div className="flex w-full flex-col">
       <div className="flex w-full flex-row gap-2">
-        <Button
-          variant="default"
-          size="xs"
-          role="combobox"
-          onClick={handleOpenListSelectionDialog}
-          className="dropdown-component-outline input-edit-node w-full py-2"
-        >
-          <div className={cn("flex items-center text-sm font-semibold")}>
-            {placeholder}
-          </div>
-        </Button>
+        {!(limit === 1 && listData.length === 1) && (
+          <Button
+            variant="default"
+            size="xs"
+            role="combobox"
+            onClick={handleOpenListSelectionDialog}
+            className="dropdown-component-outline input-edit-node w-full py-2"
+          >
+            <div className={cn("flex items-center text-sm font-semibold")}>
+              {placeholder}
+            </div>
+          </Button>
+        )}
       </div>
 
       {helperText && (
@@ -118,7 +148,7 @@ const SortableListComponent = ({
           <ReactSortable
             list={listData}
             setList={setListDataHandler}
-            className="flex w-full flex-col"
+            className={"flex w-full flex-col"}
           >
             {listData.map((data, index) => (
               <SortableListItem
@@ -126,6 +156,7 @@ const SortableListComponent = ({
                 data={data}
                 index={index}
                 onRemove={createRemoveHandler(index)}
+                limit={limit}
               />
             ))}
           </ReactSortable>
@@ -139,7 +170,7 @@ const SortableListComponent = ({
         setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}
-        limit={5}
+        limit={limit}
       />
     </div>
   );

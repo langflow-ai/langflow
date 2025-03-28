@@ -223,6 +223,7 @@ export function ParameterRenderComponent({
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
             searchCategory={templateData?.search_category}
+            limit={templateData?.limit}
           />
         );
       case "connect":
