@@ -1,3 +1,4 @@
+import IconComponent from "@/components/common/genericIconComponent";
 import * as Form from "@radix-ui/react-form";
 import { Eye, EyeOff } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
@@ -11,7 +12,6 @@ import {
   inputHandlerEventType,
 } from "../../types/components";
 import BaseModal from "../baseModal";
-import IconComponent from "@/components/common/genericIconComponent";
 
 export default function UserManagementModal({
   title,
