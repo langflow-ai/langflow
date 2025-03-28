@@ -59,7 +59,7 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 
 The **Temporary overrides** tab displays the available parameters for your flow.
 Modifying the parameters changes the code parameters across all windows.
-For example, changing the **Chat Input** component's `input_value` will change that value across all API calls to the `/run` endpoint of this flow.
+For example, changing the **Chat Input** component's `input_value` changes that value across all API calls to the `/run` endpoint of this flow.
 
 ### Send files to your flow with the API
 

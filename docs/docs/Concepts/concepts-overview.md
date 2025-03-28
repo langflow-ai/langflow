@@ -130,7 +130,7 @@ Projects, folders, and flows are exchanged as JSON objects.
 
 Upload, store, and manage files in Langflow's **File management** system.
 
-For more on managing your files, see [File management](/concepts-file-management).
+For more on managing your files, see [Manage files](/concepts-file-management).
 
 ## Options menu
 
