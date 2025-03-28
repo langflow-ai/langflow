@@ -136,7 +136,7 @@ class ComposioAPIComponent(LCToolComponent):
                     "icon": app,  # TODO: Switch to app.name
                     "link": "",
                 }
-                #for app in sorted(all_apps, key=lambda x: x.name)
+                # for app in sorted(all_apps, key=lambda x: x.name)
                 for app in enabled_tools
             ]
 
