@@ -44,12 +44,12 @@ export default function InputFileComponent({
 
   function checkFileType(fileName: string): boolean {
     if (fileTypes === undefined) return true;
-    for (let index = 0; index < fileTypes.length; index++) {
-      if (fileName.endsWith(fileTypes[index])) {
-        return true;
-      }
-    }
-    return false;
+
+    // Extract the file extension
+    const fileExtension = fileName.split(".").pop();
+
+    // Check if the extracted extension is in the list of accepted file types
+    return fileTypes.includes(fileExtension || "");
   }
 
   const { mutateAsync, isPending } = usePostUploadFile();
@@ -254,9 +254,10 @@ export default function InputFileComponent({
                         }
                         size={selectedFiles.length !== 0 ? "iconMd" : "default"}
                         className={cn(
-                          selectedFiles.length !== 0 &&
-                            "hit-area-icon absolute -top-8 right-0",
-                          "w-full font-semibold",
+                          selectedFiles.length !== 0
+                            ? "hit-area-icon absolute -top-8 right-0"
+                            : "w-full",
+                          "font-semibold",
                         )}
                         data-testid="button_open_file_management"
                       >
