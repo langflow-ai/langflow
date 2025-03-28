@@ -70,9 +70,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def sanitize_action_name(self, action_name: str) -> str:
         # We want to use title case, and replace underscores with spaces
-        print(action_name)
         sanitized_name = action_name.replace("_", " ").title()
-        print(sanitized_name)
 
         # Now we want to remove everything from and including the first dot
         return sanitized_name.replace(self.tool_name.title() + " ", "")
