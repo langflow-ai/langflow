@@ -26,8 +26,9 @@
         "selected": false,
         "source": "ChatInput-Vdvzc",
         "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Vdvzcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Vdvzcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-chjSc",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +56,9 @@
         "id": "reactflow__edge-Agent-chjSc{œdataTypeœ:œAgentœ,œidœ:œAgent-chjScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-fXi9i{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fXi9iœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-chjSc",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-chjScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-chjScœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-fXi9i",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fXi9iœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-fXi9iœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -82,9 +83,9 @@
         "id": "xy-edge__ComposioAPI-4heel{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-4heelœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-chjSc{œfieldNameœ:œtoolsœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ComposioAPI-4heel",
-        "sourceHandle": "{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-4heelœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-4heelœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-chjSc",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
