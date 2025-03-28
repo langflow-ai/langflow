@@ -1,5 +1,5 @@
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume, example, given
 from hypothesis import strategies as st
 from langflow.schema.data import Data
 from langflow.template.utils import apply_json_filter
@@ -16,6 +16,14 @@ def dict_strategy():
 
 # Test basic dictionary access
 @given(data=st.dictionaries(st.text(), st.integers()), key=st.text())
+@example(
+    data={" ": 0},  # or any other generated value
+    key=" ",
+).via("discovered failure")
+@example(
+    data={},
+    key=" ",
+).via("discovered failure")
 def test_basic_dict_access(data, key):
     # Skip empty key tests which have special handling
     assume(key != "")
