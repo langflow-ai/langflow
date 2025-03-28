@@ -85,7 +85,7 @@ The maximum supported file size is 100 MB.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| path | Files | Path to file(s) to load. Supports individual files or bundled archives. |
+| path | Files | Path to file to load. Supports individual files or bundled archives. |
 | file_path | Server File Path | Data object with a `file_path` property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports the same file types. |
 | separator | Separator | Specify the separator to use between multiple outputs in Message format. |
 | silent_errors | Silent Errors | If true, errors do not raise an exception. |
