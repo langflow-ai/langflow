@@ -52,14 +52,14 @@ def test_array_access(data, index):
 def test_nested_object_access(nested_data):
     # Skip non-dictionary inputs that would cause Data validation errors
     assume(isinstance(nested_data, dict))
-    
+
     # Skip dictionaries with empty string keys which have special handling
     assume("" not in nested_data)
 
     # Wrap in Data object to test both raw and Data object inputs
     data_obj = Data(data=nested_data)
     result = apply_json_filter(data_obj, "")
-    
+
     # Based on the test failures, the function returns None for empty string filters
     assert result is None
 
@@ -69,7 +69,7 @@ def test_nested_object_access(nested_data):
     ("input_data", "filter_str", "expected"),
     [
         ({}, "", None),  # Empty dict, empty filter returns None
-        ([], "", []),    # Empty list, empty filter returns the list itself
+        ([], "", []),  # Empty list, empty filter returns the list itself
         (None, "any.path", None),  # None input
         ({"a": 1}, None, {"a": 1}),  # None filter
         ({"a": 1}, "   ", None),  # Whitespace filter returns None
@@ -89,7 +89,7 @@ def test_complex_nested_access(data):
             inner_key = next(iter(data[outer_key]))
             filter_str = f"{outer_key}.{inner_key}"
             result = apply_json_filter(data, filter_str)
-            
+
             # Based on the test failures, when using empty keys, the function returns None
             if outer_key == "" or inner_key == "":
                 assert result is None
@@ -98,8 +98,7 @@ def test_complex_nested_access(data):
                 # or for certain nested paths with special characters, so we need to handle this case
                 expected = data[outer_key][inner_key]
                 # Only expect exact matches for simple alphanumeric keys
-                if (all(c.isalnum() or c == '_' for c in outer_key) and 
-                    all(c.isalnum() or c == '_' for c in inner_key)):
+                if all(c.isalnum() or c == "_" for c in outer_key) and all(c.isalnum() or c == "_" for c in inner_key):
                     assert result == expected
                 else:
                     # For keys with special characters, the function might return None
