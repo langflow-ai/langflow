@@ -258,7 +258,7 @@ An example flow looks like this:
 ![IBM watsonx model component in a basic prompting flow](/img/component-watsonx-model.png)
 
 The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
-For more information, see the [IBM watsonx.ai documentation](https://www.ibm.com/watsonx).
+For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/).
 
 ### Inputs
 
@@ -283,7 +283,7 @@ For more information, see the [IBM watsonx.ai documentation](https://www.ibm.com
 
 | Name  | Type          | Description                                                      |
 |-------|---------------|------------------------------------------------------------------|
-| model | LanguageModel | An instance of ChatWatsonx configured with the specified parameters. |
+| model | LanguageModel | An instance of [ChatWatsonx](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/) configured with the specified parameters. |
 
 ## Language model
 
