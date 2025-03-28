@@ -262,9 +262,9 @@ This component allows you to call the Serper.dev Google Search API.
 
 ## MCP Server
 
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for [Agent](/components-agents) in Langflow to use.
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools.
 
-Additional MCP functionality is available through the `/api/v1/mcp` API endpoints. For more information, see [MCP integrations](/integrations-mcp).
+In addition to being an MCP client that can leverage MCP servers, Langflow is also an MCP server that exposes flows as tools through the `/api/v1/mcp/sse` API endpoint. For more information, see [MCP integrations](/integrations-mcp).
 
 To use the MCP server component with an agent component, follow these steps:
 
@@ -275,8 +275,9 @@ To use the MCP server component with an agent component, follow these steps:
 uvx mcp-server-fetch
 ```
 
-`uvx` is included with `uv` in the Langflow package. To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-For an example of using `npx` MCP servers, see [MCP integrations](integrations-mcp#connect-an-astra-db-mcp-server-to-langflow).
+`uvx` is included with `uv` in the Langflow package.
+To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
 
 3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
 4. In the **Tool** field, select the server tool you want the component to use.
@@ -300,7 +301,7 @@ For more information, see [MCP integrations](/integrations-mcp).
 2. A default address the **MCP SSE URL** field.
 3. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
 The default value is `http://localhost:7860/api/v1/mcp/sse`.
-4. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+4. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
 5. Click the **Tools** field.
 All of your flows are listed as tools.
 6. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.

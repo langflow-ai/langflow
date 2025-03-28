@@ -1,5 +1,5 @@
 ---
-title: Integrate Langflow with MCP (Model context protocol)
+title: Integrate Langflow with MCP
 slug: /integrations-mcp
 ---
 
@@ -9,10 +9,6 @@ import TabItem from '@theme/TabItem';
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). This allows you to use your Langflow flows as tools in client applications that support the MCP, or extend Langflow with the [MCP server component](/components-tools#mcp-tools-stdio) to access MCP servers.
 
 You can use Langflow as an MCP server with any [MCP client](https://modelcontextprotocol.io/clients).
-For example purposes, this guide presents two ways to interact with the MCP:
-
-* [Access all of your flows as tools](#access-all-of-your-flows-as-tools)
-* [Use the MCP server component to connect Langflow to a Datastax Astra DB MCP server](#connect-an-astra-db-mcp-server-to-langflow)
 
 For configuring interactions between Langflow flows and MCP tools, see [Name and describe your flows for agentic use](#name-and-describe-your-flows-for-agentic-use).
 
@@ -22,13 +18,22 @@ To connect [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector)
 
 :::important
 Tool names must only contain letters, numbers, underscores, dashes, and cannot contain spaces.
+To re-name flows in the Langflow UI, click **Flow Name** > **Edit Details**.
 :::
+
+Connect an MCP client to Langflow to use your flows as tools.
+
+1. Install [Cursor](https://docs.cursor.com/) or [Claude for Desktop](https://claude.ai/download).
+2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) to run `uvx` commands. `uvx` is included with `uv` in the Langflow package.
+3. Optional: Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) to run `npx` commands.
+For an example `npx` server, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+4. Create at least one flow, and note your host. For example, `http://127.0.0.1:7860`.
 
 <Tabs>
 <TabItem value="cursor" label="Cursor">
 
-
-In Cursor, you can configure a Langflow server in the same way as other MCP servers. For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+In Cursor, you can configure a Langflow server in the same way as other MCP servers.
+For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
 1. Open Cursor, and then go to **Cursor Settings**.
 2. Click MCP, and then click **Add New Global MCP Server**.
@@ -46,22 +51,21 @@ This example assumes the default Langflow server address of `http://127.0.0.1:78
 ```
 4. Save the `mcp.json` file, and then click the **Reload** icon.
 5. Your Langflow server is now available to Cursor as an MCP server, and all of its flows are registered as tools.
-6. You can now use your flows as tools in Cursor.
+You can now use your flows as tools in Cursor.
 Cursor determines when to use tools based on your queries, and will request permissions when necessary.
 
 </TabItem>
 
 <TabItem value="claude for desktop" label="Claude for Desktop">
 
+In Claude for Desktop, you can configure a Langflow server in the same way as other MCP servers.
+For more information, see the [Claude for Desktop MCP documentation](https://modelcontextprotocol.io/quickstart/user).
 
-1. Install [Claude for Desktop](https://claude.ai/download).
-2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) so that you can run `uvx` commands.
-3. Create at least one flow, and note your host. For example, `http://127.0.0.1:7860`.
-4. Open Claude for Desktop, and then go to the program settings.
+1. Open Claude for Desktop, and then go to the program settings.
 For example, on the MacOS menu bar, click **Claude**, and then select **Settings**.
-5. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
+2. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
 This creates a `claude_desktop_config.json` file if you don't already have one.
-6. Add the following code to `claude_desktop_config.json`.
+3. Add the following code to `claude_desktop_config.json`.
 Your args may differ for your `uvx` and `Python` installations. To find the correct paths:
 
    * For `uvx`: Run `which uvx` in your terminal
@@ -87,7 +91,7 @@ This command assumes the default Langflow server address of `http://127.0.0.1:78
 
 This code adds a new MCP server called `langflow` and starts the [mcp-sse-shim](https://github.com/phact/mcp-sse-shim) package using the specified Python interpreter and uvx.
 
-7. Restart Claude for Desktop.
+4. Restart Claude for Desktop.
 Your new tools are available in your chat window. Click the tools icon to see a list of your flows.
 
 You can now use your flows as tools in Claude for Desktop.
@@ -134,44 +138,6 @@ You've provided enough information in the description for the agent to make the 
 I notice you're asking about Emily's job experience.
 Based on the available tools, I can see there is a Document QA for Resume flow that's designed for analyzing resumes.
 However, the description mentions it's for "Alex's resume" not Emily's. I don't have access to Emily's resume or job experience information.
-```
-
-## Connect an Astra DB MCP server to Langflow
-
-Use the [MCP server component](/components-tools#mcp-server) to connect Langflow to a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp).
-
-1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-2. Create an [OpenAI](https://platform.openai.com/) API key.
-3. Create an [Astra DB Serverless (Vector) database](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html#create-vector-database), if you don't already have one.
-4. Get your database's **Astra DB API endpoint** and an **Astra DB application token** with the Database Administrator role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
-5. Create a [Simple agent starter project](/starter-projects-simple-agent).
-6. Remove the **URL** tool and replace it with an [MCP server component](/components-tools#mcp-server) component.
-The flow should look like this:
-![MCP stdio component](/img/mcp-server-component.png)
-7. In the **MCP server** component, in the **MCP command** field, add the following code.
-Replace the values for `ASTRA_TOKEN` and `ASTRA_ENDPOINT` with the values from your Astra database.
-
-```plain
-env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcpnpx -y @datastax/astra-db-mcp
-```
-
-:::important
-Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
-To add the values for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` as global variables, add them to Langflow's `.env` file at startup.
-For more information, see [global variables](/configuration-global-variables).
-:::
-
-8. In the **Agent** component, add your **OpenAI API key**.
-9. Open the **Playground**, and then ask the agent, `What collections are available?`
-
-Since Langflow is connected to your Astra DB database through the MCP, the agent chooses the correct tool and connects to your database to retrieve the answer.
-```text
-The available collections in your database are:
-collection_002
-hardware_requirements
-load_collection
-nvidia_collection
-software_requirements
 ```
 
 ## Install MCP Inspector to test and debug flows
