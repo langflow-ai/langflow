@@ -33,7 +33,7 @@ const SortableListItem = memo(
     <li
       className={cn(
         "group inline-flex h-12 w-full items-center gap-2 text-sm font-medium text-gray-800",
-        limit === 1 ? "h-8 rounded-md bg-muted" : "cursor-grab",
+        limit === 1 ? "h-10 rounded-md bg-muted" : "cursor-grab",
       )}
     >
       {limit !== 1 && (
@@ -53,7 +53,7 @@ const SortableListItem = memo(
         <span
           className={cn(
             "truncate text-primary",
-            limit === 1 ? "max-w-full px-2" : "max-w-48",
+            limit === 1 ? "max-w-full pl-3" : "max-w-48",
           )}
         >
           {data.name}
@@ -65,7 +65,7 @@ const SortableListItem = memo(
         className={cn(
           "ml-auto h-7 w-7 opacity-0 transition-opacity duration-200",
           limit === 1
-            ? "pr-2 opacity-100"
+            ? "pr-3 opacity-100"
             : "hover:border hover:border-destructive hover:bg-transparent hover:opacity-100",
         )}
         onClick={onRemove}
