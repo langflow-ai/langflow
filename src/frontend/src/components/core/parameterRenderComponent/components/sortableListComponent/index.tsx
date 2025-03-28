@@ -32,8 +32,8 @@ const SortableListItem = memo(
   }) => (
     <li
       className={cn(
-        "group inline-flex h-12 w-full items-center gap-2 text-sm font-medium text-gray-800",
-        limit === 1 ? "h-10 rounded-md bg-muted" : "cursor-grab",
+        "inline-flex h-12 w-full items-center gap-2 text-sm font-medium text-gray-800",
+        limit === 1 ? "h-10 rounded-md bg-muted" : "group cursor-grab",
       )}
     >
       {limit !== 1 && (
@@ -65,14 +65,17 @@ const SortableListItem = memo(
         className={cn(
           "ml-auto h-7 w-7 opacity-0 transition-opacity duration-200",
           limit === 1
-            ? "pr-3 opacity-100"
+            ? "group pr-3 opacity-100"
             : "hover:border hover:border-destructive hover:bg-transparent hover:opacity-100",
         )}
         onClick={onRemove}
       >
         <ForwardedIconComponent
           name="x"
-          className={cn("h-6 w-6 text-red-500", limit === 1 && "text-gray-500")}
+          className={cn(
+            "h-6 w-6 text-red-500",
+            limit === 1 && "text-gray-500 group-hover:text-input",
+          )}
         />
       </Button>
     </li>
