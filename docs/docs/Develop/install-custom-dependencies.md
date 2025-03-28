@@ -40,17 +40,17 @@ Dependencies can be added in different groups:
 
 There are three ways to add a package using make commands:
 
-1. Add to main package dependencies (for end-user features):
+* Add to main package dependencies (for end-user features):
 ```bash
 make add main="matplotlib"
 ```
 
-2. Add to development tools (for testing, linting, debugging):
+* Add to development tools (for testing, linting, debugging):
 ```bash
 make add devel="matplotlib"
 ```
 
-3. Add to base package dependencies (for core functionality):
+* Add to base package dependencies (for core functionality):
 ```bash
 make add base="matplotlib"
 ```
@@ -64,7 +64,7 @@ dependencies = [
 ]
 ```
 
-Or as an optional dependency:
+* Or as an optional dependency:
 
 ```
 [project.optional-dependencies]
