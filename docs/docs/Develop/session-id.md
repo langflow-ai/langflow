@@ -29,11 +29,11 @@ curl --request POST \
 }'
 ```
 
-The `my_custom_session_value` value will be used in components that accept it, and the stored messages from this flow are stored in `langflow.db` with their respective `session_id` values.
+The `my_custom_session_value` value is used in components that accept it, and the stored messages from this flow are stored in `langflow.db` with their respective `session_id` values.
 
 ## Retrieval of messages from memory by session ID
 
-Add a [Message store](/components-helpers#message-store) component to a flow to access the default `langflow.db` database. The component accepts `sessionID` as a filter parameter, and will use the session ID value from upstream automatically to retrieve message history by session ID from storage.
+Add a [Message store](/components-helpers#message-store) component to a flow to access the default `langflow.db` database. The component accepts `sessionID` as a filter parameter, and uses the session ID value from upstream automatically to retrieve message history by session ID from storage.
 
 Messages can be retrieved by `session_id` from the `/monitor` endpoint in the API. For more information, see the [API examples](https://docs.langflow.org/api-reference-api-examples#get-messages).
 

@@ -3,7 +3,7 @@ title: Overview
 slug: /develop-overview
 ---
 
-This section provides information for developing and configuring Langflow applications.
+The following pages provide information about how to develop and configure Langflow applications.
 
 The [Develop an application in Langflow](/develop-application) guide walks you through packaging and serving a flow, from your local development environment to a containerized application.
 As you build your application, you will configure the following application behaviors. More detailed explanation is provided in the individual pages.

@@ -3,7 +3,7 @@ title: Develop an application in Langflow
 slug: /develop-application
 ---
 
-This guide walks you through the process of building an application using Langflow.
+Follow this guide to learn how to build an application using Langflow.
 You'll learn how to set up a project directory, manage dependencies, configure environment variables, and package your Langflow application in a Docker image.
 
 To deploy your application to Docker or Kubernetes, see [Deployment](/deployment-docker).
@@ -47,7 +47,7 @@ COPY pyproject.toml uv.lock /app/
 
 The `docker.env` file is a `.env` file loaded into your Docker image.
 
-This example `docker.env` defines auto-login behavior and which port to expose. Your environment may vary. For more information, see [Environment variables](/environment-variables).
+The following example `docker.env` file defines auto-login behavior and which port to expose. Your environment may vary. For more information, see [Environment variables](/environment-variables).
 
 ```text
 LANGFLOW_AUTO_LOGIN=true
@@ -103,7 +103,7 @@ EXPOSE 7860
 CMD ["langflow", "run", "--backend-only", "--env-file","/app/.env","--host", "0.0.0.0", "--port", "7860"]
 ```
 
-The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`, for tracking your application's behavior in a containerized environment. For more information on configuring logs, see [Logging](/logging).
+The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`, for tracking your application's behavior in a containerized environment. For more information on configuring logs, see [Logging](/logging).
 
 :::note
 Optionally, remove the `--backend-only` flag from the startup command to start Langflow with the frontend enabled.

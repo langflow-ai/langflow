@@ -5,9 +5,9 @@ slug: /memory
 
 Langflow provides flexible memory management options for storage and retrieval.
 
-This page details memory configuration in Langflow.
+This page details the following memory configuration options in Langflow.
 
-- [Local Langflow database tables](#local-langflow-database-tables)
+- [Use local Langflow database tables](#local-langflow-database-tables)
 - [Store messages in local memory](#store-messages-in-local-memory)
 - [Configure external memory](#configure-external-memory)
 - [Configure the external database connection](#configure-the-external-database-connection)
