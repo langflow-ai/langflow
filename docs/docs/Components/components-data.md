@@ -77,9 +77,15 @@ This component recursively loads files from a directory, with options for file t
 
 This component loads and parses files of various supported formats and converts the content into a [Data](/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
 
-To select a document to load, click the **Select files** button. Select a local file or a file loaded with [File management](/concepts-file-management), and then click **Select file**. The loaded file name appears in the component.
+To load a document, follow these steps:
 
-The maximum supported file size is 100 MB.
+1. Click the **Select files** button.
+2. Select a local file or a file loaded with [File management](/concepts-file-management), and then click **Select file**.
+
+The loaded file name appears in the component.
+
+The default maximum supported file size is 100 MB.
+To modify this value, see [--max-file-size-upload](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
 
 ### Inputs
 
