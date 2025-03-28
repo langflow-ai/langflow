@@ -15,7 +15,6 @@ from langflow.schema.message import Message
 
 
 class ParserComponent(Component):
-    name = "parser"
     display_name = "Parser"
     description = (
         "Format a DataFrame or Data object into text using a template. "
