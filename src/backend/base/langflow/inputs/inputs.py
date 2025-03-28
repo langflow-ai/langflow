@@ -488,6 +488,7 @@ class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, T
     """
 
     field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
+    limit: int = Field(default=None)
 
 
 class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):

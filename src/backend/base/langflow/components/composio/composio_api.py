@@ -60,12 +60,30 @@ class ComposioAPIComponent(LCToolComponent):
             options=[],
             value="",
             info="The actions to use",
+            limit=1,
         ),
     ]
 
     outputs = [
         Output(name="tools", display_name="Tools", method="build_tool"),
     ]
+
+    def sanitize_action_name(self, action_name: str) -> str:
+        # We want to use title case, and replace underscores with spaces
+        print(action_name)
+        sanitized_name = action_name.replace("_", " ").title()
+        print(sanitized_name)
+
+        # Now we want to remove everything from and including the first dot
+        return sanitized_name.replace(self.tool_name.title() + " ", "")
+
+
+    def desanitize_action_name(self, action_name: str) -> str:
+        # We want to reverse what we did above
+        unsanitized_name = action_name.replace(" ", "_").upper()
+
+        # Append the tool_name to it at the beginning, followed by a dot, in all CAPS
+        return f"{self.tool_name.upper()}_{unsanitized_name}"
 
     def validate_tool(self, build_config: dict, field_value: Any, connected_app_names: list) -> dict:
         # Get the index of the selected tool in the list of options
@@ -100,7 +118,7 @@ class ComposioAPIComponent(LCToolComponent):
         # Return the list of action names
         build_config["actions"]["options"] = [
             {
-                "name": action.name,
+                "name": self.sanitize_action_name(action.name),
             }
             for action in authenticated_actions
         ]
@@ -231,7 +249,11 @@ class ComposioAPIComponent(LCToolComponent):
             Sequence[Tool]: List of configured Composio tools.
         """
         composio_toolset = self._build_wrapper()
-        return composio_toolset.get_tools(actions=[action["name"] for action in self.actions])
+        return composio_toolset.get_tools(
+            actions=[
+                self.desanitize_action_name(action["name"]) for action in self.actions
+            ]
+        )
 
     def _build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper.
