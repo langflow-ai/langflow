@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.flow import Flow as FlowTable
 from langflow.services.database.models.message.model import MessageTable
-from langflow.services.deps import get_settings_service, get_storage_service, session_scope
+from langflow.services.deps import get_storage_service, session_scope
 from langflow.services.task.temp_flow_cleanup import (
     CleanupWorker,
     cleanup_orphaned_records,
