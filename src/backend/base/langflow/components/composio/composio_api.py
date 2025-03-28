@@ -162,10 +162,14 @@ class ComposioAPIComponent(LCToolComponent):
                 {
                     "name": app.title(),  # TODO: Switch to app.name
                     "icon": app,  # TODO: Switch to app.name
-                    "link": "",
+                    "link": (
+                        build_config["tool_name"]["options"][ind]["link"]
+                        if build_config["tool_name"]["options"]
+                        else ""
+                    ),
                 }
                 # for app in sorted(all_apps, key=lambda x: x.name)
-                for app in enabled_tools
+                for ind, app in enumerate(enabled_tools)
             ]
 
             return build_config
