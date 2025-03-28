@@ -659,7 +659,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 
 export const FLEX_VIEW_TYPES = ["bool"];
 
-export const priorityFields = new Set(["code", "template"]);
+export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
@@ -1036,4 +1036,15 @@ export const ALL_LANGUAGES = [
   { value: "ru-RU", name: "Russian" },
   { value: "ar-SA", name: "Arabic" },
   { value: "hi-IN", name: "Hindi" },
+];
+
+export const DEBOUNCE_FIELD_LIST = [
+  "SecretStrInput",
+  "MessageTextInput",
+  "TextInput",
+  "MultilineInput",
+  "SecretStrInput",
+  "IntInput",
+  "FloatInput",
+  "SliderInput",
 ];
