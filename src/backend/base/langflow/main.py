@@ -202,7 +202,6 @@ def create_app():
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
-
     setup_sentry(app)
     origins = ["*"]
 

@@ -62,6 +62,7 @@ class CustomComponent(BaseComponent):
     icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
 
+
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.
 
@@ -93,6 +94,7 @@ class CustomComponent(BaseComponent):
         self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         self._results: dict = {}
         self._artifacts: dict = {}
+
 
         # Call parent's init after setting up our attributes
         super().__init__(**data)

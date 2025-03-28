@@ -654,8 +654,11 @@ async def get_version():
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ) -> CustomComponentResponse:
-    component = Component(_code=raw_code.code)
+    base_url = request.base_url
+
+    component = Component(_code=raw_code.code, _base_url=base_url)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
@@ -675,6 +678,7 @@ async def custom_component(
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
+    request: Request,
     user: CurrentActiveUser,
 ):
     """Update a custom component with the provided code request.
@@ -686,6 +690,7 @@ async def custom_component_update(
     Args:
         code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
         user (User, optional): The user making the request. Defaults to the current active user.
+        request (Request): The incoming HTTP request.
 
     Returns:
         dict: The updated custom component node.
@@ -695,7 +700,9 @@ async def custom_component_update(
         SerializationError: If there's an error serializing the component to JSON
     """
     try:
-        component = Component(_code=code_request.code)
+        base_url = request.base_url
+        print(f"base_url: {base_url}")
+        component = Component(_code=code_request.code, _base_url=base_url)
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,

@@ -54,7 +54,6 @@ class MCPToolsComponent(Component):
             name="sse_url",
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
-            value="http://localhost:7860/api/v1/mcp/sse",
             show=False,
             refresh_button=True,
         ),
@@ -131,6 +130,8 @@ class MCPToolsComponent(Component):
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["sse_url"]["show"] = True
+                    build_config["sse_url"]["value"] = f"{self._base_url}/api/v1/mcp/sse"
+                    self.sse_url = build_config["sse_url"]["value"]
             if field_name in ("command", "sse_url", "mode"):
                 try:
                     await self.update_tools()

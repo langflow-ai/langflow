@@ -30,6 +30,7 @@ class BaseComponent:
 
     def __init__(self, **data) -> None:
         self._code: str | None = None
+        self._base_url: str | None = None
         self._function_entrypoint_name: str = "build"
         self.field_config: dict = {}
         self._user_id: str | UUID | None = None
