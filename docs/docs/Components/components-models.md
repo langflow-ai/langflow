@@ -253,7 +253,7 @@ This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx
 
 To use **IBM watsonx.ai** model components, replace a model component with the IBM watsonx.ai component in a flow.
 
-An example flow looks like this:
+An example flow looks like the following:
 
 ![IBM watsonx model component in a basic prompting flow](/img/component-watsonx-model.png)
 
@@ -291,7 +291,7 @@ This component generates text using either OpenAI or Anthropic language models.
 
 Use this component as a drop-in replacement for LLM models to switch between different model providers and models.
 
-Instead of swapping out model components when you want to try a different provider (like switching between OpenAI and Anthropic components),  change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
+Instead of swapping out model components when you want to try a different provider, like switching between OpenAI and Anthropic components,  change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
 
 For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
 
@@ -300,7 +300,7 @@ For more information, see the [OpenAI documentation](https://platform.openai.com
 | Name                | Type         | Description                                                                                   |
 |---------------------|--------------|-----------------------------------------------------------------------------------------------|
 | provider            | String       | The model provider to use. Options: "OpenAI", "Anthropic". Default: "OpenAI".                 |
-| model_name          | String       | The name of the model to use. Options depend on selected provider.                           |
+| model_name          | String       | The name of the model to use. Options depend on the selected provider.                           |
 | api_key             | SecretString | The API Key for authentication with the selected provider.                                    |
 | input_value         | String       | The input text to send to the model.                                                         |
 | system_message      | String       | A system message that helps set the behavior of the assistant (advanced).                    |

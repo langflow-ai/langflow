@@ -1,5 +1,5 @@
 ---
-title: File management
+title: Manage files
 slug: /concepts-file-management
 ---
 
@@ -35,7 +35,7 @@ For an example of using the **File** component in a flow, see the [Document QA t
 If you prefer a one-time upload, the [File](/components-data#file) component still allows one-time uploads directly from your local machine.
 :::
 
-## Supported File Types
+## Supported file types
 
 The maximum supported file size is 100 MB.
 

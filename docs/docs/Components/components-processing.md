@@ -222,7 +222,7 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 
 ## Lambda filter
 
-This component uses an LLM to generate a lambda function for filtering or transforming structured data.
+This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
 
 To use the **Lambda filter** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
 
@@ -236,9 +236,9 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The structured data to filter or transform using a lambda function. |
+| data | Data | The structured data to filter or transform using a Lambda function. |
 | llm | Language Model | The connection port for a [Model](/components-models) component. |
-| filter_instruction | Instructions | Natural language instructions for how to filter or transform the data using a lambda function, such as `Filter the data to only include items where the 'status' is 'active'.` |
+| filter_instruction | Instructions | Natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'.` |
 | sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
 | max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
 
@@ -295,7 +295,7 @@ This component is in **Beta** as of Langflow version 1.3.
 
 This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
 
-To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For DataFrames, use column names, for example `Name: {Name}`. For Data objects, use `{text}`.
+To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
 
 ### Inputs
 

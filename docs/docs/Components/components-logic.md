@@ -68,7 +68,7 @@ All options respect the `case_sensitive` setting except **regex**.
 - **contains**: Checks if match_text is found within input_text
 - **starts with**: Checks if input_text begins with match_text
 - **ends with**: Checks if input_text ends with match_text
-- **regex**: Performs regular expression matching (always case sensitive, ignores case_sensitive setting)
+- **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
 
 ## Data Conditional Router
 
@@ -110,11 +110,11 @@ This component is particularly useful in workflows that require conditional rout
 
 ### List Processing
 
-When processing a list of Data objects:
+The following actions occur when processing a list of Data objects:
 - Each object in the list is evaluated individually
 - Objects meeting the condition go to true_output
 - Objects not meeting the condition go to false_output
-- If all objects go to one output, the other output will be empty
+- If all objects go to one output, the other output is empty
 
 ## Flow as tool {#flow-as-tool}
 
