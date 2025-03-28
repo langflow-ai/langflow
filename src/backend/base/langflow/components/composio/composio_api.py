@@ -76,7 +76,6 @@ class ComposioAPIComponent(LCToolComponent):
         # Now we want to remove everything from and including the first dot
         return sanitized_name.replace(self.tool_name.title() + " ", "")
 
-
     def desanitize_action_name(self, action_name: str) -> str:
         # We want to reverse what we did above
         unsanitized_name = action_name.replace(" ", "_").upper()
@@ -256,9 +255,7 @@ class ComposioAPIComponent(LCToolComponent):
         """
         composio_toolset = self._build_wrapper()
         return composio_toolset.get_tools(
-            actions=[
-                self.desanitize_action_name(action["name"]) for action in self.actions
-            ]
+            actions=[self.desanitize_action_name(action["name"]) for action in self.actions]
         )
 
     def _build_wrapper(self) -> ComposioToolSet:
