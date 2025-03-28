@@ -25,7 +25,6 @@
         "id": "reactflow__edge-ChatInput-Vdvzc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Vdvzcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-chjSc{œfieldNameœ:œinput_valueœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-Vdvzc",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Vdvzcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Vdvzcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-chjSc",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
