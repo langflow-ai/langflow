@@ -10,10 +10,9 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import (
     BoolInput,
     DropdownInput,
-    FileInput,
-    IntInput,
     LinkInput,
     MessageTextInput,
+    NestedDictInput,
     SecretStrInput,
     StrInput,
 )
@@ -21,65 +20,79 @@ from langflow.io import Output
 from langflow.schema.message import Message
 
 
-class GmailAPIComponent(LCToolComponent):
-    display_name: str = "Gmail"
-    description: str = "Gmail API"
-    name = "GmailAPI"
-    icon = "Gmail"
+class GooglesheetsAPIComponent(LCToolComponent):
+    display_name: str = "Google Sheets"
+    description: str = "Google Sheets API"
+    name = "GooglesheetsAPI"
+    icon = "Googlesheets"
     documentation: str = "https://docs.composio.dev"
 
+    _display_to_enum_map = {
+        "Create Google Sheet": "GOOGLESHEETS_CREATE_GOOGLE_SHEET1",
+        "Batch Get Spreadsheet": "GOOGLESHEETS_BATCH_GET",
+        "Get Spreadsheet Info": "GOOGLESHEETS_GET_SPREADSHEET_INFO",
+        "Lookup Spreadsheet Row": "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW",
+        "Batch Update Spreadsheet": "GOOGLESHEETS_BATCH_UPDATE",
+        "Sheet From Json": "GOOGLESHEETS_SHEET_FROM_JSON",
+        "Clear Spreadsheet Values": "GOOGLESHEETS_CLEAR_VALUES",
+    }
+
     _actions_data: dict = {
-        "GMAIL_SEND_EMAIL": {
-            "display_name": "Send Email",
-            "parameters": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+        "GOOGLESHEETS_CREATE_GOOGLE_SHEET1": {
+            "display_name": "Create Google Sheet",
+            "parameters": ["GOOGLESHEETS_CREATE_GOOGLE_SHEET1-title"],
         },
-        "GMAIL_FETCH_EMAILS": {
-            "display_name": "Fetch Emails",
-            "parameters": ["max_results", "query"],
+        "GOOGLESHEETS_BATCH_GET": {
+            "display_name": "Batch Get Spreadsheet",
+            "parameters": [
+                "GOOGLESHEETS_BATCH_GET-spreadsheet_id",
+                "GOOGLESHEETS_BATCH_GET-ranges",
+            ],
         },
-        "GMAIL_GET_PROFILE": {
-            "display_name": "Get User Profile",
-            "parameters": [],
+        "GOOGLESHEETS_GET_SPREADSHEET_INFO": {
+            "display_name": "Get Spreadsheet Info",
+            "parameters": ["GOOGLESHEETS_GET_SPREADSHEET_INFO-spreadsheet_id"],
         },
-        "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
-            "display_name": "Get Email By ID",
-            "parameters": ["message_id"],
+        "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW": {
+            "display_name": "Lookup Spreadsheet Row",
+            "parameters": [
+                "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-spreadsheet_id",
+                "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-range",
+                "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-query",
+                "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
+            ],
         },
-        "GMAIL_CREATE_EMAIL_DRAFT": {
-            "display_name": "Create Draft Email",
-            "parameters": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+        "GOOGLESHEETS_BATCH_UPDATE": {
+            "display_name": "Batch Update Spreadsheet",
+            "parameters": [
+                "GOOGLESHEETS_BATCH_UPDATE-spreadsheet_id",
+                "GOOGLESHEETS_BATCH_UPDATE-sheet_name",
+                "GOOGLESHEETS_BATCH_UPDATE-first_cell_location",
+                "GOOGLESHEETS_BATCH_UPDATE-values",
+                "GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
+            ],
         },
-        "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
-            "display_name": "Get Message By Thread ID",
-            "parameters": ["thread_id"],
+        "GOOGLESHEETS_SHEET_FROM_JSON": {
+            "display_name": "Sheet From Json",
+            "parameters": [
+                "GOOGLESHEETS_SHEET_FROM_JSON-title",
+                "GOOGLESHEETS_SHEET_FROM_JSON-sheet_name",
+                "GOOGLESHEETS_SHEET_FROM_JSON-sheet_json",
+            ],
         },
-        "GMAIL_LIST_THREADS": {
-            "display_name": "List Email Threads",
-            "parameters": ["max_results", "query"],
-        },
-        "GMAIL_REPLY_TO_THREAD": {
-            "display_name": "Reply To Thread",
-            "parameters": ["thread_id", "message_body", "recipient_email"],
-        },
-        "GMAIL_LIST_LABELS": {
-            "display_name": "List Email Labels",
-            "parameters": [],
-        },
-        "GMAIL_CREATE_LABEL": {
-            "display_name": "Create Email Label",
-            "parameters": ["label_name"],
-        },
-        "GMAIL_GET_PEOPLE": {
-            "display_name": "Get Contacts",
-            "parameters": [],
-        },
-        "GMAIL_REMOVE_LABEL": {
-            "display_name": "Delete Email Label",
-            "parameters": ["label_id"],
+        "GOOGLESHEETS_CLEAR_VALUES": {
+            "display_name": "Clear Spreadsheet Values",
+            "parameters": [
+                "GOOGLESHEETS_CLEAR_VALUES-spreadsheet_id",
+                "GOOGLESHEETS_CLEAR_VALUES-range",
+            ],
         },
     }
 
-    _bool_variables = {"is_html", "include_spam_trash"}
+    _bool_variables = {
+        "GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
+        "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
+    }
 
     inputs = [
         MessageTextInput(
@@ -126,178 +139,131 @@ class GmailAPIComponent(LCToolComponent):
             required=True,
         ),
         MessageTextInput(
-            name="recipient_email",
-            display_name="Recipient Email",
-            info="Email address of the recipient",
+            name="GOOGLESHEETS_BATCH_UPDATE-spreadsheet_id",
+            display_name="Spreadsheet Id",
+            info="The unique identifier of the Google Sheets spreadsheet to be updated",
             show=False,
             required=True,
         ),
         MessageTextInput(
-            name="subject",
-            display_name="Subject",
-            info="Subject of the email",
+            name="GOOGLESHEETS_BATCH_UPDATE-sheet_name",
+            display_name="Sheet Name",
+            info="The name of the specific sheet within the spreadsheet to update",
             show=False,
             required=True,
         ),
         MessageTextInput(
-            name="body",
-            display_name="Body",
-            required=True,
-            info="Content of the email",
+            name="GOOGLESHEETS_BATCH_UPDATE-first_cell_location",
+            display_name="First Cell Location",
+            info="The starting cell for the update range, specified in A1 notation (e.g., 'A1', 'B2'). The update will extend from this cell to the right and down, based on the provided values.",  # noqa: E501
             show=False,
         ),
-        IntInput(
-            name="max_results",
-            display_name="Max Results",
+        NestedDictInput(
+            name="GOOGLESHEETS_BATCH_UPDATE-values",
+            display_name="Row Column Values",
+            info="A 2D list representing the values to update. Each inner list corresponds to a row in the spreadsheet.",  # noqa: E501
+            is_list=True,
             required=True,
-            info="Maximum number of emails to be returned",
+            show=False,
+        ),
+        BoolInput(
+            name="GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
+            display_name="Include Values in Response",
+            info="If set to True, the response will include the updated values from the spreadsheet",
+            show=False,
+            value=False,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-spreadsheet_id",
+            display_name="Spreadsheet Id",
+            info="The ID of the spreadsheet",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-range",
+            display_name="Range",
+            info="The A1 notation of the range to search.If not specified, it will return the non-empty part of the first sheet in the spreadsheet.Example: Sheet1!A1:D5., Please specify the range for large spreadsheets.",  # noqa: E501
             show=False,
         ),
         MessageTextInput(
-            name="message_id",
-            display_name="Message ID",
-            info="The ID of the specific email message",
-            show=False,
-            required=True,
-        ),
-        StrInput(
-            name="thread_id",
-            display_name="Thread ID",
-            info="The ID of the email thread",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="query",
+            name="GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-query",
             display_name="Query",
-            info="Search query to filter emails (e.g., 'from:someone@email.com' or 'subject:hello')",
+            info="The search query to use for matching the row. This field is required.",
             show=False,
-        ),
-        MessageTextInput(
-            name="message_body",
-            display_name="Message Body",
-            info="The body content of the message to be sent",
-            show=False,
-        ),
-        MessageTextInput(
-            name="label_name",
-            display_name="Label Name",
-            info="Name of the Gmail label to create, modify, or filter by",
-            show=False,
-        ),
-        MessageTextInput(
-            name="label_id",
-            display_name="Label ID",
-            info="The ID of the Gmail label",
-            show=False,
-        ),
-        StrInput(
-            name="cc",
-            display_name="CC",
-            is_list=True,
-            info="Email addresses to CC (Carbon Copy) in the email",
-            show=False,
-        ),
-        StrInput(
-            name="bcc",
-            display_name="BCC",
-            is_list=True,
-            info="Email addresses to BCC (Blind Carbon Copy) in the email",
-            show=False,
+            required=True,
         ),
         BoolInput(
-            name="is_html",
-            display_name="Is HTML",
-            info="Specify whether the email body contains HTML content (true/false)",
+            name="GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
+            display_name="Case Sensitive",
+            info="Whether the search should be case-sensitive.",
             show=False,
             value=False,
         ),
         MessageTextInput(
-            name="page_token",
-            display_name="Page Token",
-            info="Token for retrieving the next page of results",
+            name="GOOGLESHEETS_GET_SPREADSHEET_INFO-spreadsheet_id",
+            display_name="Spreadsheet Id",
+            info="ID of the Google Sheet to retrieve",
             show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="GOOGLESHEETS_CREATE_GOOGLE_SHEET1-title",
+            display_name="Title",
+            info="Title of the Google Sheet. Please ensure the title is mentioned.",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="GOOGLESHEETS_SHEET_FROM_JSON-title",
+            display_name="Title",
+            info="Title of the Google Sheet. Please ensure the title is mentioned.",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="GOOGLESHEETS_SHEET_FROM_JSON-sheet_name",
+            display_name="Sheet Name",
+            info="Name of the sheet to be created. Please ensure the name is mentioned.",
+            show=False,
+            required=True,
         ),
         StrInput(
-            name="label_ids",
-            display_name="Label Ids",
+            name="GOOGLESHEETS_SHEET_FROM_JSON-sheet_json",
+            display_name="Sheet Json",
+            info="A list of dictionaries where each dictionary has the same keys. Values can be strings, numbers, booleans, or null.",  # noqa: E501
+            show=False,
             is_list=True,
-            info="Comma-separated list of label IDs to filter messages",
-            show=False,
-        ),
-        BoolInput(
-            name="include_spam_trash",
-            display_name="Include messages from Spam/Trash",
-            info="Include messages from SPAM and TRASH in the results",
-            show=False,
-            value=False,
+            required=True,
         ),
         MessageTextInput(
-            name="format",
-            display_name="Format",
-            info="The format to return the message in. Possible values: minimal, full, raw, metadata",
-            show=False,
-        ),
-        MessageTextInput(
-            name="label_list_visibility",
-            display_name="Label List Visibility",
-            info="The visibility of the label in the label list in the Gmail web interface. Possible values: 'labelShow' to show the label in the label list, 'labelShowIfUnread' to show the label if there are any unread messages with that label, 'labelHide' to not show the label in the label list",  # noqa: E501
-            show=False,
-        ),
-        MessageTextInput(
-            name="message_list_visibility",
-            display_name="Message List Visibility",
-            info="The visibility of the label in the message list in the Gmail web interface. Possible values: 'show' to show the label in the message list, 'hide' to not show the label in the message list",  # noqa: E501
-            show=False,
-        ),
-        MessageTextInput(
-            name="resource_name",
-            display_name="Resource Name",
-            info="The resource name of the person to provide information about. To get information about a google account, specify 'people/account_id'",  # noqa: E501
-            show=False,
-        ),
-        MessageTextInput(
-            name="person_fields",
-            display_name="Person fields",
-            info="A field mask to restrict which fields on the person are returned. Multiple fields can be specified by separating them with commas.Valid values are: addresses, ageRanges, biographies, birthdays, calendarUrls, clientData, coverPhotos, email Addresses etc",  # noqa: E501
-            show=False,
-        ),
-        MessageTextInput(
-            name="attachment_id",
-            display_name="Attachment ID",
-            info="Id of the attachment",
+            name="GOOGLESHEETS_CLEAR_VALUES-spreadsheet_id",
+            display_name="Spreadsheet Id",
+            info="The ID of the spreadsheet",
             show=False,
             required=True,
         ),
         MessageTextInput(
-            name="file_name",
-            display_name="File name",
-            info="File name of the attachment file",
+            name="GOOGLESHEETS_CLEAR_VALUES-range",
+            display_name="Range",
+            info="The A1 notation range to clear in the spreadsheet",
             show=False,
             required=True,
         ),
-        FileInput(
-            name="attachment",
-            display_name="Add Attachment",
-            file_types=[
-                "csv",
-                "txt",
-                "doc",
-                "docx",
-                "xls",
-                "xlsx",
-                "pdf",
-                "png",
-                "jpg",
-                "jpeg",
-                "gif",
-                "zip",
-                "rar",
-                "ppt",
-                "pptx",
-            ],
-            info="Add an attachment",
+        MessageTextInput(
+            name="GOOGLESHEETS_BATCH_GET-spreadsheet_id",
+            display_name="Spreadsheet Id",
+            info="The ID of the spreadsheet",
             show=False,
+            required=True,
+        ),
+        StrInput(
+            name="GOOGLESHEETS_BATCH_GET-ranges",
+            display_name="Ranges",
+            info="List of ranges to retrieve in A1 notation, e.g. 'Sheet1!A1:B2'. If not specified, the filled part of the sheet will be returned if it is less than 100 rows and columns.",  # noqa: E501
+            show=False,
+            is_list=True,
         ),
     ]
 
@@ -306,21 +272,17 @@ class GmailAPIComponent(LCToolComponent):
     ]
 
     def execute_action(self) -> Message:
-        """Execute Gmail action and return response as Message."""
+        """Execute Google Sheets action and return response as Message."""
         toolset = self._build_wrapper()
 
         try:
-            action_key = self.action
-            if action_key not in self._actions_data:
-                for key, data in self._actions_data.items():
-                    if data["display_name"] == action_key:
-                        action_key = key
-                        break
+            action_key = self._display_to_enum_map.get(self.action)
 
-            enum_name = getattr(Action, action_key)
+            enum_name = getattr(Action, action_key)  # type: ignore[arg-type]
             params = {}
             if action_key in self._actions_data:
                 for field in self._actions_data[action_key]["parameters"]:
+                    param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
                     if value is None or value == "" or value == [] or value == [""] or value == ['']:
@@ -329,7 +291,7 @@ class GmailAPIComponent(LCToolComponent):
                     if field in self._bool_variables:
                         value = bool(value)
 
-                    params[field] = value
+                    params[param_name] = value
 
             result = toolset.execute_action(
                 action=enum_name,
@@ -353,17 +315,14 @@ class GmailAPIComponent(LCToolComponent):
         for field in all_fields:
             build_config[field]["show"] = False
 
-            if field in self._bool_variables:
-                build_config[field]["value"] = False
-            else:
-                build_config[field]["value"] = ""
+            # if field in self._bool_variables: # TODO: Remove this once the issue is fixed
+            #     build_config[field]["value"] = False
+            # elif field == "GOOGLESHEETS_BATCH_UPDATE-values":
+            #     build_config[field]["value"] = []
+            # else:
+            #     build_config[field]["value"] = ""
 
-        action_key = field_value
-        if action_key not in self._actions_data:
-            for key, data in self._actions_data.items():
-                if data["display_name"] == action_key:
-                    action_key = key
-                    break
+        action_key = self._display_to_enum_map.get(field_value)
 
         if action_key in self._actions_data:
             for field in self._actions_data[action_key]["parameters"]:
@@ -390,26 +349,24 @@ class GmailAPIComponent(LCToolComponent):
             self.show_hide_fields(build_config, field_value)
 
         if hasattr(self, "api_key") and self.api_key != "":
-            gmail_display_names = [
-                self._actions_data[action]["display_name"] for action in list(self._actions_data.keys())
-            ]
-            build_config["action"]["options"] = gmail_display_names
+            googlesheets_display_names = list(self._display_to_enum_map.keys())
+            build_config["action"]["options"] = googlesheets_display_names
 
             try:
                 toolset = self._build_wrapper()
                 entity = toolset.client.get_entity(id=self.entity_id)
 
                 try:
-                    entity.get_connection(app="gmail")
+                    entity.get_connection(app="googlesheets")
                     build_config["auth_status"]["value"] = "✅"
                     build_config["auth_link"]["show"] = False
 
                 except NoItemsFound:
-                    auth_scheme = self._get_auth_scheme("gmail")
+                    auth_scheme = self._get_auth_scheme("googlesheets")
                     if auth_scheme.auth_mode == "OAUTH2":
                         build_config["auth_link"]["show"] = True
                         build_config["auth_link"]["advanced"] = False
-                        auth_url = self._initiate_default_connection(entity, "gmail")
+                        auth_url = self._initiate_default_connection(entity, "googlesheets")
                         build_config["auth_link"]["value"] = auth_url
                         build_config["auth_status"]["value"] = "Click link to authenticate"
 
@@ -468,6 +425,6 @@ class GmailAPIComponent(LCToolComponent):
     @property
     def enabled_tools(self):
         return [
-            "GMAIL_SEND_EMAIL",
-            "GMAIL_FETCH_EMAILS",
+            "GOOGLESHEETS_CREATE_GOOGLE_SHEET1",
+            "GOOGLESHEETS_BATCH_GET",
         ]
