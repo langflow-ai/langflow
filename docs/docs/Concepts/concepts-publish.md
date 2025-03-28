@@ -5,6 +5,8 @@ slug: /concepts-publish
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow via API endpoints, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
+
 ## API access
 
 The **API** pane presents code templates for integrating your flow into external applications.
@@ -55,9 +57,9 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 
 ### Temporary overrides
 
-The **Temporary overrides** tab displays the available parameters for your flow.
+The **Temporary overrides** tab displays the available parameters for your flow.
 Modifying the parameters changes the code parameters across all windows.
-For example, changing the **Chat Input** component's `input_value` will change that value across all API calls to the `/run` endpoint of this flow.
+For example, changing the **Chat Input** component's `input_value` will change that value across all API calls to the `/run` endpoint of this flow.
 
 ### Send files to your flow with the API
 
@@ -72,7 +74,7 @@ curl -X POST \
   "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
   -H 'Content-Type: application/json'\
   -d '{"any": "data"}'
-  ```
+```
 
 To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
 
