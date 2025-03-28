@@ -1,9 +1,11 @@
-import asyncio
+import os
 from typing import Any
 
+import httpx
 from langchain_core.tools import StructuredTool
 
 from langflow.base.mcp.util import (
+    HTTP_ERROR_STATUS_CODE,
     MCPSseClient,
     MCPStdioClient,
     create_input_schema_from_json_schema,
@@ -21,12 +23,15 @@ from langflow.schema import Message
 
 class MCPToolsComponent(Component):
     schema_inputs: list[InputTypes] = []
-    stdio_client = MCPStdioClient()
-    sse_client = MCPSseClient()
+    stdio_client: MCPStdioClient = MCPStdioClient()
+    sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
-    default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
+    default_keys: list[str] = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
+    common_ports: list[int] = [7860, 7861, 7863, 3000, 8000, 8080]  # Common Langflow deployment ports
+
+    sse_url: str | None = None
 
     display_name = "MCP Server"
     description = "Connect to an MCP server and expose tools."
@@ -82,6 +87,35 @@ class MCPToolsComponent(Component):
         Output(display_name="Response", name="response", method="build_output"),
     ]
 
+    async def find_langflow_instance(self) -> tuple[bool, int | None, str]:
+        """Find Langflow instance by checking env variable first, then scanning common ports."""
+        # First check environment variable
+        env_port = os.getenv("LANGFLOW_PORT")
+        if env_port:
+            try:
+                port = int(env_port)
+                url = f"http://localhost:{port}/api/v1/mcp/sse"
+                async with httpx.AsyncClient() as client:
+                    response = await client.head(url, timeout=2.0)
+                    if response.status_code < HTTP_ERROR_STATUS_CODE:
+                        return True, port, f"Langflow instance found at configured port {port}"
+            except (ValueError, httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError):
+                logger.warning(f"Could not connect to Langflow at configured port {env_port}")
+
+        # If env port not set or connection failed, scan common ports
+        base_url = "http://localhost"
+        for port in self.common_ports:
+            url = f"{base_url}:{port}/api/v1/mcp/sse"
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.head(url, timeout=2.0)
+                    if response.status_code < HTTP_ERROR_STATUS_CODE:
+                        return True, port, f"Langflow instance found at port {port}"
+            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError):
+                continue
+
+        return False, None, "No Langflow instance found on configured port or common ports"
+
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
         """Validate connection parameters based on mode."""
         if mode not in ["Stdio", "SSE"]:
@@ -131,8 +165,25 @@ class MCPToolsComponent(Component):
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["sse_url"]["show"] = True
+                    _, port, _ = await self.find_langflow_instance()
+                    if port:
+                        build_config["sse_url"]["value"] = f"http://localhost:{port}/api/v1/mcp/sse"
+                        self.sse_url = build_config["sse_url"]["value"]
             if field_name in ("command", "sse_url", "mode"):
                 try:
+                    # If SSE mode and localhost URL is not valid, try to find correct port
+                    if field_name == "sse_url":
+                        self.sse_url = field_value
+                    elif self.mode == "SSE" and ("localhost" in str(self.sse_url) or "127.0.0.1" in str(self.sse_url)):
+                        is_valid, _ = await self.sse_client.validate_url(self.sse_url)
+                        if not is_valid:
+                            found, port, message = await self.find_langflow_instance()
+                            if found:
+                                new_url = f"http://localhost:{port}/api/v1/mcp/sse"
+                                logger.info(f"Original URL {self.sse_url} not valid. {message}")
+                                build_config["sse_url"]["value"] = new_url
+                                self.sse_url = new_url
+
                     await self.update_tools()
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
@@ -285,7 +336,28 @@ class MCPToolsComponent(Component):
                 if not self.stdio_client.session:
                     self.tools = await self.stdio_client.connect_to_server(self.command)
             elif self.mode == "SSE" and not self.sse_client.session:
-                self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
+                try:
+                    self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
+                except ValueError as e:
+                    # URL validation error
+                    logger.error(f"SSE URL validation error: {e}")
+                    msg = f"Invalid SSE URL configuration: {e}. Please check your Langflow deployment URL and port."
+                    raise ValueError(msg) from e
+                except ConnectionError as e:
+                    # Connection failed after retries
+                    logger.error(f"SSE connection error: {e}")
+                    msg = (
+                        f"Could not connect to Langflow SSE endpoint: {e}. "
+                        "Please verify:\n"
+                        "1. Langflow server is running\n"
+                        "2. The SSE URL matches your Langflow deployment port\n"
+                        "3. There are no network issues preventing the connection"
+                    )
+                    raise ValueError(msg) from e
+                except Exception as e:
+                    logger.error(f"Unexpected SSE error: {e}")
+                    msg = f"Unexpected error connecting to SSE endpoint: {e}"
+                    raise ValueError(msg) from e
 
             if not self.tools:
                 logger.warning("No tools returned from server")
@@ -300,8 +372,7 @@ class MCPToolsComponent(Component):
                 try:
                     args_schema = create_input_schema_from_json_schema(tool.inputSchema)
                     if not args_schema:
-                        msg = f"Empty schema for tool '{tool.name}', skipping"
-                        logger.warning(msg)
+                        logger.warning(f"Empty schema for tool '{tool.name}', skipping")
                         continue
 
                     client = self.stdio_client if self.mode == "Stdio" else self.sse_client
@@ -320,15 +391,18 @@ class MCPToolsComponent(Component):
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
                 except (AttributeError, ValueError, TypeError, KeyError) as e:
-                    msg = f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e!s}"
+                    msg = f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e}"
                     logger.exception(msg)
                     continue
 
             self.tool_names = [tool.name for tool in self.tools if hasattr(tool, "name")]
 
-        except (ValueError, RuntimeError, asyncio.TimeoutError) as e:
-            msg = f"Error updating tools: {e!s}"
-            logger.exception(msg)
+        except ValueError as e:
+            # Re-raise validation errors with clear messages
+            raise ValueError(str(e)) from e
+        except Exception as e:
+            logger.exception("Error updating tools")
+            msg = f"Failed to update tools: {e!s}"
             raise ValueError(msg) from e
         else:
             return tool_list
