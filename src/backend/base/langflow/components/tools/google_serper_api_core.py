@@ -34,7 +34,6 @@ class GoogleSerperAPICore(Component):
         Output(
             display_name="Results",
             name="results",
-            type_=DataFrame,
             method="search_serper",
         ),
     ]

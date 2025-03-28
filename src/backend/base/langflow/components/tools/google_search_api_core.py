@@ -38,7 +38,6 @@ class GoogleSearchAPICore(Component):
         Output(
             display_name="Results",
             name="results",
-            type_=DataFrame,
             method="search_google",
         ),
     ]

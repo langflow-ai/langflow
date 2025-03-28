@@ -73,7 +73,6 @@ class BatchRunComponent(Component):
             display_name="Batch Results",
             name="batch_results",
             method="run_batch",
-            info="A DataFrame with columns: 'text_input', 'model_response', 'batch_index', and 'metadata'.",
         ),
     ]
 
@@ -158,12 +157,8 @@ class BatchRunComponent(Component):
             )
 
             # Process batches and track progress
-            responses_with_idx = [
-                (idx, response)
-                for idx, response in zip(
-                    range(len(conversations)), await model.abatch(list(conversations)), strict=True
-                )
-            ]
+            responses = await model.abatch(list(conversations))
+            responses_with_idx = list(enumerate(responses))
 
             # Sort by index to maintain order
             responses_with_idx.sort(key=operator.itemgetter(0))
