@@ -87,17 +87,15 @@ const ConnectionComponent = ({
   }, [value, options]);
 
   useEffect(() => {
-    if (connectionLink === "error") {
-      setLink("error");
-    }
-  }, [connectionLink]);
-
-  useEffect(() => {
     if (connectionLink !== "") {
       setLink(connectionLink);
       if (connectionLink === "validated") {
         setIsAuthenticated(true);
       }
+    }
+
+    if (connectionLink === "error") {
+      setLink("error");
     }
   }, [connectionLink]);
 
@@ -164,7 +162,10 @@ const ConnectionComponent = ({
   const handleSelection = (item: any) => {
     setIsAuthenticated(false);
     setSelectedItem([{ name: item.name }]);
-    setLink("loading");
+    setLink(item.link === "validated" ? "validated" : "loading");
+    if (item.link === "validated") {
+      setIsAuthenticated(true);
+    }
     handleOnNewValue({ value: item.name }, { skipSnapshot: true });
   };
 
