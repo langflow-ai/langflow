@@ -42,7 +42,10 @@ class BatchRunComponent(Component):
         MessageTextInput(
             name="column_name",
             display_name="Column Name",
-            info="The name of the DataFrame column to treat as text messages. If empty, all columns will be formatted in TOML.",
+            info=(
+                "The name of the DataFrame column to treat as text messages. "
+                "If empty, all columns will be formatted in TOML."
+            ),
             required=False,
             advanced=False,
         ),
@@ -125,7 +128,6 @@ class BatchRunComponent(Component):
         system_msg = self.system_message or ""
         df: DataFrame = self.df
         col_name = self.column_name or ""
-        output_col_name = self.output_column_name or "model_response"
 
         # Validate inputs first
         if not isinstance(df, DataFrame):
