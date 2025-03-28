@@ -55,12 +55,13 @@ class ComposioAPIComponent(LCToolComponent):
             name="actions",
             display_name="Actions",
             placeholder="Select action",
-            helper_text="Please connect before selecting tools.",
+            helper_text="Please connect before selecting actions.",
             helper_text_metadata={"icon": "OctagonAlert", "variant": "destructive"},
             options=[],
             value="",
             info="The actions to use",
             limit=1,
+            show=False,
         ),
     ]
 
@@ -121,6 +122,9 @@ class ComposioAPIComponent(LCToolComponent):
             for action in authenticated_actions
         ]
 
+        # Lastly, we need to show the actions field
+        build_config["actions"]["show"] = True
+
         return build_config
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
@@ -130,6 +134,9 @@ class ComposioAPIComponent(LCToolComponent):
                 # Reset the list of tools
                 build_config["tool_name"]["options"] = []
                 build_config["tool_name"]["value"] = ""
+
+                # Reset the list of actions
+                build_config["actions"]["show"] = False
                 build_config["actions"]["options"] = []
                 build_config["actions"]["value"] = ""
 
@@ -168,6 +175,7 @@ class ComposioAPIComponent(LCToolComponent):
             connected_app_names = [app.appName.lower() for app in connected_apps]
 
             # Clear out the list of selected actions
+            build_config["actions"]["show"] = True
             build_config["actions"]["options"] = []
             build_config["actions"]["value"] = ""
 
@@ -187,7 +195,7 @@ class ComposioAPIComponent(LCToolComponent):
                 # If the tool selected is NOT what we are validating, return the build config
                 if check_app != self.tool_name.lower():
                     # Set the helper text and helper text metadata field of the actions now
-                    build_config["actions"]["helper_text"] = "Please connect before selecting tools."
+                    build_config["actions"]["helper_text"] = "Please connect before selecting actions."
                     build_config["actions"]["helper_text_metadata"] = {
                         "icon": "OctagonAlert",
                         "variant": "destructive",
@@ -236,7 +244,7 @@ class ComposioAPIComponent(LCToolComponent):
             build_config["tool_name"]["options"][selected_tool_index]["link"] = connection_request.redirectUrl
 
             # Set the helper text and helper text metadata field of the actions now
-            build_config["actions"]["helper_text"] = "Please connect before selecting tools."
+            build_config["actions"]["helper_text"] = "Please connect before selecting actions."
 
         return build_config
 
