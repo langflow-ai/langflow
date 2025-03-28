@@ -2,8 +2,6 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
   getNodeIcon,
   nodeColors,
-  nodeIconsLucide,
-  nodeNames,
 } from "@/utils/styleUtils";
 import { removeCountFromString } from "@/utils/utils";
 import DisclosureComponent from "../../DisclosureComponent";
@@ -24,7 +22,7 @@ export function SidebarCategoryComponent({
         getFilterEdge.length !== 0 || search.length !== 0 ? true : false
       }
       button={{
-        title: nodeNames[name] ?? nodeNames.unknown,
+        title: name,
         Icon: getNodeIcon(name) ?? getNodeIcon("unknown"),
       }}
     >

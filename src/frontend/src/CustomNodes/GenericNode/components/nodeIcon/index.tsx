@@ -1,8 +1,8 @@
 import { useTypesStore } from "@/stores/typesStore";
 import {
   BG_NOISE,
+  iconExists,
   nodeColors,
-  nodeIconsLucide,
   toolModeGradient,
 } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
@@ -26,7 +26,7 @@ export function NodeIcon({
   hasToolMode: boolean;
 }) {
   const types = useTypesStore((state) => state.types);
-  const name = nodeIconsLucide[dataType] ? dataType : types[dataType];
+  const name = iconExists(dataType) ? dataType : types[dataType];
   const isEmoji = emojiRegex().test(icon ?? "");
   const iconColor = nodeColors[types[dataType]];
   const iconName = icon || (isGroup ? "group_components" : name);

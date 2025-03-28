@@ -326,7 +326,7 @@ export const categoryIcons: Record<string, string> = {
   custom_components: "GradientInfinity",
 };
 
-export const nodeIconsLucide: Record<string, string> = {
+export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
   inputs: "Download",
   outputs: "Upload",
@@ -790,7 +790,7 @@ export const eagerLoadedIconsMap = {
 
 // Function to get a lazy-loaded icon component
 export const getNodeIcon = (name: string) => {
-  const iconName = nodeIconsLucide[name];
+  const iconName = nodeIconToDisplayIconMap[name];
 
   if (eagerLoadedIconsMap[iconName || name]) {
     return eagerLoadedIconsMap[iconName || name];
@@ -815,5 +815,16 @@ export const getNodeIcon = (name: string) => {
     Promise.resolve({
       default: () => null,
     }),
+  );
+};
+
+
+export const iconExists = (name: string): boolean => {
+  const iconName = nodeIconToDisplayIconMap[name] || name;
+  
+  return !!(
+    eagerLoadedIconsMap[iconName] || 
+    nodeIconsMapping[iconName] || 
+    dynamicIconImports[getLucideIconName(iconName)]
   );
 };

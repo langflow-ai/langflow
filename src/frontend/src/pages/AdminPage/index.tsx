@@ -291,7 +291,7 @@ export default function AdminPage() {
                 titleHeader={"Add a new user"}
                 cancelText="Cancel"
                 confirmationText="Save"
-                icon={"UserPlus2"}
+                icon={"UserRoundPlus"}
                 onConfirm={(index, user) => {
                   handleNewUser(user);
                 }}
@@ -436,7 +436,7 @@ export default function AdminPage() {
                                 titleHeader={`${user.id}`}
                                 cancelText="Cancel"
                                 confirmationText="Save"
-                                icon={"UserPlus2"}
+                                icon={"UserRoundPlus"}
                                 data={user}
                                 index={index}
                                 onConfirm={(index, editUser) => {
