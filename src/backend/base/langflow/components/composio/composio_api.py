@@ -128,8 +128,8 @@ class ComposioAPIComponent(LCToolComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         # If the list of tools is not available, always update it
-        if field_name == "api_key":
-            if not field_value:
+        if field_name == "api_key" or (self.api_key and not build_config["tool_name"]["options"]):
+            if field_name == "api_key" and not field_value:
                 # Reset the list of tools
                 build_config["tool_name"]["options"] = []
                 build_config["tool_name"]["value"] = ""
