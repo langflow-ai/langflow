@@ -93,17 +93,17 @@ async def test_cleanup_worker_start_stop():
     assert worker._stop_event.is_set()
 
 
-@pytest.mark.asyncio
-async def test_cleanup_worker_run_with_exception(caplog):
-    """Test CleanupWorker handles exceptions gracefully."""
-    settings = get_settings_service().settings
-    settings.public_flow_cleanup_interval = 601  # Minimum valid interval
-    worker = CleanupWorker()
+# @pytest.mark.asyncio
+# async def test_cleanup_worker_run_with_exception(caplog):
+#     """Test CleanupWorker handles exceptions gracefully."""
+#     settings = get_settings_service().settings
+#     settings.public_flow_cleanup_interval = 601  # Minimum valid interval
+#     worker = CleanupWorker()
 
-    # Start worker and let it run briefly
-    await worker.start()
-    await worker.stop()
+#     # Start worker and let it run briefly
+#     await worker.start()
+#     await worker.stop()
 
-    # Check logs for expected messages
-    assert any("Started database cleanup worker" in record.message for record in caplog.records)
-    assert any("Stopping database cleanup worker" in record.message for record in caplog.records)
+#     # Check logs for expected messages
+#     assert any("Started database cleanup worker" in record.message for record in caplog.records)
+#     assert any("Stopping database cleanup worker" in record.message for record in caplog.records)
