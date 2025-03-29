@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
+from httpx import codes as httpx_codes
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
@@ -16,7 +17,7 @@ from sqlmodel import select
 from langflow.helpers.base_model import BaseModel
 from langflow.services.database.models import Flow
 
-HTTP_ERROR_STATUS_CODE = 400  # HTTP status code for client errors
+HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., Awaitable]:
