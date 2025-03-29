@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-auIvg",
+            "id": "ChatInput-Vdvzc",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-gCLrf",
+            "id": "Agent-chjSc",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-auIvg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-auIvgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-gCLrf{œfieldNameœ:œinput_valueœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Vdvzc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Vdvzcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-chjSc{œfieldNameœ:œinput_valueœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-auIvg",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-auIvgœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-gCLrf",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-gCLrfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Vdvzc",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Vdvzcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-chjSc",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-gCLrf",
+            "id": "Agent-chjSc",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-8WiQm",
+            "id": "ChatOutput-fXi9i",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,20 +52,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-gCLrf{œdataTypeœ:œAgentœ,œidœ:œAgent-gCLrfœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8WiQm{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8WiQmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-chjSc{œdataTypeœ:œAgentœ,œidœ:œAgent-chjScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-fXi9i{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fXi9iœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-gCLrf",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-gCLrfœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-8WiQm",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8WiQmœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-chjSc",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-chjScœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-fXi9i",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-fXi9iœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ComposioAPI",
-            "id": "ComposioAPI-Tdreq",
+            "id": "ComposioAPI-4heel",
             "name": "tools",
             "output_types": [
               "Tool"
@@ -73,25 +72,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-gCLrf",
+            "id": "Agent-chjSc",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ComposioAPI-Tdreq{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-Tdreqœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-gCLrf{œfieldNameœ:œtoolsœ,œidœ:œAgent-gCLrfœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__ComposioAPI-4heel{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-4heelœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-chjSc{œfieldNameœ:œtoolsœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ComposioAPI-Tdreq",
-        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-Tdreqœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-gCLrf",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-gCLrfœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ComposioAPI-4heel",
+        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-4heelœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-chjSc",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Agent-gCLrf",
+          "id": "Agent-chjSc",
           "node": {
             "base_classes": [
               "Message"
@@ -743,7 +742,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-gCLrf",
+        "id": "Agent-chjSc",
         "measured": {
           "height": 624,
           "width": 320
@@ -757,7 +756,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-auIvg",
+          "id": "ChatInput-Vdvzc",
           "node": {
             "base_classes": [
               "Message"
@@ -1055,7 +1054,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-auIvg",
+        "id": "ChatInput-Vdvzc",
         "measured": {
           "height": 66,
           "width": 192
@@ -1069,7 +1068,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-8WiQm",
+          "id": "ChatOutput-fXi9i",
           "node": {
             "base_classes": [
               "Message"
@@ -1367,7 +1366,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-8WiQm",
+        "id": "ChatOutput-fXi9i",
         "measured": {
           "height": 66,
           "width": 192
@@ -1381,9 +1380,9 @@
       },
       {
         "data": {
-          "id": "note-y0nez",
+          "id": "note-FzaUv",
           "node": {
-            "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the App Names field\n   - Click the refresh button next to the App Name\n   - Follow the Gmail authentication link\n   - After authenticating, click refresh again\n   - Verify that authentication status shows as successful\n\n3. Select Actions\n   - Default actions (pre-selected):\n     - GMAIL_SEND_EMAIL: Send emails directly\n     - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select additional actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
+            "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the Tool Name field\n   - Follow the Gmail authentication link\n   - Verify that authentication status shows as successful\n\n3. Select an Action\n   - GMAIL_SEND_EMAIL: Send emails directly\n   - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select other actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1392,7 +1391,7 @@
         },
         "dragging": false,
         "height": 842,
-        "id": "note-y0nez",
+        "id": "note-FzaUv",
         "measured": {
           "height": 842,
           "width": 395
@@ -1402,15 +1401,13 @@
           "y": -87.30330362954265
         },
         "resizing": false,
-        "selected": false,
+        "selected": true,
         "type": "noteNode",
         "width": 394
       },
       {
         "data": {
-          "description": "Use Composio toolset to run actions with your agent",
-          "display_name": "Composio Tools",
-          "id": "ComposioAPI-Tdreq",
+          "id": "ComposioAPI-4heel",
           "node": {
             "base_classes": [
               "Tool"
@@ -1425,17 +1422,12 @@
             "field_order": [
               "entity_id",
               "api_key",
-              "app_names",
-              "app_credentials",
-              "username",
-              "auth_link",
-              "auth_status",
-              "action_names"
+              "tool_name",
+              "actions"
             ],
             "frozen": false,
             "icon": "Composio",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1460,49 +1452,29 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "action_names": {
-                "_input_type": "MultiselectInput",
+              "actions": {
+                "_input_type": "SortableListInput",
                 "advanced": false,
-                "combobox": false,
-                "display_name": "Actions to use",
-                "dynamic": true,
-                "info": "The actions to pass to agent to execute",
-                "list": true,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "action_names",
-                "options": [
-                  "GMAIL_GET_PEOPLE",
-                  "GMAIL_FETCH_EMAILS",
-                  "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
-                  "GMAIL_SEARCH_PEOPLE",
-                  "GMAIL_SEND_EMAIL",
-                  "GMAIL_CREATE_EMAIL_DRAFT",
-                  "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
-                  "GMAIL_CREATE_LABEL",
-                  "GMAIL_GET_ATTACHMENT",
-                  "GMAIL_FIND_EMAIL_ID",
-                  "GMAIL_REMOVE_LABEL",
-                  "GMAIL_GET_PROFILE",
-                  "GMAIL_ADD_LABEL_TO_EMAIL",
-                  "GMAIL_GET_CONTACTS",
-                  "GMAIL_REPLY_TO_THREAD",
-                  "GMAIL_LIST_LABELS",
-                  "GMAIL_FETCH_LAST_THREE_MESSAGES",
-                  "GMAIL_LIST_THREADS",
-                  "GMAIL_FETCH_EMAILS_WITH_LABEL",
-                  "GMAIL_MODIFY_THREAD_LABELS"
-                ],
-                "placeholder": "",
-                "required": true,
-                "show": true,
+                "display_name": "Actions",
+                "dynamic": false,
+                "helper_text": "Please connect before selecting actions.",
+                "helper_text_metadata": {
+                  "icon": "OctagonAlert",
+                  "variant": "destructive"
+                },
+                "info": "The actions to use",
+                "limit": 1,
+                "name": "actions",
+                "options": [],
+                "placeholder": "Select action",
+                "required": false,
+                "search_category": [],
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "str",
-                "value": [
-                  "GMAIL_GET_PEOPLE"
-                ]
+                "type": "sortableList",
+                "value": ""
               },
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -1524,208 +1496,6 @@
                 "type": "str",
                 "value": "COMPOSIO_API_KEY"
               },
-              "app_credentials": {
-                "_input_type": "SecretStrInput",
-                "advanced": true,
-                "display_name": "App Credentials",
-                "dynamic": true,
-                "info": "Credentials for app authentication (API Key, Password, etc)",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "app_credentials",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "app_names": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "App Name",
-                "dynamic": false,
-                "info": "The app name to use. Please refresh after selecting app name",
-                "load_from_db": false,
-                "name": "app_names",
-                "options": [
-                  "ACCELO",
-                  "AIRTABLE",
-                  "AMAZON",
-                  "APALEO",
-                  "ASANA",
-                  "ATLASSIAN",
-                  "ATTIO",
-                  "AUTH0",
-                  "BATTLENET",
-                  "BITBUCKET",
-                  "BLACKBAUD",
-                  "BLACKBOARD",
-                  "BOLDSIGN",
-                  "BORNEO",
-                  "BOX",
-                  "BRAINTREE",
-                  "BREX",
-                  "BREX_STAGING",
-                  "BRIGHTPEARL",
-                  "CALENDLY",
-                  "CANVA",
-                  "CANVAS",
-                  "CHATWORK",
-                  "CLICKUP",
-                  "CONFLUENCE",
-                  "CONTENTFUL",
-                  "D2LBRIGHTSPACE",
-                  "DEEL",
-                  "DISCORD",
-                  "DISCORDBOT",
-                  "DOCUSIGN",
-                  "DROPBOX",
-                  "DROPBOX_SIGN",
-                  "DYNAMICS365",
-                  "EPIC_GAMES",
-                  "EVENTBRITE",
-                  "EXIST",
-                  "FACEBOOK",
-                  "FIGMA",
-                  "FITBIT",
-                  "FRESHBOOKS",
-                  "FRONT",
-                  "GITHUB",
-                  "GMAIL",
-                  "GMAIL_BETA",
-                  "GO_TO_WEBINAR",
-                  "GOOGLE_ANALYTICS",
-                  "GOOGLE_DRIVE_BETA",
-                  "GOOGLE_MAPS",
-                  "GOOGLECALENDAR",
-                  "GOOGLEDOCS",
-                  "GOOGLEDRIVE",
-                  "GOOGLEMEET",
-                  "GOOGLEPHOTOS",
-                  "GOOGLESHEETS",
-                  "GOOGLETASKS",
-                  "GORGIAS",
-                  "GUMROAD",
-                  "HARVEST",
-                  "HIGHLEVEL",
-                  "HUBSPOT",
-                  "ICIMS_TALENT_CLOUD",
-                  "INTERCOM",
-                  "JIRA",
-                  "KEAP",
-                  "KLAVIYO",
-                  "LASTPASS",
-                  "LEVER",
-                  "LEVER_SANDBOX",
-                  "LINEAR",
-                  "LINKEDIN",
-                  "LINKHUT",
-                  "MAILCHIMP",
-                  "MICROSOFT_TEAMS",
-                  "MICROSOFT_TENANT",
-                  "MIRO",
-                  "MONDAY",
-                  "MURAL",
-                  "NETSUITE",
-                  "NOTION",
-                  "ONE_DRIVE",
-                  "OUTLOOK",
-                  "PAGERDUTY",
-                  "PIPEDRIVE",
-                  "PRODUCTBOARD",
-                  "REDDIT",
-                  "RING_CENTRAL",
-                  "RIPPLING",
-                  "SAGE",
-                  "SALESFORCE",
-                  "SEISMIC",
-                  "SERVICEM8",
-                  "SHARE_POINT",
-                  "SHOPIFY",
-                  "SLACK",
-                  "SLACKBOT",
-                  "SMARTRECRUITERS",
-                  "SPOTIFY",
-                  "SQUARE",
-                  "STACK_EXCHANGE",
-                  "SURVEY_MONKEY",
-                  "TIMELY",
-                  "TODOIST",
-                  "TONEDEN",
-                  "TRELLO",
-                  "TWITCH",
-                  "TWITTER",
-                  "TWITTER_MEDIA",
-                  "WAKATIME",
-                  "WAVE_ACCOUNTING",
-                  "WEBEX",
-                  "WIZ",
-                  "WRIKE",
-                  "XERO",
-                  "YANDEX",
-                  "YNAB",
-                  "YOUTUBE",
-                  "ZENDESK",
-                  "ZOHO",
-                  "ZOHO_BIGIN",
-                  "ZOHO_BOOKS",
-                  "ZOHO_DESK",
-                  "ZOHO_INVENTORY",
-                  "ZOHO_INVOICE",
-                  "ZOHO_MAIL",
-                  "ZOOM"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "refresh_button": true,
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "GMAIL"
-              },
-              "auth_link": {
-                "_input_type": "LinkInput",
-                "advanced": true,
-                "display_name": "Authentication Link",
-                "dynamic": true,
-                "info": "Click to authenticate with OAuth2",
-                "load_from_db": false,
-                "name": "auth_link",
-                "placeholder": "Click to authenticate",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "type": "link",
-                "value": ""
-              },
-              "auth_status": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Auth Status",
-                "dynamic": true,
-                "info": "Current authentication status",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "auth_status",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "✅"
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1742,7 +1512,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nimport requests\n\n# Third-party imports\nfrom composio.client.collections import AppAuthScheme\nfrom composio.client.exceptions import NoItemsFound\nfrom composio_langchain import Action, ComposioToolSet\nfrom langchain_core.tools import Tool\nfrom loguru import logger\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput\nfrom langflow.io import Output\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"app_names\",\n            display_name=\"App Name\",\n            options=[],\n            value=\"\",\n            info=\"The app name to use. Please refresh after selecting app name\",\n            refresh_button=True,\n            required=True,\n        ),\n        # Authentication-related inputs (initially hidden)\n        SecretStrInput(\n            name=\"app_credentials\",\n            display_name=\"App Credentials\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Credentials for app authentication (API Key, Password, etc)\",\n            load_from_db=False,\n        ),\n        MessageTextInput(\n            name=\"username\",\n            display_name=\"Username\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Username for Basic authentication\",\n        ),\n        LinkInput(\n            name=\"auth_link\",\n            display_name=\"Authentication Link\",\n            value=\"\",\n            info=\"Click to authenticate with OAuth2\",\n            dynamic=True,\n            show=False,\n            placeholder=\"Click to authenticate\",\n        ),\n        StrInput(\n            name=\"auth_status\",\n            display_name=\"Auth Status\",\n            value=\"Not Connected\",\n            info=\"Current authentication status\",\n            dynamic=True,\n            show=False,\n        ),\n        MultiselectInput(\n            name=\"action_names\",\n            display_name=\"Actions to use\",\n            required=True,\n            options=[],\n            value=[],\n            info=\"The actions to pass to agent to execute\",\n            dynamic=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def _check_for_authorization(self, app: str) -> str:\n        \"\"\"Checks if the app is authorized.\n\n        Args:\n            app (str): The app name to check authorization for.\n\n        Returns:\n            str: The authorization status or URL.\n        \"\"\"\n        toolset = self._build_wrapper()\n        entity = toolset.client.get_entity(id=self.entity_id)\n        try:\n            # Check if user is already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # Get auth scheme for the app\n            auth_scheme = self._get_auth_scheme(app)\n            return self._handle_auth_by_scheme(entity, app, auth_scheme)\n        except Exception:  # noqa: BLE001\n            logger.exception(\"Authorization error\")\n            return \"Error checking authorization\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:\n        \"\"\"Get the primary auth scheme for an app.\n\n        Args:\n            app_name (str): The name of the app to get auth scheme for.\n\n        Returns:\n            AppAuthScheme: The auth scheme details.\n        \"\"\"\n        toolset = self._build_wrapper()\n        try:\n            return toolset.get_auth_scheme_for_app(app=app_name.lower())\n        except Exception:  # noqa: BLE001\n            logger.exception(f\"Error getting auth scheme for {app_name}\")\n            return None\n\n    def _get_oauth_apps(self, api_key: str) -> list[str]:\n        \"\"\"Fetch OAuth-enabled apps from Composio API.\n\n        Args:\n            api_key (str): The Composio API key.\n\n        Returns:\n            list[str]: A list containing OAuth-enabled app names.\n        \"\"\"\n        oauth_apps = []\n        try:\n            url = \"https://backend.composio.dev/api/v1/apps\"\n            headers = {\"x-api-key\": api_key}\n            params = {\n                \"includeLocal\": \"true\",\n                \"additionalFields\": \"auth_schemes\",\n                \"sortBy\": \"alphabet\",\n            }\n\n            response = requests.get(url, headers=headers, params=params, timeout=20)\n            data = response.json()\n\n            for item in data.get(\"items\", []):\n                for auth_scheme in item.get(\"auth_schemes\", []):\n                    if auth_scheme.get(\"mode\") in {\"OAUTH1\", \"OAUTH2\"}:\n                        oauth_apps.append(item[\"key\"].upper())\n                        break\n        except requests.RequestException as e:\n            logger.error(f\"Error fetching OAuth apps: {e}\")\n            return []\n        else:\n            return oauth_apps\n\n    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:\n        \"\"\"Handle authentication based on the auth scheme.\n\n        Args:\n            entity (Any): The entity instance.\n            app (str): The app name.\n            auth_scheme (AppAuthScheme): The auth scheme details.\n\n        Returns:\n            str: The authentication status or URL.\n        \"\"\"\n        auth_mode = auth_scheme.auth_mode\n\n        try:\n            # First check if already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # If not connected, handle new connection based on auth mode\n            if auth_mode == \"API_KEY\":\n                if hasattr(self, \"app_credentials\") and self.app_credentials:\n                    try:\n                        entity.initiate_connection(\n                            app_name=app,\n                            auth_mode=\"API_KEY\",\n                            auth_config={\"api_key\": self.app_credentials},\n                            use_composio_auth=False,\n                            force_new_integration=True,\n                        )\n                    except Exception as e:  # noqa: BLE001\n                        logger.error(f\"Error connecting with API Key: {e}\")\n                        return \"Invalid API Key\"\n                    else:\n                        return f\"{app} CONNECTED\"\n                return \"Enter API Key\"\n\n            if (\n                auth_mode == \"BASIC\"\n                and hasattr(self, \"username\")\n                and hasattr(self, \"app_credentials\")\n                and self.username\n                and self.app_credentials\n            ):\n                try:\n                    entity.initiate_connection(\n                        app_name=app,\n                        auth_mode=\"BASIC\",\n                        auth_config={\"username\": self.username, \"password\": self.app_credentials},\n                        use_composio_auth=False,\n                        force_new_integration=True,\n                    )\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error connecting with Basic Auth: {e}\")\n                    return \"Invalid credentials\"\n                else:\n                    return f\"{app} CONNECTED\"\n            elif auth_mode == \"BASIC\":\n                return \"Enter Username and Password\"\n\n            if auth_mode == \"OAUTH2\":\n                try:\n                    return self._initiate_default_connection(entity, app)\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error initiating OAuth2: {e}\")\n                    return \"OAuth2 initialization failed\"\n\n            return \"Unsupported auth mode\"\n        except Exception as e:  # noqa: BLE001\n            logger.error(f\"Error checking connection status: {e}\")\n            return f\"Error: {e!s}\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _initiate_default_connection(self, entity: Any, app: str) -> str:\n        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)\n        return connection.redirectUrl\n\n    def _get_connected_app_names_for_entity(self) -> list[str]:\n        toolset = self._build_wrapper()\n        connections = toolset.client.get_entity(id=self.entity_id).get_connections()\n        return list({connection.appUniqueId for connection in connections})\n\n    def _get_normalized_app_name(self) -> str:\n        \"\"\"Get app name without connection status suffix.\n\n        Returns:\n            str: Normalized app name.\n        \"\"\"\n        return self.app_names.replace(\" ✅\", \"\").replace(\"_connected\", \"\")\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002\n        # Update the available apps options from the API\n        if hasattr(self, \"api_key\") and self.api_key != \"\":\n            toolset = self._build_wrapper()\n            build_config[\"app_names\"][\"options\"] = self._get_oauth_apps(api_key=self.api_key)\n\n        # First, ensure all dynamic fields are hidden by default\n        dynamic_fields = [\"app_credentials\", \"username\", \"auth_link\", \"auth_status\", \"action_names\"]\n        for field in dynamic_fields:\n            if field in build_config:\n                if build_config[field][\"value\"] is None or build_config[field][\"value\"] == \"\":\n                    build_config[field][\"show\"] = False\n                    build_config[field][\"advanced\"] = True\n                    build_config[field][\"load_from_db\"] = False\n                else:\n                    build_config[field][\"show\"] = True\n                    build_config[field][\"advanced\"] = False\n\n        if field_name == \"app_names\" and (not hasattr(self, \"app_names\") or not self.app_names):\n            build_config[\"auth_status\"][\"show\"] = True\n            build_config[\"auth_status\"][\"value\"] = \"Please select an app first\"\n            return build_config\n\n        if field_name == \"app_names\" and hasattr(self, \"api_key\") and self.api_key != \"\":\n            # app_name = self._get_normalized_app_name()\n            app_name = self.app_names\n            try:\n                toolset = self._build_wrapper()\n                entity = toolset.client.get_entity(id=self.entity_id)\n\n                # Always show auth_status when app is selected\n                build_config[\"auth_status\"][\"show\"] = True\n                build_config[\"auth_status\"][\"advanced\"] = False\n\n                try:\n                    # Check if already connected\n                    entity.get_connection(app=app_name)\n                    build_config[\"auth_status\"][\"value\"] = \"✅\"\n                    build_config[\"auth_link\"][\"show\"] = False\n                    # Show action selection for connected apps\n                    build_config[\"action_names\"][\"show\"] = True\n                    build_config[\"action_names\"][\"advanced\"] = False\n\n                except NoItemsFound:\n                    # Get auth scheme and show relevant fields\n                    auth_scheme = self._get_auth_scheme(app_name)\n                    auth_mode = auth_scheme.auth_mode\n                    logger.info(f\"Auth mode for {app_name}: {auth_mode}\")\n\n                    if auth_mode == \"API_KEY\":\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"API Key\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter API Key\"\n\n                    elif auth_mode == \"BASIC\":\n                        build_config[\"username\"][\"show\"] = True\n                        build_config[\"username\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"Password\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter Username and Password\"\n\n                    elif auth_mode == \"OAUTH2\":\n                        build_config[\"auth_link\"][\"show\"] = True\n                        build_config[\"auth_link\"][\"advanced\"] = False\n                        auth_url = self._initiate_default_connection(entity, app_name)\n                        build_config[\"auth_link\"][\"value\"] = auth_url\n                        build_config[\"auth_status\"][\"value\"] = \"Click link to authenticate\"\n\n                    else:\n                        build_config[\"auth_status\"][\"value\"] = \"Unsupported auth mode\"\n\n                # Update action names if connected\n                if build_config[\"auth_status\"][\"value\"] == \"✅\":\n                    all_action_names = [str(action).replace(\"Action.\", \"\") for action in Action.all()]\n                    app_action_names = [\n                        action_name\n                        for action_name in all_action_names\n                        if action_name.lower().startswith(app_name.lower() + \"_\")\n                    ]\n                    if build_config[\"action_names\"][\"options\"] != app_action_names:\n                        build_config[\"action_names\"][\"options\"] = app_action_names\n                        build_config[\"action_names\"][\"value\"] = [app_action_names[0]] if app_action_names else [\"\"]\n\n            except Exception as e:  # noqa: BLE001\n                logger.error(f\"Error checking auth status: {e}, app: {app_name}\")\n                build_config[\"auth_status\"][\"value\"] = f\"Error: {e!s}\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(actions=self.action_names)\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)\n        except ValueError as e:\n            logger.error(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
+                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nfrom composio import Action, App\n\n# Third-party imports\nfrom composio_langchain import ComposioToolSet\nfrom langchain_core.tools import Tool\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import (\n    ConnectionInput,\n    MessageTextInput,\n    SecretStrInput,\n    SortableListInput,\n)\nfrom langflow.io import Output\n\n# TODO: We get the list from the API but we need to filter it\nenabled_tools = [\"confluence\", \"discord\", \"dropbox\", \"github\", \"gmail\", \"linkedin\", \"notion\", \"slack\", \"youtube\"]\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        ConnectionInput(\n            name=\"tool_name\",\n            display_name=\"Tool Name\",\n            placeholder=\"Select a tool...\",\n            button_metadata={\"icon\": \"unplug\", \"variant\": \"destructive\"},\n            options=[],\n            search_category=[],\n            value=\"\",\n            connection_link=\"\",\n            info=\"The name of the tool to use\",\n            real_time_refresh=True,\n        ),\n        SortableListInput(\n            name=\"actions\",\n            display_name=\"Actions\",\n            placeholder=\"Select action\",\n            helper_text=\"Please connect before selecting actions.\",\n            helper_text_metadata={\"icon\": \"OctagonAlert\", \"variant\": \"destructive\"},\n            options=[],\n            value=\"\",\n            info=\"The actions to use\",\n            limit=1,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def sanitize_action_name(self, action_name: str) -> str:\n        # TODO: Maybe restore\n        return action_name\n\n        # We want to use title case, and replace underscores with spaces\n        sanitized_name = action_name.replace(\"_\", \" \").title()\n\n        # Now we want to remove everything from and including the first dot\n        return sanitized_name.replace(self.tool_name.title() + \" \", \"\")\n\n    def desanitize_action_name(self, action_name: str) -> str:\n        # TODO: Maybe restore\n        return action_name\n\n        # We want to reverse what we did above\n        unsanitized_name = action_name.replace(\" \", \"_\").upper()\n\n        # Append the tool_name to it at the beginning, followed by a dot, in all CAPS\n        return f\"{self.tool_name.upper()}_{unsanitized_name}\"\n\n    def validate_tool(self, build_config: dict, field_value: Any, connected_app_names: list) -> dict:\n        # Get the index of the selected tool in the list of options\n        selected_tool_index = next(\n            (\n                ind\n                for ind, tool in enumerate(build_config[\"tool_name\"][\"options\"])\n                if tool[\"name\"] == field_value\n                or (\"validate\" in field_value and tool[\"name\"] == field_value[\"validate\"])\n            ),\n            None,\n        )\n\n        # Set the link to be the text 'validated'\n        build_config[\"tool_name\"][\"options\"][selected_tool_index][\"link\"] = \"validated\"\n\n        # Set the helper text and helper text metadata field of the actions now\n        build_config[\"actions\"][\"helper_text\"] = \"\"\n        build_config[\"actions\"][\"helper_text_metadata\"] = {\"icon\": \"Check\", \"variant\": \"success\"}\n\n        # Get the list of actions available\n        all_actions = list(Action.all())\n        authenticated_actions = sorted(\n            [\n                action\n                for action in all_actions\n                if action.app.lower() in list(connected_app_names) and action.app.lower() == self.tool_name.lower()\n            ],\n            key=lambda x: x.name,\n        )\n\n        # Return the list of action names\n        build_config[\"actions\"][\"options\"] = [\n            {\n                \"name\": self.sanitize_action_name(action.name),\n            }\n            for action in authenticated_actions\n        ]\n\n        # Lastly, we need to show the actions field\n        build_config[\"actions\"][\"show\"] = True\n\n        return build_config\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        # If the list of tools is not available, always update it\n        if field_name == \"api_key\" or (self.api_key and not build_config[\"tool_name\"][\"options\"]):\n            if field_name == \"api_key\" and not field_value:\n                # Reset the list of tools\n                build_config[\"tool_name\"][\"options\"] = []\n                build_config[\"tool_name\"][\"value\"] = \"\"\n\n                # Reset the list of actions\n                build_config[\"actions\"][\"show\"] = False\n                build_config[\"actions\"][\"options\"] = []\n                build_config[\"actions\"][\"value\"] = \"\"\n\n                return build_config\n\n            # TODO: Re-enable dynamic tool list\n            # Initialize the Composio ToolSet with your API key\n            # toolset = ComposioToolSet(api_key=self.api_key)\n\n            # Get the entity (e.g., \"default\" for your user)\n            # entity = toolset.get_entity(self.entity_id)\n\n            # Get all available apps\n            # all_apps = entity.client.apps.get()\n\n            # Build an object with name, icon, link\n            build_config[\"tool_name\"][\"options\"] = [\n                {\n                    \"name\": app.title(),  # TODO: Switch to app.name\n                    \"icon\": app,  # TODO: Switch to app.name\n                    \"link\": (\n                        build_config[\"tool_name\"][\"options\"][ind][\"link\"]\n                        if build_config[\"tool_name\"][\"options\"]\n                        else \"\"\n                    ),\n                }\n                # for app in sorted(all_apps, key=lambda x: x.name)\n                for ind, app in enumerate(enabled_tools)\n            ]\n\n            return build_config\n\n        # Handle the click of the Tool Name connect button\n        if field_name == \"tool_name\" and field_value:\n            # Get the list of apps (tools) we have connected\n            toolset = ComposioToolSet(api_key=self.api_key)\n            connected_apps = [app for app in toolset.get_connected_accounts() if app.status == \"ACTIVE\"]\n\n            # Get the unique list of appName from the connected apps\n            connected_app_names = [app.appName.lower() for app in connected_apps]\n\n            # Clear out the list of selected actions\n            build_config[\"actions\"][\"show\"] = True\n            build_config[\"actions\"][\"options\"] = []\n            build_config[\"actions\"][\"value\"] = \"\"\n\n            # Clear out any helper text\n            build_config[\"tool_name\"][\"helper_text\"] = \"\"\n            build_config[\"tool_name\"][\"helper_text_metadata\"] = {}\n\n            # If it's a dictionary, we need to do validation\n            if isinstance(field_value, dict):\n                # If the current field value is a dictionary, it means the user has selected a tool\n                if \"validate\" not in field_value:\n                    return build_config\n\n                # Check if the selected tool is connected\n                check_app = field_value[\"validate\"].lower()\n\n                # If the tool selected is NOT what we are validating, return the build config\n                if check_app != self.tool_name.lower():\n                    # Set the helper text and helper text metadata field of the actions now\n                    build_config[\"actions\"][\"helper_text\"] = \"Please connect before selecting actions.\"\n                    build_config[\"actions\"][\"helper_text_metadata\"] = {\n                        \"icon\": \"OctagonAlert\",\n                        \"variant\": \"destructive\",\n                    }\n\n                    return build_config\n\n                # Check if the tool is already validated\n                if check_app not in connected_app_names:\n                    return build_config\n\n                # Validate the selected tool\n                return self.validate_tool(build_config, field_value, connected_app_names)\n\n            # Check if the tool is already validated\n            if field_value.lower() in connected_app_names:\n                return self.validate_tool(build_config, field_value, connected_app_names)\n\n            # Get the entity (e.g., \"default\" for your user)\n            entity = toolset.get_entity(id=self.entity_id)\n\n            # Set the metadata for the actions\n            build_config[\"actions\"][\"helper_text_metadata\"] = {\"icon\": \"OctagonAlert\", \"variant\": \"destructive\"}\n\n            # Get the index of the selected tool in the list of options\n            selected_tool_index = next(\n                (ind for ind, tool in enumerate(build_config[\"tool_name\"][\"options\"]) if tool[\"name\"] == field_value),\n                None,\n            )\n\n            # Initiate a GitHub connection and get the redirect URL\n            try:\n                connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))\n            except Exception as _:  # noqa: BLE001\n                # Indicate that there was an error connecting to the tool\n                build_config[\"tool_name\"][\"options\"][selected_tool_index][\"link\"] = \"error\"\n                build_config[\"tool_name\"][\"helper_text\"] = f\"Error connecting to {field_value}\"\n                build_config[\"tool_name\"][\"helper_text_metadata\"] = {\n                    \"icon\": \"OctagonAlert\",\n                    \"variant\": \"destructive\",\n                }\n\n                return build_config\n\n            # Print the direct HTTP link for authentication\n            build_config[\"tool_name\"][\"options\"][selected_tool_index][\"link\"] = connection_request.redirectUrl\n\n            # Set the helper text and helper text metadata field of the actions now\n            build_config[\"actions\"][\"helper_text\"] = \"Please connect before selecting actions.\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(\n            actions=[self.desanitize_action_name(action[\"name\"]) for action in self.actions]\n        )\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)\n        except ValueError as e:\n            self.log(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
               },
               "entity_id": {
                 "_input_type": "MessageTextInput",
@@ -1767,27 +1537,28 @@
                 "type": "str",
                 "value": "default"
               },
-              "username": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Username",
-                "dynamic": true,
-                "info": "Username for Basic authentication",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "username",
-                "placeholder": "",
+              "tool_name": {
+                "_input_type": "ConnectionInput",
+                "advanced": false,
+                "button_metadata": {
+                  "icon": "unplug",
+                  "variant": "destructive"
+                },
+                "connection_link": "",
+                "display_name": "Tool Name",
+                "dynamic": false,
+                "info": "The name of the tool to use",
+                "name": "tool_name",
+                "options": [],
+                "placeholder": "Select a tool...",
+                "real_time_refresh": true,
                 "required": false,
-                "show": false,
+                "search_category": [],
+                "show": true,
                 "title_case": false,
                 "tool_mode": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "connect",
                 "value": ""
               }
             },
@@ -1797,28 +1568,28 @@
           "type": "ComposioAPI"
         },
         "dragging": false,
-        "id": "ComposioAPI-Tdreq",
+        "id": "ComposioAPI-4heel",
         "measured": {
-          "height": 497,
+          "height": 332,
           "width": 320
         },
         "position": {
-          "x": -137.53986902236176,
-          "y": 20.325147658297382
+          "x": -188.38126171451378,
+          "y": -74.76352834864377
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 666.3549315745112,
-      "y": 178.32327136900147,
-      "zoom": 0.8590936972080208
+      "x": 782.0226980413704,
+      "y": 124.34564913657198,
+      "zoom": 0.9609155689915785
     }
   },
   "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
   "endpoint_name": null,
-  "id": "db962555-dbb0-477f-85cc-536c68b32ee8",
+  "id": "580794d2-0d2f-4dc3-bff0-c58dd62264ec",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Gmail Agent",
