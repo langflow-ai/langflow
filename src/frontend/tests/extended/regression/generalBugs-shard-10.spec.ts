@@ -70,7 +70,7 @@ test(
       timeout: 1000,
     });
 
-    await page.getByText("Freeze").last().click();
+    await page.getByText("Freeze").first().click();
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 

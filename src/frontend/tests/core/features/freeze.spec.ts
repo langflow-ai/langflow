@@ -262,11 +262,7 @@ test(
 
     await page.getByText("Split Text", { exact: true }).click();
 
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
-    });
-
-    await page.getByText("Freeze").last().click();
+    await page.getByText("Freeze").first().click();
 
     await page.waitForTimeout(3000);
 
