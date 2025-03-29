@@ -460,7 +460,7 @@ const NodeToolbarComponent = memo(
           {!hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
-              label="Freeze Path"
+              label="Freeze"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
