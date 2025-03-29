@@ -47,6 +47,7 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
+        "Components/components-auth",
         "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
