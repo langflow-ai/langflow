@@ -39,6 +39,7 @@ export default function ChatView({
   focusChat,
   closeChat,
   playgroundPage,
+  sidebarOpen,
 }: chatViewProps): JSX.Element {
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
@@ -163,11 +164,19 @@ export default function ChatView({
   };
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
-  const soundDetected = useVoiceStore((state) => state.soundDetected);
+  const isVoiceAssistantActive = useVoiceStore(
+    (state) => state.isVoiceAssistantActive,
+  );
 
   return (
     <div
-      className="flex h-full w-full flex-col rounded-md"
+      className={cn(
+        "flex h-full w-full flex-col rounded-md",
+        visibleSession ? "h-[95%]" : "h-full",
+        sidebarOpen &&
+          !isVoiceAssistantActive &&
+          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
+      )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}

@@ -792,6 +792,7 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
+  sidebarOpen: boolean;
   sendMessage: ({
     repeat,
     files,
