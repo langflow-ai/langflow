@@ -1,3 +1,4 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { regexHighlight } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
@@ -66,6 +67,19 @@ export default function PromptAreaComponent({
     </span>
   );
 
+  const renderExternalLinkIcon = () =>
+    !value || value == "" ? (
+      <ForwardedIconComponent
+        name={disabled ? "lock" : "Scan"}
+        className={cn(
+          "icons-parameters-comp pointer-events-none absolute right-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2",
+          disabled ? "text-placeholder-foreground" : "text-foreground",
+        )}
+      />
+    ) : (
+      <></>
+    );
+
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <PromptModal
@@ -82,7 +96,10 @@ export default function PromptAreaComponent({
           className="w-full"
           data-testid="button_open_prompt_modal"
         >
-          <div className="relative w-full">{renderPromptText()}</div>
+          <div className="relative w-full">
+            {renderPromptText()}
+            {renderExternalLinkIcon()}
+          </div>
         </Button>
       </PromptModal>
     </div>
