@@ -30,17 +30,15 @@ The **Simple Agent** flow consists of these components:
 * The **URL** tool component searches a list of URLs for content.
 * The **Calculator** component performs basic arithmetic operations.
 * The **Chat Input** component accepts user input to the chat.
-* The **Prompt** component combines the user input with a user-defined prompt.
 * The **Chat Output** component prints the flow's output to the chat.
-* The **OpenAI** model component sends the user input and prompt to the OpenAI API and receives a response.
 
 ## Run the Simple Agent flow
 
-1. Add your credentials to the Open AI component.
+1. Add your credentials to the **Agent** component.
 2. Click **Playground** to start a chat session.
 3. To confirm the tools are connected, ask the agent, `What tools are available to you?`
 The response is similar to the following:
-```plain
+```text
 I have access to the following tools:
 Calculator: Perform basic arithmetic operations.
 fetch_content: Load and retrieve data from specified URLs.
@@ -52,7 +50,7 @@ get_current_date: Returns the current date and time in a selected timezone.
 The agent will tell you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
 The final output should be similar to this:
 
-```plain
+```text
 Final Attributes
 Strength (STR): 10
 Constitution (CON): 12

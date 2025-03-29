@@ -75,24 +75,72 @@ This component recursively loads files from a directory, with options for file t
 
 ## File
 
-The FileComponent is a class that loads and parses text files of various supported formats, converting the content into a Data object. It supports multiple file types and provides an option for silent error handling.
+This component loads and parses files of various supported formats and converts the content into a [Data](/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
 
-The maximum supported file size is 100 MB.
+To load a document, follow these steps:
+
+1. Click the **Select files** button.
+2. Select a local file or a file loaded with [File management](/concepts-file-management), and then click **Select file**.
+
+The loaded file name appears in the component.
+
+The default maximum supported file size is 100 MB.
+To modify this value, see [--max-file-size-upload](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
 
 ### Inputs
 
-| Name          | Display Name  | Info                                         |
-| ------------- | ------------- | -------------------------------------------- |
-| path          | Path          | File path to load.                           |
+| Name | Display Name | Info |
+|------|--------------|------|
+| path | Files | Path to file(s) to load. Supports individual files or bundled archives. |
+| file_path | Server File Path | Data object with a `file_path` property pointing to the server file or a Message object with a path to the file. Supersedes 'Path' but supports the same file types. |
+| separator | Separator | Specify the separator to use between multiple outputs in Message format. |
 | silent_errors | Silent Errors | If true, errors do not raise an exception. |
+| delete_server_file_after_processing | Delete Server File After Processing | If true, the Server File Path is deleted after processing. |
+| ignore_unsupported_extensions | Ignore Unsupported Extensions | If true, files with unsupported extensions are not processed. |
+| ignore_unspecified_files | Ignore Unspecified Files | If true, `Data` with no `file_path` property is ignored. |
+| use_multithreading | [Deprecated] Use Multithreading | Set 'Processing Concurrency' greater than `1` to enable multithreading. This option is deprecated. |
+| concurrency_multithreading | Processing Concurrency | When multiple files are being processed, the number of files to process concurrently. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
 
 ### Outputs
 
-| Name | Display Name | Info                                         |
-| ---- | ------------ | -------------------------------------------- |
-| data | Data         | Parsed content of the file as a Data object. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Parsed content of the file as a [Data](/concepts-objects) object. |
+| dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe-object) object. |
+| message | Message | File content as a [Message](/concepts-objects#message-object) object. |
+
+
+### Supported File Types
+
+Text files:
+- `.txt` - Text files
+- `.md`, `.mdx` - Markdown files
+- `.csv` - CSV files
+- `.json` - JSON files
+- `.yaml`, `.yml` - YAML files
+- `.xml` - XML files
+- `.html`, `.htm` - HTML files
+- `.pdf` - PDF files
+- `.docx` - Word documents
+- `.py` - Python files
+- `.sh` - Shell scripts
+- `.sql` - SQL files
+- `.js` - JavaScript files
+- `.ts`, `.tsx` - TypeScript files
+
+Archive formats (for bundling multiple files):
+- `.zip` - ZIP archives
+- `.tar` - TAR archives
+- `.tgz` - Gzipped TAR archives
+- `.bz2` - Bzip2 compressed files
+- `.gz` - Gzip compressed files
 
 ## Gmail Loader
+
+:::info
+Google components are available in the **Components** menu under **Bundles**.
+For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
+:::
 
 This component loads emails from Gmail using provided credentials and filters.
 
@@ -114,6 +162,11 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 ## Google Drive Loader
 
+:::info
+Google components are available in the **Components** menu under **Bundles**.
+For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
+:::
+
 This component loads documents from Google Drive using provided credentials and a single document ID.
 
 For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
@@ -132,6 +185,11 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | docs   | Data | Loaded document data |
 
 ## Google Drive Search
+
+:::info
+Google components are available in the **Components** menu under **Bundles**.
+For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
+:::
 
 This component searches Google Drive files using provided credentials and query parameters.
 
@@ -178,19 +236,24 @@ This component executes SQL queries on a specified database.
 
 ## URL
 
-This component fetches content from one or more URLs, processes the content, and returns it as a list of [Data](/concepts-objects) objects.
+This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.
 
 ### Inputs
 
-| Name | Display Name | Info                   |
-| ---- | ------------ | ---------------------- |
-| urls | URLs         | Enter one or more URLs |
+| Name | Display Name | Info |
+|------|--------------|------|
+| urls | URLs | Enter one or more URLs. URLs are automatically validated and cleaned. |
+| format | Output Format | Output Format. Use **Text** to extract text from the HTML, **Raw HTML** for the raw HTML content, or **JSON** to extract JSON from the HTML. |
+| separator | Separator | Specify the separator to use between multiple outputs. Default for **Text** is `\n\n`. Default for **Raw HTML** is `\n<!-- Separator -->\n`. |
+| clean_extra_whitespace | Clean Extra Whitespace | Whether to clean excessive blank lines in the text output. Only applies to `Text` format. |
 
 ### Outputs
 
-| Name | Display Name | Info                                                         |
-| ---- | ------------ | ------------------------------------------------------------ |
-| data | Data         | List of Data objects containing fetched content and metadata |
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | List of [Data](/concepts-objects) objects containing fetched content and metadata. |
+| text | Text | Fetched content as formatted text, with applied separators and cleaning. |
+| dataframe | DataFrame | Content formatted as a [Data](/concepts-objects#dataframe-object) object. |
 
 ## Webhook
 
@@ -219,12 +282,14 @@ Your JSON data is posted to the **Chat Output** component, which indicates that 
 
 ### Inputs
 
-| Name | Type   | Description                                    |
-| ---- | ------ | ---------------------------------------------- |
-| data | String | JSON payload for testing the webhook component |
+| Name | Display Name | Description |
+|------|--------------|-------------|
+| data | Payload | Receives a payload from external systems through HTTP POST requests. |
+| curl | cURL | The cURL command template for making requests to this webhook. |
+| endpoint | Endpoint | The endpoint URL where this webhook receives requests. |
 
 ### Outputs
 
-| Name        | Type | Description                           |
-| ----------- | ---- | ------------------------------------- |
-| output_data | Data | Processed data from the webhook input |
+| Name | Display Name | Description |
+|------|--------------|-------------|
+| output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
