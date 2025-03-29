@@ -1,10 +1,11 @@
 # Add helper functions for each event type
+import json
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any, Protocol
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessageChunk, BaseMessage
 from typing_extensions import TypedDict
 
 from langflow.schema.content_block import ContentBlock
@@ -216,6 +217,42 @@ async def handle_on_chain_stream(
     return agent_message, start_time
 
 
+async def handle_on_agent_action(
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_method: SendMessageFunctionType,
+    start_time: float,
+) -> tuple[Message, float]:
+    # Create content blocks if they don't exist
+    if not agent_message.content_blocks:
+        agent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
+
+    if event["data"].get("output"):
+        output_data = event["data"].get("output")
+        if isinstance(output_data, AIMessageChunk):
+            reasoning_content = output_data.additional_kwargs.get("reasoning_content", None)
+            text = "\n\n".join(
+                filter(
+                    None,
+                    [
+                        f"**Reasoning:**\n{reasoning_content}" if reasoning_content else None,
+                        f"**Model Output:**\n{output_data.content}" if output_data.content else None,
+                        f"**Tool Calls:**\n{json.dumps(output_data.tool_calls)}" if output_data.tool_calls else None,
+                    ],
+                )
+            )
+            text_content = TextContent(
+                type="text",
+                text=text,
+                duration=_calculate_duration(start_time),
+                header={"title": "Model Think", "icon": "BrainCircuit"},
+            )
+            agent_message.content_blocks[0].contents.append(text_content)
+            agent_message = await send_message_method(message=agent_message)
+            start_time = perf_counter()
+    return agent_message, start_time
+
+
 class ToolEventHandler(Protocol):
     async def __call__(
         self,
@@ -244,6 +281,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_start": handle_on_chain_start,
     "on_chain_end": handle_on_chain_end,
     "on_chain_stream": handle_on_chain_stream,
+    "on_chat_model_end": handle_on_agent_action,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {
