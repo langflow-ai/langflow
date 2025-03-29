@@ -107,16 +107,17 @@ export default defineConfig({
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
-        LANGFLOW_AUTO_LOGIN: "false",
-        LANGFLOW_KEYCLOAK_ENABLED: "true",
-        LANGFLOW_KEYCLOAK_SERVER_URL: "https://login.kubert.tekstackapps.com",
-        LANGFLOW_KEYCLOAK_REALM: "ops",
-        LANGFLOW_KEYCLOAK_CLIENT_ID: "langflow",
-        LANGFLOW_KEYCLOAK_CLIENT_SECRET: "2WfsYTjXsOpuJbDA2UTnvTWfuyBSPdXS",
-        LANGFLOW_KEYCLOAK_REDIRECT_URI: "http://localhost:3000/keycloak/callback",
-        LANGFLOW_KEYCLOAK_ADMIN_ROLE: "kubert-langflow-admin",
-        LANGFLOW_KEYCLOAK_FORCE_SSO: "true",
-        LANGFLOW_LOG_LEVEL:"debug"
+        LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_KEYCLOAK_ENABLED: "false",
+        LANGFLOW_SSO_TEST_ENABLED: "false",
+        //LANGFLOW_KEYCLOAK_SERVER_URL: "",
+        //LANGFLOW_KEYCLOAK_REALM: "",
+        //LANGFLOW_KEYCLOAK_CLIENT_ID: "",
+        //LANGFLOW_KEYCLOAK_CLIENT_SECRET: "",
+        //LANGFLOW_KEYCLOAK_REDIRECT_URI: "",
+        //LANGFLOW_KEYCLOAK_ADMIN_ROLE: "",
+        //LANGFLOW_KEYCLOAK_FORCE_SSO: "",
+        //LANGFLOW_LOG_LEVEL:"info"
       },
       stdout: "ignore",
 

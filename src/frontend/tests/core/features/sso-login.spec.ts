@@ -104,12 +104,12 @@ const preformLogout = async (page) => {
 
 
 test.describe("SSO Authentication", () => {
-  test.beforeAll(async ({ browser }) => {
-    if(!ssoTestEnabled) {
-      test.skip(true,"LANGFLOW_SSO_TEST_ENABLED required to run this test and must be set to 'true'");
-      return;
-    }
+  console.log('LANGFLOW_SSO_TEST_ENABLED:', process.env.LANGFLOW_SSO_TEST_ENABLED);
+  console.log('ssoTestEnabled variable:', ssoTestEnabled);
+  // Skip the entire test suite if SSO tests are not enabled
+  test.skip(!ssoTestEnabled, "LANGFLOW_SSO_TEST_ENABLED required to run this test and must be set to 'true'");
 
+  test.beforeAll(async ({ browser }) => {
     validateEnvVars();
   });
 
