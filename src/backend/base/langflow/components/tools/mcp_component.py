@@ -29,7 +29,6 @@ class MCPToolsComponent(Component):
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
     default_keys: list[str] = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
-    common_ports: list[int] = [7860, 7861, 7863, 3000, 8000, 8080]  # Common Langflow deployment ports
 
     sse_url: str | None = None
 
@@ -59,7 +58,6 @@ class MCPToolsComponent(Component):
             name="sse_url",
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
-            value="http://localhost:7860/api/v1/mcp/sse",
             show=False,
             refresh_button=True,
         ),
@@ -91,29 +89,15 @@ class MCPToolsComponent(Component):
         """Find Langflow instance by checking env variable first, then scanning common ports."""
         # First check environment variable
         env_port = os.getenv("LANGFLOW_PORT")
-        if env_port:
-            try:
-                port = int(env_port)
-                url = f"http://localhost:{port}/api/v1/mcp/sse"
-                async with httpx.AsyncClient() as client:
-                    response = await client.head(url, timeout=2.0)
-                    if response.status_code < HTTP_ERROR_STATUS_CODE:
-                        return True, port, f"Langflow instance found at configured port {port}"
-            except (ValueError, httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError):
-                logger.warning(f"Could not connect to Langflow at configured port {env_port}")
-
-        # If env port not set or connection failed, scan common ports
-        base_url = "http://localhost"
-        for port in self.common_ports:
-            url = f"{base_url}:{port}/api/v1/mcp/sse"
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.head(url, timeout=2.0)
-                    if response.status_code < HTTP_ERROR_STATUS_CODE:
-                        return True, port, f"Langflow instance found at port {port}"
-            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError):
-                continue
-
+        port = int(env_port) if env_port else 7860
+        try:
+            url = f"http://localhost:{port}/api/v1/mcp/sse"
+            async with httpx.AsyncClient() as client:
+                response = await client.head(url, timeout=2.0)
+                if response.status_code < HTTP_ERROR_STATUS_CODE:
+                    return True, port, f"Langflow instance found at configured port {port}"
+        except (ValueError, httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError):
+            logger.warning(f"Could not connect to Langflow at configured port {env_port}")
         return False, None, "No Langflow instance found on configured port or common ports"
 
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
@@ -169,6 +153,7 @@ class MCPToolsComponent(Component):
                     if port:
                         build_config["sse_url"]["value"] = f"http://localhost:{port}/api/v1/mcp/sse"
                         self.sse_url = build_config["sse_url"]["value"]
+                    return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
                     # If SSE mode and localhost URL is not valid, try to find correct port
@@ -337,6 +322,11 @@ class MCPToolsComponent(Component):
                     self.tools = await self.stdio_client.connect_to_server(self.command)
             elif self.mode == "SSE" and not self.sse_client.session:
                 try:
+                    is_valid, _ = await self.sse_client.validate_url(self.sse_url)
+                    if not is_valid:
+                        msg = f"Invalid SSE URL configuration: {self.sse_url}. Please check the SSE URL and try again."
+                        logger.error(msg)
+                        return []
                     self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
                 except ValueError as e:
                     # URL validation error
