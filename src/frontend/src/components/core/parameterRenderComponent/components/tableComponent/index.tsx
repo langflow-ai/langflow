@@ -38,6 +38,7 @@ export interface TableComponentProps extends AgGridReactProps {
   onDuplicate?: () => void;
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
+  paginationInfo?: string;
 }
 
 const TableComponent = forwardRef<
@@ -268,6 +269,7 @@ const TableComponent = forwardRef<
           <TableOptions
             tableOptions={props.tableOptions}
             stateChange={columnStateChange}
+            paginationInfo={props.paginationInfo}
             hasSelection={realRef.current?.api?.getSelectedRows()?.length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
             deleteRow={props.onDelete ? props.onDelete : undefined}
