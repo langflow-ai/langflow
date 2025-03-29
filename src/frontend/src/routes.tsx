@@ -22,6 +22,7 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
 import FlowPage from "./pages/FlowPage";
+import KeycloakCallback from "./pages/KeycloakCallback";
 import LoginPage from "./pages/LoginPage";
 import CollectionPage from "./pages/MainPage/pages";
 import FilesPage from "./pages/MainPage/pages/filesPage";
@@ -194,6 +195,7 @@ const router = createBrowserRouter(
               </ProtectedLoginRoute>
             }
           />
+          <Route path="keycloak/callback" element={<KeycloakCallback />} />
         </Route>
       </Route>
       <Route path="*" element={<CustomNavigate replace to="/" />} />

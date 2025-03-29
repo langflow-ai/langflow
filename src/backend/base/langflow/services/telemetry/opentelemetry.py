@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
+from loguru import logger
 from opentelemetry import metrics
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
@@ -116,6 +117,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]
     ) -> None:
         metric = Metric(name=name, description=description, metric_type=metric_type, unit=unit, labels=labels)
+        logger.debug(f"Registering metric: {metric}")
         self._metrics_registry[name] = metric
         if labels is None or len(labels) == 0:
             msg = "Labels must be provided for the metric upon registration"
@@ -126,6 +128,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
 
         A thread safe singleton class to manage metrics.
         """
+        logger.debug("Registering application-level metrics...")
         self._add_metric(
             name="file_uploads",
             description="The uploaded file size in bytes",
@@ -140,42 +143,59 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.COUNTER,
             labels={"flow_id": mandatory_label},
         )
+        logger.debug("System metrics registered")
+        self._add_metric(
+            name="fastapi_version",
+            description="The FastAPI version.",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"version": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_version",
+            description="The Langflow app version.",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"version": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
+        logger.debug("OpenTelemetry init called")
         # Only initialize once
         self.prometheus_enabled = prometheus_enabled
         if OpenTelemetry._initialized:
             return
 
+        logger.debug("Current global MeterProvider: {}", type(metrics.get_meter_provider()).__name__)
+
         if not self._metrics_registry:
             self._register_metric()
 
         if self._meter_provider is None:
-            # Get existing meter provider if any
-            existing_provider = metrics.get_meter_provider()
+            logger.debug("Creating new MeterProvider")
+            resource = Resource.create({"service.name": "langflow"})
+            metric_readers = []
+            if self.prometheus_enabled:
+                logger.debug("Adding PrometheusMetricReader")
+                metric_readers.append(PrometheusMetricReader())
 
-            # Check if FastAPI instrumentation is already set up
-            if hasattr(existing_provider, "get_meter") and existing_provider.get_meter("http.server"):
-                self._meter_provider = existing_provider
-            else:
-                resource = Resource.create({"service.name": "langflow"})
-                metric_readers = []
-                if self.prometheus_enabled:
-                    metric_readers.append(PrometheusMetricReader())
-
-                self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-                metrics.set_meter_provider(self._meter_provider)
+            self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
+            metrics.set_meter_provider(self._meter_provider)
+            logger.debug("MeterProvider set globally")
 
         self.meter = self._meter_provider.get_meter(langflow_meter_name)
+        logger.debug(f"Meter obtained for name: '{langflow_meter_name}'")
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
                 msg = f"Key '{name}' does not match metric name '{metric.name}'"
                 raise ValueError(msg)
             if name not in self._metrics:
+                logger.debug(f"Creating instrument for metric: {name}")
                 self._metrics[metric.name] = self._create_metric(metric)
 
         OpenTelemetry._initialized = True
+        logger.debug("OpenTelemetry initialization complete")
 
     def _create_metric(self, metric):
         # Remove _created_instruments check

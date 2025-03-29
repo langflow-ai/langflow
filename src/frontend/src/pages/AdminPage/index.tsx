@@ -42,6 +42,7 @@ import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
+import { useKeycloakAuth } from "@/hooks/useKeycloakAuth";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -68,6 +69,9 @@ export default function AdminPage() {
   const [filterUserList, setFilterUserList] = useState(userList.current);
 
   const { mutate: mutateGetUsers, isPending, isIdle } = useGetUsers({});
+
+  // Get Keycloak configuration and functions from the hook
+  const { isKeycloakEnabled} = useKeycloakAuth();
 
   function getUsers() {
     mutateGetUsers(
@@ -145,6 +149,15 @@ export default function AdminPage() {
   }
 
   function handleEditUser(userId, user) {
+    // Prevent editing Keycloak users
+    if (user.is_keycloak_user) {
+      setErrorData({
+        title: "Cannot edit Keycloak user",
+        list: ["User management for Keycloak users must be done through Keycloak"],
+      });
+      return;
+    }
+
     mutateUpdateUser(
       { user_id: userId, user: user },
       {
@@ -165,6 +178,15 @@ export default function AdminPage() {
   }
 
   function handleDisableUser(check, userId, user) {
+    // Prevent disabling Keycloak users
+    if (user.is_keycloak_user) {
+      setErrorData({
+        title: "Cannot disable Keycloak user",
+        list: ["User management for Keycloak users must be done through Keycloak"],
+      });
+      return;
+    }
+
     const userEdit = cloneDeep(user);
     userEdit.is_active = !check;
 
@@ -297,7 +319,7 @@ export default function AdminPage() {
                 }}
                 asChild
               >
-                <Button variant="primary">New User</Button>
+                <Button variant="primary" disabled={isKeycloakEnabled}>New User</Button>
               </UserManagementModal>
             </div>
           </div>
@@ -330,8 +352,11 @@ export default function AdminPage() {
                       <TableHead className="h-10">Username</TableHead>
                       <TableHead className="h-10">Active</TableHead>
                       <TableHead className="h-10">Superuser</TableHead>
+                      <TableHead className="h-10">Keycloak User</TableHead>
+                      <TableHead className="h-10">Deleted</TableHead>
                       <TableHead className="h-10">Created At</TableHead>
                       <TableHead className="h-10">Updated At</TableHead>
+                      <TableHead className="h-10">Deleted At</TableHead>
                       <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -352,6 +377,9 @@ export default function AdminPage() {
                             </ShadTooltip>
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
+                          {user.is_keycloak_user  ? (
+                              user.is_active ? "Yes" : "No"
+                            ) : (
                             <ConfirmationModal
                               size="x-small"
                               title="Edit"
@@ -382,8 +410,12 @@ export default function AdminPage() {
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
+                          )}
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
+                          {user.is_keycloak_user  ? (
+                              user.is_superuser ? "Yes" : "No"
+                            ) : (
                             <ConfirmationModal
                               size="x-small"
                               title="Edit"
@@ -414,6 +446,13 @@ export default function AdminPage() {
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
+                          )}
+                          </TableCell>
+                          <TableCell className="truncate py-2">
+                            {user.is_keycloak_user ? "Yes" : "No"}
+                          </TableCell>
+                          <TableCell className="truncate py-2">
+                            {user.is_deleted ? "Yes" : "No"}
                           </TableCell>
                           <TableCell className="truncate py-2">
                             {
@@ -429,7 +468,13 @@ export default function AdminPage() {
                                 .split("T")[0]
                             }
                           </TableCell>
+                          <TableCell className="truncate py-2">
+                            {user.deleted_at
+                              ? new Date(user.deleted_at).toISOString().split("T")[0]
+                              : "N/A"}
+                          </TableCell>
                           <TableCell className="flex w-[100px] py-2 text-right">
+                          {!user.is_keycloak_user && (
                             <div className="flex">
                               <UserManagementModal
                                 title="Edit"
@@ -472,13 +517,16 @@ export default function AdminPage() {
                                   </span>
                                 </ConfirmationModal.Content>
                                 <ConfirmationModal.Trigger>
-                                  <IconComponent
-                                    name="Trash2"
-                                    className="ml-2 h-4 w-4 cursor-pointer"
-                                  />
+                                  <div className="cursor-pointer">
+                                    <IconComponent
+                                      name="Trash2"
+                                      className="ml-2 h-4 w-4"
+                                    />
+                                  </div>
                                 </ConfirmationModal.Trigger>
                               </ConfirmationModal>
                             </div>
+                          )}
                           </TableCell>
                         </TableRow>
                       ))}
