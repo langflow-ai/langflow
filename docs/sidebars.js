@@ -20,14 +20,14 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Tutorials",
+      label: "Sample flows",
       items: [
-        'Tutorials/tutorials-blog-writer',
-        'Tutorials/tutorials-document-qa',
-        'Tutorials/tutorials-memory-chatbot',
-        'Tutorials/tutorials-math-agent',
-        'Tutorials/tutorials-sequential-agent',
-        'Tutorials/tutorials-travel-planning-agent',
+        'Sample-Flows/blog-writer',
+        'Sample-Flows/document-qa',
+        'Sample-Flows/memory-chatbot',
+        'Sample-Flows/math-agent',
+        'Sample-Flows/sequential-agent',
+        'Sample-Flows/travel-planning-agent',
       ],
     },
     {

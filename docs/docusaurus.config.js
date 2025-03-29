@@ -115,13 +115,6 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "/tutorials-travel-planning-agent",
-            from: [
-              "/starter-projects-dynamic-agent/",
-              "/starter-projects-travel-planning-agent",
-            ],
-          },
-          {
             to: "concepts-overview",
             from: [
               "/workspace-overview",
@@ -137,7 +130,7 @@ const config = {
               "/components",
               "/components-overview"
             ],
-            },
+          },
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
@@ -158,20 +151,47 @@ const config = {
             ]
           },
           {
-            to: "/tutorials-sequential-agent",
-            from: "/starter-projects-sequential-agent",
+            to: "/blog-writer",
+            from: [
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer"
+            ],
           },
           {
-            to: "/tutorials-blog-writer",
-            from: "/starter-projects-blog-writer",
+            to: "/memory-chatbot",
+            from: [
+              "/starter-projects-memory-chatbot",
+              "/tutorials-memory-chatbot"
+            ],
           },
           {
-            to: "/tutorials-memory-chatbot",
-            from: "/starter-projects-memory-chatbot",
+            to: "/document-qa",
+            from: [
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa"
+            ],
           },
           {
-            to: "/tutorials-document-qa",
-            from: "/starter-projects-document-qa",
+            to: "/math-agent",
+            from: [
+              "/starter-projects-math-agent",
+              "/tutorials-math-agent"
+            ],
+          },
+          {
+            to: "/sequential-agent",
+            from: [
+              "/starter-projects-sequential-agent",
+              "/tutorials-sequential-agent"
+            ],
+          },
+          {
+            to: "/travel-planning-agent",
+            from: [
+              "/starter-projects-travel-planning-agent",
+              "/tutorials-travel-planning-agent",
+              "/starter-projects-dynamic-agent/",
+            ],
           },
           {
             to: "/components-vector-stores",

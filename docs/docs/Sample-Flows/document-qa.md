@@ -1,6 +1,6 @@
 ---
 title: Document QA
-slug: /tutorials-document-qa
+slug: /document-qa
 ---
 
 

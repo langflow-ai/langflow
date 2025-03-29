@@ -1,6 +1,6 @@
 ---
 title: Math agent
-slug: /tutorials-math-agent
+slug: /math-agent
 ---
 
 import Icon from "@site/src/components/icon";
