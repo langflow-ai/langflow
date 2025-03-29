@@ -124,7 +124,7 @@ class StructuredOutputComponent(Component):
             name="multiple",
             advanced=True,
             display_name="Generate Multiple",
-            info="[Deplrecated] Always set to True",
+            info="[Deprecated] Always set to True",
             value=True,
         ),
     ]
