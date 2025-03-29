@@ -717,7 +717,27 @@ class Component(CustomComponent):
 
         return await self.build_results()
 
+    def get_loop_output_value(self, name: str) -> Any:
+        """Get the value of an output that allows looping.
+
+        Args:
+            name (str): The name of the output to check.
+
+        Returns:
+            Any: The value from the vertex if the output allows looping,
+                 otherwise returns None.
+        """
+        if not hasattr(self, "_vertex") or self._vertex is None:
+            return None
+
+        if any(
+            getattr(output, "allows_loop", False) and output.name == name for output in getattr(self, "outputs", [])
+        ):
+            return self._vertex.get_value_from_output_names(name)
+        return None
+
     def __getattr__(self, name: str) -> Any:
+        # First check if it's a loop output
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
@@ -737,6 +757,7 @@ class Component(CustomComponent):
             return PlaceholderGraph(
                 flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
             )
+
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
