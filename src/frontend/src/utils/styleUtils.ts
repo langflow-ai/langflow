@@ -6,6 +6,7 @@ import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
+import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
@@ -725,6 +726,7 @@ export const nodeIconsLucide: iconsType = {
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   NotDiamond: NotDiamondIcon,
+  GridHorizontal: GridHorizontalIcon,
   Composio: ComposioIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
