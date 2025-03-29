@@ -14,6 +14,7 @@ from .openai import OpenAIEmbeddingsComponent
 from .similarity import EmbeddingSimilarityComponent
 from .text_embedder import TextEmbedderComponent
 from .vertexai import VertexAIEmbeddingsComponent
+from .watsonx import WatsonxEmbeddingsComponent
 
 __all__ = [
     "AIMLEmbeddingsComponent",
@@ -32,4 +33,5 @@ __all__ = [
     "OpenAIEmbeddingsComponent",
     "TextEmbedderComponent",
     "VertexAIEmbeddingsComponent",
+    "WatsonxEmbeddingsComponent",
 ]
