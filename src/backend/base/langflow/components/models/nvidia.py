@@ -1,10 +1,18 @@
 from typing import Any
 
+from loguru import logger
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
+from langflow.schema.message import Message
+
+# Enabled detailed thinking for NVIDIA reasoning models.
+#
+# Models are trained with this exact string. Do not update.
+DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
 
 
 class NVIDIAModelComponent(LCModelComponent):
@@ -109,6 +117,14 @@ class NVIDIAModelComponent(LCModelComponent):
                     build_config["model_name"]["value"] = None
 
                 # TODO: use api to determine if model supports detailed thinking
+                if "detailed_thinking" not in build_config:
+                    build_config["detailed_thinking"] = BoolInput(
+                        name="detailed_thinking",
+                        display_name="Detailed Thinking",
+                        value=False,
+                        info="Enable detailed thinking.",
+                        advanced=True,
+                    ).to_dict()
                 if build_config["model_name"]["value"] == "nemotron":
                     build_config["detailed_thinking"]["show"] = True
                 else:
@@ -140,4 +156,25 @@ class NVIDIAModelComponent(LCModelComponent):
             api_key=api_key,
             temperature=temperature or 0.1,
             seed=seed,
+        )
+
+    def get_chat_result(
+        self,
+        *,
+        runnable: LanguageModel,
+        stream: bool,
+        input_value: str | Message,
+        system_message: str | None = None,
+    ):
+        try:
+            if self.detailed_thinking:
+                system_message = DETAILED_THINKING_PREFIX + (system_message or "")
+        except Exception:  # noqa: BLE001
+            logger.error("Failed to add detailed thinking prefix to system message.")
+
+        return self._get_chat_result(
+            runnable=runnable,
+            stream=stream,
+            input_value=input_value,
+            system_message=system_message,
         )
