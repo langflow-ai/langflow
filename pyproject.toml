@@ -170,6 +170,7 @@ dev = [
     "pydantic-ai>=0.0.19",
     "elevenlabs>=1.52.0",
     "faker>=37.0.0",
+    "pytest-timeout>=2.3.1",
 ]
 
 [tool.uv.sources]
@@ -232,6 +233,8 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
+timeout = 120
+tiemout_method = "thread"
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
