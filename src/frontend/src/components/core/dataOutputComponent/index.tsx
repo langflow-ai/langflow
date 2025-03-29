@@ -2,6 +2,7 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
+import { useEffect, useState } from "react";
 import { extractColumnsFromRows } from "../../../utils/utils";
 
 function DataOutputComponent({
@@ -13,12 +14,18 @@ function DataOutputComponent({
   rows: any[];
   columnMode?: "intersection" | "union";
 }) {
-  // If the rows are not an array of objects, convert them to an array of objects
-  if (rows.some((row) => typeof row !== "object")) {
-    rows = rows.map((row) => ({ data: row }));
-  }
+  const [rowsInternal, setRowsInternal] = useState(rows.slice(0, 1000));
 
-  const columns = extractColumnsFromRows(rows, columnMode);
+  useEffect(() => {
+    const rowsSliced = rows.slice(0, 1000);
+    if (rowsSliced.some((row) => typeof row !== "object")) {
+      setRowsInternal(rowsSliced.map((row) => ({ data: row })));
+    } else {
+      setRowsInternal(rowsSliced);
+    }
+  }, [rows]);
+
+  const columns = extractColumnsFromRows(rowsInternal, columnMode);
 
   const columnDefs = columns.map((col, idx) => ({
     ...col,
@@ -30,10 +37,11 @@ function DataOutputComponent({
       autoSizeStrategy={{ type: "fitGridWidth", defaultMinWidth: 100 }}
       key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
+      paginationInfo={rows.length > 1000 ? rows[1000] : undefined}
       suppressRowClickSelection={true}
       pagination={pagination}
       columnDefs={columnDefs}
-      rowData={rows}
+      rowData={rowsInternal}
     />
   );
 }
