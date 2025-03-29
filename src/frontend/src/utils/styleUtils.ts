@@ -1,347 +1,10 @@
-import { AIMLIcon } from "@/icons/AIML";
-import { AWSInvertedIcon } from "@/icons/AWSInverted";
-import { BWPythonIcon } from "@/icons/BW python";
-import { DropboxIcon } from "@/icons/Dropbox";
-import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
-import { ExaIcon } from "@/icons/Exa";
-import { GleanIcon } from "@/icons/Glean";
-import { GoogleDriveIcon } from "@/icons/GoogleDrive";
-import { JSIcon } from "@/icons/JSicon";
-import { LangwatchIcon } from "@/icons/Langwatch";
-import { MilvusIcon } from "@/icons/Milvus";
-import { OneDriveIcon } from "@/icons/OneDrive";
-import Perplexity from "@/icons/Perplexity/Perplexity";
-import { SearchAPIIcon } from "@/icons/SearchAPI";
-import { SerpSearchIcon } from "@/icons/SerpSearch";
-import { TavilyIcon } from "@/icons/Tavily";
-import { UnstructuredIcon } from "@/icons/Unstructured";
-import { WikipediaIcon } from "@/icons/Wikipedia";
-import YouTubeIcon from "@/icons/Youtube/youtube";
-import { ZepMemoryIcon } from "@/icons/ZepMemory";
-import { AthenaIcon } from "@/icons/athena/index";
-import { freezeAllIcon } from "@/icons/freezeAll";
-import { GlobeOkIcon } from "@/icons/globe-ok";
-import { GmailIcon } from "@/icons/gmail";
-import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { GradientSave } from "@/icons/GradientSparkles";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowBigUp,
-  ArrowLeft,
-  ArrowRight,
-  ArrowRightLeft,
-  ArrowUpRight,
-  ArrowUpToLine,
-  AudioLines,
-  Bell,
-  Binary,
-  Blocks,
-  BookMarked,
-  BookOpenText,
-  BookmarkPlus,
-  Bot,
-  BotMessageSquare,
-  Boxes,
-  Braces,
-  BrainCircuit,
-  ChartNetwork,
-  Check,
-  CheckCheck,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronRightSquare,
-  ChevronUp,
-  ChevronsDownUp,
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronsUpDown,
-  ChevronsUpDownIcon,
-  Circle,
-  CircleCheckBig,
-  CircleDot,
-  CircleOff,
-  Clipboard,
-  CloudDownload,
-  Code,
-  Code2,
-  CodeXml,
-  Cog,
-  Columns2,
-  Combine,
-  Command,
-  Compass,
-  Copy,
-  CopyPlus,
-  CornerDownLeft,
-  Cpu,
-  Database,
-  DatabaseZap,
-  Delete,
-  DollarSign,
-  Dot,
-  Download,
-  DownloadCloud,
-  Edit,
-  Ellipsis,
-  EllipsisVertical,
-  Eraser,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  File,
-  FileChartColumn,
-  FileClock,
-  FileCode2,
-  FileDown,
-  FileJson,
-  FilePen,
-  FileQuestion,
-  FileSearch,
-  FileSearch2,
-  FileSliders,
-  FileText,
-  FileType,
-  FileType2,
-  FileUp,
-  Filter,
-  FlaskConical,
-  FolderIcon,
-  FolderPlus,
-  FolderPlusIcon,
-  FolderSync,
-  FolderUp,
-  FormInput,
-  Forward,
-  Gift,
-  GitBranchPlus,
-  GitFork,
-  GithubIcon,
-  Globe,
-  GripVertical,
-  Group,
-  Hammer,
-  Heart,
-  HelpCircle,
-  Home,
-  Image,
-  Infinity,
-  Info,
-  InstagramIcon,
-  Key,
-  Keyboard,
-  Laptop2,
-  Layers,
-  LayoutGrid,
-  LayoutPanelTop,
-  Link,
-  Link2,
-  List,
-  ListChecks,
-  ListFilter,
-  ListOrdered,
-  ListX,
-  Loader2,
-  Lock,
-  LockOpen,
-  LogIn,
-  LogOut,
-  LucideSend,
-  Maximize2,
-  Menu,
-  MessageCircle,
-  MessageSquare,
-  MessageSquareMore,
-  MessagesSquare,
-  Mic,
-  Mic2,
-  MicOff,
-  Minimize2,
-  Minus,
-  Monitor,
-  Moon,
-  MoonIcon,
-  MoreHorizontal,
-  Network,
-  Newspaper,
-  NotebookPen,
-  OctagonAlert,
-  OptionIcon,
-  Package2,
-  Palette,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
-  Paperclip,
-  PaperclipIcon,
-  Pen,
-  Pencil,
-  PencilLine,
-  PencilRuler,
-  PieChart,
-  Pin,
-  Plane,
-  Play,
-  Plus,
-  PlusCircle,
-  PlusSquare,
-  PocketKnife,
-  Radio,
-  Redo,
-  RefreshCcw,
-  RefreshCcwDot,
-  Repeat,
-  Replace,
-  RotateCcw,
-  Save,
-  SaveAll,
-  Scan,
-  ScanEye,
-  Scissors,
-  ScreenShare,
-  Scroll,
-  ScrollText,
-  Search,
-  Settings,
-  Settings2,
-  Share,
-  Share2,
-  Shield,
-  Sigma,
-  Sliders,
-  SlidersHorizontal,
-  Snowflake,
-  Sparkles,
-  Square,
-  SquareArrowOutUpRight,
-  SquareCode,
-  SquarePen,
-  SquarePlay,
-  StickyNote,
-  Store,
-  Sun,
-  SunIcon,
-  Table,
-  Tags,
-  TerminalIcon,
-  TerminalSquare,
-  TextCursorInput,
-  TextSearch,
-  TextSearchIcon,
-  ThumbsDown,
-  ThumbsUp,
-  ToyBrick,
-  Trash2,
-  Type,
-  Undo,
-  Ungroup,
-  Unplug,
-  Upload,
-  User,
-  UserCog2,
-  UserMinus2,
-  UserPlus2,
-  Users,
-  Users2,
-  Variable,
-  Wand2,
-  Workflow,
-  Wrench,
-  X,
-  XCircle,
-  Youtube,
-  Zap,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import dynamicIconImports from "lucide-react/dynamicIconImports";
+import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
-import { AWSIcon } from "../icons/AWS";
-import { AgentQLIcon } from "../icons/AgentQL";
-import { AirbyteIcon } from "../icons/Airbyte";
-import { AnthropicIcon } from "../icons/Anthropic";
-import { ApifyIcon, ApifyWhiteIcon } from "../icons/Apify";
-import { ArXivIcon } from "../icons/ArXiv";
-import { ArizeIcon } from "../icons/Arize";
-import { AssemblyAIIcon } from "../icons/AssemblyAI";
-import { AstraDBIcon } from "../icons/AstraDB";
-import { AzureIcon } from "../icons/Azure";
-import { BingIcon } from "../icons/Bing";
-import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
-import { CassandraIcon } from "../icons/Cassandra";
-import { ChromaIcon } from "../icons/ChromaIcon";
-import { ClickhouseIcon } from "../icons/Clickhouse";
-import { CloudflareIcon } from "../icons/Cloudflare";
-import { CohereIcon } from "../icons/Cohere";
-import { ComposioIcon } from "../icons/Composio";
-import { ConfluenceIcon } from "../icons/Confluence";
-import { CouchbaseIcon } from "../icons/Couchbase";
-import { CrewAiIcon } from "../icons/CrewAI";
-import { DeepSeekIcon } from "../icons/DeepSeek";
-import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
-import { EvernoteIcon } from "../icons/Evernote";
-import { FBIcon } from "../icons/FacebookMessenger";
-import { FirecrawlIcon } from "../icons/Firecrawl";
-import { GitBookIcon } from "../icons/GitBook";
-import { GitLoaderIcon } from "../icons/GitLoader";
-import { GoogleIcon } from "../icons/Google";
-import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
-import {
-  GradientInfinity,
-  GradientSave,
-  GradientUngroup,
-} from "../icons/GradientSparkles";
-import { GroqIcon } from "../icons/Groq";
-import { HCDIcon } from "../icons/HCD";
-import { HuggingFaceIcon } from "../icons/HuggingFace";
-import { WatsonxAiIcon } from "../icons/IBMWatsonx";
-import { IFixIcon } from "../icons/IFixIt";
-import { IcosaIcon } from "../icons/Icosa";
-import { LMStudioIcon } from "../icons/LMStudio";
-import { LangChainIcon } from "../icons/LangChain";
-import { MaritalkIcon } from "../icons/Maritalk";
-import { Mem0 } from "../icons/Mem0";
-import { MetaIcon } from "../icons/Meta";
-import { MidjourneyIcon } from "../icons/Midjorney";
-import { MongoDBIcon } from "../icons/MongoDB";
-import { NeedleIcon } from "../icons/Needle";
-import { NotDiamondIcon } from "../icons/NotDiamond";
-import { NotionIcon } from "../icons/Notion";
-import { NovitaIcon } from "../icons/Novita";
-import { NvidiaIcon } from "../icons/Nvidia";
-import { OlivyaIcon } from "../icons/Olivya";
-import { OllamaIcon } from "../icons/Ollama";
-import { OpenAiIcon } from "../icons/OpenAi";
-import { OpenRouterIcon } from "../icons/OpenRouter";
-import { OpenSearch } from "../icons/OpenSearch";
-import { PineconeIcon } from "../icons/Pinecone";
-import { PostgresIcon } from "../icons/Postgres";
-import { PythonIcon } from "../icons/Python";
-import { QDrantIcon } from "../icons/QDrant";
-import { QianFanChatIcon } from "../icons/QianFanChat";
-import { RedisIcon } from "../icons/Redis";
-import { SambaNovaIcon } from "../icons/SambaNova";
-import ScrapeGraph from "../icons/ScrapeGraphAI/ScrapeGraphAI";
-import { SearxIcon } from "../icons/Searx";
-import { SerperIcon } from "../icons/Serper";
-import { ShareIcon } from "../icons/Share";
-import { Share2Icon } from "../icons/Share2";
-import SvgSlackIcon from "../icons/Slack/SlackIcon";
-import { SpiderIcon } from "../icons/Spider";
-import { Streamlit } from "../icons/Streamlit";
-import { UpstashSvgIcon } from "../icons/Upstash";
-import { VectaraIcon } from "../icons/VectaraIcon";
-import { VertexAIIcon } from "../icons/VertexAI";
-import { WeaviateIcon } from "../icons/Weaviate";
-import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
-import SvgWolfram from "../icons/Wolfram/Wolfram";
-import { HackerNewsIcon } from "../icons/hackerNews";
-import { MistralIcon } from "../icons/mistral";
-import { SupabaseIcon } from "../icons/supabase";
-import { XAIIcon } from "../icons/xAI";
-import { iconsType } from "../types/components";
+import { lucideIcons } from "../icons/lucideIcons";
 
 export const BG_NOISE =
   "url(data:image/png;base64,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)";
@@ -596,451 +259,492 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
 ];
 
-export const categoryIcons = {
-  saved_components: GradientSave,
-  inputs: Download,
-  outputs: Upload,
-  prompts: TerminalSquare,
-  data: Database,
-  models: BrainCircuit,
-  helpers: Wand2,
-  vectorstores: Layers,
-  embeddings: Binary,
-  agents: Bot,
-  astra_assistants: Sparkles,
-  chains: Link,
-  documentloaders: Paperclip,
-  langchain_utilities: PocketKnife,
-  link_extractors: Link2,
-  memories: Cpu,
-  output_parsers: Compass,
-  prototypes: FlaskConical,
-  retrievers: FileSearch,
-  textsplitters: Scissors,
-  toolkits: Package2,
-  tools: Hammer,
-  custom: Edit,
-  custom_components: GradientInfinity,
+export const categoryIcons: Record<string, string> = {
+  saved_components: "GradientSave",
+  inputs: "Download",
+  outputs: "Upload",
+  prompts: "TerminalSquare",
+  data: "Database",
+  models: "BrainCircuit",
+  helpers: "Wand2",
+  vectorstores: "Layers",
+  embeddings: "Binary",
+  agents: "Bot",
+  astra_assistants: "Sparkles",
+  chains: "Link",
+  documentloaders: "Paperclip",
+  langchain_utilities: "PocketKnife",
+  link_extractors: "Link2",
+  memories: "Cpu",
+  output_parsers: "Compass",
+  prototypes: "FlaskConical",
+  retrievers: "FileSearch",
+  textsplitters: "Scissors",
+  toolkits: "Package2",
+  tools: "Hammer",
+  custom: "Edit",
+  custom_components: "GradientInfinity",
 };
 
-export const nodeIconsLucide: iconsType = {
+export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
-  inputs: Download,
-  outputs: Upload,
-  prompts: TerminalSquare,
-  data: Database,
-  models: BrainCircuit,
-  helpers: Wand2,
-  vectorstores: Layers,
-  embeddings: Binary,
-  agents: Bot,
-  astra_assistants: Sparkles,
-  chains: Link,
-  documentloaders: Paperclip,
-  langchain_utilities: PocketKnife,
-  link_extractors: Link2,
-  memories: Cpu,
-  output_parsers: Compass,
-  prototypes: FlaskConical,
-  retrievers: FileSearch,
-  textsplitters: Scissors,
-  toolkits: Package2,
-  tools: Hammer,
-  custom_components: GradientInfinity,
-  ChatInput: MessagesSquare,
-  ChatOutput: MessagesSquare,
+  inputs: "Download",
+  outputs: "Upload",
+  prompts: "TerminalSquare",
+  data: "Database",
+  models: "BrainCircuit",
+  helpers: "Wand2",
+  vectorstores: "Layers",
+  embeddings: "Binary",
+  agents: "Bot",
+  astra_assistants: "Sparkles",
+  chains: "Link",
+  documentloaders: "Paperclip",
+  langchain_utilities: "PocketKnife",
+  link_extractors: "Link2",
+  memories: "Cpu",
+  output_parsers: "Compass",
+  prototypes: "FlaskConical",
+  retrievers: "FileSearch",
+  textsplitters: "Scissors",
+  toolkits: "Package2",
+  tools: "Hammer",
+  custom_components: "GradientInfinity",
+  ChatInput: "MessagesSquare",
+  ChatOutput: "MessagesSquare",
   //Integration Icons
-  Gmail: GmailIcon,
-  LMStudio: LMStudioIcon,
-  Notify: Bell,
-  ListFlows: Group,
-  ClearMessageHistory: FileClock,
-  Python: PythonIcon,
-  BWPython: BWPythonIcon,
-  AzureChatOpenAi: AzureIcon,
-  Ollama: OllamaIcon,
-  ChatOllama: OllamaIcon,
-  AzureOpenAiEmbeddings: AzureIcon,
-  Azure: AzureIcon,
-  OllamaEmbeddings: OllamaIcon,
-  ChatOllamaModel: OllamaIcon,
-  FAISS: MetaIcon,
-  Maritalk: MaritalkIcon,
-  FaissSearch: MetaIcon,
-  LangChain: LangChainIcon,
-  AzureOpenAiModel: AzureIcon,
-  Redis: RedisIcon,
-  RedisSearch: RedisIcon,
-  PostgresChatMessageHistory: PostgresIcon,
-  BaiduQianfan: QianFanChatIcon,
-  Vectara: VectaraIcon,
-  ArrowUpToLine: ArrowUpToLine,
-  Cassandra: CassandraIcon,
-  Chroma: ChromaIcon,
-  Couchbase: CouchbaseIcon,
-  Clickhouse: ClickhouseIcon,
-  Cloudflare: CloudflareIcon,
-  AirbyteJSONLoader: AirbyteIcon,
-  AmazonBedrockEmbeddings: AWSIcon,
-  Amazon: AWSIcon,
-  AWSInverted: AWSInvertedIcon,
-  Anthropic: AnthropicIcon,
-  ArXiv: ArXivIcon,
-  ChatAnthropic: AnthropicIcon,
-  assemblyai: AssemblyAIIcon,
-  AgentQL: AgentQLIcon,
-  AssemblyAI: AssemblyAIIcon,
-  AstraDB: AstraDBIcon,
-  BingSearchAPIWrapper: BingIcon,
-  BingSearchRun: BingIcon,
-  CloudDownload,
-  Olivya: OlivyaIcon,
-  Bing: BingIcon,
-  Cohere: CohereIcon,
-  ChevronsUpDownIcon,
-  CohereEmbeddings: CohereIcon,
-  EverNoteLoader: EvernoteIcon,
-  FacebookChatLoader: FBIcon,
-  FirecrawlCrawlApi: FirecrawlIcon,
-  FirecrawlScrapeApi: FirecrawlIcon,
-  FirecrawlMapApi: FirecrawlIcon,
-  FirecrawlExtractApi: FirecrawlIcon,
-  GitbookLoader: GitBookIcon,
-  GoogleSearchAPIWrapper: GoogleIcon,
-  GoogleSearchResults: GoogleIcon,
-  GoogleSearchRun: GoogleIcon,
-  GoogleSearchAPI: GoogleIcon,
-  GoogleSerperAPI: GoogleIcon,
-  Google: GoogleIcon,
-  GoogleGenerativeAI: GoogleGenerativeAIIcon,
-  Groq: GroqIcon,
-  HCD: HCDIcon,
-  HNLoader: HackerNewsIcon,
-  Unstructured: UnstructuredIcon,
-  Filter: Filter,
-  HuggingFaceHub: HuggingFaceIcon,
-  HuggingFace: HuggingFaceIcon,
-  HuggingFaceEmbeddings: HuggingFaceIcon,
-  Icosa: IcosaIcon,
-  IFixitLoader: IFixIcon,
-  CrewAI: CrewAiIcon,
-  NotDiamond: NotDiamondIcon,
-  Composio: ComposioIcon,
-  Meta: MetaIcon,
-  Midjorney: MidjourneyIcon,
-  MongoDBAtlasVectorSearch: MongoDBIcon,
-  MongoDB: MongoDBIcon,
-  MongoDBChatMessageHistory: MongoDBIcon,
-  notion: NotionIcon,
-  Notion: NotionIcon,
-  NotionDirectoryLoader: NotionIcon,
-  novita: NovitaIcon,
-  Novita: NovitaIcon,
-  Needle: NeedleIcon,
-  NVIDIA: NvidiaIcon,
-  ChatOpenAI: OpenAiIcon,
-  AzureChatOpenAI: OpenAiIcon,
-  OpenAI: OpenAiIcon,
-  OpenRouter: OpenRouterIcon,
-  DeepSeek: DeepSeekIcon,
-  xAI: XAIIcon,
-  OpenAIEmbeddings: OpenAiIcon,
-  Pinecone: PineconeIcon,
-  Qdrant: QDrantIcon,
-  ElasticsearchStore: ElasticsearchIcon,
-  Weaviate: WeaviateIcon,
-  SambaNova: SambaNovaIcon,
-  Searx: SearxIcon,
-  SlackDirectoryLoader: SvgSlackIcon,
-  SpiderTool: SpiderIcon,
-  SupabaseVectorStore: SupabaseIcon,
-  Supabase: SupabaseIcon,
-  VertexAI: VertexAIIcon,
-  ChatVertexAI: VertexAIIcon,
-  VertexAIEmbeddings: VertexAIIcon,
-  WatsonxAI: WatsonxAiIcon,
-  Share3: ShareIcon,
-  Share4: Share2Icon,
-  WikipediaAPIWrapper: SvgWikipedia,
-  WolframAlphaAPIWrapper: SvgWolfram,
-  WikipediaQueryRun: SvgWikipedia,
-  WolframAlphaQueryRun: SvgWolfram,
-  WolframAlphaAPI: SvgWolfram,
-  group_components: GradientUngroup,
-  Streamlit,
-  Discord: FaDiscord,
-  MistralAI: MistralIcon,
-  Upstash: UpstashSvgIcon,
-  Confluence: ConfluenceIcon,
-  AIML: AIMLIcon,
-  "AI/ML": AIMLIcon,
-  GitLoader: GitLoaderIcon,
-  athenaIcon: AthenaIcon,
-  DuckDuckGo: DuckDuckGoIcon,
-  Perplexity,
-  TavilyIcon,
-  OpenSearch,
-  GithubIcon,
-  FaGithub,
-  FaApple,
-  YouTube: YouTubeIcon,
-  Milvus: MilvusIcon,
-  ExaSearch: ExaIcon,
-  ZepMemory: ZepMemoryIcon,
-  Langwatch: LangwatchIcon,
-  Mem0,
-  Glean: GleanIcon,
-  GleanAPI: GleanIcon,
-  SerpSearch: SerpSearchIcon,
-  SearchAPI: SearchAPIIcon,
-  Wikipedia: WikipediaIcon,
-  Arize: ArizeIcon,
-  Apify: ApifyIcon,
-  ApifyWhite: ApifyWhiteIcon,
+  AIML: "AI/ML",
+  AgentQL: "AgentQL",
+  AirbyteJSONLoader: "Airbyte",
+  AmazonBedrockEmbeddings: "AWS",
+  Amazon: "AWS",
+  arXiv: "ArXiv",
+  assemblyai: "AssemblyAI",
+  athenaIcon: "Athena",
+  AzureChatOpenAi: "OpenAI",
+  AzureOpenAiEmbeddings: "Azure",
+  AzureOpenAiModel: "Azure",
+  BaiduQianfan: "QianFanChat",
+  BingSearchAPIWrapper: "Bing",
+  BingSearchRun: "Bing",
+  ChatAnthropic: "Anthropic",
+  ChatOllama: "Ollama",
+  ChatOllamaModel: "Ollama",
+  ChatOpenAI: "OpenAI",
+  ChatVertexAI: "VertexAI",
+  ChevronsUpDownIcon: "ChevronsUpDown",
+  ClearMessageHistory: "FileClock",
+  CohereEmbeddings: "Cohere",
+  Discord: "FaDiscord",
+  ElasticsearchStore: "ElasticsearchStore",
+  EverNoteLoader: "Evernote",
+  ExaSearch: "Exa",
+  FacebookChatLoader: "FacebookMessenger",
+  FAISS: "Meta",
+  FaissSearch: "Meta",
+  FirecrawlCrawlApi: "Firecrawl",
+  FirecrawlExtractApi: "Firecrawl",
+  FirecrawlMapApi: "Firecrawl",
+  FirecrawlScrapeApi: "Firecrawl",
+  GitbookLoader: "GitBook",
+  GoogleGenerativeAI: "GoogleGenerativeAI",
+  GoogleSearchAPI: "Google",
+  GoogleSearchAPIWrapper: "Google",
+  GoogleSearchResults: "Google",
+  GoogleSearchRun: "Google",
+  GoogleSerperAPI: "Google",
+  group_components: "GradientUngroup",
+  HNLoader: "HackerNews",
+  HuggingFaceEmbeddings: "HuggingFace",
+  HuggingFaceHub: "HuggingFace",
+  IFixitLoader: "IFixIt",
+  ListFlows: "Group",
+  MistralAI: "Mistral",
+  MongoDBAtlasVectorSearch: "MongoDB",
+  MongoDBChatMessageHistory: "MongoDB",
+  notion: "Notion",
+  NotionDirectoryLoader: "Notion",
+  NotDiamond: "NotDiamond",
+  Notify: "Bell",
+  novita: "Novita",
+  OllamaEmbeddings: "Ollama",
+  OpenAIEmbeddings: "OpenAI",
+  PostgresChatMessageHistory: "Postgres",
+  Qdrant: "QDrant",
+  RedisSearch: "Redis",
+  Share3: "Share",
+  Share4: "Share2",
+  SlackDirectoryLoader: "Slack",
+  SpiderTool: "Spider",
+  SupabaseVectorStore: "Supabase",
+  TavilyIcon: "Tavily",
+  VertexAIEmbeddings: "VertexAI",
+  WikipediaAPIWrapper: "WikipediaAPI",
+  WikipediaQueryRun: "WikipediaAPI",
+  WolframAlphaAPI: "Wolfram",
+  WolframAlphaAPIWrapper: "Wolfram",
+  WolframAlphaQueryRun: "Wolfram",
 
   //Node Icons
-  model_specs: FileSliders,
-  advanced: Laptop2,
-  chat: MessageCircle,
-  saved_components: GradientSave,
-  vectorsearch: TextSearch,
-  wrappers: Gift,
-  unknown: HelpCircle,
-  custom: Edit,
-  Keyboard,
-  ArrowRight,
-  Play,
-  BotMessageSquareIcon,
-  CheckCheck,
-  ListFilter,
-  ScrollText,
-  Workflow,
-  User,
-  ScanEye,
-  Type,
-  FolderIcon,
-  X,
-  Trash2,
-  CircleOff,
-  Boxes,
-  Network,
-  XCircle,
-  Info,
-  CheckCircle2,
-  FileJson,
-  FileChartColumn,
-  FileType,
-  File,
-  SquarePen,
-  Zap,
-  MessagesSquare,
-  ExternalLink,
-  ChevronsUpDown,
-  Check,
-  Home,
-  Users2,
-  SunIcon,
-  MoonIcon,
-  Bell,
-  AlertTriangle,
-  ChevronLeft,
-  SlidersHorizontal,
-  GoogleDrive: GoogleDriveIcon,
-  OneDrive: OneDriveIcon,
-  Dropbox: DropboxIcon,
-  Palette,
-  RefreshCcwDot,
-  FolderUp,
-  SquarePlay,
-  LayoutPanelTop,
-  Database,
-  Blocks,
-  ChevronDown,
-  ArrowLeft,
-  BrainCircuit,
-  Wand2,
-  Layers,
-  Binary,
-  Paperclip,
-  PocketKnife,
-  Scissors,
-  Cpu,
-  Hammer,
-  GradientSave,
-  Shield,
-  NotebookPen,
-  Plus,
-  Redo,
-  Settings2,
-  FileType2,
-  Undo,
-  FileSearch2,
-  ChevronRight,
-  Circle,
-  CircleDot,
-  Clipboard,
-  PlusCircle,
-  PlusSquare,
-  Code2,
-  Globe,
-  Variable,
-  Snowflake,
-  Store,
-  Download,
-  Replace,
-  Eraser,
-  Lock,
-  LockOpen,
-  ListX,
-  Newspaper,
-  Tags,
-  CodeXml,
-  PieChart,
-  LucideSend,
-  Sparkles,
-  DownloadCloud,
-  FileText,
-  FolderPlus,
-  GitFork,
-  FileDown,
-  FilePen,
-  FileUp,
-  Menu,
-  Save,
-  Search,
-  Copy,
-  Upload,
-  MessageSquare,
-  MoreHorizontal,
-  UserMinus2,
-  UserPlus2,
-  Pencil,
-  PencilRuler,
-  ChevronsRight,
-  ChevronsLeft,
-  EyeOff,
-  Eye,
-  UserCog2,
-  Key,
-  Unplug,
-  Group,
-  LogIn,
-  ChevronUp,
-  PencilLine,
-  Ungroup,
-  BookMarked,
-  Minus,
-  LogOut,
-  BotMessageSquare,
-  Square,
-  Minimize2,
-  Maximize2,
-  FormInput,
-  ChevronRightSquare,
-  Plane,
-  Users,
-  ListOrdered,
-  SaveAll,
-  MessageSquareMore,
-  Forward,
-  Share2,
-  Share,
-  GitBranchPlus,
-  Infinity,
-  Loader2,
-  BookmarkPlus,
-  Heart,
-  Package2,
-  FileSearch,
-  Compass,
-  Link2,
-  Pin,
-  Link,
-  ToyBrick,
-  RefreshCcw,
-  SquareArrowOutUpRight,
-  Combine,
-  TerminalIcon,
-  TerminalSquare,
-  TextCursorInput,
-  Repeat,
-  Sliders,
-  ScreenShare,
-  Code,
-  OctagonAlert,
-  Ellipsis,
-  Braces,
-  FlaskConical,
-  AlertCircle,
-  Bot,
-  EllipsisVertical,
-  Delete,
-  Command,
-  ArrowBigUp,
-  PanelRightClose,
-  Dot,
-  LayoutGrid,
-  StickyNote,
-  note: StickyNote,
-  RotateCcw,
-  Wrench,
-  GripVertical,
-  FolderPlusIcon,
-  PaperclipIcon,
-  Settings,
-  Monitor,
-  Moon,
-  Sun,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ArrowUpRight,
-  Scroll,
-  Image,
-  CopyPlus,
-  Pen,
-  TwitterLogoIcon,
-  InstagramIcon,
-  TextSearchIcon,
-  FileQuestion,
-  Youtube,
-  List,
-  SquareCode,
-  ListChecks,
-  PanelRightOpen,
-  CornerDownLeft,
-  ChevronsDownUp,
-  OptionIcon,
-  ChartNetwork,
-  Option: OptionIcon,
-  FreezeAll: freezeAllIcon,
-  Table,
-  Scan,
-  GlobeOkIcon,
-  CircleCheckBig,
-  ZoomIn,
-  ZoomOut,
-  Sigma,
-  Radio,
-  DatabaseZap,
-  Cog,
-  ArrowRightLeft,
-  FolderSync,
-  ThumbsUp,
-  ThumbsDown,
-  ThumbDownIconCustom,
-  ThumbUpIconCustom,
-  Serper: SerperIcon,
-  javascript: JSIcon,
-  FileCode2,
-  Columns2,
-  ScrapeGraphAI: ScrapeGraph,
-  ScrapeGraph: ScrapeGraph,
-  ScrapeGraphSmartScraperApi: ScrapeGraph,
-  ScrapeGraphMarkdownifyApi: ScrapeGraph,
-  Mic,
-  MicOff,
-  Mic2,
-  DollarSign,
-  BookOpenText,
-  AudioLines,
+  model_specs: "FileSliders",
+  advanced: "Laptop2",
+  chat: "MessageCircle",
+  saved_components: "GradientSave",
+  vectorsearch: "TextSearch",
+  wrappers: "Gift",
+  unknown: "HelpCircle",
+  custom: "Edit",
+  BotMessageSquareIcon: "BotMessageSquare",
+  TextSearchIcon: "TextSearch",
+  ChevronsUpDown: "ChevronsUpDown",
+  SunIcon: "Sun",
+  MoonIcon: "Moon",
+  FolderIcon: "FolderIcon",
+  GradientSave: "GradientSave",
+  FolderPlusIcon: "FolderPlus",
+  PaperclipIcon: "Paperclip",
+  TerminalIcon: "TerminalIcon",
+  OptionIcon: "Option",
+  Option: "OptionIcon",
+  GlobeOkIcon: "GlobeOk",
+  ThumbDownIconCustom: "ThumbDownCustom",
+  ThumbUpIconCustom: "ThumbUpCustom",
+  ScrapeGraphAI: "ScrapeGraph",
+  ScrapeGraphSmartScraperApi: "ScrapeGraph",
+  ScrapeGraphMarkdownifyApi: "ScrapeGraph",
+  note: "StickyNote",
+};
+
+export const getLucideIconName = (name: string): string => {
+  const map = {
+    AlertCircle: "circle-alert",
+    AlertTriangle: "triangle-alert",
+    TerminalSquare: "square-terminal",
+    Wand2: "wand-sparkles",
+  };
+  const kebabCaseName = name
+    .replace(/([a-z])([A-Z])/g, "$1-$2")
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+  return map[name] || kebabCaseName;
+};
+
+export const nodeIconsMapping: Record<string, () => Promise<any>> = {
+  "AI/ML": () =>
+    import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
+  AgentQL: () =>
+    import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
+  Airbyte: () =>
+    import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
+  Anthropic: () =>
+    import("@/icons/Anthropic").then((mod) => ({ default: mod.AnthropicIcon })),
+  Apify: () =>
+    import("@/icons/Apify").then((mod) => ({ default: mod.ApifyIcon })),
+  ApifyWhite: () =>
+    import("@/icons/Apify").then((mod) => ({ default: mod.ApifyWhiteIcon })),
+  ArXiv: () =>
+    import("@/icons/ArXiv").then((mod) => ({ default: mod.ArXivIcon })),
+  Arize: () =>
+    import("@/icons/Arize").then((mod) => ({ default: mod.ArizeIcon })),
+  AssemblyAI: () =>
+    import("@/icons/AssemblyAI").then((mod) => ({
+      default: mod.AssemblyAIIcon,
+    })),
+  AstraDB: () =>
+    import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
+  Athena: () =>
+    import("@/icons/athena").then((mod) => ({ default: mod.AthenaIcon })),
+  AWS: () => import("@/icons/AWS").then((mod) => ({ default: mod.AWSIcon })),
+  AWSInverted: () =>
+    import("@/icons/AWSInverted").then((mod) => ({
+      default: mod.AWSInvertedIcon,
+    })),
+  Azure: () =>
+    import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
+  Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  // BotMessageSquare: () =>
+  //   import("@/icons/BotMessageSquare").then((mod) => ({
+  //     default: mod.BotMessageSquareIcon,
+  //   })),
+  BWPython: () =>
+    import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
+  Cassandra: () =>
+    import("@/icons/Cassandra").then((mod) => ({ default: mod.CassandraIcon })),
+  Chroma: () =>
+    import("@/icons/ChromaIcon").then((mod) => ({ default: mod.ChromaIcon })),
+  Clickhouse: () =>
+    import("@/icons/Clickhouse").then((mod) => ({
+      default: mod.ClickhouseIcon,
+    })),
+  Cloudflare: () =>
+    import("@/icons/Cloudflare").then((mod) => ({
+      default: mod.CloudflareIcon,
+    })),
+  Cohere: () =>
+    import("@/icons/Cohere").then((mod) => ({ default: mod.CohereIcon })),
+  Composio: () =>
+    import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
+  Confluence: () =>
+    import("@/icons/Confluence").then((mod) => ({
+      default: mod.ConfluenceIcon,
+    })),
+  Couchbase: () =>
+    import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
+  CrewAI: () =>
+    import("@/icons/CrewAI").then((mod) => ({ default: mod.CrewAiIcon })),
+  DeepSeek: () =>
+    import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
+  Dropbox: () =>
+    import("@/icons/Dropbox").then((mod) => ({ default: mod.DropboxIcon })),
+  DuckDuckGo: () =>
+    import("@/icons/DuckDuckGo").then((mod) => ({
+      default: mod.DuckDuckGoIcon,
+    })),
+  ElasticsearchStore: () =>
+    import("@/icons/ElasticsearchStore").then((mod) => ({
+      default: mod.ElasticsearchIcon,
+    })),
+  Evernote: () =>
+    import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
+  Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
+  FacebookMessenger: () =>
+    import("@/icons/FacebookMessenger").then((mod) => ({
+      default: mod.FBIcon,
+    })),
+  Firecrawl: () =>
+    import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
+  FreezeAll: () =>
+    import("@/icons/freezeAll").then((mod) => ({ default: mod.freezeAllIcon })),
+  GitBook: () =>
+    import("@/icons/GitBook").then((mod) => ({ default: mod.GitBookIcon })),
+  GitLoader: () =>
+    import("@/icons/GitLoader").then((mod) => ({ default: mod.GitLoaderIcon })),
+  Glean: () =>
+    import("@/icons/Glean").then((mod) => ({ default: mod.GleanIcon })),
+  GlobeOk: () =>
+    import("@/icons/globe-ok").then((mod) => ({ default: mod.GlobeOkIcon })),
+  Google: () =>
+    import("@/icons/Google").then((mod) => ({ default: mod.GoogleIcon })),
+  GoogleDrive: () =>
+    import("@/icons/GoogleDrive").then((mod) => ({
+      default: mod.GoogleDriveIcon,
+    })),
+  GoogleGenerativeAI: () =>
+    import("@/icons/GoogleGenerativeAI").then((mod) => ({
+      default: mod.GoogleGenerativeAIIcon,
+    })),
+  Gmail: () =>
+    import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
+  GradientInfinity: () =>
+    import("@/icons/GradientSparkles").then((mod) => ({
+      default: mod.GradientInfinity,
+    })),
+  GradientSave: () =>
+    import("@/icons/GradientSparkles").then((mod) => ({
+      default: mod.GradientSave,
+    })),
+  GradientUngroup: () =>
+    import("@/icons/GradientSparkles").then((mod) => ({
+      default: mod.GradientUngroup,
+    })),
+  Groq: () => import("@/icons/Groq").then((mod) => ({ default: mod.GroqIcon })),
+  HackerNews: () =>
+    import("@/icons/hackerNews").then((mod) => ({
+      default: mod.HackerNewsIcon,
+    })),
+  HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
+  HuggingFace: () =>
+    import("@/icons/HuggingFace").then((mod) => ({
+      default: mod.HuggingFaceIcon,
+    })),
+  Icosa: () =>
+    import("@/icons/Icosa").then((mod) => ({ default: mod.IcosaIcon })),
+  IFixIt: () =>
+    import("@/icons/IFixIt").then((mod) => ({ default: mod.IFixIcon })),
+  javascript: () =>
+    import("@/icons/JSicon").then((mod) => ({ default: mod.JSIcon })),
+  LangChain: () =>
+    import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
+  Langwatch: () =>
+    import("@/icons/Langwatch").then((mod) => ({ default: mod.LangwatchIcon })),
+  LMStudio: () =>
+    import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
+  Maritalk: () =>
+    import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
+  Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
+  Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
+  Midjourney: () =>
+    import("@/icons/Midjorney").then((mod) => ({
+      default: mod.MidjourneyIcon,
+    })),
+  Milvus: () =>
+    import("@/icons/Milvus").then((mod) => ({ default: mod.MilvusIcon })),
+  Mistral: () =>
+    import("@/icons/mistral").then((mod) => ({ default: mod.MistralIcon })),
+  MongoDB: () =>
+    import("@/icons/MongoDB").then((mod) => ({ default: mod.MongoDBIcon })),
+  Needle: () =>
+    import("@/icons/Needle").then((mod) => ({ default: mod.NeedleIcon })),
+  NotDiamond: () =>
+    import("@/icons/NotDiamond").then((mod) => ({
+      default: mod.NotDiamondIcon,
+    })),
+  Notion: () =>
+    import("@/icons/Notion").then((mod) => ({ default: mod.NotionIcon })),
+  Novita: () =>
+    import("@/icons/Novita").then((mod) => ({ default: mod.NovitaIcon })),
+  NVIDIA: () =>
+    import("@/icons/Nvidia").then((mod) => ({ default: mod.NvidiaIcon })),
+  Olivya: () =>
+    import("@/icons/Olivya").then((mod) => ({ default: mod.OlivyaIcon })),
+  Ollama: () =>
+    import("@/icons/Ollama").then((mod) => ({ default: mod.OllamaIcon })),
+  OpenAI: () =>
+    import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
+  OpenRouter: () =>
+    import("@/icons/OpenRouter").then((mod) => ({
+      default: mod.OpenRouterIcon,
+    })),
+  OpenSearch: () =>
+    import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Perplexity: () =>
+    import("@/icons/Perplexity").then((mod) => ({
+      default: mod.PerplexityIcon,
+    })),
+  Pinecone: () =>
+    import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
+  Postgres: () =>
+    import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
+  Python: () =>
+    import("@/icons/Python").then((mod) => ({ default: mod.PythonIcon })),
+  QDrant: () =>
+    import("@/icons/QDrant").then((mod) => ({ default: mod.QDrantIcon })),
+  QianFanChat: () =>
+    import("@/icons/QianFanChat").then((mod) => ({
+      default: mod.QianFanChatIcon,
+    })),
+  Redis: () =>
+    import("@/icons/Redis").then((mod) => ({ default: mod.RedisIcon })),
+  SambaNova: () =>
+    import("@/icons/SambaNova").then((mod) => ({ default: mod.SambaNovaIcon })),
+  ScrapeGraph: () =>
+    import("@/icons/ScrapeGraphAI").then((mod) => ({
+      default: mod.ScrapeGraph,
+    })),
+  SearchAPI: () =>
+    import("@/icons/SearchAPI").then((mod) => ({ default: mod.SearchAPIIcon })),
+  Searx: () =>
+    import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
+  SerpSearch: () =>
+    import("@/icons/SerpSearch").then((mod) => ({
+      default: mod.SerpSearchIcon,
+    })),
+  Serper: () =>
+    import("@/icons/Serper").then((mod) => ({ default: mod.SerperIcon })),
+  Share: () =>
+    import("@/icons/Share").then((mod) => ({ default: mod.ShareIcon })),
+  Share2: () =>
+    import("@/icons/Share2").then((mod) => ({ default: mod.Share2Icon })),
+  Slack: () =>
+    import("@/icons/Slack/SlackIcon").then((mod) => ({ default: mod.default })),
+  Spider: () =>
+    import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
+  Streamlit: () =>
+    import("@/icons/Streamlit").then((mod) => ({ default: mod.Streamlit })),
+  Supabase: () =>
+    import("@/icons/supabase").then((mod) => ({ default: mod.SupabaseIcon })),
+  Tavily: () =>
+    import("@/icons/Tavily").then((mod) => ({ default: mod.TavilyIcon })),
+  ThumbDownCustom: () =>
+    import("@/icons/thumbs").then((mod) => ({
+      default: mod.ThumbDownIconCustom,
+    })),
+  ThumbUpCustom: () =>
+    import("@/icons/thumbs").then((mod) => ({
+      default: mod.ThumbUpIconCustom,
+    })),
+  Unstructured: () =>
+    import("@/icons/Unstructured").then((mod) => ({
+      default: mod.UnstructuredIcon,
+    })),
+  Upstash: () =>
+    import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
+  Vectara: () =>
+    import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
+  VertexAI: () =>
+    import("@/icons/VertexAI").then((mod) => ({ default: mod.VertexAIIcon })),
+  WatsonxAI: () =>
+    import("@/icons/IBMWatsonx").then((mod) => ({
+      default: mod.WatsonxAiIcon,
+    })),
+  Weaviate: () =>
+    import("@/icons/Weaviate").then((mod) => ({ default: mod.WeaviateIcon })),
+  Wikipedia: () =>
+    import("@/icons/Wikipedia/Wikipedia").then((mod) => ({
+      default: mod.default,
+    })),
+  Wolfram: () =>
+    import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
+  xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),
+  YouTube: () =>
+    import("@/icons/Youtube").then((mod) => ({ default: mod.YouTubeSvgIcon })),
+  ZepMemory: () =>
+    import("@/icons/ZepMemory").then((mod) => ({ default: mod.ZepMemoryIcon })),
+};
+
+// Create a map of eagerly loaded icons to prevent unnecessary lazy loading
+export const eagerLoadedIconsMap = {
+  // Custom icons
+  GradientSave: GradientSave,
+  BotMessageSquareIcon: BotMessageSquareIcon,
+  "sticky-note": lucideIcons.StickyNote,
+
+  // React icons
+  FaApple: FaApple,
+  FaDiscord: FaDiscord,
+  FaGithub: FaGithub,
+  TwitterLogoIcon: TwitterLogoIcon,
+
+  // All Lucide Icons
+  ...lucideIcons,
+};
+
+// Function to get a lazy-loaded icon component
+export const getNodeIcon = (name: string) => {
+  const iconName = nodeIconToDisplayIconMap[name];
+
+  if (eagerLoadedIconsMap[iconName || name]) {
+    return eagerLoadedIconsMap[iconName || name];
+  }
+
+  if (nodeIconsMapping[iconName || name]) {
+    return lazy(nodeIconsMapping[iconName || name]);
+  }
+
+  const lucideIconName = getLucideIconName(iconName || name);
+
+  if (dynamicIconImports[lucideIconName]) {
+    try {
+      return lazy(dynamicIconImports[lucideIconName]);
+    } catch (e) {
+      // Fall through to next option
+    }
+  }
+
+  // If all else fails, return a simple empty component
+  return lazy(() =>
+    Promise.resolve({
+      default: () => null,
+    }),
+  );
+};
+
+export const iconExists = (name: string): boolean => {
+  const iconName = nodeIconToDisplayIconMap[name] || name;
+
+  return !!(
+    eagerLoadedIconsMap[iconName] ||
+    nodeIconsMapping[iconName] ||
+    dynamicIconImports[getLucideIconName(iconName)]
+  );
 };
