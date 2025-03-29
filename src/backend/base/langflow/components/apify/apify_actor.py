@@ -80,8 +80,8 @@ class ApifyActorsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Output", name="output", type_=list[Data], method="run_model"),
-        Output(display_name="Tool", name="tool", type_=Tool, method="build_tool"),
+        Output(display_name="Output", name="output", method="run_model"),
+        Output(display_name="Tool", name="tool", method="build_tool"),
     ]
 
     def __init__(self, *args, **kwargs) -> None:
