@@ -512,7 +512,7 @@ wheels = [
 
 [[package]]
 name = "auth0-python"
-version = "4.8.1"
+version = "4.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -521,9 +521,9 @@ dependencies = [
     { name = "requests" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/ca/c5d5aef3599d143b3fa5203be850542ee54e3798392fb80bd3126fd865e2/auth0_python-4.8.1.tar.gz", hash = "sha256:2d46027296a5e6d7c28f2ef1cc3d9b5705f3978de3622a744dabf36b39d53342", size = 74876 }
+sdist = { url = "https://files.pythonhosted.org/packages/12/81/3e867262f1f48fdacb1f8e9853497f6283274ba2c3c145e767bc0c7ed3c8/auth0_python-4.7.2.tar.gz", hash = "sha256:5d36b7f26defa946c0a548dddccf0451fc62e9f8e61fd0138c5025ad2506ba8b", size = 73261 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/70/0025c8f763ece48b9dbffe22b68f843f1cd43a6324ee9f95e94a1d3e4d6c/auth0_python-4.8.1-py3-none-any.whl", hash = "sha256:ac2fea3cba4dc186b2f01a953a08db5f38a543255c19e9298fef4755fe5f9716", size = 134260 },
+    { url = "https://files.pythonhosted.org/packages/e4/0e/38cb7b781371e79e9c697fb78f3ccd18fda8bd547d0a2e76e616561a3792/auth0_python-4.7.2-py3-none-any.whl", hash = "sha256:df2224f9b1e170b3aa12d8bc7ff02eadb7cc229307a09ec6b8a55fd1e0e05dc8", size = 131834 },
 ]
 
 [[package]]
@@ -1383,7 +1383,7 @@ wheels = [
 
 [[package]]
 name = "composio-core"
-version = "0.7.1"
+version = "0.7.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1404,14 +1404,14 @@ dependencies = [
     { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/0c/c852ed97a6bd4c615447d49c56687949ee711a868e6ef992cd655a399ee6/composio_core-0.7.1.tar.gz", hash = "sha256:f51d13154df9baad6768a61b40bcab74d057da63e502ece0503b3b61666b43f0", size = 314490 }
+sdist = { url = "https://files.pythonhosted.org/packages/a4/8c/baecb880d69098a17e23724ba8c35237428749d47645d353006428991ab4/composio_core-0.7.12.tar.gz", hash = "sha256:5e13db7c298bb1bbf29e40d139656c22dfde3c2a5a675962ede5673c76d376e4", size = 329357 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/03/33bbe17cca76d3ad0bb239424d5a02d7d52dc4831768cf6a5bef5cab6ac7/composio_core-0.7.1-py3-none-any.whl", hash = "sha256:cbe85a6b2e5b5326c8e067e4b88c201d076d7e46b1a35e0b803852cb001fca61", size = 477780 },
+    { url = "https://files.pythonhosted.org/packages/5d/6c/71ccaaf26f399e10206dafa529e3bb6664e0eeb5f410636d7063b0eb73ee/composio_core-0.7.12-py3-none-any.whl", hash = "sha256:8904cdc47975e70542cf09499c7b90078371a9289452e941a659eb46d42f3b7a", size = 492528 },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.7.1"
+version = "0.7.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-core" },
@@ -1420,9 +1420,9 @@ dependencies = [
     { name = "langchainhub" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/53/dec4238dd7467f3a033eeb85aefb70002464b11a5fe59659e0b90c62841a/composio_langchain-0.7.1.tar.gz", hash = "sha256:8ffd75c8a0165cc178268ad5f3bdff965886f21dc3ee580816c38c647595ed80", size = 4417 }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/9d/e9e2a07eb9f582c8c7e4882f2418b32404b25540c994bd191fcc8a354823/composio_langchain-0.7.12.tar.gz", hash = "sha256:e22098542a8c2e309e79fbbd9d05b46f6b7a3bd59f13429ea1469a3bca7f3082", size = 4447 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/ce/52b0e7c72a0274e0a349f7adf931026ef248f7f5482bcf69f83f8c6cc298/composio_langchain-0.7.1-py3-none-any.whl", hash = "sha256:27ec56e6248e6ce2cde1190831323d83935f4ad62d650cbd71afb4aaf2171671", size = 4844 },
+    { url = "https://files.pythonhosted.org/packages/aa/46/902dea095cf3c58c3a5269fabad7ee5d45fc303d48f5e334762a3c1dbae4/composio_langchain-0.7.12-py3-none-any.whl", hash = "sha256:5834b7b39aa1aa3400dac8ca01f372b80e999a6d57110b2d6a7c07fd7416cba5", size = 4878 },
 ]
 
 [[package]]
@@ -2861,6 +2861,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/24/8a/e2d52d4111d3ef48e0a8b2324e80b600f6c5339dae9827744b94325a0b6a/google_crc32c-1.7.0-cp313-cp313-macosx_12_0_x86_64.whl", hash = "sha256:6a40522958040051c755a173eb98c05ad4d64a6dd898888c3e5ccca2d1cbdcdc", size = 30149 },
     { url = "https://files.pythonhosted.org/packages/da/60/8cd1605391da56c55db67ef64660e72b89787755a271ebe04f9418320b19/google_crc32c-1.7.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f714fe5cdf5007d7064c57cf7471a99e0cbafda24ddfa829117fc3baafa424f7", size = 32972 },
     { url = "https://files.pythonhosted.org/packages/3d/65/065ffe1bb324709e7704205261b429588ed17bbde8b7940eb12b140a6082/google_crc32c-1.7.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f04e58dbe1bf0c9398e603a9be5aaa09e0ba7eb022a3293195d8749459a01069", size = 32616 },
+    { url = "https://files.pythonhosted.org/packages/16/b8/95e6a189f5764abd643e3df5ab06e291d379f26ff77ea97bbcb12ac9207b/google_crc32c-1.7.0-cp313-cp313-win_amd64.whl", hash = "sha256:e545b51ddf97f604d30114f7c23eecaf4c06cd6c023ff1ae0b80dcd99af32833", size = 33496 },
     { url = "https://files.pythonhosted.org/packages/1b/30/51b10f995be9bd09551d050117c571f9749297717fcc2e7946e242eb4830/google_crc32c-1.7.0-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:364067b063664dd8d1fec75a3fe85edf05c46f688365269beccaf42ef5dfe889", size = 33080 },
     { url = "https://files.pythonhosted.org/packages/4d/ec/a7ca773559c7ab6919ac0255d84c74571c8cecf0e8891036705f6861c04d/google_crc32c-1.7.0-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e1b0d6044799f6ac51d1cc2decb997280a83c448b3bef517a54b57a3b71921c0", size = 32708 },
     { url = "https://files.pythonhosted.org/packages/35/9e/0fca77ec4a5d4651e33662c62d44418cb1c37bd04b22f6368a0f7a7abefa/google_crc32c-1.7.0-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1b8f48dddd1451026a517d7eb1f8c4ee2491998bfa383abb5fdebf32b0aa333e", size = 28080 },
@@ -3400,6 +3401,59 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bb/98/0051e770d36f7e0a55bcfa3590790448d57ed2f355da9adbb957b1f545d9/hypothesis-6.129.4.tar.gz", hash = "sha256:e9fd66c25b8f0aa6395ce6728360892c3af22529cc16cae7512a4672776d4781", size = 425235 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8d/7c/7266143385cbd19c839f9b61cc660d74c5ce2626fea41d8b215ccc5cfba3/hypothesis-6.129.4-py3-none-any.whl", hash = "sha256:45a31fe2b936688b2954f375c7f87e9dfefa4f2cddfa31cdeba15d77600e1286", size = 489542 },
+]
+
+[[package]]
+name = "ibm-cos-sdk"
+version = "2.13.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ibm-cos-sdk-core" },
+    { name = "ibm-cos-sdk-s3transfer" },
+    { name = "jmespath" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e4/e6/908791df6fd31d94e80be9597242eac2b942c28b0d4ea1fc6b963d4a6be3/ibm-cos-sdk-2.13.5.tar.gz", hash = "sha256:1aff7f9863ac9072a3db2f0053bec99478b26f3fb5fa797ce96a15bbb13cd40e", size = 58638 }
+
+[[package]]
+name = "ibm-cos-sdk-core"
+version = "2.13.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "python-dateutil" },
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/ff/cabdf3d7892c3607297ffb7d77c3caafe2f50f876d29e90c44ac67495cef/ibm-cos-sdk-core-2.13.5.tar.gz", hash = "sha256:d3a99d8b06b3f8c00b1a9501f85538d592463e63ddf8cec32672ab5a0b107b83", size = 1101815 }
+
+[[package]]
+name = "ibm-cos-sdk-s3transfer"
+version = "2.13.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ibm-cos-sdk-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/42/f2faefd0c3360928336b93a14db2aff25f556aa50252188efd1ba363e371/ibm-cos-sdk-s3transfer-2.13.5.tar.gz", hash = "sha256:9649b1f2201c6de96ff5a6b5a3686de3a809e6ef3b8b12c7c4f2f7ce72da7749", size = 139491 }
+
+[[package]]
+name = "ibm-watsonx-ai"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "httpx" },
+    { name = "ibm-cos-sdk" },
+    { name = "importlib-metadata" },
+    { name = "lomond" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "requests" },
+    { name = "tabulate" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/71/fad93b14427faa0cf95a08f033c3ef29aeac6c2718ea8adae9ebe306e706/ibm_watsonx_ai-1.3.1.tar.gz", hash = "sha256:d32668fbd9a1308f355ee372d3dcc929eadc7f9c1e00a8549d37e9d144a3ddab", size = 693398 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/ab/d1d76b874ad5d0ede9cddaefd3ed0118d6fd3a9e4c571c05b3497417d810/ibm_watsonx_ai-1.3.1-py3-none-any.whl", hash = "sha256:62fa1d4dfd62a7d8013cabf7999f5e0144b502d97a51bccb5c3dbeffc6918ee7", size = 1074052 },
 ]
 
 [[package]]
@@ -4267,6 +4321,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-ibm"
+version = "0.3.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ibm-watsonx-ai" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/1d/a0d5a535beb722dc8275a30e7db9b23938e0a074069cc7d4093507a5bd4f/langchain_ibm-0.3.8.tar.gz", hash = "sha256:b8e606f1581c2bed9a078bae6335f2f70b6f9b25e07736b61f763966be3405bc", size = 23015 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/76/7d/dc4db1613c2aa53528205a4cd2286720fda92478686f186414e651326c73/langchain_ibm-0.3.8-py3-none-any.whl", hash = "sha256:a3eb4465a50c59aa8f7253d2b500e4cf303c7e2bf6358487def9732abb51a5db", size = 27476 },
+]
+
+[[package]]
 name = "langchain-milvus"
 version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
@@ -4466,6 +4533,7 @@ dependencies = [
     { name = "google-search-results" },
     { name = "graph-retriever" },
     { name = "huggingface-hub", extra = ["inference"] },
+    { name = "ibm-watsonx-ai" },
     { name = "jq" },
     { name = "json-repair" },
     { name = "kubernetes" },
@@ -4483,6 +4551,7 @@ dependencies = [
     { name = "langchain-google-vertexai" },
     { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
+    { name = "langchain-ibm" },
     { name = "langchain-milvus" },
     { name = "langchain-mistralai" },
     { name = "langchain-mongodb" },
@@ -4601,6 +4670,7 @@ dev = [
     { name = "pytest-rerunfailures" },
     { name = "pytest-split" },
     { name = "pytest-sugar" },
+    { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "requests" },
     { name = "respx" },
@@ -4636,8 +4706,8 @@ requires-dist = [
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = "==0.5.23" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-core", specifier = "==0.7.1" },
-    { name = "composio-langchain", specifier = "==0.7.1" },
+    { name = "composio-core", specifier = "==0.7.12" },
+    { name = "composio-langchain", specifier = "==0.7.12" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "==0.102.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
@@ -4653,6 +4723,7 @@ requires-dist = [
     { name = "google-search-results", specifier = ">=2.4.1,<3.0.0" },
     { name = "graph-retriever", specifier = "==0.6.1" },
     { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
+    { name = "ibm-watsonx-ai", specifier = ">=1.3.1" },
     { name = "jq", specifier = "==1.8.0" },
     { name = "json-repair", specifier = "==0.30.3" },
     { name = "kubernetes", specifier = "==31.0.0" },
@@ -4670,6 +4741,7 @@ requires-dist = [
     { name = "langchain-google-vertexai", specifier = "==2.0.7" },
     { name = "langchain-graph-retriever", specifier = "==0.6.1" },
     { name = "langchain-groq", specifier = "==0.2.1" },
+    { name = "langchain-ibm", specifier = ">=0.3.8" },
     { name = "langchain-milvus", specifier = "==0.1.7" },
     { name = "langchain-mistralai", specifier = "==0.2.3" },
     { name = "langchain-mongodb", specifier = "==0.2.0" },
@@ -4768,6 +4840,7 @@ dev = [
     { name = "pytest-rerunfailures", specifier = ">=15.0" },
     { name = "pytest-split", specifier = ">=0.9.0" },
     { name = "pytest-sugar", specifier = ">=1.0.0" },
+    { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "pytest-xdist", specifier = ">=3.6.0" },
     { name = "requests", specifier = ">=2.32.0" },
     { name = "respx", specifier = ">=0.21.1" },
@@ -4816,6 +4889,7 @@ dependencies = [
     { name = "greenlet" },
     { name = "gunicorn" },
     { name = "httpx", extra = ["http2"] },
+    { name = "ibm-watsonx-ai" },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "json-repair" },
     { name = "jsonquerylang" },
@@ -4823,6 +4897,7 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-experimental" },
+    { name = "langchain-ibm" },
     { name = "langchainhub" },
     { name = "loguru" },
     { name = "mcp" },
@@ -4957,6 +5032,7 @@ requires-dist = [
     { name = "greenlet", specifier = ">=3.1.1" },
     { name = "gunicorn", specifier = ">=22.0.0,<24.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
+    { name = "ibm-watsonx-ai", specifier = ">=1.3.1" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
     { name = "jsonquerylang", specifier = ">=1.1.1" },
@@ -4964,6 +5040,7 @@ requires-dist = [
     { name = "langchain-community", specifier = "~=0.3.10" },
     { name = "langchain-core", specifier = "~=0.3.15" },
     { name = "langchain-experimental", specifier = ">=0.0.61,<1.0.0" },
+    { name = "langchain-ibm", specifier = ">=0.3.8" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
@@ -5361,6 +5438,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3a/05/a1dae3dffd1116099471c643b8924f5aa6524411dc6c63fdae648c4f1aca/loguru-0.7.3.tar.gz", hash = "sha256:19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6", size = 63559 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl", hash = "sha256:31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c", size = 61595 },
+]
+
+[[package]]
+name = "lomond"
+version = "0.3.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/9e/ef7813c910d4a893f2bc763ce9246269f55cc68db21dc1327e376d6a2d02/lomond-0.3.3.tar.gz", hash = "sha256:427936596b144b4ec387ead99aac1560b77c8a78107d3d49415d3abbe79acbd3", size = 28789 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/b1/02eebed49c754b01b17de7705caa8c4ceecfb4f926cdafc220c863584360/lomond-0.3.3-py2.py3-none-any.whl", hash = "sha256:df1dd4dd7b802a12b71907ab1abb08b8ce9950195311207579379eb3b1553de7", size = 35512 },
 ]
 
 [[package]]
@@ -10199,11 +10288,11 @@ wheels = [
 
 [[package]]
 name = "urllib3"
-version = "2.3.0"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/aa/63/e53da845320b757bf29ef6a9062f5c669fe997973f966045cb019c3f4b66/urllib3-2.3.0.tar.gz", hash = "sha256:f8c5449b3cf0861679ce7e0503c7b44b5ec981bec0d1d3795a07f1ba96f0204d", size = 307268 }
+sdist = { url = "https://files.pythonhosted.org/packages/36/dd/a6b232f449e1bc71802a5b7950dc3675d32c6dbc2a1bd6d71f065551adb6/urllib3-2.1.0.tar.gz", hash = "sha256:df7aa8afb0148fa78488e7899b2c59b5f4ffcfa82e6c54ccb9dd37c1d7b52d54", size = 263900 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/19/4ec628951a74043532ca2cf5d97b7b14863931476d117c471e8e2b1eb39f/urllib3-2.3.0-py3-none-any.whl", hash = "sha256:1cee9ad369867bfdbbb48b7dd50374c0967a0bb7710050facf0dd6911440e3df", size = 128369 },
+    { url = "https://files.pythonhosted.org/packages/96/94/c31f58c7a7f470d5665935262ebd7455c7e4c7782eb525658d3dbf4b9403/urllib3-2.1.0-py3-none-any.whl", hash = "sha256:55901e917a5896a349ff771be919f8bd99aff50b79fe58fec595eb37bbc56bb3", size = 104579 },
 ]
 
 [[package]]

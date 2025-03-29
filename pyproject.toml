@@ -66,8 +66,8 @@ dependencies = [
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]~=2.2.11",
-    "composio-langchain==0.7.1",
-    "composio-core==0.7.1",
+    "composio-langchain==0.7.12",
+    "composio-core==0.7.12",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -119,6 +119,8 @@ dependencies = [
     "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
+    "ibm-watsonx-ai>=1.3.1",
+    "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
 ]
 
@@ -167,6 +169,7 @@ dev = [
     "pydantic-ai>=0.0.19",
     "elevenlabs>=1.52.0",
     "faker>=37.0.0",
+    "pytest-timeout>=2.3.1",
 ]
 
 [tool.uv.sources]
@@ -229,6 +232,8 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
+timeout = 120
+tiemout_method = "thread"
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"

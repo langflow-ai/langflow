@@ -1,13 +1,8 @@
-import {
-  useDeleteGlobalVariables,
-  useGetGlobalVariables,
-} from "@/controllers/API/queries/variables";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
-import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useEffect } from "react";
-import DeleteConfirmationModal from "../../../../../modals/deleteConfirmationModal";
-import useAlertStore from "../../../../../stores/alertStore";
+import { useEffect, useMemo, useRef } from "react";
+
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -27,40 +22,70 @@ export default function InputGlobalComponent({
   editNode = false,
   placeholder,
   isToolMode = false,
+  hasRefreshButton = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const { data: globalVariables } = useGetGlobalVariables();
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );
 
-  useEffect(() => {
-    if (globalVariables && !disabled) {
-      if (
-        load_from_db &&
-        !globalVariables.find((variable) => variable.name === value)
-      ) {
-        handleOnNewValue(
-          { value: "", load_from_db: false },
-          { skipSnapshot: true },
-        );
-      }
-      if (
-        !load_from_db &&
-        value === "" &&
-        unavailableFields &&
-        Object.keys(unavailableFields).includes(display_name ?? "")
-      ) {
-        handleOnNewValue(
-          { value: unavailableFields[display_name ?? ""], load_from_db: true },
-          { skipSnapshot: true },
-        );
-      }
+  const initialLoadCompleted = useRef(false);
+
+  const valueExists = useMemo(() => {
+    return (
+      globalVariables?.some((variable) => variable.name === value) ?? false
+    );
+  }, [globalVariables, value]);
+
+  const unavailableField = useMemo(() => {
+    if (
+      display_name &&
+      unavailableFields &&
+      Object.keys(unavailableFields).includes(display_name)
+    ) {
+      return unavailableFields[display_name];
     }
-  }, [globalVariables, unavailableFields, disabled]);
+    return null;
+  }, [unavailableFields, display_name]);
+
+  useMemo(() => {
+    if (disabled) {
+      return;
+    }
+
+    if (load_from_db && globalVariables && !valueExists) {
+      handleOnNewValue(
+        { value: "", load_from_db: false },
+        { skipSnapshot: true },
+      );
+    }
+  }, [
+    globalVariables,
+    unavailableFields,
+    disabled,
+    load_from_db,
+    valueExists,
+    unavailableField,
+    value,
+    handleOnNewValue,
+  ]);
+
+  useEffect(() => {
+    if (initialLoadCompleted.current || disabled || unavailableField === null) {
+      return;
+    }
+
+    handleOnNewValue(
+      { value: unavailableField, load_from_db: true },
+      { skipSnapshot: true },
+    );
+
+    initialLoadCompleted.current = true;
+  }, [unavailableField, disabled, load_from_db, value, handleOnNewValue]);
 
   function handleDelete(key: string) {
-    if (value === key && load_from_db) {
-      handleOnNewValue({ value: "", load_from_db: false });
+    if (value === key) {
+      handleOnNewValue({ value: "", load_from_db: load_from_db });
     }
   }
 
@@ -95,13 +120,7 @@ export default function InputGlobalComponent({
           onConfirmDelete={() => handleDelete(option)}
         />
       )}
-      selectedOption={
-        load_from_db &&
-        globalVariables &&
-        globalVariables?.map((variable) => variable.name).includes(value ?? "")
-          ? value
-          : ""
-      }
+      selectedOption={load_from_db && valueExists ? value : ""}
       setSelectedOption={(value) => {
         handleOnNewValue({
           value: value,
@@ -115,6 +134,7 @@ export default function InputGlobalComponent({
         );
       }}
       isToolMode={isToolMode}
+      hasRefreshButton={hasRefreshButton}
     />
   );
 }

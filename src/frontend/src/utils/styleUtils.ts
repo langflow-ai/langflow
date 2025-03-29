@@ -6,6 +6,7 @@ import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
+import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
@@ -296,6 +297,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { WatsonxAiIcon } from "../icons/IBMWatsonx";
 import { IFixIcon } from "../icons/IFixIt";
 import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
@@ -732,6 +734,7 @@ export const nodeIconsLucide: iconsType = {
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   NotDiamond: NotDiamondIcon,
+  GridHorizontal: GridHorizontalIcon,
   Composio: ComposioIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
@@ -765,6 +768,7 @@ export const nodeIconsLucide: iconsType = {
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
+  WatsonxAI: WatsonxAiIcon,
   Share3: ShareIcon,
   Share4: Share2Icon,
   WikipediaAPIWrapper: SvgWikipedia,

@@ -613,6 +613,11 @@ async def flow_as_tool_websocket(
                             log_event(event, "↑")
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
+                        elif msg.get("type") == "response.create":
+                            if voice_config.use_elevenlabs:
+                                response = msg.setdefault("response", {})
+                                response["modalities"] = ["text"]
+                            await openai_ws.send(json.dumps(msg))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
                                 await openai_ws.send(message_text)

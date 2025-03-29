@@ -28,6 +28,8 @@
     --accent-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --destructive: 0 72% 51%; /* hsl(0, 72%, 51%) */
     --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --accent-amber: 26 90% 37%; /* hsl(26, 90%, 37%) */
+    --accent-amber-foreground: 26 90% 37%; /* hsl(26, 90%, 37%) */
     --ring: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --primary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
@@ -39,6 +41,7 @@
     --accent-emerald-hover: 152.4 76% 80.4%; /* hsl(152.4, 76%, 80.4%) */
     --accent-indigo: 226 100% 94%; /* hsl(226, 100%, 94%) */
     --accent-indigo-foreground: 243 75% 59%; /* hsl(243, 75%, 59%) */
+
     --accent-pink: 326 78% 95%; /* hsl(326, 78%, 95%) */
     --accent-pink-foreground: 333 71% 51%; /* hsl(333, 71%, 51%) */
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
@@ -46,9 +49,9 @@
 
     --jse-theme-color: hsl(240, 5%, 96%);
     --jse-theme-color-highlight: hsl(240, 6%, 90%);
-    --jse-menu-color: hsl(0, 0%, 0%);
+    --jse-menu-color: hsl(240, 6%, 90%);
     --jse-main-border: hsl(240, 6%, 90%);
-    --jse-background-color: hsl(0, 0%, 100%);
+    --jse-background-color: hsl(240, 5%, 96%);
     --jse-text-color: hsl(0, 0%, 0%);
     --jse-selection-background-color: hsl(240, 5%, 96%);
     --jse-selection-background-inactive-color: hsl(240, 6%, 90%);
@@ -188,10 +191,8 @@
 
     --zinc-foreground: 240 5.9% 90%;
 
-
-
     --accent-amber: 21.7 77.8% 26.5%;
-    --accent-amber-foreground: 26 90.5% 37.1%; 
+    --accent-amber-foreground: 26 90.5% 37.1%;
     --red-foreground: 0 90.6% 70.8%;
   }
 
@@ -230,12 +231,13 @@
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
-    --jse-theme-color: hsl(240, 6%, 10%) !important;
+    --jse-theme-color: hsl(240, 4%, 16%) !important;
     --jse-theme-color-highlight: hsl(240, 4%, 16%);
     --jse-panel-background: hsl(240, 4%, 16%);
-    --jse-menu-color: hsl(240, 6%, 90%);
+    --jse-menu-color: hsl(240, 5%, 26%);
+
     --jse-main-border: hsl(240, 5%, 26%);
-    --jse-background-color: hsl(0, 0%, 0%);
+    --jse-background-color: hsl(240, 4%, 16%);
     --jse-text-color: hsl(0, 0%, 100%);
     --jse-selection-background-color: hsl(240, 4%, 16%);
     --jse-selection-background-inactive-color: hsl(240, 5%, 26%);
@@ -444,7 +446,6 @@
     --slider-input-border: #d4d4d8;
 
     --zinc-foreground: 240 5.2% 33.9%;
-
 
     --accent-amber: 48 96.5% 88.8%;
     --accent-amber-foreground: 45.9 96.7% 64.5%;
