@@ -262,17 +262,7 @@ test(
 
     await page.getByText("Split Text", { exact: true }).click();
 
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
-    });
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
-      timeout: 1000,
-    });
-
-    await page.getByText("Freeze", { exact: true }).click();
+    await page.getByText("Freeze").first().click();
 
     await page.waitForTimeout(3000);
 

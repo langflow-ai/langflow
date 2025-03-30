@@ -37,4 +37,10 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   ) => set({ openaiVoices }),
   soundDetected: false,
   setSoundDetected: (soundDetected: boolean) => set({ soundDetected }),
+  isVoiceAssistantActive: false,
+  setIsVoiceAssistantActive: (isVoiceAssistantActive: boolean) =>
+    set({ isVoiceAssistantActive }),
+  newSessionCloseVoiceAssistant: false,
+  setNewSessionCloseVoiceAssistant: (newSessionCloseVoiceAssistant: boolean) =>
+    set({ newSessionCloseVoiceAssistant }),
 }));
