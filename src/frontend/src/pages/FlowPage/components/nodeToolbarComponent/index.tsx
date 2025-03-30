@@ -199,6 +199,14 @@ const NodeToolbarComponent = memo(
       });
     }, [isMinimal, showNode, data.id]);
 
+    useEffect(() => {
+      if (!isMinimal && !showNode) {
+        setShowNode(true);
+        updateNodeInternals(data.id);
+        return;
+      }
+    }, [isMinimal, showNode, data.id]);
+
     const handleungroup = useCallback(() => {
       if (isGroup) {
         takeSnapshot();
@@ -460,7 +468,7 @@ const NodeToolbarComponent = memo(
           {!hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
-              label="Freeze Path"
+              label="Freeze"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
