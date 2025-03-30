@@ -672,6 +672,20 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
+                {hasToolMode && (
+                  <SelectItem value="freezeAll">
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Freeze")
+                          ?.shortcut!
+                      }
+                      value={"Freeze"}
+                      icon={"FreezeAll"}
+                      dataTestId="freeze-path-button"
+                      style={`${frozen ? " text-ice" : ""} transition-all`}
+                    />
+                  </SelectItem>
+                )}
                 <SelectItem value="Download">
                   <ToolbarSelectItem
                     shortcut={

@@ -69,6 +69,7 @@ test(
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 1000,
     });
+    await page.getByTestId("more-options-modal").click();
 
     await page.getByText("Freeze").first().click();
 
