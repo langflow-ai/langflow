@@ -82,8 +82,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     value =
       (await page
@@ -188,8 +187,7 @@ test(
     await page.getByText("Close").last().click();
 
     await zoomOut(page, 2);
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(
