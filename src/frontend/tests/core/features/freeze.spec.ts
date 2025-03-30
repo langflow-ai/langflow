@@ -272,7 +272,7 @@ test(
       timeout: 1000,
     });
 
-    await page.getByText("Freeze", { exact: true }).click();
+    await page.getByText("Freeze", { exact: true }).first().click();
 
     await page.waitForTimeout(3000);
 
