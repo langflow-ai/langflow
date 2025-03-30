@@ -27,6 +27,7 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.dotdict import dotdict
 
 
@@ -156,6 +157,7 @@ class APIRequestComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="make_requests"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def _parse_json_value(self, value: Any) -> Any:
@@ -389,6 +391,7 @@ class APIRequestComponent(Component):
 
         # Process body using the new helper method
         processed_body = self._process_body(body)
+        redirection_history = []
 
         try:
             response = await client.request(
@@ -640,3 +643,12 @@ class APIRequestComponent(Component):
                 return {}  # Return empty dictionary instead of None
             return processed_headers
         return {}
+
+    async def as_dataframe(self) -> DataFrame:
+        """Convert the API response data into a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the API response data.
+        """
+        data = await self.make_requests()
+        return DataFrame(data)

@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-KQVLR",
+            "id": "Prompt-WNOHC",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,18 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-mzPNm",
+            "id": "Agent-INg7A",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-KQVLR{œdataTypeœ:œPromptœ,œidœ:œPrompt-KQVLRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-mzPNm{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-mzPNmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-KQVLR",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KQVLRœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-mzPNm",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-mzPNmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-WNOHC{œdataTypeœ:œPromptœ,œidœ:œPrompt-WNOHCœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-INg7A{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-INg7Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-WNOHC",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WNOHCœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-INg7A",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-INg7Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -34,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-zC2bp",
+            "id": "Prompt-d1yBl",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -42,18 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-PNvaZ",
+            "id": "Agent-xzdFp",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-zC2bp{œdataTypeœ:œPromptœ,œidœ:œPrompt-zC2bpœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-PNvaZ{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-PNvaZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-zC2bp",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-zC2bpœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-PNvaZ",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-PNvaZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-d1yBl{œdataTypeœ:œPromptœ,œidœ:œPrompt-d1yBlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-xzdFp{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-d1yBl",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-d1yBlœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-xzdFp",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-xzdFpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-PNvaZ",
+            "id": "Agent-xzdFp",
             "name": "response",
             "output_types": [
               "Message"
@@ -69,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "finance_agent_output",
-            "id": "Prompt-KQVLR",
+            "id": "Prompt-WNOHC",
             "inputTypes": [
               "Message",
               "Text"
@@ -77,11 +79,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-PNvaZ{œdataTypeœ:œAgentœ,œidœ:œAgent-PNvaZœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-KQVLR{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-KQVLRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-PNvaZ",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-PNvaZœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-KQVLR",
-        "targetHandle": "{œfieldNameœ: œfinance_agent_outputœ, œidœ: œPrompt-KQVLRœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-xzdFp{œdataTypeœ:œAgentœ,œidœ:œAgent-xzdFpœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-WNOHC{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-WNOHCœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-xzdFp",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-xzdFpœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-WNOHC",
+        "targetHandle": "{œfieldNameœ: œfinance_agent_outputœ, œidœ: œPrompt-WNOHCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -89,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ZyZgH",
+            "id": "ChatInput-EXrQ4",
             "name": "message",
             "output_types": [
               "Message"
@@ -97,18 +100,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-58C6Q",
+            "id": "Agent-mYTzY",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-ZyZgH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ZyZgHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-58C6Q{œfieldNameœ:œinput_valueœ,œidœ:œAgent-58C6Qœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-ZyZgH",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ZyZgHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-58C6Q",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-58C6Qœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-EXrQ4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-EXrQ4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-mYTzY{œfieldNameœ:œinput_valueœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-EXrQ4",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-EXrQ4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-mYTzY",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-mYTzYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -116,7 +120,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-b9wSh",
+            "id": "Prompt-f7d7X",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -124,18 +128,19 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-58C6Q",
+            "id": "Agent-mYTzY",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-b9wSh{œdataTypeœ:œPromptœ,œidœ:œPrompt-b9wShœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-58C6Q{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-58C6Qœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-b9wSh",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-b9wShœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-58C6Q",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-58C6Qœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-f7d7X{œdataTypeœ:œPromptœ,œidœ:œPrompt-f7d7Xœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-mYTzY{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-f7d7X",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-f7d7Xœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-mYTzY",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-mYTzYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -143,7 +148,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-58C6Q",
+            "id": "Agent-mYTzY",
             "name": "response",
             "output_types": [
               "Message"
@@ -151,18 +156,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-PNvaZ",
+            "id": "Agent-xzdFp",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-58C6Q{œdataTypeœ:œAgentœ,œidœ:œAgent-58C6Qœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-PNvaZ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-PNvaZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-58C6Q",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-58C6Qœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-PNvaZ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-PNvaZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-mYTzY{œdataTypeœ:œAgentœ,œidœ:œAgent-mYTzYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-xzdFp{œfieldNameœ:œinput_valueœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-mYTzY",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-mYTzYœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-xzdFp",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-xzdFpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -170,7 +176,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-58C6Q",
+            "id": "Agent-mYTzY",
             "name": "response",
             "output_types": [
               "Message"
@@ -178,7 +184,7 @@
           },
           "targetHandle": {
             "fieldName": "research_agent_output",
-            "id": "Prompt-KQVLR",
+            "id": "Prompt-WNOHC",
             "inputTypes": [
               "Message",
               "Text"
@@ -186,18 +192,20 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-58C6Q{œdataTypeœ:œAgentœ,œidœ:œAgent-58C6Qœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-KQVLR{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-KQVLRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-58C6Q",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-58C6Qœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-KQVLR",
-        "targetHandle": "{œfieldNameœ: œresearch_agent_outputœ, œidœ: œPrompt-KQVLRœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-mYTzY{œdataTypeœ:œAgentœ,œidœ:œAgent-mYTzYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-WNOHC{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-WNOHCœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-mYTzY",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-mYTzYœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-WNOHC",
+        "targetHandle": "{œfieldNameœ: œresearch_agent_outputœ, œidœ: œPrompt-WNOHCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-idZ9Q",
+            "id": "CalculatorComponent-9O7Ap",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -205,25 +213,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-mzPNm",
+            "id": "Agent-INg7A",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-idZ9Q{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-idZ9Qœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-mzPNm{œfieldNameœ:œtoolsœ,œidœ:œAgent-mzPNmœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-idZ9Q",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-idZ9Qœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-mzPNm",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-mzPNmœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorComponent-9O7Ap{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-9O7Apœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-INg7A{œfieldNameœ:œtoolsœ,œidœ:œAgent-INg7Aœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CalculatorComponent-9O7Ap",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-9O7Apœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-INg7A",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-INg7Aœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-uJAk8",
+            "id": "YfinanceComponent-Adjq6",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -231,25 +241,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-PNvaZ",
+            "id": "Agent-xzdFp",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-uJAk8{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-uJAk8œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-PNvaZ{œfieldNameœ:œtoolsœ,œidœ:œAgent-PNvaZœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "YfinanceComponent-uJAk8",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-uJAk8œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-PNvaZ",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PNvaZœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-YfinanceComponent-Adjq6{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-Adjq6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-xzdFp{œfieldNameœ:œtoolsœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "YfinanceComponent-Adjq6",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-Adjq6œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-xzdFp",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-xzdFpœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-UfEaB",
+            "id": "TavilySearchComponent-6ezaX",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -257,24 +269,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-58C6Q",
+            "id": "Agent-mYTzY",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-UfEaB{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-UfEaBœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-58C6Q{œfieldNameœ:œtoolsœ,œidœ:œAgent-58C6Qœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-UfEaB",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-UfEaBœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-58C6Q",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-58C6Qœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-TavilySearchComponent-6ezaX{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-6ezaXœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-mYTzY{œfieldNameœ:œtoolsœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "TavilySearchComponent-6ezaX",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-6ezaXœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-mYTzY",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-mYTzYœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-mzPNm",
+            "id": "Agent-INg7A",
             "name": "response",
             "output_types": [
               "Message"
@@ -282,7 +297,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-6kq7Z",
+            "id": "ChatOutput-rF4Qx",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -291,11 +306,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__Agent-mzPNm{œdataTypeœ:œAgentœ,œidœ:œAgent-mzPNmœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6kq7Z{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6kq7Zœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "Agent-mzPNm",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-mzPNmœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-6kq7Z",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6kq7Zœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-INg7A{œdataTypeœ:œAgentœ,œidœ:œAgent-INg7Aœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rF4Qx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rF4Qxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-INg7A",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-INg7Aœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-rF4Qx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rF4Qxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -303,7 +319,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Finance Agent",
-          "id": "Agent-PNvaZ",
+          "id": "Agent-xzdFp",
           "node": {
             "base_classes": [
               "Message"
@@ -453,7 +469,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -902,7 +918,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-PNvaZ",
+        "id": "Agent-xzdFp",
         "measured": {
           "height": 650,
           "width": 320
@@ -923,7 +939,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Analysis & Editor Agent",
-          "id": "Agent-mzPNm",
+          "id": "Agent-INg7A",
           "node": {
             "base_classes": [
               "Message"
@@ -1073,7 +1089,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1522,7 +1538,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-mzPNm",
+        "id": "Agent-INg7A",
         "measured": {
           "height": 650,
           "width": 320
@@ -1543,7 +1559,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-b9wSh",
+          "id": "Prompt-f7d7X",
           "node": {
             "base_classes": [
               "Message"
@@ -1561,7 +1577,7 @@
             "field_order": [
               "template"
             ],
-            "frozen": true,
+            "frozen": false,
             "full_path": null,
             "icon": "prompts",
             "is_composition": null,
@@ -1655,7 +1671,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-b9wSh",
+        "id": "Prompt-f7d7X",
         "measured": {
           "height": 260,
           "width": 320
@@ -1676,7 +1692,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-zC2bp",
+          "id": "Prompt-d1yBl",
           "node": {
             "base_classes": [
               "Message"
@@ -1788,7 +1804,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-zC2bp",
+        "id": "Prompt-d1yBl",
         "measured": {
           "height": 260,
           "width": 320
@@ -1809,7 +1825,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-KQVLR",
+          "id": "Prompt-WNOHC",
           "node": {
             "base_classes": [
               "Message"
@@ -1970,7 +1986,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-KQVLR",
+        "id": "Prompt-WNOHC",
         "measured": {
           "height": 433,
           "width": 320
@@ -1989,7 +2005,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-ZyZgH",
+          "id": "ChatInput-EXrQ4",
           "node": {
             "base_classes": [
               "Message"
@@ -2012,7 +2028,7 @@
               "chat_icon",
               "text_color"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.0.19.post2",
@@ -2096,7 +2112,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -2135,6 +2151,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -2271,7 +2288,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-ZyZgH",
+        "id": "ChatInput-EXrQ4",
         "measured": {
           "height": 234,
           "width": 320
@@ -2290,7 +2307,7 @@
       },
       {
         "data": {
-          "id": "note-yWlba",
+          "id": "note-Lit1C",
           "node": {
             "description": "# Sequential Tasks Agents\n\n## Overview\nThis flow demonstrates how to chain multiple AI agents for comprehensive research and analysis. Each agent specializes in different aspects of the research process, building upon the previous agent's work.\n\n## How to Use the Flow\n\n1. **Input Your Query** 🎯\n   - Be specific and clear\n   - Include key aspects you want analyzed\n   - Examples:\n     ```\n     Good: \"Should I invest in Tesla (TSLA)? Focus on AI development impact\"\n     Bad: \"Tell me about Tesla\"\n     ```\n\n2. **Research Agent Process** 🔍\n   - Utilizes Tavily Search for comprehensive research\n\n\n3. **Specialized Analysis** 📊\n   - Each agent adds unique value:\n     ```\n     Research Agent → Deep Research & Context\n         ↓\n     Finance Agent → Data Analysis & Metrics\n         ↓\n     Editor Agent → Final Synthesis & Report\n     ```\n\n4. **Output Format** 📝\n   - Structured report\n   - Embedded images and charts\n   - Data-backed insights\n   - Clear recommendations\n\n## Pro Tips\n\n### Query Construction\n- Include specific points of interest\n- Mention required metrics or data points\n- Specify time frames if relevant\n\n### Flow Customization\n- Modify agent prompts for different use cases\n- Add or remove tools as needed\n\n## Common Applications\n- Investment Research\n- Market Analysis\n- Competitive Intelligence\n- Industry Reports\n- Technology Impact Studies\n\n⚡ **Best Practice**: Start with a test query to understand the flow's capabilities before running complex analyses.\n\n---\n*Note: This flow template uses financial analysis as an example but can be adapted for any research-intensive task requiring multiple perspectives and data sources.*",
             "display_name": "",
@@ -2301,14 +2318,14 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-yWlba",
+        "id": "note-Lit1C",
         "measured": {
           "height": 800,
           "width": 601
         },
         "position": {
           "x": -2122.739127560837,
-          "y": -1302.6582482086806
+          "y": -1305.2541787135094
         },
         "positionAbsolute": {
           "x": -2122.739127560837,
@@ -2325,7 +2342,7 @@
       },
       {
         "data": {
-          "id": "note-epw2j",
+          "id": "note-aqqVW",
           "node": {
             "description": "## What Are Sequential Task Agents?\nA system where multiple AI agents work in sequence, each specializing in specific tasks and passing their output to the next agent in the chain. Think of it as an assembly line where each agent adds value to the final result.\n\n## How It Works\n1. **First Agent** → **Second Agent** → **Third Agent** → **Final Output**\n   - Each agent receives input from the previous one\n   - Processes and enhances the information\n   - Passes refined output forward\n\n## Key Benefits\n- **Specialization**: Each agent focuses on specific tasks\n- **Progressive Refinement**: Information gets enhanced at each step\n- **Structured Output**: Final result combines multiple perspectives\n- **Quality Control**: Each agent validates and improves previous work\n\n## Building Your Own Sequence\n1. **Plan Your Chain**\n   - Identify distinct tasks\n   - Determine logical order\n   - Define input/output requirements\n\n2. **Configure Agents**\n   - Give each agent clear instructions\n   - Ensure compatible outputs/inputs\n   - Set appropriate tools for each agent\n\n3. **Connect the Flow**\n   - Link agents in proper order\n   - Test data flow between agents\n   - Verify final output format\n\n## Example Applications\n- Research → Analysis → Report Writing\n- Data Collection → Processing → Visualization\n- Content Research → Writing → Editing\n- Market Analysis → Financial Review → Investment Advice\n\n⭐ **Pro Tip**: The strength of sequential agents comes from how well they complement each other's capabilities.\n\nThis template uses financial analysis as an example, but you can adapt it for any multi-step process requiring different expertise at each stage.",
             "display_name": "",
@@ -2338,14 +2355,14 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-epw2j",
+        "id": "note-aqqVW",
         "measured": {
           "height": 800,
           "width": 601
         },
         "position": {
-          "x": -1456.0688717707517,
-          "y": -1916.6876704866322
+          "x": -1423.4595108457968,
+          "y": -1965.6017118740644
         },
         "positionAbsolute": {
           "x": -1456.0688717707517,
@@ -2364,7 +2381,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Researcher Agent",
-          "id": "Agent-58C6Q",
+          "id": "Agent-mYTzY",
           "node": {
             "base_classes": [
               "Message"
@@ -2404,7 +2421,7 @@
               "template",
               "add_current_date_tool"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "bot",
             "legacy": false,
             "lf_version": "1.0.19.post2",
@@ -2514,7 +2531,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -2963,7 +2980,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-58C6Q",
+        "id": "Agent-mYTzY",
         "measured": {
           "height": 650,
           "width": 320
@@ -2982,27 +2999,27 @@
       },
       {
         "data": {
-          "id": "note-xVdpE",
+          "id": "note-VDGf8",
           "node": {
-            "description": "## Get your API key at [https://tavily.com](https://tavily.com)\n",
+            "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
             "display_name": "",
             "documentation": "",
             "template": {
-              "backgroundColor": "rose"
+              "backgroundColor": "lime"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 324,
-        "id": "note-xVdpE",
+        "id": "note-VDGf8",
         "measured": {
           "height": 324,
           "width": 348
         },
         "position": {
-          "x": -1144.3898055225054,
-          "y": -844.3506743985376
+          "x": -1152.542145753744,
+          "y": -722.0655709299575
         },
         "positionAbsolute": {
           "x": -1144.3898055225054,
@@ -3019,7 +3036,7 @@
       },
       {
         "data": {
-          "id": "note-EMxHt",
+          "id": "note-lux0a",
           "node": {
             "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA/SambaNova: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
             "display_name": "",
@@ -3032,14 +3049,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-EMxHt",
+        "id": "note-lux0a",
         "measured": {
           "height": 324,
           "width": 371
         },
         "position": {
-          "x": -739.4383746675942,
-          "y": -1672.0874594411662
+          "x": -736.720927923848,
+          "y": -1707.414267109867
         },
         "positionAbsolute": {
           "x": -739.4383746675942,
@@ -3056,14 +3073,16 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-uJAk8",
+          "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+          "display_name": "Yahoo Finance",
+          "id": "YfinanceComponent-Adjq6",
           "node": {
             "base_classes": [
               "Data",
+              "DataFrame",
               "Message"
             ],
             "beta": false,
-            "category": "tools",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
@@ -3077,20 +3096,22 @@
             ],
             "frozen": false,
             "icon": "trending-up",
-            "key": "YfinanceComponent",
             "legacy": false,
             "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
@@ -3098,7 +3119,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.007568328950209746,
             "template": {
               "_type": "Component",
               "code": {
@@ -3117,12 +3137,13 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport pprint\nfrom enum import Enum\n\nimport yfinance as yf\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DropdownInput, IntInput, MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass YahooFinanceMethod(Enum):\n    GET_INFO = \"get_info\"\n    GET_NEWS = \"get_news\"\n    GET_ACTIONS = \"get_actions\"\n    GET_ANALYSIS = \"get_analysis\"\n    GET_BALANCE_SHEET = \"get_balance_sheet\"\n    GET_CALENDAR = \"get_calendar\"\n    GET_CASHFLOW = \"get_cashflow\"\n    GET_INSTITUTIONAL_HOLDERS = \"get_institutional_holders\"\n    GET_RECOMMENDATIONS = \"get_recommendations\"\n    GET_SUSTAINABILITY = \"get_sustainability\"\n    GET_MAJOR_HOLDERS = \"get_major_holders\"\n    GET_MUTUALFUND_HOLDERS = \"get_mutualfund_holders\"\n    GET_INSIDER_PURCHASES = \"get_insider_purchases\"\n    GET_INSIDER_TRANSACTIONS = \"get_insider_transactions\"\n    GET_INSIDER_ROSTER_HOLDERS = \"get_insider_roster_holders\"\n    GET_DIVIDENDS = \"get_dividends\"\n    GET_CAPITAL_GAINS = \"get_capital_gains\"\n    GET_SPLITS = \"get_splits\"\n    GET_SHARES = \"get_shares\"\n    GET_FAST_INFO = \"get_fast_info\"\n    GET_SEC_FILINGS = \"get_sec_filings\"\n    GET_RECOMMENDATIONS_SUMMARY = \"get_recommendations_summary\"\n    GET_UPGRADES_DOWNGRADES = \"get_upgrades_downgrades\"\n    GET_EARNINGS = \"get_earnings\"\n    GET_INCOME_STMT = \"get_income_stmt\"\n\n\nclass YahooFinanceSchema(BaseModel):\n    symbol: str = Field(..., description=\"The stock symbol to retrieve data for.\")\n    method: YahooFinanceMethod = Field(YahooFinanceMethod.GET_INFO, description=\"The type of data to retrieve.\")\n    num_news: int | None = Field(5, description=\"The number of news articles to retrieve.\")\n\n\nclass YfinanceComponent(Component):\n    display_name = \"Yahoo Finance\"\n    description = \"\"\"Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \\\nto access financial data and market information from Yahoo Finance.\"\"\"\n    icon = \"trending-up\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"symbol\",\n            display_name=\"Stock Symbol\",\n            info=\"The stock symbol to retrieve data for (e.g., AAPL, GOOG).\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Data Method\",\n            info=\"The type of data to retrieve.\",\n            options=list(YahooFinanceMethod),\n            value=\"get_news\",\n        ),\n        IntInput(\n            name=\"num_news\",\n            display_name=\"Number of News\",\n            info=\"The number of news articles to retrieve (only applicable for get_news).\",\n            value=5,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def run_model(self) -> list[Data]:\n        return self.fetch_content()\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = \"\"\n        for item in data:\n            result_string += item.text + \"\\n\"\n        self.status = result_string\n        return Message(text=result_string)\n\n    def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:\n        try:\n            if method == YahooFinanceMethod.GET_INFO:\n                result = ticker.info\n            elif method == YahooFinanceMethod.GET_NEWS:\n                result = ticker.news[:num_news]\n            else:\n                result = getattr(ticker, method.value)()\n            return pprint.pformat(result)\n        except Exception as e:\n            error_message = f\"Error retrieving data: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            return self._yahoo_finance_tool(\n                self.symbol,\n                YahooFinanceMethod(self.method),\n                self.num_news,\n            )\n        except ToolException:\n            raise\n        except Exception as e:\n            error_message = f\"Unexpected error: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def _yahoo_finance_tool(\n        self,\n        symbol: str,\n        method: YahooFinanceMethod,\n        num_news: int | None = 5,\n    ) -> list[Data]:\n        ticker = yf.Ticker(symbol)\n        result = self._fetch_yfinance_data(ticker, method, num_news)\n\n        if method == YahooFinanceMethod.GET_NEWS:\n            data_list = [\n                Data(text=f\"{article['title']}: {article['link']}\", data=article)\n                for article in ast.literal_eval(result)\n            ]\n        else:\n            data_list = [Data(text=result, data={\"result\": result})]\n\n        return data_list\n"
+                "value": "import ast\nimport pprint\nfrom enum import Enum\n\nimport yfinance as yf\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DropdownInput, IntInput, MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\n\nclass YahooFinanceMethod(Enum):\n    GET_INFO = \"get_info\"\n    GET_NEWS = \"get_news\"\n    GET_ACTIONS = \"get_actions\"\n    GET_ANALYSIS = \"get_analysis\"\n    GET_BALANCE_SHEET = \"get_balance_sheet\"\n    GET_CALENDAR = \"get_calendar\"\n    GET_CASHFLOW = \"get_cashflow\"\n    GET_INSTITUTIONAL_HOLDERS = \"get_institutional_holders\"\n    GET_RECOMMENDATIONS = \"get_recommendations\"\n    GET_SUSTAINABILITY = \"get_sustainability\"\n    GET_MAJOR_HOLDERS = \"get_major_holders\"\n    GET_MUTUALFUND_HOLDERS = \"get_mutualfund_holders\"\n    GET_INSIDER_PURCHASES = \"get_insider_purchases\"\n    GET_INSIDER_TRANSACTIONS = \"get_insider_transactions\"\n    GET_INSIDER_ROSTER_HOLDERS = \"get_insider_roster_holders\"\n    GET_DIVIDENDS = \"get_dividends\"\n    GET_CAPITAL_GAINS = \"get_capital_gains\"\n    GET_SPLITS = \"get_splits\"\n    GET_SHARES = \"get_shares\"\n    GET_FAST_INFO = \"get_fast_info\"\n    GET_SEC_FILINGS = \"get_sec_filings\"\n    GET_RECOMMENDATIONS_SUMMARY = \"get_recommendations_summary\"\n    GET_UPGRADES_DOWNGRADES = \"get_upgrades_downgrades\"\n    GET_EARNINGS = \"get_earnings\"\n    GET_INCOME_STMT = \"get_income_stmt\"\n\n\nclass YahooFinanceSchema(BaseModel):\n    symbol: str = Field(..., description=\"The stock symbol to retrieve data for.\")\n    method: YahooFinanceMethod = Field(YahooFinanceMethod.GET_INFO, description=\"The type of data to retrieve.\")\n    num_news: int | None = Field(5, description=\"The number of news articles to retrieve.\")\n\n\nclass YfinanceComponent(Component):\n    display_name = \"Yahoo Finance\"\n    description = \"\"\"Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \\\nto access financial data and market information from Yahoo Finance.\"\"\"\n    icon = \"trending-up\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"symbol\",\n            display_name=\"Stock Symbol\",\n            info=\"The stock symbol to retrieve data for (e.g., AAPL, GOOG).\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Data Method\",\n            info=\"The type of data to retrieve.\",\n            options=list(YahooFinanceMethod),\n            value=\"get_news\",\n        ),\n        IntInput(\n            name=\"num_news\",\n            display_name=\"Number of News\",\n            info=\"The number of news articles to retrieve (only applicable for get_news).\",\n            value=5,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def run_model(self) -> list[Data]:\n        return self.fetch_content()\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = \"\"\n        for item in data:\n            result_string += item.text + \"\\n\"\n        self.status = result_string\n        return Message(text=result_string)\n\n    def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:\n        try:\n            if method == YahooFinanceMethod.GET_INFO:\n                result = ticker.info\n            elif method == YahooFinanceMethod.GET_NEWS:\n                result = ticker.news[:num_news]\n            else:\n                result = getattr(ticker, method.value)()\n            return pprint.pformat(result)\n        except Exception as e:\n            error_message = f\"Error retrieving data: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            return self._yahoo_finance_tool(\n                self.symbol,\n                YahooFinanceMethod(self.method),\n                self.num_news,\n            )\n        except ToolException:\n            raise\n        except Exception as e:\n            error_message = f\"Unexpected error: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def _yahoo_finance_tool(\n        self,\n        symbol: str,\n        method: YahooFinanceMethod,\n        num_news: int | None = 5,\n    ) -> list[Data]:\n        ticker = yf.Ticker(symbol)\n        result = self._fetch_yfinance_data(ticker, method, num_news)\n\n        if method == YahooFinanceMethod.GET_NEWS:\n            data_list = [\n                Data(text=f\"{article['title']}: {article['link']}\", data=article)\n                for article in ast.literal_eval(result)\n            ]\n        else:\n            data_list = [Data(text=result, data={\"result\": result})]\n\n        return data_list\n\n    def as_dataframe(self) -> DataFrame:\n        \"\"\"Convert the Yahoo search results to a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the search results.\n        \"\"\"\n        data = self.fetch_content()\n        return DataFrame(data)\n"
               },
               "method": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Data Method",
                 "dynamic": false,
                 "info": "The type of data to retrieve.",
@@ -3154,6 +3175,7 @@
                   "get_earnings",
                   "get_income_stmt"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -3239,37 +3261,56 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -3283,6 +3324,7 @@
                   {
                     "description": "fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
                     "name": "YfinanceComponent-fetch_content",
+                    "status": true,
                     "tags": [
                       "YfinanceComponent-fetch_content"
                     ]
@@ -3290,8 +3332,17 @@
                   {
                     "description": "fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
                     "name": "YfinanceComponent-fetch_content_text",
+                    "status": true,
                     "tags": [
                       "YfinanceComponent-fetch_content_text"
+                    ]
+                  },
+                  {
+                    "description": "as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "name": "YfinanceComponent-as_dataframe",
+                    "status": true,
+                    "tags": [
+                      "YfinanceComponent-as_dataframe"
                     ]
                   }
                 ]
@@ -3303,7 +3354,7 @@
           "type": "YfinanceComponent"
         },
         "dragging": true,
-        "id": "YfinanceComponent-uJAk8",
+        "id": "YfinanceComponent-Adjq6",
         "measured": {
           "height": 519,
           "width": 320
@@ -3317,7 +3368,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-idZ9Q",
+          "id": "CalculatorComponent-9O7Ap",
           "node": {
             "base_classes": [
               "Data"
@@ -3492,21 +3543,21 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-idZ9Q",
+        "id": "CalculatorComponent-9O7Ap",
         "measured": {
           "height": 334,
           "width": 320
         },
         "position": {
           "x": 418.5430081507146,
-          "y": -618.940894040711
+          "y": -498.99999708804125
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "TavilySearchComponent-UfEaB",
+          "id": "TavilySearchComponent-6ezaX",
           "node": {
             "base_classes": [
               "Data",
@@ -3543,6 +3594,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -3564,7 +3616,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3572,7 +3624,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "TAVILY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -3751,6 +3803,7 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
@@ -3760,9 +3813,10 @@
                       "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
@@ -3772,9 +3826,10 @@
                       "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
@@ -3784,7 +3839,20 @@
                       "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -3841,21 +3909,21 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-UfEaB",
+        "id": "TavilySearchComponent-6ezaX",
         "measured": {
           "height": 437,
           "width": 320
         },
         "position": {
-          "x": -1138.848513020278,
-          "y": -764.5604109436156
+          "x": -1141.5659597640242,
+          "y": -555.3170116751562
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-6kq7Z",
+          "id": "ChatOutput-rF4Qx",
           "node": {
             "base_classes": [
               "Message"
@@ -4150,7 +4218,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-6kq7Z",
+        "id": "ChatOutput-rF4Qx",
         "measured": {
           "height": 66,
           "width": 192
@@ -4164,18 +4232,16 @@
       }
     ],
     "viewport": {
-      "x": 556.7510301801152,
-      "y": 940.5287846680051,
-      "zoom": 0.43409522578672
+      "x": 777.2369417602284,
+      "y": 881.5715494830567,
+      "zoom": 0.37106613302179997
     }
   },
   "description": "This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence. By adhering to this structured order, the Agent ensures that each task is completed efficiently and effectively, optimizing overall performance and maintaining a high level of accuracy.",
   "endpoint_name": null,
-  "gradient": "1",
-  "icon": "ListChecks",
-  "id": "9a7ffc1e-5cbb-4f16-8226-2b68390a4228",
+  "id": "98e71965-2948-4541-90cc-15352236491c",
   "is_component": false,
-  "last_tested_version": "1.1.5",
+  "last_tested_version": "1.2.0",
   "name": "Sequential Tasks Agents",
   "tags": [
     "assistants",
