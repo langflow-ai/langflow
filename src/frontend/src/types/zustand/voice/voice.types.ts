@@ -31,4 +31,10 @@ export type VoiceStoreType = {
   ) => void;
   soundDetected: boolean;
   setSoundDetected: (soundDetected: boolean) => void;
+  isVoiceAssistantActive: boolean;
+  setIsVoiceAssistantActive: (isVoiceAssistantActive: boolean) => void;
+  newSessionCloseVoiceAssistant: boolean;
+  setNewSessionCloseVoiceAssistant: (
+    newSessionCloseVoiceAssistant: boolean,
+  ) => void;
 };

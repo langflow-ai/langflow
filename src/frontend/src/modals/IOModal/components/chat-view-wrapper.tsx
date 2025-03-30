@@ -91,30 +91,23 @@ export const ChatViewWrapper = ({
           {!playgroundPage && <Separator orientation="vertical" />}
         </div>
       </div>
-      <div
-        className={cn(
-          visibleSession ? "h-[95%]" : "h-full",
-          sidebarOpen
-            ? "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
-            : "",
-        )}
-      >
-        {messagesFetched && (
-          <ChatView
-            focusChat={sessionId}
-            sendMessage={sendMessage}
-            visibleSession={visibleSession}
-            closeChat={
-              !canvasOpen
-                ? undefined
-                : () => {
-                    setOpen(false);
-                  }
-            }
-            playgroundPage={playgroundPage}
-          />
-        )}
-      </div>
+
+      {messagesFetched && (
+        <ChatView
+          focusChat={sessionId}
+          sendMessage={sendMessage}
+          visibleSession={visibleSession}
+          closeChat={
+            !canvasOpen
+              ? undefined
+              : () => {
+                  setOpen(false);
+                }
+          }
+          playgroundPage={playgroundPage}
+          sidebarOpen={sidebarOpen}
+        />
+      )}
     </div>
   );
 };

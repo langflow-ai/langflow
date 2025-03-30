@@ -37,6 +37,7 @@ interface SettingsVoiceModalProps {
   handleClickSaveOpenAIApiKey: (openaiApiKey: string) => void;
   isEditingOpenAIKey: boolean;
   setIsEditingOpenAIKey: (isEditingOpenAIKey: boolean) => void;
+  isPlayingRef: React.MutableRefObject<boolean>;
 }
 
 const SettingsVoiceModal = ({
@@ -50,6 +51,7 @@ const SettingsVoiceModal = ({
   handleClickSaveOpenAIApiKey,
   isEditingOpenAIKey,
   setIsEditingOpenAIKey,
+  isPlayingRef,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
@@ -147,6 +149,7 @@ const SettingsVoiceModal = ({
   };
 
   const onOpenChangeDropdownMenu = (open: boolean) => {
+    isPlayingRef.current = false;
     setOpen(open);
     setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey);
   };
