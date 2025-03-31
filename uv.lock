@@ -4045,12 +4045,9 @@ dependencies = [
     { name = "langchain-community" },
     { name = "numpy" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "astrapy", specifier = ">=2.0.1,<3.0.0" },
-    { name = "langchain-community", specifier = ">=0.3.1" },
-    { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/0f/3c/e8cd9e7a091e5c9f459856b6f7270ae56f8b84ccf953c16506f3f0c3a276/langchain_astradb-0.6.0.tar.gz", hash = "sha256:5254a85923aa3b0a5850277aa467c3a281f6bafd9b6e1454de6c66c4062ad6d8", size = 64975 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/d3/b540e6639d8e4f0907c6b9c9226e8f92756bfaeff6b5be58eadb2aed3a72/langchain_astradb-0.6.0-py3-none-any.whl", hash = "sha256:dc5886b29e50f24d6ab5356fdda6aa8b3e5b8c718e2493c8f263d9ecef42d9b4", size = 69654 },
 ]
 
 [[package]]
@@ -4671,7 +4668,7 @@ requires-dist = [
     { name = "kubernetes", specifier = "==31.0.0" },
     { name = "langchain", specifier = "==0.3.10" },
     { name = "langchain-anthropic", specifier = "==0.3.0" },
-    { name = "langchain-astradb", specifier = "==0.6.0" },
+    { name = "langchain-astradb", specifier = "~=0.6.0" },
     { name = "langchain-aws", specifier = "==0.2.7" },
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
