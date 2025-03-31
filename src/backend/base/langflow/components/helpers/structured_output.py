@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING, cast
 
-from langchain.output_parsers import PydanticOutputParser
-from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
@@ -197,8 +195,3 @@ class StructuredOutputComponent(Component):
         if isinstance(output, list):
             return DataFrame(data=output)
         return DataFrame(data=[output])
-
-    def is_last_pydantic_output_parser(self, llm_with_structured_output: Runnable) -> bool:
-        return isinstance(llm_with_structured_output.last, PydanticOutputParser) and not issubclass(
-            llm_with_structured_output.last.__class__, PydanticOutputParser
-        )
