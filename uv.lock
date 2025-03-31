@@ -4039,7 +4039,7 @@ wheels = [
 [[package]]
 name = "langchain-astradb"
 version = "0.6.0"
-source = { directory = "../langchain-datastax/libs/astradb" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astrapy" },
     { name = "langchain-community" },
