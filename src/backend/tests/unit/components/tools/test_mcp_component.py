@@ -209,7 +209,10 @@ class TestMCPSseClient:
     async def test_connect_to_server(self, sse_client):
         """Test connecting to server via SSE."""
         # Mock the pre_check_redirect first
-        with patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"):
+        with (
+            patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"),
+            patch.object(sse_client, "validate_url", return_value=(True, "")),
+        ):
             # Create mock for sse_client context manager
             mock_sse = AsyncMock()
             mock_write = AsyncMock()
@@ -245,11 +248,22 @@ class TestMCPSseClient:
 
     async def test_connect_timeout(self, sse_client):
         """Test connection timeout handling."""
+        # Set max_retries to 1 to avoid multiple retry attempts
+        sse_client.max_retries = 1
+
         with (
             patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"),
+            patch.object(sse_client, "validate_url", return_value=(True, "")),  # Mock URL validation
             patch.object(sse_client, "_connect_with_timeout") as mock_connect,
         ):
             mock_connect.side_effect = asyncio.TimeoutError()
 
-            with pytest.raises(TimeoutError, match="Connection to http://test.url timed out after 1 seconds"):
+            # Expect ConnectionError instead of TimeoutError
+            with pytest.raises(
+                ConnectionError,
+                match=(
+                    "Failed to connect after 1 attempts. "
+                    "Last error: Connection to http://test.url timed out after 1 seconds"
+                ),
+            ):
                 await sse_client.connect_to_server("http://test.url", {}, timeout_seconds=1)
