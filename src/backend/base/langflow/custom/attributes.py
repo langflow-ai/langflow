@@ -33,6 +33,12 @@ def getattr_return_bool(value):
     return None
 
 
+def getattr_return_int(value):
+    if isinstance(value, int):
+        return value
+    return None
+
+
 def getattr_return_list_of_str(value):
     if isinstance(value, list):
         return [str(val) for val in value]
@@ -63,6 +69,7 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "beta": getattr_return_bool,
     "legacy": getattr_return_bool,
     "documentation": getattr_return_str,
+    "priority": getattr_return_int,
     "icon": validate_icon,
     "minimized": getattr_return_bool,
     "frozen": getattr_return_bool,
