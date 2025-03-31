@@ -347,7 +347,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASSEMBLYAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -520,7 +520,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1654,7 +1654,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -3169,7 +3169,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASSEMBLYAI_API_KEY"
               },
               "audio_file": {
                 "_input_type": "FileInput",
