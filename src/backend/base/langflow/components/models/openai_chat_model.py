@@ -102,17 +102,52 @@ class OpenAIModelComponent(LCModelComponent):
         timeout = self.timeout
 
         api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None
-        output = ChatOpenAI(
-            max_tokens=max_tokens or None,
-            model_kwargs=model_kwargs,
-            model=model_name,
-            base_url=openai_api_base,
-            api_key=api_key,
-            temperature=temperature if temperature is not None else 0.1,
-            seed=seed,
-            max_retries=max_retries,
-            request_timeout=timeout,
-        )
+
+        # Prepare arguments for ChatOpenAI, excluding temperature initially
+        chat_openai_kwargs = {
+            "max_tokens": max_tokens or None,
+            "model_kwargs": model_kwargs,
+            "model": model_name,
+            "base_url": openai_api_base,
+            "api_key": api_key,
+            "seed": seed,
+            "max_retries": max_retries,
+            "request_timeout": timeout,
+        }
+
+        # Only add temperature if the model does NOT start with "o"
+        # Models like o1, o1-mini, o1-pro, o3-mini do not support the temperature parameter.
+        if not model_name.startswith("o"):
+            # Use the user's temperature or the default 0.1 if not provided
+            chat_openai_kwargs["temperature"] = temperature if temperature is not None else 0.1
+
+        # Create the ChatOpenAI instance
+        output = ChatOpenAI(**chat_openai_kwargs)
+
+        # For 'o' models, we need to take extra steps to ensure temperature is not sent in the API request
+        if model_name.startswith("o"):
+            # Store the original _get_request_payload method
+            original_get_request_payload = output._get_request_payload
+
+            # Create a wrapper method that removes temperature from the payload
+            # Ensure it has the exact same signature as the original method
+            def wrapped_get_request_payload(input_, *, stop=None, **kwargs):
+                # Call the original method
+                payload = original_get_request_payload(input_, stop=stop, **kwargs)
+
+                # Remove temperature if it exists in the payload
+                if "temperature" in payload:
+                    del payload["temperature"]
+
+                return payload
+
+            # Use types.MethodType to bind the new method to the instance
+            output._get_request_payload = wrapped_get_request_payload
+
+            # Also remove temperature from default params in case it's used elsewhere
+            if hasattr(output, "_default_params") and "temperature" in output._default_params:
+                del output._default_params["temperature"]
+
         if json_mode:
             output = output.bind(response_format={"type": "json_object"})
 
