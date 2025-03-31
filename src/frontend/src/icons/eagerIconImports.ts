@@ -1,4 +1,3 @@
-// Import all icons eagerly
 import { AgentQLIcon } from "@/icons/AgentQL";
 import { AIMLIcon } from "@/icons/AIML";
 import { AirbyteIcon } from "@/icons/Airbyte";
@@ -8,10 +7,12 @@ import { ArizeIcon } from "@/icons/Arize";
 import { ArXivIcon } from "@/icons/ArXiv";
 import { AssemblyAIIcon } from "@/icons/AssemblyAI";
 import { AstraDBIcon } from "@/icons/AstraDB";
-import { AthenaIcon } from "@/icons/athena";
+import { AthenaIcon } from "@/icons/athena/index";
 import { AWSIcon } from "@/icons/AWS";
+import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { AzureIcon } from "@/icons/Azure";
 import { BingIcon } from "@/icons/Bing";
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { BWPythonIcon } from "@/icons/BW python";
 import { CassandraIcon } from "@/icons/Cassandra";
 import { ChromaIcon } from "@/icons/ChromaIcon";
@@ -36,19 +37,15 @@ import { GitLoaderIcon } from "@/icons/GitLoader";
 import { GleanIcon } from "@/icons/Glean";
 import { GlobeOkIcon } from "@/icons/globe-ok";
 import { GmailIcon } from "@/icons/gmail";
-import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
-import {
-  GradientInfinity,
-  GradientSave,
-  GradientUngroup,
-} from "@/icons/GradientSparkles";
+import { GoogleIcon } from "@/icons/Google";
+import { GradientInfinity, GradientSave, GradientUngroup } from "@/icons/GradientSparkles";
+import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { GroqIcon } from "@/icons/Groq";
 import { HackerNewsIcon } from "@/icons/hackerNews";
 import { HCDIcon } from "@/icons/HCD";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
-import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
@@ -67,8 +64,9 @@ import { NotDiamondIcon } from "@/icons/NotDiamond";
 import { NotionIcon } from "@/icons/Notion";
 import { NovitaIcon } from "@/icons/Novita";
 import { NvidiaIcon } from "@/icons/Nvidia";
-import { OlivyaIcon } from "@/icons/Olivya";
 import { OllamaIcon } from "@/icons/Ollama";
+import { OlivyaIcon } from "@/icons/Olivya";
+import { OneDriveIcon } from "@/icons/OneDrive";
 import { OpenAiIcon } from "@/icons/OpenAi";
 import { OpenRouterIcon } from "@/icons/OpenRouter";
 import { OpenSearch } from "@/icons/OpenSearch";
@@ -84,11 +82,11 @@ import { ScrapeGraph } from "@/icons/ScrapeGraphAI";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SearxIcon } from "@/icons/Searx";
 import { SerperIcon } from "@/icons/Serper";
-import { SerpSearchIcon } from "@/icons/SerpSearch";
-import { ShareIcon } from "@/icons/Share";
 import { Share2Icon } from "@/icons/Share2";
-import { default as SlackIcon } from "@/icons/Slack/SlackIcon";
+import { ShareIcon } from "@/icons/Share";
+import { SlackIcon } from "@/icons/Slack";
 import { SpiderIcon } from "@/icons/Spider";
+import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { Streamlit } from "@/icons/Streamlit";
 import { SupabaseIcon } from "@/icons/supabase";
 import { TavilyIcon } from "@/icons/Tavily";
@@ -97,11 +95,12 @@ import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
 import { VectaraIcon } from "@/icons/VectaraIcon";
 import { VertexAIIcon } from "@/icons/VertexAI";
+import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { WeaviateIcon } from "@/icons/Weaviate";
-import { default as WikipediaIcon } from "@/icons/Wikipedia/Wikipedia";
-import { default as WolframIcon } from "@/icons/Wolfram/Wolfram";
+import { WikipediaIcon } from "@/icons/Wikipedia";
+import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
-import { YouTubeSvgIcon } from "@/icons/Youtube";
+import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 
 // Export the eagerly loaded icons map
@@ -118,8 +117,10 @@ export const eagerIconsMapping = {
   AstraDB: AstraDBIcon,
   Athena: AthenaIcon,
   AWS: AWSIcon,
+  AWSInverted: AWSInvertedIcon,
   Azure: AzureIcon,
   Bing: BingIcon,
+  BotMessageSquare: BotMessageSquareIcon,
   BWPython: BWPythonIcon,
   Cassandra: CassandraIcon,
   Chroma: ChromaIcon,
@@ -150,6 +151,7 @@ export const eagerIconsMapping = {
   GradientInfinity: GradientInfinity,
   GradientSave: GradientSave,
   GradientUngroup: GradientUngroup,
+  GridHorizontal: GridHorizontalIcon,
   Groq: GroqIcon,
   HackerNews: HackerNewsIcon,
   HCD: HCDIcon,
@@ -174,6 +176,7 @@ export const eagerIconsMapping = {
   NVIDIA: NvidiaIcon,
   Olivya: OlivyaIcon,
   Ollama: OllamaIcon,
+  OneDrive: OneDriveIcon,
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   OpenSearch: OpenSearch,
@@ -208,6 +211,6 @@ export const eagerIconsMapping = {
   Wikipedia: WikipediaIcon,
   Wolfram: WolframIcon,
   xAI: XAIIcon,
-  YouTube: YouTubeSvgIcon,
+  YouTube: YouTubeIcon,
   ZepMemory: ZepMemoryIcon,
 };
