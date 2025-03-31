@@ -188,6 +188,6 @@ This example used movie data, but the RAG pattern can be used with any data you 
 
 Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
 
-Expose this flow as an [API](/concepts-api) and call it from your external applications.
+Publish this flow as an [API](/concepts-publish) and call it from your external applications.
 
 For more on the **Astra DB** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).
