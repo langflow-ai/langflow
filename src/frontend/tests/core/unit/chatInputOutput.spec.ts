@@ -20,9 +20,10 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page
     .getByTestId("outputsChat Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+    .hover()
+    .then(async () => {
+      await page.getByTestId("add-component-button-chat-output").click();
+    });
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -32,59 +33,19 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page
     .getByTestId("inputsChat Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 100 },
+    });
 
   await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
   await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
 
-  const elementsChatInput = await page
-    .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
-    .all();
+  await page.getByTestId("handle-chatinput-noshownode-message-source").click();
+  await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
 
-  let visibleElementHandle;
-
-  for (const element of elementsChatInput) {
-    if (await element.isVisible()) {
-      visibleElementHandle = element;
-      break;
-    }
-  }
-
-  // Click and hold on the first element
-  await visibleElementHandle.hover();
-  await page.mouse.down();
-
-  // Move to the second element
-
-  const elementsChatOutput = await page
-    .getByTestId("handle-chatoutput-noshownode-text-target")
-    .all();
-
-  for (const element of elementsChatOutput) {
-    if (await element.isVisible()) {
-      visibleElementHandle = element;
-      break;
-    }
-  }
-
-  await visibleElementHandle.hover();
-
-  // Release the mouse
-  await page.mouse.up();
-
-  await page.getByTestId("fit_view").click();
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
@@ -92,9 +53,7 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByTestId("button-send").first().click();
-  const chat_input = await page
-    .getByTestId("chat-message-User-teste")
-    .textContent();
+  const chat_input = await page.getByTestId("div-chat-message").textContent();
 
   expect(chat_input).toBe("teste");
 });
