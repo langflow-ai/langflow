@@ -14,7 +14,6 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import { AxiosError } from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../../../../../../components/common/genericIconComponent";
 import SettingsVoiceModal from "./components/audio-settings/audio-settings-dialog";
@@ -61,6 +60,9 @@ export function VoiceAssistant({
   const analyserRef = useRef<AnalyserNode | null>(null);
 
   const soundDetected = useVoiceStore((state) => state.soundDetected);
+  const setIsVoiceAssistantActive = useVoiceStore(
+    (state) => state.setIsVoiceAssistantActive,
+  );
   const setSoundDetected = useVoiceStore((state) => state.setSoundDetected);
   const messagesStore = useMessagesStore();
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
@@ -86,19 +88,14 @@ export function VoiceAssistant({
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { data: globalVariables } = useGetGlobalVariables();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlowId = currentFlow?.id;
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
       variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
   }, [variables, open, addKey]);
-
-  const hasElevenLabsApiKey = useMemo(() => {
-    return (
-      variables?.find((variable) => variable === "ELEVENLABS_API_KEY")
-        ?.length! > 0
-    );
-  }, [variables, addKey, open]);
 
   const openaiApiKey = useMemo(() => {
     return variables?.find((variable) => variable === "OPENAI_API_KEY");
@@ -216,7 +213,7 @@ export function VoiceAssistant({
   const handleGetMessagesMutation = () => {
     getMessagesMutation.mutate({
       mode: "union",
-      id: currentSessionId,
+      id: currentFlowId,
     });
   };
 
@@ -291,10 +288,20 @@ export function VoiceAssistant({
     };
   }, []);
 
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      const chatContainer = document.querySelector(".chat-message-div");
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 300);
+  };
+
   const handleCloseAudioInput = () => {
-    setIsRecording;
+    setIsRecording(false);
     stopRecording();
     setShowAudioInput(false);
+    scrollToBottom();
   };
 
   const handleSetShowSettingsModal = async (
@@ -430,6 +437,7 @@ export function VoiceAssistant({
               handleClickSaveOpenAIApiKey={handleClickSaveOpenAIApiKey}
               isEditingOpenAIKey={isEditingOpenAIKey}
               setIsEditingOpenAIKey={setIsEditingOpenAIKey}
+              isPlayingRef={isPlayingRef}
             >
               {hasOpenAIAPIKey ? (
                 <>
