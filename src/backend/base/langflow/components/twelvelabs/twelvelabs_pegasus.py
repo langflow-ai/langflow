@@ -223,7 +223,7 @@ class TwelveLabsPegasus(Component):
             # Create index and process video
             index = client.index.create(
                 name=f"index_{int(time.time())}",
-                models=[{"type": "visual", "name": "pegasus1.2", "options": ["visual"]}]
+                models=[{"type": "visual", "name": "pegasus1.2", "options": ["visual","audio"]}]
             )
             self._index_id = index.id
 
