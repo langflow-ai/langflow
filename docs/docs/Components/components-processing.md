@@ -138,6 +138,11 @@ This component performs the following operations on Pandas [DataFrame](https://p
 ## Data to message
 
 :::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+Instead, use the [Parser](#parser) component.
+:::
+
+:::important
 Prior to Langflow version 1.1.3, this component was named **Parse Data**.
 :::
 
@@ -314,6 +319,11 @@ To use this component, create variables for values in the `template` the same wa
 | parsed_text | Parsed Text | The resulting formatted text as a [Message](/concepts-objects#message-object) object. |
 
 ## Parse DataFrame
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+Instead, use the [Parser](#parser) component.
+:::
 
 This component converts DataFrames into plain text using templates.
 
