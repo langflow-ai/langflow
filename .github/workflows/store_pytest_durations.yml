@@ -30,7 +30,7 @@ jobs:
       - name: Run unit tests
         id: run_tests
         continue-on-error: true
-        run: uv run pytest src/backend/tests/unit --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
+        run: uv run pytest src/backend/tests/unit --timeout=120 --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
       - name: Minimize uv cache
         run: uv cache prune --ci
 
