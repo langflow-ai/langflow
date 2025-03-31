@@ -714,7 +714,7 @@ curl -X DELETE \
 
 Upload a file to your user account. The file can be used across multiple flows.
 
-The file is uploaded in the format `{user_id}\{file_id}.{file_extension}`.
+The file is uploaded in the format`USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -758,7 +758,7 @@ curl -X POST "$LANGFLOW_URL/api/v2/files" \
   -F "file=@image-file.png"
 ```
 
-The file is uploaded in the format `{user_id}\{file_id}.{file_extension}`, and the API returns metadata about the uploaded file:
+The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
 
 ```json
 {
@@ -854,6 +854,34 @@ File contents downloaded to downloaded_file.txt
   </TabItem>
 </Tabs>
 
+### Edit file name (v2)
+
+Change a file name.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X PUT \
+  "$LANGFLOW_URL/api/v2/files/$FILE_ID?name=new_file_name" \
+  -H "accept: application/json"
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "id":"76543e40-f388-4cb3-b0ee-a1e870aca3d3",
+  "name":"new_file_name",
+  "path":"6f17a73e-97d7-4519-a8d9-8e4c0be411bb/76543e40-f388-4cb3-b0ee-a1e870aca3d3.png",
+  "size":2728251,
+  "provider":null
+  }
+```
+
+  </TabItem>
+</Tabs>
 ### Delete file (v2)
 
 Delete a specific file by its ID.
@@ -863,7 +891,7 @@ Delete a specific file by its ID.
 
 ```bash
 curl -X DELETE \
-  "$LANGFLOW_URL/api/v2/files/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34" \
+  "$LANGFLOW_URL/api/v2/files/$FILE_ID" \
   -H "accept: application/json"
 ```
 
