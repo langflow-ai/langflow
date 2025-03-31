@@ -122,6 +122,8 @@ python -m langflow run [OPTIONS]
 | <Link id="run-auto-saving-interval"/>`--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds.<br/>See [`LANGFLOW_AUTO_SAVING_INTERVAL` variable](./environment-variables.md#LANGFLOW_AUTO_SAVING_INTERVAL). |
 | <Link id="run-health-check-max-retries"/>`--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See [`LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable](./environment-variables.md#LANGFLOW_HEALTH_CHECK_MAX_RETRIES). |
 | <Link id="run-max-file-size-upload"/>`--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes.<br/>See [`LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable](./environment-variables.md#LANGFLOW_MAX_FILE_SIZE_UPLOAD). |
+| <Link id="run-ssl-cert-file-path"/>`--ssl-cert-file-path` | Not set | String | Path to the SSL certificate file on the local system. |
+| <Link id="run-ssl-key-file-path"/>`--ssl-key-file-path` | Not set | String | Path to the SSL key file on the local system. |
 | <Link id="run-help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow superuser
