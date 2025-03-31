@@ -211,7 +211,7 @@ class TestMCPSseClient:
         # Mock the pre_check_redirect first
         with (
             patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"),
-            patch.object(sse_client, "validate_url", return_value=(True, ""))
+            patch.object(sse_client, "validate_url", return_value=(True, "")),
         ):
             # Create mock for sse_client context manager
             mock_sse = AsyncMock()
