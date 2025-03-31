@@ -156,26 +156,10 @@ class StructuredOutputComponent(Component):
         )
 
         try:
-            tool_description = f"Extract structured data in {schema_name} format"
-            llm_with_structured_output = create_extractor(
-                self.llm,
-                tools=[
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": schema_name,
-                            "description": tool_description,
-                            "parameters": output_model.model_json_schema(),
-                        },
-                    }
-                ]
-                if hasattr(output_model, "model_json_schema")
-                else output_model,
-            )
+            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
             raise TypeError(msg) from exc
-
         config_dict = {
             "run_name": self.display_name,
             "project_name": self.get_project_name(),
