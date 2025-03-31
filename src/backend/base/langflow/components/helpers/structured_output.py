@@ -152,6 +152,7 @@ class StructuredOutputComponent(Component):
 
         output_model = create_model(
             schema_name,
+            __doc__=f"A list of {schema_name}.",
             objects=(list[output_model_], Field(description=f"A list of {schema_name}.")),  # type: ignore[valid-type]
         )
 
