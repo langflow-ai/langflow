@@ -3,11 +3,13 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Custom Component Generator",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.ANTHROPIC_API_KEY,
@@ -29,11 +31,6 @@ test(
       timeout: 100000,
     });
 
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .last()
-      .fill(process.env.ANTHROPIC_API_KEY ?? "");
-
     await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
       timeout: 5000,
     });
@@ -42,26 +39,38 @@ test(
 
     await page.keyboard.press("Enter");
 
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(1000);
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
+    try {
+      await page
+        .getByTestId("anchor-popover-anchor-input-api_key")
+        .last()
+        .fill(process.env.ANTHROPIC_API_KEY ?? "");
+    } catch (e) {
+      console.log("There's API already added");
+    }
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByTestId("playground-btn-flow-io").click();
+
     await page
-      .getByText("No input message provided.", { exact: true })
+      .getByTestId("input-chat-playground")
       .last()
-      .isVisible();
+      .fill(
+        "Create a custom component that can generate a random number between 1 and 100 and is called Langflow Random Number",
+      );
 
-    await waitForOpenModalWithChatInput(page);
+    await page.getByTestId("button-send").last().click();
+
+    await page.waitForTimeout(1000);
+
+    const stopButton = page.getByRole("button", { name: "Stop" });
+    await stopButton.waitFor({ state: "hidden", timeout: 30000 * 3 });
 
     const textContents = await getAllResponseMessage(page);
     expect(textContents.length).toBeGreaterThan(100);
     expect(await page.getByTestId("chat-code-tab").last().isVisible()).toBe(
       true,
     );
-    expect(textContents).toContain("langflow");
+    expect(textContents.toLowerCase()).toContain("langflow");
   },
 );

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -10,52 +9,8 @@ from loguru import logger
 from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.utils import constants
-
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
-
-
-def truncate_json(data, *, max_size: int = constants.MAX_TEXT_LENGTH):
-    def calculate_size(data):
-        return len(json.dumps(data))
-
-    def shrink_to_size(data, remaining_size):
-        if isinstance(data, dict):
-            truncated = {}
-            for key, value in data.items():
-                key_size = len(json.dumps(key))
-                if remaining_size - key_size <= 0:
-                    break
-                truncated[key] = shrink_to_size(value, remaining_size - key_size)
-                remaining_size -= len(json.dumps({key: value})) - key_size
-            return truncated
-
-        if isinstance(data, list):
-            truncated = []
-            for item in data:
-                if remaining_size <= len('""'):
-                    break
-                truncated.append(shrink_to_size(item, remaining_size))
-                remaining_size -= len(json.dumps(item)) + 1
-            return truncated
-
-        if isinstance(data, str):
-            max_string_length = max(remaining_size - 2, 0)
-            return data[:max_string_length] + "…" if max_string_length > 0 else "…"
-
-        return data
-
-    try:
-        json.dumps(data)
-        is_serialized = True
-    except Exception:  # noqa: BLE001
-        is_serialized = False
-
-    if calculate_size(data) <= max_size or not is_serialized:
-        return data
-
-    return shrink_to_size(data, max_size)
 
 
 async def initialize_database(*, fix_migration: bool = False) -> None:
