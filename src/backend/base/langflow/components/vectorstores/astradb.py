@@ -2,9 +2,10 @@ import re
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
-from astrapy import AstraDBAdmin, DataAPIClient, Database
+from astrapy import DataAPIClient, Database
 from astrapy.info import CollectionDescriptor
-from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
+from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
+from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
@@ -294,8 +295,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
         try:
             # Get the admin object
-            admin = AstraDBAdmin(token=token, environment=environment)
-            db_admin = admin.get_database_admin(api_endpoint=api_endpoint)
+            client = DataAPIClient(environment=environment)
+            admin_client = client.get_admin()
+            db_admin = admin_client.get_database_admin(api_endpoint, token=token)
 
             # Get the list of embedding providers
             embedding_providers = db_admin.find_embedding_providers().as_dict()
@@ -325,7 +327,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         environment: str | None = None,
         keyspace: str | None = None,
     ):
-        client = DataAPIClient(token=token, environment=environment)
+        client = DataAPIClient(environment=environment)
 
         # Get the admin object
         admin_client = client.get_admin(token=token)
@@ -359,19 +361,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
     ):
-        # Create the data API client
-        client = DataAPIClient(token=token, environment=environment)
-
-        # Get the database object
-        database = client.get_async_database(api_endpoint=api_endpoint, token=token)
-
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
-            vectorize_options = CollectionVectorServiceOptions(
-                provider=cls.get_vectorize_providers(
-                    token=token, environment=environment, api_endpoint=api_endpoint
-                ).get(embedding_generation_provider, [None, []])[0],
+            providers = cls.get_vectorize_providers(
+                token=token, environment=environment or "prod", api_endpoint=api_endpoint
+            )
+            vectorize_options = VectorServiceOptions(
+                provider=providers.get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
             )
 
@@ -380,44 +377,42 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = "Collection name is required to create a new collection."
             raise ValueError(msg)
 
-        # Create the collection
-        return await database.create_collection(
-            name=new_collection_name,
+        _AstraDBCollectionEnvironment(
+            new_collection_name,
+            token=token,
+            api_endpoint=api_endpoint,
             keyspace=keyspace,
-            dimension=dimension,
-            service=vectorize_options,
+            environment=environment or "prod",
+            embedding_dimension=dimension,
+            collection_vector_service_options=vectorize_options,
         )
 
     @classmethod
     def get_database_list_static(cls, token: str, environment: str | None = None):
-        client = DataAPIClient(token=token, environment=environment)
+        client = DataAPIClient(environment=environment)
 
         # Get the admin object
         admin_client = client.get_admin(token=token)
 
         # Get the list of databases
-        db_list = list(admin_client.list_databases())
-
-        # Set the environment properly
-        env_string = ""
-        if environment and environment != "prod":
-            env_string = f"-{environment}"
+        db_list = admin_client.list_databases()
 
         # Generate the api endpoint for each database
         db_info_dict = {}
         for db in db_list:
             try:
                 # Get the API endpoint for the database
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
+                api_endpoint = db.regions[0].api_endpoint
 
                 # Get the number of collections
                 try:
+                    _keyspace = db.keyspaces[0]
                     num_collections = len(
-                        list(
-                            client.get_database(
-                                api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
-                            ).list_collection_names(keyspace=db.info.keyspace)
-                        )
+                        client.get_database(
+                            api_endpoint,
+                            token=token,
+                            keyspace=_keyspace,
+                        ).list_collection_names()
                     )
                 except Exception:  # noqa: BLE001
                     if db.status != "PENDING":
@@ -425,7 +420,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     num_collections = 0
 
                 # Add the database to the dictionary
-                db_info_dict[db.info.name] = {
+                db_info_dict[db.name] = {
                     "api_endpoint": api_endpoint,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
@@ -437,7 +432,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return db_info_dict
 
     def get_database_list(self):
-        return self.get_database_list_static(token=self.token, environment=self.environment)
+        return self.get_database_list_static(token=self.token, environment=self.environment or "prod")
 
     @classmethod
     def get_api_endpoint_static(
@@ -470,7 +465,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_api_endpoint(self):
         return self.get_api_endpoint_static(
             token=self.token,
-            environment=self.environment,
+            environment=self.environment or "prod",
             api_endpoint=self.api_endpoint,
             database_name=self.database_name,
         )
@@ -496,10 +491,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
+            client = DataAPIClient(environment=self.environment or "prod")
 
             return client.get_database(
-                api_endpoint=api_endpoint or self.get_api_endpoint(),
+                api_endpoint or self.get_api_endpoint(),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
@@ -510,15 +505,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
             if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
+                client = DataAPIClient(environment=self.environment or "prod")
 
                 database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
+                    self.get_api_endpoint(),
                     token=self.token,
                     keyspace=self.get_keyspace(),
                 )
 
-            collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
+            collection = database.get_collection(collection_name)
 
             return collection.estimated_document_count()
         except Exception as e:  # noqa: BLE001
@@ -546,13 +541,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_provider_icon(cls, collection: CollectionDescriptor | None = None, provider_name: str | None = None) -> str:
         # Get the provider name from the collection
         provider_name = provider_name or (
-            collection.options.vector.service.provider
-            if collection and collection.options and collection.options.vector and collection.options.vector.service
+            collection.definition.vector.service.provider
+            if (
+                collection
+                and collection.definition
+                and collection.definition.vector
+                and collection.definition.vector.service
+            )
             else None
         )
 
         # If there is no provider, use the vector store icon
-        if not provider_name or provider_name == "Bring your own":
+        if not provider_name or provider_name.lower() == "bring your own":
             return "vectorstores"
 
         # Map provider casings
@@ -581,7 +581,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         database = self.get_database_object(api_endpoint=api_endpoint)
 
         # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        collection_list = database.list_collections(keyspace=self.get_keyspace())
 
         # Return the list of collections and metadata associated
         return [
@@ -589,11 +589,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "name": col.name,
                 "records": self.collection_data(collection_name=col.name, database=database),
                 "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
+                    col.definition.vector.service.provider if col.definition.vector and col.definition.vector.service else None
                 ),
                 "icon": self.get_provider_icon(collection=col),
                 "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
+                    col.definition.vector.service.model_name if col.definition.vector and col.definition.vector.service else None
                 ),
             }
             for col in collection_list
@@ -607,7 +607,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get vectorize providers
         vectorize_providers_api = self.get_vectorize_providers(
             token=self.token,
-            environment=self.environment,
+            environment=self.environment or "prod",
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
@@ -855,7 +855,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             {
                 "records": 0,
                 "provider": provider,
-                "icon": self.get_provider_icon(provider_name=embedding_provider),
+                "icon": self.get_provider_icon(provider_name=provider),
                 "model": field_value.get("03_embedding_generation_model"),
             }
         )
@@ -977,7 +977,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 api_endpoint=database.api_endpoint,
                 namespace=database.keyspace,
                 collection_name=self.collection_name,
-                environment=self.environment,
+                environment=self.environment or "prod",
                 # Astra DB Usage Tracking Parameters
                 ext_callers=[(f"{langflow_prefix}langflow", __version__)],
                 # Astra DB Vector Store Parameters
