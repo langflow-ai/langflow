@@ -30,7 +30,6 @@ class MCPToolsComponent(Component):
     _tool_cache: dict = {}  # Cache for tool objects
     default_keys: list[str] = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
 
-
     display_name = "MCP Server"
     description = "Connect to an MCP server and expose tools."
     icon = "server"
