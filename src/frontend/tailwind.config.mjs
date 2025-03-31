@@ -56,7 +56,7 @@ const config = {
           from: {
             opacity: 0,
             transform: "translate(-50%, -50%) scale(0.95)",
-            clipPath: "inset(45% 0)",
+            clipPath: "inset(40% 0)",
             boxShadow: "0 4px 8px -2px rgba(0, 0, 0, 0.1)", // Smaller shadow
           },
           to: {
@@ -78,7 +78,7 @@ const config = {
           to: {
             opacity: 0,
             transform: "translate(-50%, -50%) scale(0.95)",
-            clipPath: "inset(45% 0)",
+            clipPath: "inset(40% 0)",
             boxShadow: "0 4px 8px -2px rgba(0, 0, 0, 0.1)",
           },
         },
@@ -94,10 +94,10 @@ const config = {
       },
       animation: {
         // Animation definitions
-        overlayShow: "overlayShow 500ms cubic-bezier(0.16, 1, 0.3, 1)",
-        overlayHide: "overlayHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
-        contentShow: "contentShow 500ms cubic-bezier(0.16, 1, 0.3, 1)",
-        contentHide: "contentHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+        overlayShow: "overlayShow 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+        overlayHide: "overlayHide 300ms cubic-bezier(0.16, 1, 0.3, 1)",
+        contentShow: "contentShow 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+        contentHide: "contentHide 300ms cubic-bezier(0.16, 1, 0.3, 1)",
         wiggle: "wiggle 150ms ease-in-out 1",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
         "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",

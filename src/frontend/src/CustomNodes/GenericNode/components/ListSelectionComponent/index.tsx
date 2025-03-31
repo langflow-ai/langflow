@@ -124,7 +124,7 @@ const ListSelectionComponent = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="flex max-h-[50vh] min-h-[30vh] flex-col rounded-xl">
+      <DialogContent className="flex max-h-[65vh] min-h-[30vh] flex-col rounded-xl">
         <div className="flex items-center justify-between pb-4">
           <SearchBarComponent
             searchCategories={searchCategories}
