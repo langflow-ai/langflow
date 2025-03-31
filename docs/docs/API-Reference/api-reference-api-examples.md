@@ -548,19 +548,21 @@ curl -X POST \
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
 There are `/v1` and `/v2` versions of the `/files` endpoint.
-The `/v2` version offers several improvements over `/v1`:
+The `files/v2` version offers several improvements over `/v1`:
 
-* In v1, files are organized by `flow_id`. In v2, files are organized by `user_id`.
+* In `v1`, files are organized by `flow_id`. In `v2`, files are organized by `user_id`.
 This means files are accessed based on user ownership, and not tied to specific flows.
-You can upload a file one time, and use it with multiple flows.
-* In v2, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one-by-one.
-* 
+You can upload a file to Langflow one time, and use it with multiple flows.
+* In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
+* Responses from the `/v2` endpoint contain more descriptive metadata.
 
 ### Upload file
 
-Upload a file to an existing flow.
+This example uploads `the_oscar_award.csv` from a local machine to Langflow.
 
-This example uploads `the_oscar_award.csv`.
+The `/v1` and `/v2` endpoints handle the uploaded file differently.
+
+The `/v2/files` endpoint uploads the file to the authenticated Langflow user, and doesn't require a value for `flow_id`.
 
 <Tabs>
   <TabItem value="v2" label="v2" default>
@@ -568,6 +570,7 @@ This example uploads `the_oscar_award.csv`.
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v2/files" \
+  -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@the_oscar_award.csv"
 ```
@@ -587,6 +590,8 @@ curl -X POST \
 
   </TabItem>
 </Tabs>
+
+The `files/v1` endpoint uploads the file to an existing flow, and returns less metadata.
 
 <Tabs>
   <TabItem value="v1" label="v1" default>
