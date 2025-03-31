@@ -71,9 +71,12 @@ The global variable, and any existing references to it, are deleted.
 
 ## Add custom global variables from the environment
 
-You can use the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable to source custom global variables from your runtime environment. All global variables sourced from the environment are automatically set as **Credential** type global variables.
+You can use the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable to source custom global variables from your runtime environment.
+All global variables sourced from the environment are automatically set as **Credential** type global variables.
 
-Langflow's [default global variables](#default-environment-variables) are set automatically when detected and don't need to be added to this variable.
+Langflow's [default global variables](#default-environment-variables) are already included in this list and are automatically sourced when detected.
+You can extend this list by setting `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` with your additional variables.
+
 <Tabs>
 
 <TabItem value="local" label="Local" default>
@@ -84,12 +87,18 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
 
 2. Add the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable as follows:
 
-   ```plaintext title=".env"
+   You can specify the variables either as a comma-separated string with no spaces, or as a JSON list:
+
+   ```text
+   # Option 1: Comma-separated string (no spaces)
    LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=VARIABLE1,VARIABLE2
+
+   # Option 2: JSON list format
+   LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=["VARIABLE1", "VARIABLE2"]
    ```
 
-   Replace `VARIABLE1,VARIABLE2` with a comma-separated list (no spaces) of variables that you want Langflow to source from the environment.
-   For example, `my_key,some_string`.
+   Replace `VARIABLE1,VARIABLE2` with your additional variables that you want Langflow to source from the environment, such as `my_key,some_string` or `["my_key", "some_string"]`.
+   These are added to the default list of variables that Langflow already monitors.
 
 3. Save and close the file.
 
@@ -152,7 +161,7 @@ When adding global variables from the environment, the following limitations app
   To add additional parameters, such as the **Apply To Fields** parameter, you must edit the global variables in the Langflow UI.
 
 - Global variables that you add from the environment always have the **Credential** type.
-  :::
+:::
 
 
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file:
