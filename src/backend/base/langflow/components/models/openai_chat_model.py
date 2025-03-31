@@ -1,6 +1,5 @@
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
-import types
 
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
@@ -129,22 +128,22 @@ class OpenAIModelComponent(LCModelComponent):
         if model_name.startswith("o"):
             # Store the original _get_request_payload method
             original_get_request_payload = output._get_request_payload
-            
+
             # Create a wrapper method that removes temperature from the payload
             # Ensure it has the exact same signature as the original method
             def wrapped_get_request_payload(input_, *, stop=None, **kwargs):
                 # Call the original method
                 payload = original_get_request_payload(input_, stop=stop, **kwargs)
-                
+
                 # Remove temperature if it exists in the payload
                 if "temperature" in payload:
                     del payload["temperature"]
-                
+
                 return payload
-            
+
             # Use types.MethodType to bind the new method to the instance
             output._get_request_payload = wrapped_get_request_payload
-            
+
             # Also remove temperature from default params in case it's used elsewhere
             if hasattr(output, "_default_params") and "temperature" in output._default_params:
                 del output._default_params["temperature"]
