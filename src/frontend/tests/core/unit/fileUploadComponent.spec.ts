@@ -169,10 +169,8 @@ test(
         timeout: 1000,
       });
 
-      await page
-        .getByText(`${jsonFileName}.json`)
-        .first()
-        .click({ clickCount: 2 });
+      await page.getByTestId(`context-menu-button-${jsonFileName}`).click();
+      await page.getByTestId("btn-rename-file").click();
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);
