@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -22,17 +23,8 @@ test(
       .getByTestId("modelsNVIDIA")
       .hover()
       .then(async () => {
-        // Wait for the API request to complete after clicking the add button
-        const responsePromise = page.waitForResponse(
-          (response) =>
-            response.url().includes("/api/v1/custom_component/update") &&
-            response.status() === 200,
-        );
         await page.getByTestId("add-component-button-nvidia").click();
-        await responsePromise; // Wait for the request to complete
       });
-
-    //add
 
     await page.getByTestId("title-NVIDIA").click();
 
@@ -41,8 +33,6 @@ test(
     await page.getByTestId("showseed").click();
 
     await page.getByText("Close").last().click();
-
-    await page.getByTestId("fit_view").click();
 
     await page.locator('//*[@id="int_int_seed"]').click();
     await page.locator('//*[@id="int_int_seed"]').fill("");
@@ -60,7 +50,8 @@ test(
 
     expect(value).toBe("-3");
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.getByText("Close").last().click();
 
@@ -69,7 +60,8 @@ test(
     if (elementCount === 0) {
       expect(true).toBeTruthy();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await page.getByTestId("more-options-modal").click();
+      await page.getByTestId("advanced-button-modal").click();
 
       await page.getByText("Close").last().click();
       await page.locator('//*[@id="int_int_seed"]').click();

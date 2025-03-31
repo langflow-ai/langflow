@@ -2,11 +2,10 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "../../components/ui/button";
 import {
-  ICON_STROKE_WIDTH,
   TOOLTIP_HIDDEN_OUTPUTS,
   TOOLTIP_OPEN_HIDDEN_OUTPUTS,
 } from "../../constants/constants";
@@ -21,9 +20,6 @@ import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 
-import { useAlternate } from "@/shared/hooks/use-alternate";
-import { useUtilityStore } from "@/stores/utilityStore";
-import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -57,8 +53,8 @@ const HiddenOutputsButton = memo(
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="icon-size text-placeholder-foreground group-hover:text-foreground"
+        strokeWidth={1.5}
+        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
       />
     </Button>
   ),
@@ -91,7 +87,6 @@ function GenericNode({
   const edges = useFlowStore((state) => state.edges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
-  const dismissAll = useUtilityStore((state) => state.dismissAll);
 
   const showNode = data.showNode ?? true;
 
@@ -101,9 +96,6 @@ function GenericNode({
   };
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-
-  const [editNameDescription, toggleEditNameDescription, set] =
-    useAlternate(false);
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
@@ -205,18 +197,6 @@ function GenericNode({
     [data.node?.outputs],
   );
 
-  const nodeRef = useRef<HTMLDivElement>(null);
-
-  useChangeOnUnfocus({
-    selected,
-    value: editNameDescription,
-    onChange: set,
-    defaultValue: false,
-    shouldChangeValue: (value) => value === true,
-    nodeRef,
-    callback: toggleEditNameDescription,
-  });
-
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
       return outputs?.map((output, idx) => (
@@ -249,85 +229,29 @@ function GenericNode({
     [data.node?.outputs],
   );
 
-  const [hasChangedNodeDescription, setHasChangedNodeDescription] =
-    useState(false);
-
-  const editedNameDescription =
-    editNameDescription && hasChangedNodeDescription;
-
-  const hasDescription = useMemo(() => {
-    return data.node?.description && data.node?.description !== "";
-  }, [data.node?.description]);
-
-  const selectedNodesCount = useMemo(() => {
-    return useFlowStore.getState().nodes.filter((node) => node.selected).length;
-  }, [selected]);
-
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return selected && selectedNodesCount === 1 ? (
-      <>
-        <div
-          className={cn(
-            "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
-            "transform transition-all duration-300 ease-out",
-          )}
-        >
-          <NodeToolbarComponent
-            data={data}
-            deleteNode={(id) => {
-              takeSnapshot();
-              deleteNode(id);
-            }}
-            setShowNode={(show) => {
-              setNode(data.id, (old) => ({
-                ...old,
-                data: { ...old.data, showNode: show },
-              }));
-            }}
-            numberOfOutputHandles={shownOutputs.length ?? 0}
-            showNode={showNode}
-            openAdvancedModal={false}
-            onCloseAdvancedModal={() => {}}
-            updateNode={handleUpdateCode}
-            isOutdated={isOutdated && isUserEdited}
-          />
-        </div>
-        <div className="-z-10">
-          <Button
-            unstyled
-            onClick={() => {
-              toggleEditNameDescription();
-              setHasChangedNodeDescription(false);
-            }}
-            className={cn(
-              "nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md",
-              "transform transition-all duration-300 ease-out",
-              showNode
-                ? "top-2 translate-x-[10.4rem]"
-                : "top-0 translate-x-[6.4rem]",
-              editedNameDescription
-                ? "bg-accent-emerald"
-                : "bg-zinc-foreground",
-            )}
-            data-testid={
-              editedNameDescription
-                ? "save-name-description-button"
-                : "edit-name-description-button"
-            }
-          >
-            <ForwardedIconComponent
-              name={editedNameDescription ? "Check" : "PencilLine"}
-              strokeWidth={ICON_STROKE_WIDTH}
-              className={cn(
-                editedNameDescription
-                  ? "text-accent-emerald-foreground"
-                  : "text-muted-foreground",
-                "icon-size",
-              )}
-            />
-          </Button>
-        </div>
-      </>
+    return selected ? (
+      <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
+        <NodeToolbarComponent
+          data={data}
+          deleteNode={(id) => {
+            takeSnapshot();
+            deleteNode(id);
+          }}
+          setShowNode={(show) => {
+            setNode(data.id, (old) => ({
+              ...old,
+              data: { ...old.data, showNode: show },
+            }));
+          }}
+          numberOfOutputHandles={shownOutputs.length ?? 0}
+          showNode={showNode}
+          openAdvancedModal={false}
+          onCloseAdvancedModal={() => {}}
+          updateNode={handleUpdateCode}
+          isOutdated={isOutdated && isUserEdited}
+        />
+      </div>
     ) : (
       <></>
     );
@@ -342,10 +266,6 @@ function GenericNode({
     isUserEdited,
     selected,
     shortcuts,
-    editNameDescription,
-    hasChangedNodeDescription,
-    toggleEditNameDescription,
-    selectedNodesCount,
   ]);
 
   useEffect(() => {
@@ -376,9 +296,6 @@ function GenericNode({
         validationStatus={validationStatus}
         isOutdated={isOutdated}
         beta={data.node?.beta || false}
-        editNameDescription={editNameDescription}
-        toggleEditNameDescription={toggleEditNameDescription}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
       />
     );
   }, [
@@ -389,9 +306,6 @@ function GenericNode({
     validationStatus,
     isOutdated,
     data.node?.beta,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
   ]);
 
   const renderNodeStatus = useCallback(() => {
@@ -408,7 +322,6 @@ function GenericNode({
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
         getValidationStatus={getValidationStatus}
-        handleUpdateComponent={handleUpdateCode}
       />
     );
   }, [
@@ -419,8 +332,6 @@ function GenericNode({
     isOutdated,
     isUserEdited,
     getValidationStatus,
-    dismissAll,
-    handleUpdateCode,
   ]);
 
   const renderDescription = useCallback(() => {
@@ -430,19 +341,9 @@ function GenericNode({
         mdClassName={"dark:prose-invert"}
         nodeId={data.id}
         selected={selected}
-        editNameDescription={editNameDescription}
-        setEditNameDescription={set}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
       />
     );
-  }, [
-    data.node?.description,
-    data.id,
-    selected,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
+  }, [data.node?.description, data.id, selected]);
 
   const renderInputParameters = useCallback(() => {
     return (
@@ -458,11 +359,7 @@ function GenericNode({
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
-    <div
-      className={cn(
-        isOutdated && !isUserEdited && !dismissAll ? "relative -mt-10" : "",
-      )}
-    >
+    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
@@ -472,12 +369,12 @@ function GenericNode({
         )}
       >
         {memoizedNodeToolbarComponent}
-        {isOutdated && !isUserEdited && !dismissAll && (
+        {isOutdated && !isUserEdited && (
           <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
             <ForwardedIconComponent
               name="AlertTriangle"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="icon-size shrink-0"
+              strokeWidth={1.5}
+              className="h-[18px] w-[18px] shrink-0"
             />
             <span className="flex-1 truncate text-sm font-medium">
               {showNode && "Update Ready"}
@@ -498,9 +395,8 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap p-4 leading-5",
-            showNode ? "border-b" : "relative",
-            hasDescription && "gap-3",
+            "grid gap-3 truncate text-wrap p-4 leading-5",
+            showNode && "border-b",
           )}
         >
           <div
@@ -516,9 +412,7 @@ function GenericNode({
               data-testid="generic-node-title-arrangement"
             >
               {renderNodeIcon()}
-              <div className="generic-node-tooltip-div truncate">
-                {renderNodeName()}
-              </div>
+              <div className="generic-node-tooltip-div">{renderNodeName()}</div>
             </div>
             <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
@@ -535,7 +429,7 @@ function GenericNode({
           {showNode && <div>{renderDescription()}</div>}
         </div>
         {showNode && (
-          <div className="nopan nodelete nodrag noflow relative cursor-auto">
+          <div className="relative">
             <>
               {renderInputParameters()}
               <div
@@ -553,11 +447,9 @@ function GenericNode({
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
-                {showHiddenOutputs && (
-                  <div className="block">
-                    {renderOutputs(data.node!.outputs, "hidden")}
-                  </div>
-                )}
+                <div className="block">
+                  {renderOutputs(data.node!.outputs, "hidden")}
+                </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip

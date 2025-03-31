@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.io import (
-    MessageTextInput,
     Output,
     SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
 
@@ -25,10 +25,10 @@ class ScrapeGraphMarkdownifyApi(Component):
             password=True,
             info="The API key to use ScrapeGraph API.",
         ),
-        MessageTextInput(
+        StrInput(
             name="url",
             display_name="URL",
-            tool_mode=True,
+            required=True,
             info="The URL to markdownify.",
         ),
     ]

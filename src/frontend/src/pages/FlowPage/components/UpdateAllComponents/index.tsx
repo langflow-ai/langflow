@@ -9,62 +9,25 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 
-const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
-const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
-  "There was an error updating the components.",
-  "If the error persists, please report it on our Discord or GitHub.",
-];
-const ERROR_MESSAGE_EDGES_LOST =
-  "Some edges were lost after updating the components. Please review the flow and reconnect them.";
-
-export default function UpdateAllComponents({}: {}) {
+export default function UpdateAllComponents() {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
-  const setDismissAll = useUtilityStore((state) => state.setDismissAll);
+  const updateNodeInternals = useUpdateNodeInternals();
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const updateNodeInternals = useUpdateNodeInternals();
   const updateAllNodes = useUpdateAllNodes(setNodes, updateNodeInternals);
 
-  const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const edgesUpdateRef = useRef({
-    numberOfEdgesBeforeUpdate: 0,
-    updateComponent: false,
-  });
-
-  useMemo(() => {
-    if (
-      edgesUpdateRef.current.numberOfEdgesBeforeUpdate > 0 &&
-      edges.length !== edgesUpdateRef.current.numberOfEdgesBeforeUpdate &&
-      edgesUpdateRef.current.updateComponent
-    ) {
-      useAlertStore.getState().setNoticeData({
-        title: ERROR_MESSAGE_EDGES_LOST,
-      });
-
-      resetEdgesUpdateRef();
-    }
-  }, [edges]);
-
-  const getSuccessTitle = (updatedCount: number) => {
-    resetEdgesUpdateRef();
-    return `Successfully updated ${updatedCount} component${
-      updatedCount > 1 ? "s" : ""
-    }`;
-  };
-
   const handleUpdateAllComponents = () => {
-    startEdgesUpdateRef();
-
     setLoadingUpdate(true);
     takeSnapshot();
 
@@ -111,37 +74,29 @@ export default function UpdateAllComponents({}: {}) {
     Promise.all(updatePromises)
       .then(() => {
         if (updatedCount > 0) {
+          // Batch update all nodes at once
           updateAllNodes(updates);
 
           useAlertStore.getState().setSuccessData({
-            title: getSuccessTitle(updatedCount),
+            title: `Successfully updated ${updatedCount} component${
+              updatedCount > 1 ? "s" : ""
+            }`,
           });
         }
       })
       .catch((error) => {
         setErrorData({
-          title: ERROR_MESSAGE_UPDATING_COMPONENTS,
-          list: ERROR_MESSAGE_UPDATING_COMPONENTS_LIST,
+          title: "Error updating components",
+          list: [
+            "There was an error updating the components.",
+            "If the error persists, please report it on our Discord or GitHub.",
+          ],
         });
         console.error(error);
       })
       .finally(() => {
         setLoadingUpdate(false);
       });
-  };
-
-  const resetEdgesUpdateRef = () => {
-    edgesUpdateRef.current = {
-      numberOfEdgesBeforeUpdate: 0,
-      updateComponent: false,
-    };
-  };
-
-  const startEdgesUpdateRef = () => {
-    edgesUpdateRef.current = {
-      numberOfEdgesBeforeUpdate: edges.length,
-      updateComponent: true,
-    };
   };
 
   if (componentsToUpdate.length === 0) return null;
@@ -169,10 +124,8 @@ export default function UpdateAllComponents({}: {}) {
           variant="link"
           size="icon"
           className="shrink-0 text-sm text-warning-foreground"
-          onClick={(e) => {
+          onClick={() => {
             setDismissed(true);
-            setDismissAll(true);
-            e.stopPropagation();
           }}
         >
           Dismiss

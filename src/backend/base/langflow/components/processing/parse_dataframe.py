@@ -11,7 +11,6 @@ class ParseDataFrameComponent(Component):
     )
     icon = "braces"
     name = "ParseDataFrame"
-    legacy = True
 
     inputs = [
         DataFrameInput(name="df", display_name="DataFrame", info="The DataFrame to convert to text rows."),

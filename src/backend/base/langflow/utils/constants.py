@@ -52,22 +52,7 @@ def python_function(text: str) -> str:
 
 
 PYTHON_BASIC_TYPES = [str, bool, int, float, tuple, list, dict, set]
-DIRECT_TYPES = [
-    "str",
-    "bool",
-    "dict",
-    "int",
-    "float",
-    "Any",
-    "prompt",
-    "code",
-    "NestedDict",
-    "table",
-    "slider",
-    "tab",
-    "sortableList",
-    "connect",
-]
+DIRECT_TYPES = ["str", "bool", "dict", "int", "float", "Any", "prompt", "code", "NestedDict", "table", "slider"]
 
 
 LOADERS_INFO: list[dict[str, Any]] = [
@@ -188,3 +173,6 @@ MESSAGE_SENDER_AI = "Machine"
 MESSAGE_SENDER_USER = "User"
 MESSAGE_SENDER_NAME_AI = "AI"
 MESSAGE_SENDER_NAME_USER = "User"
+
+MAX_TEXT_LENGTH = 20000
+MAX_ITEMS_LENGTH = 1000

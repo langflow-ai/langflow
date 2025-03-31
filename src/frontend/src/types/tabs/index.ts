@@ -69,13 +69,3 @@ export type errorsVarType = {
   title: string;
   list?: Array<string>;
 };
-
-export type APITabType = {
-  title: string;
-  language: string;
-  icon: string;
-  code: string;
-  copyCode: string;
-};
-
-export type tabsArrayType = Array<APITabType>;

@@ -15,20 +15,6 @@ test(
       });
     });
 
-    await page.addInitScript(() => {
-      window.process = window.process || {};
-
-      const newEnv = { ...window.process.env, LANGFLOW_AUTO_LOGIN: "false" };
-
-      Object.defineProperty(window.process, "env", {
-        value: newEnv,
-        writable: true,
-        configurable: true,
-      });
-
-      sessionStorage.setItem("testMockAutoLogin", "true");
-    });
-
     const randomName = Math.random().toString(36).substring(5);
     const randomPassword = Math.random().toString(36).substring(5);
     const secondRandomName = Math.random().toString(36).substring(5);
@@ -41,10 +27,6 @@ test(
 
     await page.getByPlaceholder("Username").fill("langflow");
     await page.getByPlaceholder("Password").fill("langflow");
-
-    await page.evaluate(() => {
-      sessionStorage.removeItem("testMockAutoLogin");
-    });
 
     await page.getByRole("button", { name: "Sign In" }).click();
 
@@ -179,10 +161,6 @@ test(
 
     await page.getByTestId("user-profile-settings").click();
 
-    await page.evaluate(() => {
-      sessionStorage.setItem("testMockAutoLogin", "true");
-    });
-
     await page.getByText("Logout", { exact: true }).click();
 
     await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
@@ -195,10 +173,6 @@ test(
     });
 
     await page.getByRole("button", { name: "Sign In" }).click();
-
-    await page.evaluate(() => {
-      sessionStorage.removeItem("testMockAutoLogin");
-    });
 
     await page.waitForSelector('[id="new-project-btn"]', {
       timeout: 30000,
@@ -214,8 +188,6 @@ test(
         )
       ).isVisible(),
     );
-
-    await page.waitForTimeout(2000);
 
     await awaitBootstrapTest(page, { skipGoto: true });
 
@@ -259,20 +231,12 @@ test(
 
     await page.getByTestId("user-profile-settings").click();
 
-    await page.evaluate(() => {
-      sessionStorage.setItem("testMockAutoLogin", "true");
-    });
-
     await page.getByText("Logout", { exact: true }).click();
 
     await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
 
     await page.getByPlaceholder("Username").fill("langflow");
     await page.getByPlaceholder("Password").fill("langflow");
-
-    await page.evaluate(() => {
-      sessionStorage.removeItem("testMockAutoLogin");
-    });
 
     await page.getByRole("button", { name: "Sign In" }).click();
 
@@ -290,10 +254,6 @@ test(
 
     await expect(page.getByText(randomFlowName, { exact: true })).toBeVisible({
       timeout: 2000,
-    });
-
-    await page.evaluate(() => {
-      sessionStorage.removeItem("testMockAutoLogin");
     });
   },
 );

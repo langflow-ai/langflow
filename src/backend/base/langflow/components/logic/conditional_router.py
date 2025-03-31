@@ -46,6 +46,7 @@ class ConditionalRouterComponent(Component):
             name="message",
             display_name="Message",
             info="The message to pass through either route.",
+            advanced=True,
         ),
         IntInput(
             name="max_iterations",

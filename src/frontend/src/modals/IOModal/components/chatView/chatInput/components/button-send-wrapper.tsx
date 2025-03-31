@@ -16,6 +16,7 @@ const BUTTON_STATES = {
 
 type ButtonSendWrapperProps = {
   send: () => void;
+  lockChat: boolean;
   noInput: boolean;
   chatValue: string;
   files: FilePreviewType[];
@@ -23,6 +24,7 @@ type ButtonSendWrapperProps = {
 
 const ButtonSendWrapper = ({
   send,
+  lockChat,
   noInput,
   chatValue,
   files,
@@ -30,9 +32,10 @@ const ButtonSendWrapper = ({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const showStopButton = isBuilding || files.some((file) => file.loading);
+  const showStopButton = lockChat || files.some((file) => file.loading);
+  const showPlayButton = !lockChat && noInput;
   const showSendButton =
-    !(isBuilding || files.some((file) => file.loading)) && !noInput;
+    !(lockChat || files.some((file) => file.loading)) && !noInput;
 
   const getButtonState = () => {
     if (showStopButton) return BUTTON_STATES.SHOW_STOP;
@@ -55,6 +58,7 @@ const ButtonSendWrapper = ({
   return (
     <Button
       className={buttonClasses}
+      disabled={lockChat && !isBuilding}
       onClick={handleClick}
       unstyled
       data-testid={showStopButton ? "button-stop" : "button-send"}

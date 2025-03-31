@@ -3,8 +3,6 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-import anyio
-
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
@@ -18,7 +16,6 @@ class StorageService(Service):
     def __init__(self, session_service: SessionService, settings_service: SettingsService):
         self.settings_service = settings_service
         self.session_service = session_service
-        self.data_dir: anyio.Path = anyio.Path(settings_service.settings.config_dir)
         self.set_ready()
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:

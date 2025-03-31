@@ -12,7 +12,7 @@ const config = {
     "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
   favicon: "img/favicon.ico",
   url: "https://docs.langflow.org",
-  baseUrl: process.env.BASE_URL ? process.env.BASE_URL : "/",
+  baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   onBrokenAnchors: "warn",
@@ -20,19 +20,13 @@ const config = {
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
+  customFields: {
+    mendableAnonKey: "b7f52734-297c-41dc-8737-edbd13196394", // Mendable Anon Client-side key, safe to expose to the public
+  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
   },
-  headTags: [
-    {
-      tagName: "link",
-      attributes: {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
-      },
-    }
-  ],
 
   presets: [
     [
@@ -178,15 +172,8 @@ const config = {
             from: "/components-rag",
           },
           {
-            to: "/concepts-publish",
-            from: [
-              "/concepts-api",
-              "/workspace-api",
-            ]
-          },
-          {
-            to: "/components-custom-components",
-            from: "/components/custom",
+            to: "/concepts-api",
+            from: "/workspace-api",
           },
           // add more redirects like this
           // {
@@ -264,17 +251,8 @@ const config = {
       },
       docs: {
         sidebar: {
-          hideable: false,
+          hideable: true,
         },
-      },
-      algolia: {
-        appId: 'UZK6BDPCVY',
-        // public key, safe to commit
-        apiKey: 'adbd7686dceb1cd510d5ce20d04bf74c',
-        indexName: 'langflow',
-        contextualSearch: true,
-        searchParameters: {},
-        searchPagePath: 'search',
       },
     }),
 };

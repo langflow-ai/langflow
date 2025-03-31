@@ -6,7 +6,7 @@ const UploadFileButton = ({
   fileInputRef,
   handleFileChange,
   handleButtonClick,
-  isBuilding,
+  lockChat,
 }) => {
   return (
     <ShadTooltip
@@ -16,16 +16,16 @@ const UploadFileButton = ({
     >
       <div>
         <input
-          disabled={isBuilding}
+          disabled={lockChat}
           type="file"
           ref={fileInputRef}
           style={{ display: "none" }}
           onChange={handleFileChange}
         />
         <Button
-          disabled={isBuilding}
-          className={`btn-playground-actions ${
-            isBuilding
+          disabled={lockChat}
+          className={`flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all ${
+            lockChat
               ? "cursor-not-allowed"
               : "text-muted-foreground hover:text-primary"
           }`}

@@ -1,5 +1,4 @@
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
 import { useMutationFunctionType } from "@/types/api";
 import { Message } from "@/types/messages";
 import { UseMutationResult } from "@tanstack/react-query";
@@ -19,29 +18,15 @@ export const useUpdateMessage: useMutationFunctionType<
   const { mutate, queryClient } = UseRequestProcessor();
 
   const updateMessageApi = async (data: UpdateMessageParams) => {
-    const isPlayground = useFlowStore.getState().playgroundPage;
-    const flowId = useFlowsManagerStore.getState().currentFlowId;
     const message = data.message;
     if (message.files && typeof message.files === "string") {
       message.files = JSON.parse(message.files);
     }
-    if (isPlayground && flowId) {
-      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
-      const messageIndex = messages.findIndex(
-        (m: Message) => m.id === message.id,
-      );
-      messages[messageIndex] = message;
-      sessionStorage.setItem(flowId, JSON.stringify(messages));
-      return {
-        data: message,
-      };
-    } else {
-      const result = await api.put(
-        `${getURL("MESSAGES")}/${message.id}`,
-        message,
-      );
-      return result.data;
-    }
+    const result = await api.put(
+      `${getURL("MESSAGES")}/${message.id}`,
+      message,
+    );
+    return result.data;
   };
 
   const mutation: UseMutationResult<Message, any, UpdateMessageParams> = mutate(

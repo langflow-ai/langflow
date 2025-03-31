@@ -21,7 +21,6 @@ const ExportModal = forwardRef(
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
     const currentFlow = useFlowStore((state) => state.currentFlow);
-    const isBuilding = useFlowStore((state) => state.isBuilding);
     useEffect(() => {
       setName(currentFlow?.name ?? "");
       setDescription(currentFlow?.description ?? "");
@@ -31,6 +30,7 @@ const ExportModal = forwardRef(
       currentFlow?.description ?? "",
     );
     const [open, setOpen] = useState(false);
+
     return (
       <BaseModal
         size="smaller-h-full"
@@ -47,7 +47,6 @@ const ExportModal = forwardRef(
                 last_tested_version: version,
                 endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
-                tags: currentFlow!.tags,
               },
               name!,
               description,
@@ -65,7 +64,6 @@ const ExportModal = forwardRef(
                 last_tested_version: version,
                 endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
-                tags: currentFlow!.tags,
               }),
               name!,
               description,
@@ -107,7 +105,7 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Export", loading: isBuilding }} />
+        <BaseModal.Footer submit={{ label: "Export" }} />
       </BaseModal>
     );
   },

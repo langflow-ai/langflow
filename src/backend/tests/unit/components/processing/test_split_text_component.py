@@ -1,5 +1,4 @@
 import pytest
-from langflow.components.data import URLComponent
 from langflow.components.processing import SplitTextComponent
 from langflow.schema import Data, DataFrame
 
@@ -45,7 +44,6 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
                 "chunk_overlap": 0,
                 "chunk_size": 15,
                 "separator": "\n",
-                "text_key": "text",
                 "session_id": "test_session",
                 "sender": "test_sender",
                 "sender_name": "test_sender_name",
@@ -56,9 +54,9 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert len(results) == 3, f"Expected 3 chunks, got {len(results)}"
         assert "This is a test" in results[0].text, f"Expected 'This is a test', got '{results[0].text}'"
         assert "It has multiple lines" in results[1].text, f"Expected 'It has multiple lines', got '{results[1].text}'"
-        assert "Each line should be a chunk" in results[2].text, (
-            f"Expected 'Each line should be a chunk', got '{results[2].text}'"
-        )
+        assert (
+            "Each line should be a chunk" in results[2].text
+        ), f"Expected 'Each line should be a chunk', got '{results[2].text}'"
 
     def test_split_text_with_overlap(self):
         """Test text splitting with overlap."""
@@ -125,12 +123,12 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         results = component.split_text()
         assert len(results) == 2, f"Expected 2 chunks, got {len(results)}"
         for result in results:
-            assert result.data["source"] == test_metadata["source"], (
-                f"Expected source '{test_metadata['source']}', got '{result.data.get('source')}'"
-            )
-            assert result.data["author"] == test_metadata["author"], (
-                f"Expected author '{test_metadata['author']}', got '{result.data.get('author')}'"
-            )
+            assert (
+                result.data["source"] == test_metadata["source"]
+            ), f"Expected source '{test_metadata['source']}', got '{result.data.get('source')}'"
+            assert (
+                result.data["author"] == test_metadata["author"]
+            ), f"Expected author '{test_metadata['author']}', got '{result.data.get('author')}'"
 
     def test_split_text_as_dataframe(self):
         """Test converting split text results to DataFrame."""
@@ -152,15 +150,15 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 3, f"Expected DataFrame with 3 rows, got {len(data_frame)}"
         assert list(data_frame.columns) == ["text"], f"Expected columns ['text'], got {list(data_frame.columns)}"
-        assert "First chunk" in data_frame.iloc[0]["text"], (
-            f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
-        )
-        assert "Second chunk" in data_frame.iloc[1]["text"], (
-            f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
-        )
-        assert "Third chunk" in data_frame.iloc[2]["text"], (
-            f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
-        )
+        assert (
+            "First chunk" in data_frame.iloc[0]["text"]
+        ), f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
+        assert (
+            "Second chunk" in data_frame.iloc[1]["text"]
+        ), f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
+        assert (
+            "Third chunk" in data_frame.iloc[2]["text"]
+        ), f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
 
     def test_split_text_empty_input(self):
         """Test handling of empty input text."""
@@ -222,53 +220,3 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert "Second line" in results[1].text, f"Expected 'Second line', got '{results[1].text}'"
         assert "Another text" in results[2].text, f"Expected 'Another text', got '{results[2].text}'"
         assert "Another line" in results[3].text, f"Expected 'Another line', got '{results[3].text}'"
-
-    def test_split_text_with_dataframe_input(self):
-        """Test splitting text with DataFrame input."""
-        component = SplitTextComponent()
-        test_texts = ["First text\nSecond line", "Another text\nAnother line"]
-        data_frame = DataFrame([Data(text=text) for text in test_texts])
-        component.set_attributes(
-            {
-                "data_inputs": data_frame,
-                "chunk_overlap": 0,
-                "chunk_size": 10,
-                "separator": "\n",
-                "session_id": "test_session",
-                "sender": "test_sender",
-                "sender_name": "test_sender_name",
-            }
-        )
-
-        results = component.split_text()
-        assert len(results) == 4, f"Expected 4 chunks (2 from each text), got {len(results)}"
-        assert "First text" in results[0].text, f"Expected 'First text', got '{results[0].text}'"
-        assert "Second line" in results[1].text, f"Expected 'Second line', got '{results[1].text}'"
-        assert "Another text" in results[2].text, f"Expected 'Another text', got '{results[2].text}'"
-        assert "Another line" in results[3].text, f"Expected 'Another line', got '{results[3].text}'"
-
-    def test_with_url_loader(self):
-        """Test splitting text with URL loader."""
-        component = SplitTextComponent()
-        url = ["https://en.wikipedia.org/wiki/London", "https://en.wikipedia.org/wiki/Paris"]
-        data_frame = URLComponent(urls=url, format="Text").as_dataframe()
-        assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
-        assert len(data_frame) == 2, f"Expected DataFrame with 2 rows, got {len(data_frame)}"
-        component.set_attributes(
-            {
-                "data_inputs": data_frame,
-                "chunk_overlap": 0,
-                "chunk_size": 10,
-                "separator": "\n",
-                "session_id": "test_session",
-                "sender": "test_sender",
-                "sender_name": "test_sender_name",
-            }
-        )
-        results = component.as_dataframe()
-        assert isinstance(results, DataFrame), "Expected DataFrame instance"
-        assert len(results) > 2, f"Expected DataFrame with more than 2 rows, got {len(results)}"
-
-        results = component.split_text()
-        assert isinstance(results, list), "Expected list instance"
-        assert len(results) > 2, f"Expected DataFrame with more than 2 rows, got {len(results)}"

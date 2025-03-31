@@ -1,5 +1,4 @@
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
-import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { cn } from "@/utils/utils";
@@ -16,7 +15,6 @@ export function CustomParameterComponent({
   disabled,
   placeholder,
   isToolMode,
-  nodeInformationMetadata,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -29,7 +27,6 @@ export function CustomParameterComponent({
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
-  nodeInformationMetadata?: NodeInfoType;
 }) {
   return (
     <ParameterRenderComponent
@@ -44,7 +41,6 @@ export function CustomParameterComponent({
       disabled={disabled}
       placeholder={placeholder}
       isToolMode={isToolMode}
-      nodeInformationMetadata={nodeInformationMetadata}
     />
   );
 }
@@ -53,12 +49,10 @@ export function getCustomParameterTitle({
   title,
   nodeId,
   isFlexView,
-  required,
 }: {
   title: string;
   nodeId: string;
   isFlexView: boolean;
-  required?: boolean;
 }) {
   return (
     <div className={cn(isFlexView && "max-w-56 truncate")}>
@@ -68,7 +62,6 @@ export function getCustomParameterTitle({
       >
         {title}
       </span>
-      {required && <span className="text-red-500">*</span>}
     </div>
   );
 }

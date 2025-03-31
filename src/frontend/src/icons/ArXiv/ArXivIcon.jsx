@@ -1,3 +1,5 @@
+import React from "react";
+
 const ArXivIcon = (props) => {
   return (
     <svg

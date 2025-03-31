@@ -64,7 +64,6 @@ class DeepSeekModelComponent(LCModelComponent):
             info="Controls randomness in responses",
             value=1.0,
             range_spec=RangeSpec(min=0, max=2, step=0.01),
-            advanced=True,
         ),
         IntInput(
             name="seed",

@@ -38,7 +38,7 @@ import pytorch
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "https://docs.langflow.org/components-custom-components"
+    documentation: str = "http://docs.langflow.org/components/custom"
     icon = "custom_components"
     name = "CustomComponent"
 
@@ -61,20 +61,8 @@ class CustomComponent(Component):
 
     await page.getByText("Check & Save").last().click();
 
-    // Wait for the error message to appear and have sufficient length
-    await page.waitForFunction(
-      () => {
-        const errorElement = document.querySelector(
-          '[data-testid="title_error_code_modal"]',
-        );
-        return (
-          errorElement &&
-          errorElement.textContent &&
-          errorElement.textContent.length > 20
-        );
-      },
-      { timeout: 10000 }, // 5 second timeout
-    );
+    //wait for the animation to propagate
+    await page.waitForTimeout(1000);
 
     const error = await page
       .getByTestId("title_error_code_modal")

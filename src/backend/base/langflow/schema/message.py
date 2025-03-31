@@ -368,37 +368,6 @@ class MessageResponse(DefaultModel):
 class ErrorMessage(Message):
     """A message class specifically for error messages with predefined error-specific attributes."""
 
-    @staticmethod
-    def _format_markdown_reason(exception: BaseException) -> str:
-        """Format the error reason with markdown formatting."""
-        reason = f"**{exception.__class__.__name__}**\n"
-        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
-            reason += f" - **{exception.body.get('message')}**\n"
-        elif hasattr(exception, "code"):
-            reason += f" - **Code: {exception.code}**\n"
-        elif hasattr(exception, "args") and exception.args:
-            reason += f" - **Details: {exception.args[0]}**\n"
-        elif isinstance(exception, ValidationError):
-            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
-        else:
-            reason += " - **An unknown error occurred.**\n"
-        return reason
-
-    @staticmethod
-    def _format_plain_reason(exception: BaseException) -> str:
-        """Format the error reason without markdown."""
-        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
-            reason = f"{exception.body.get('message')}\n"
-        elif hasattr(exception, "code"):
-            reason = f"Code: {exception.code}\n"
-        elif hasattr(exception, "args") and exception.args:
-            reason = f"{exception.args[0]}\n"
-        elif isinstance(exception, ValidationError):
-            reason = f"{exception!s}\n"
-        else:
-            reason = "An unknown error occurred.\n"
-        return reason
-
     def __init__(
         self,
         exception: BaseException,
@@ -410,9 +379,19 @@ class ErrorMessage(Message):
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
             exception = exception.__cause__
+        # Get the error reason
+        reason = f"**{exception.__class__.__name__}**\n"
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
+            reason += f" - **{exception.body.get('message')}**\n"
+        elif hasattr(exception, "code"):
+            reason += f" - **Code: {exception.code}**\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason += f" - **Details: {exception.args[0]}**\n"
+        elif isinstance(exception, ValidationError):
+            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
+        else:
+            reason += " - **An unknown error occurred.**\n"
 
-        plain_reason = self._format_plain_reason(exception)
-        markdown_reason = self._format_markdown_reason(exception)
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)
@@ -423,7 +402,7 @@ class ErrorMessage(Message):
             session_id=session_id,
             sender=source.display_name if source else None,
             sender_name=source.display_name if source else None,
-            text=plain_reason,
+            text=reason,
             properties=Properties(
                 text_color="red",
                 background_color="red",
@@ -443,7 +422,7 @@ class ErrorMessage(Message):
                             type="error",
                             component=source.display_name if source else None,
                             field=str(exception.field) if hasattr(exception, "field") else None,
-                            reason=markdown_reason,
+                            reason=reason,
                             solution=str(exception.solution) if hasattr(exception, "solution") else None,
                             traceback=traceback.format_exc(),
                         )

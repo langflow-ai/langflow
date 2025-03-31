@@ -55,8 +55,6 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Failed to connect to Couchbase: {e}"
             raise ValueError(msg) from e
 
-        self.ingest_data = self._prepare_ingest_data()
-
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

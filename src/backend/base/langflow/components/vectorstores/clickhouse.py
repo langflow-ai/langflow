@@ -49,7 +49,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             value=False,
             advanced=True,
         ),
-        StrInput(name="index_param", display_name="Param of the index", value="100,'L2Distance'", advanced=True),
+        StrInput(name="index_param", display_name="Param of the index", value="'L2Distance',100", advanced=True),
         DictInput(name="index_query_params", display_name="index query params", advanced=True),
         *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
@@ -75,16 +75,11 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         try:
-            client = clickhouse_connect.get_client(
-                host=self.host, port=self.port, username=self.username, password=self.password
-            )
+            client = clickhouse_connect.get_client(host=self.host, username=self.username, password=self.password)
             client.command("SELECT 1")
         except Exception as e:
             msg = f"Failed to connect to Clickhouse: {e}"
             raise ValueError(msg) from e
-
-        # Convert DataFrame to Data if needed using parent's method
-        self.ingest_data = self._prepare_ingest_data()
 
         documents = []
         for _input in self.ingest_data or []:

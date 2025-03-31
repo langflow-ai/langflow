@@ -127,8 +127,7 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert "ChatOutput" in json_response["outputs"]
 
 
-@pytest.mark.usefixtures("active_user")
-async def test_post_validate_code(client: AsyncClient, logged_in_headers):
+async def test_post_validate_code(client: AsyncClient):
     # Test case with a valid import and function
     code1 = """
 import math
@@ -136,7 +135,7 @@ import math
 def square(x):
     return x ** 2
 """
-    response1 = await client.post("api/v1/validate/code", json={"code": code1}, headers=logged_in_headers)
+    response1 = await client.post("api/v1/validate/code", json={"code": code1})
     assert response1.status_code == 200
     assert response1.json() == {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -147,7 +146,7 @@ import non_existent_module
 def square(x):
     return x ** 2
 """
-    response2 = await client.post("api/v1/validate/code", json={"code": code2}, headers=logged_in_headers)
+    response2 = await client.post("api/v1/validate/code", json={"code": code2})
     assert response2.status_code == 200
     assert response2.json() == {
         "imports": {"errors": ["No module named 'non_existent_module'"]},
@@ -161,7 +160,7 @@ import math
 def square(x)
     return x ** 2
 """
-    response3 = await client.post("api/v1/validate/code", json={"code": code3}, headers=logged_in_headers)
+    response3 = await client.post("api/v1/validate/code", json={"code": code3})
     assert response3.status_code == 200
     assert response3.json() == {
         "imports": {"errors": []},
@@ -169,11 +168,11 @@ def square(x)
     }
 
     # Test case with invalid JSON payload
-    response4 = await client.post("api/v1/validate/code", json={"invalid_key": code1}, headers=logged_in_headers)
+    response4 = await client.post("api/v1/validate/code", json={"invalid_key": code1})
     assert response4.status_code == 422
 
     # Test case with an empty code string
-    response5 = await client.post("api/v1/validate/code", json={"code": ""}, headers=logged_in_headers)
+    response5 = await client.post("api/v1/validate/code", json={"code": ""})
     assert response5.status_code == 200
     assert response5.json() == {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -184,7 +183,7 @@ import math
 def square(x)
     return x ** 2
 """
-    response6 = await client.post("api/v1/validate/code", json={"code": code6}, headers=logged_in_headers)
+    response6 = await client.post("api/v1/validate/code", json={"code": code6})
     assert response6.status_code == 200
     assert response6.json() == {
         "imports": {"errors": []},
@@ -414,9 +413,9 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(text_input_outputs) == 1
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
-    assert all(output.get("results").get("text").get("text") == "value1" for output in text_input_outputs), (
-        text_input_outputs
-    )
+    assert all(
+        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
+    ), text_input_outputs
 
 
 @pytest.mark.api_key_required
@@ -448,9 +447,9 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all(output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs), (
-        chat_input_outputs
-    )
+    assert all(
+        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
+    ), chat_input_outputs
 
 
 @pytest.mark.benchmark
@@ -504,9 +503,9 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     all_message_or_text_dicts = [
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
-    assert all(message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts), (
-        any_input_outputs
-    )
+    assert all(
+        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
+    ), any_input_outputs
 
 
 async def test_invalid_flow_id(client, created_api_key):

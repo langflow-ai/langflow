@@ -26,7 +26,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
 
-  await page.getByTestId("edit-button-modal").last().click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showmax_tokens").click();
 
   await page.getByText("Close").last().click();
@@ -59,7 +60,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
 
-  await page.getByTestId("edit-button-modal").last().click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
@@ -88,7 +90,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -108,7 +110,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -128,7 +130,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.getByText("Close").last().click();
 
@@ -137,7 +139,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     const valueEditNode = await page
       .getByTestId("int_int_max_tokens")

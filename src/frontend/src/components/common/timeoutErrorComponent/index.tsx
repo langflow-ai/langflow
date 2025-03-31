@@ -1,6 +1,7 @@
 import BaseModal from "../../../modals/baseModal";
 import { fetchErrorComponentType } from "../../../types/components";
 import Loading from "../../ui/loading";
+import IconComponent from "../genericIconComponent";
 
 export default function TimeoutErrorComponent({
   message,

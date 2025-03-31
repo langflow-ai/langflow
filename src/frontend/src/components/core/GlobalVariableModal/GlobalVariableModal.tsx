@@ -11,7 +11,6 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
-import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -25,7 +24,6 @@ export default function GlobalVariableModal({
   children,
   asChild,
   initialData,
-  referenceField,
   open: myOpen,
   setOpen: mySetOpen,
   disabled = false,
@@ -33,7 +31,6 @@ export default function GlobalVariableModal({
   children?: JSX.Element;
   asChild?: boolean;
   initialData?: GlobalVariable;
-  referenceField?: string;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
   disabled?: boolean;
@@ -54,7 +51,6 @@ export default function GlobalVariableModal({
   const { mutate: updateVariable } = usePatchGlobalVariables();
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
-  useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
   useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
@@ -65,11 +61,6 @@ export default function GlobalVariableModal({
       setAvailableFields(
         sortByName(fields.concat(initialData?.default_fields ?? [])),
       );
-      if (referenceField && fields.includes(referenceField)) {
-        setFields([referenceField]);
-      }
-    } else {
-      setAvailableFields(["System", "System Message", "System Prompt"]);
     }
   }, [globalVariables, componentFields, initialData]);
 
@@ -115,7 +106,7 @@ export default function GlobalVariableModal({
   }
 
   function submitForm() {
-    if (!initialData || !initialData.id) {
+    if (!initialData) {
       handleSaveVariable();
     } else {
       updateVariable({
@@ -175,7 +166,7 @@ export default function GlobalVariableModal({
             </Tabs>
           </div>
 
-          <div className="space-y-2" id="global-variable-modal-inputs">
+          <div className="space-y-2">
             <Label>Name*</Label>
             <Input
               value={key}

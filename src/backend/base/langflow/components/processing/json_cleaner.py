@@ -14,7 +14,7 @@ class JSONCleaner(Component):
         "Cleans the messy and sometimes incorrect JSON strings produced by LLMs "
         "so that they are fully compliant with the JSON spec."
     )
-    legacy = True
+
     inputs = [
         MessageTextInput(
             name="json_str", display_name="JSON String", info="The JSON string to be cleaned.", required=True

@@ -61,11 +61,11 @@ Replace `SECRET_KEY`, `PUBLIC_KEY`, and `HOST_URL` with the API key information 
 
 1. Start Langflow in the same terminal or environment where you set the environment variables:
 
-```bash
-uv run langflow run
-```
+    ```bash
+    python -m langflow run
+    ```
 
-2. In Langflow, open an existing project, and then run a flow.
+2. In Langflow, open and existing project, and then run a flow.
 
 ## View tracing data in Langfuse
 

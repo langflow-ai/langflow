@@ -1,7 +1,6 @@
 from langflow.custom import Component
 from langflow.inputs import StrInput
 from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.template import Output
 
 
@@ -23,18 +22,9 @@ class CreateListComponent(Component):
 
     outputs = [
         Output(display_name="Data List", name="list", method="create_list"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def create_list(self) -> list[Data]:
         data = [Data(text=text) for text in self.texts]
         self.status = data
         return data
-
-    def as_dataframe(self) -> DataFrame:
-        """Convert the list of Data objects into a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the list data.
-        """
-        return DataFrame(self.create_list())

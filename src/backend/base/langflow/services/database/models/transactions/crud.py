@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from loguru import logger
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -26,7 +25,7 @@ async def get_transactions_by_flow_id(
     return list(transactions)
 
 
-async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable | None:
+async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable:
     """Log a transaction and maintain a maximum number of transactions in the database.
 
     This function logs a new transaction into the database and ensures that the number of transactions
@@ -43,9 +42,6 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
     Raises:
         IntegrityError: If there is a database integrity error
     """
-    if not transaction.flow_id:
-        logger.debug("Transaction flow_id is None")
-        return None
     table = TransactionTable(**transaction.model_dump())
 
     try:
@@ -67,6 +63,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         db.add(table)
         await db.exec(delete_older)
         await db.commit()
+        await db.refresh(table)
 
     except Exception:
         await db.rollback()

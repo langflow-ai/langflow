@@ -52,7 +52,7 @@ const HandleContent = memo(function HandleContent({
       styleSheet.textContent = `
         @keyframes pulseNeon-${nodeId} {
           0% {
-            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
                         0 0 2px ${handleColor},
                         0 0 4px ${handleColor},
                         0 0 6px ${handleColor},
@@ -62,7 +62,7 @@ const HandleContent = memo(function HandleContent({
                         0 0 20px ${handleColor};
           }
           50% {
-            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
                         0 0 4px ${handleColor},
                         0 0 8px ${handleColor},
                         0 0 12px ${handleColor},
@@ -72,7 +72,7 @@ const HandleContent = memo(function HandleContent({
                         0 0 30px ${handleColor};
           }
           100% {
-            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
                         0 0 2px ${handleColor},
                         0 0 4px ${handleColor},
                         0 0 6px ${handleColor},
@@ -278,17 +278,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const isNullHandle =
       filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
 
-    // Create a Set from colorName to remove duplicates
-    const colorNameSet = new Set(colorName || []);
-    const uniqueColorCount = colorNameSet.size;
-    const firstUniqueColor =
-      colorName && colorName.length > 0 ? colorName[0] : "";
-
     const handleColorName = connectedEdge
       ? connectedColor
-      : uniqueColorCount > 1
+      : colorName!.length > 1
         ? "secondary-foreground"
-        : "datatype-" + firstUniqueColor;
+        : "datatype-" + colorName![0];
 
     const handleColor = isNullHandle
       ? dark
@@ -296,15 +290,15 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         : "hsl(var(--accent-gray-foreground)"
       : connectedEdge
         ? "hsl(var(--datatype-" + connectedColor + "))"
-        : uniqueColorCount > 1
+        : colorName!.length > 1
           ? "hsl(var(--secondary-foreground))"
-          : "hsl(var(--datatype-" + firstUniqueColor + "))";
+          : "hsl(var(--datatype-" + colorName![0] + "))";
 
     const accentForegroundColorName = connectedEdge
       ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
-      : uniqueColorCount > 1
+      : colorName!.length > 1
         ? "hsl(var(--input))"
-        : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
+        : "hsl(var(--datatype-" + colorName![0] + "-foreground))";
 
     const currentFilter = left
       ? {

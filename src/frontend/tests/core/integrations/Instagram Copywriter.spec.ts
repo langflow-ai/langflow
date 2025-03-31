@@ -8,7 +8,7 @@ import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 
 test(
   "Instagram Copywriter",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-project"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

@@ -1,4 +1,5 @@
 import { useMutationFunctionType } from "@/types/api";
+import { GlobalVariable } from "@/types/global_variables";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";

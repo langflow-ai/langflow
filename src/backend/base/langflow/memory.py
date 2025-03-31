@@ -1,4 +1,3 @@
-import asyncio
 import json
 from collections.abc import Sequence
 from uuid import UUID
@@ -155,19 +154,9 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
     try:
         for message in messages:
             session.add(message)
-        try:
-            await session.commit()
-            # This is a hack.
-            # We are doing this because build_public_tmp causes the CancelledError to be raised
-            # while build_flow does not.
-        except asyncio.CancelledError:
-            await session.commit()
+        await session.commit()
         for message in messages:
             await session.refresh(message)
-    except asyncio.CancelledError as e:
-        logger.exception(e)
-        error_msg = "Operation cancelled"
-        raise ValueError(error_msg) from e
     except Exception as e:
         logger.exception(e)
         raise

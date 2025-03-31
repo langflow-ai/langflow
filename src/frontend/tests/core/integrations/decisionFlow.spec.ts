@@ -1,7 +1,6 @@
 import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -24,33 +23,33 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await addLegacyComponents(page);
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
 
     //---------------------------------- CHAT INPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
-      timeout: 2000,
+      timeout: 500,
     });
-
-    await zoomOut(page, 6);
-
     await page
       .getByTestId("inputsChat Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await zoomOut(page);
 
     //---------------------------------- CREATE LIST
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("list");
     await page.waitForSelector('[data-testid="helpersCreate List"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("helpersCreate List")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 200, y: 100 },
+        targetPosition: { x: 100, y: 100 },
       });
 
     await page.waitForSelector('[data-testid="input-list-plus-btn_texts-0"]', {
@@ -76,7 +75,7 @@ test(
     await page
       .getByTestId("helpersCreate List")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 350, y: 100 },
+        targetPosition: { x: 300, y: 300 },
       });
     await page.getByTestId("input-list-plus-btn_texts-0").last().click();
     await page.getByTestId("input-list-plus-btn_texts-0").last().click();
@@ -94,123 +93,126 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data to message");
     await page.waitForSelector('[data-testid="processingData to Message"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 500, y: 100 },
+        targetPosition: { x: 350, y: 100 },
       });
+    await zoomOut(page, 1);
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 650, y: 100 },
+        targetPosition: { x: 50, y: 300 },
       });
+    await zoomOut(page, 2);
 
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("logicPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 800, y: 100 },
+        targetPosition: { x: 400, y: 100 },
       });
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("logicPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 50, y: 200 },
+        targetPosition: { x: 600, y: 200 },
       });
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("logicPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 200, y: 300 },
+        targetPosition: { x: 650, y: 350 },
       });
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 2000,
+      timeout: 500,
     });
+    zoomOut(page, 2);
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
     await page.waitForSelector('[data-testid="promptsPrompt"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("promptsPrompt")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 350, y: 300 },
+        targetPosition: { x: 50, y: 150 },
       });
 
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
     await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("modelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 500, y: 300 },
+        targetPosition: { x: 50, y: 300 },
       });
 
     //---------------------------------- CONDITIONAL ROUTER
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
     await page.waitForSelector('[data-testid="logicIf-Else"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("logicIf-Else")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 650, y: 300 },
+        targetPosition: { x: 750, y: 150 },
       });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("outputsChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 800, y: 300 },
+        targetPosition: { x: 100, y: 75 },
       });
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     await page
       .getByTestId("outputsChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 800, y: 400 },
+        targetPosition: { x: 250, y: 75 },
       });
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 2000,
+      timeout: 500,
     });
     //----------------------------------
     await page.getByTestId("fit_view").click();
@@ -238,7 +240,7 @@ test(
       .click();
     await page
       .getByTestId("handle-createlist-shownode-data list-right")
-      .nth(1)
+      .nth(2)
       .click();
     await page
       .getByTestId("handle-parsedata-shownode-data-left")
@@ -263,7 +265,7 @@ test(
       .click();
     await page
       .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(1)
+      .nth(2)
       .click();
     await page
       .getByTestId("handle-prompt-shownode-false_examples-left")
@@ -271,7 +273,7 @@ test(
       .click();
     await page
       .getByTestId("handle-pass-shownode-output message-right")
-      .nth(2)
+      .nth(4)
       .click();
     await page
       .getByTestId("handle-prompt-shownode-user_message-left")
@@ -328,7 +330,7 @@ test(
       .click();
     await page
       .getByTestId("handle-pass-shownode-output message-right")
-      .nth(1)
+      .nth(2)
       .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-text-target")

@@ -17,13 +17,4 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setStarterProjectId: (id) => set(() => ({ starterProjectId: id })),
   folders: [],
   setFolders: (folders) => set(() => ({ folders: folders })),
-  resetStore: () => {
-    set({
-      folders: [],
-      myCollectionId: "",
-      folderToEdit: null,
-      folderDragging: false,
-      folderIdDragging: "",
-    });
-  },
 }));

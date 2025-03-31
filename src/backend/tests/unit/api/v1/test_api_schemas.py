@@ -4,7 +4,6 @@ from hypothesis import HealthCheck, example, given, settings
 from hypothesis import strategies as st
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.schema.schema import OutputValue
-from langflow.serialization import serialize
 from langflow.services.tracing.schema import Log
 from pydantic import BaseModel
 
@@ -27,9 +26,9 @@ def test_result_data_response_truncation(long_string):
     )
 
     response.serialize_model()
-    truncated = serialize(long_string, max_length=TEST_TEXT_LENGTH)
-    assert len(truncated) <= TEST_TEXT_LENGTH + len("...")
-    assert "..." in truncated
+    truncated = response._serialize_and_truncate(long_string, max_length=TEST_TEXT_LENGTH)
+    assert len(truncated) <= TEST_TEXT_LENGTH + len("... [truncated]")
+    assert "... [truncated]" in truncated
 
 
 @given(
@@ -78,20 +77,20 @@ def test_result_data_response_nested_structures(long_list, long_dict):
         "dict": long_dict,
     }
 
-    ResultDataResponse(results=nested_data)
-    serialized = serialize(nested_data, max_length=TEST_TEXT_LENGTH)
+    response = ResultDataResponse(results=nested_data)
+    serialized = response._serialize_and_truncate(nested_data, max_length=TEST_TEXT_LENGTH)
 
     # Check list items
     for item in serialized["list"]:
-        assert len(item) <= TEST_TEXT_LENGTH + len("...")
+        assert len(item) <= TEST_TEXT_LENGTH + len("... [truncated]")
         if len(item) > TEST_TEXT_LENGTH:
-            assert "..." in item
+            assert "... [truncated]" in item
 
     # Check dict values
     for val in serialized["dict"].values():
-        assert len(val) <= TEST_TEXT_LENGTH + len("...")
+        assert len(val) <= TEST_TEXT_LENGTH + len("... [truncated]")
         if len(val) > TEST_TEXT_LENGTH:
-            assert "..." in val
+            assert "... [truncated]" in val
 
 
 @given(
@@ -115,7 +114,7 @@ def test_result_data_response_outputs(outputs_dict):
     outputs = {key: OutputValue(type="text", message=value) for key, value in outputs_dict.items()}
 
     response = ResultDataResponse(outputs=outputs)
-    serialized = serialize(response, max_length=TEST_TEXT_LENGTH)
+    serialized = ResultDataResponse._serialize_and_truncate(response, max_length=TEST_TEXT_LENGTH)
 
     # Check outputs are properly serialized and truncated
     for key, value in outputs_dict.items():
@@ -125,9 +124,9 @@ def test_result_data_response_outputs(outputs_dict):
 
         # Check message truncation
         message = serialized_output["message"]
-        assert len(message) <= TEST_TEXT_LENGTH + len("..."), f"Message length: {len(message)}"
+        assert len(message) <= TEST_TEXT_LENGTH + len("... [truncated]"), f"Message length: {len(message)}"
         if len(value) > TEST_TEXT_LENGTH:
-            assert "..." in message
+            assert "... [truncated]" in message
             assert message.startswith(value[:TEST_TEXT_LENGTH])
         else:
             assert message == value
@@ -159,7 +158,7 @@ def test_result_data_response_logs(log_messages):
     }
 
     response = ResultDataResponse(logs=logs)
-    serialized = serialize(response, max_length=TEST_TEXT_LENGTH)
+    serialized = ResultDataResponse._serialize_and_truncate(response, max_length=TEST_TEXT_LENGTH)
 
     # Check logs are properly serialized and truncated
     assert "test_node" in serialized["logs"]
@@ -172,9 +171,9 @@ def test_result_data_response_logs(log_messages):
 
         # Check message truncation
         message = serialized_log["message"]
-        assert len(message) <= TEST_TEXT_LENGTH + len("...")
+        assert len(message) <= TEST_TEXT_LENGTH + len("... [truncated]")
         if len(log_msg) > TEST_TEXT_LENGTH:
-            assert "..." in message
+            assert "... [truncated]" in message
             assert message.startswith(log_msg[:TEST_TEXT_LENGTH])
         else:
             assert message == log_msg
@@ -226,7 +225,7 @@ def test_result_data_response_combined_fields(outputs_dict, log_messages):
         message={"text": "test"},
         artifacts={"file": "test.txt"},
     )
-    serialized = serialize(response, max_length=TEST_TEXT_LENGTH)
+    serialized = ResultDataResponse._serialize_and_truncate(response, max_length=TEST_TEXT_LENGTH)
 
     # Check all fields are present
     assert "outputs" in serialized
@@ -244,8 +243,8 @@ def test_result_data_response_combined_fields(outputs_dict, log_messages):
         # Check message truncation
         message = serialized_output["message"]
         if len(value) > TEST_TEXT_LENGTH:
-            assert len(message) <= TEST_TEXT_LENGTH + len("...")
-            assert "..." in message
+            assert len(message) <= TEST_TEXT_LENGTH + len("... [truncated]")
+            assert "... [truncated]" in message
         else:
             assert message == value
 
@@ -261,8 +260,8 @@ def test_result_data_response_combined_fields(outputs_dict, log_messages):
         # Check message truncation
         message = serialized_log["message"]
         if len(log_msg) > TEST_TEXT_LENGTH:
-            assert len(message) <= TEST_TEXT_LENGTH + len("...")
-            assert "..." in message
+            assert len(message) <= TEST_TEXT_LENGTH + len("... [truncated]")
+            assert "... [truncated]" in message
         else:
             assert message == log_msg
 
@@ -312,6 +311,6 @@ def test_vertex_build_response_with_long_data(long_string):
     )
 
     response.model_dump()
-    truncated = serialize(long_string, max_length=TEST_TEXT_LENGTH)
-    assert len(truncated) <= TEST_TEXT_LENGTH + len("...")
-    assert "..." in truncated
+    truncated = result_data._serialize_and_truncate(long_string, max_length=TEST_TEXT_LENGTH)
+    assert len(truncated) <= TEST_TEXT_LENGTH + len("... [truncated]")
+    assert "... [truncated]" in truncated

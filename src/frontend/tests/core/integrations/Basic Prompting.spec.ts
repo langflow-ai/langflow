@@ -3,11 +3,10 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "Basic Prompting (Hello, World)",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-project"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

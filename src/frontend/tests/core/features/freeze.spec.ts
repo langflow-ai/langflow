@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -12,9 +11,8 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await addLegacyComponents(page);
-
     //first component
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
     await page.waitForSelector('[data-testid="inputsText Input"]', {
@@ -115,34 +113,52 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
-      .nth(0)
-      .click();
-    await page
-      .getByTestId("handle-splittext-shownode-data or dataframe-left")
-      .click();
+    const urlOutput = await page
+      .getByTestId("handle-url-shownode-data-right")
+      .nth(0);
+    await urlOutput.hover();
+    await page.mouse.down();
+    const splitTextInputData = await page.getByTestId(
+      "handle-splittext-shownode-data inputs-left",
+    );
+    await splitTextInputData.hover();
+    await page.mouse.up();
 
     //connection 2
-    await page
+    const textOutput = await page
       .getByTestId("handle-textinput-shownode-message-right")
-      .nth(0)
-      .click();
-    await page.getByTestId("handle-splittext-shownode-separator-left").click();
+      .nth(0);
+    await textOutput.hover();
+    await page.mouse.down();
+    const splitTextInput = await page.getByTestId(
+      "handle-splittext-shownode-separator-left",
+    );
+    await splitTextInput.hover();
+    await page.mouse.up();
 
     //connection 3
-    await page
+    const splitTextOutput = await page
       .getByTestId("handle-splittext-shownode-chunks-right")
-      .nth(0)
-      .click();
-    await page.getByTestId("handle-parsedata-shownode-data-left").click();
+      .nth(0);
+    await splitTextOutput.hover();
+    await page.mouse.down();
+    const parseDataInput = await page.getByTestId(
+      "handle-parsedata-shownode-data-left",
+    );
+    await parseDataInput.hover();
+    await page.mouse.up();
 
     //connection 4
-    await page
+    const parseDataOutput = await page
       .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(0)
-      .click();
-    await page.getByTestId("handle-chatoutput-shownode-text-left").click();
+      .nth(0);
+    await parseDataOutput.hover();
+    await page.mouse.down();
+    const chatOutputInput = await page.getByTestId(
+      "handle-chatoutput-shownode-text-left",
+    );
+    await chatOutputInput.hover();
+    await page.mouse.up();
 
     await page
       .getByTestId("textarea_str_input_value")
@@ -173,11 +189,15 @@ test(
       .first()
       .click();
 
+    await page.getByRole("gridcell").nth(4).click();
+
     const firstRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
       .textContent();
 
     await page.getByText("Close").last().click();
+
+    await page.getByTestId("btn-close-modal").click();
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 
@@ -201,10 +221,13 @@ test(
       .first()
       .click();
 
+    await page.getByRole("gridcell").nth(4).click();
+
     const secondRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
       .textContent();
 
+    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.getByText("Split Text", { exact: true }).last().click();
@@ -215,13 +238,11 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
+    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
       timeout: 1000,
     });
 
-    await page.getByTestId("icon-FreezeAll").last().click();
-
-    await page.waitForTimeout(3000);
+    await page.getByTestId("icon-Snowflake").click();
 
     await page.keyboard.press("Escape");
 
@@ -235,8 +256,6 @@ test(
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
     });
-
-    await page.waitForTimeout(2000);
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -258,25 +277,34 @@ test(
       .first()
       .click();
 
+    await page.getByRole("gridcell").nth(4).click();
+
     const firstTextFreezed = await page.getByPlaceholder("Empty").textContent();
 
+    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.getByText("Split Text", { exact: true }).click();
 
-    await page.getByText("Freeze").first().click();
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 1000,
+    });
 
-    await page.waitForTimeout(3000);
+    await page.getByTestId("more-options-modal").click();
+
+    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
+      timeout: 1000,
+    });
+
+    await page.getByText("Freeze", { exact: true }).click();
 
     await page.keyboard.press("Escape");
 
+    await page.locator('//*[@id="react-flow-id"]').click();
+
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector("text=built successfully", {
-      timeout: 30000 * 3,
-    });
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.getByText("built successfully").last().click({
       timeout: 15000,
@@ -294,15 +322,17 @@ test(
       .first()
       .click();
 
+    await page.getByRole("gridcell").nth(4).click();
+
     const thirdTextWithoutFreezing = await page
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(firstTextFreezed).toBe(secondRunWithoutFreezing);
+    expect(secondRunWithoutFreezing).toBe(firstTextFreezed);
 
-    expect(firstTextFreezed).not.toBe(firstRunWithoutFreezing);
-    expect(firstTextFreezed).not.toBe(thirdTextWithoutFreezing);
+    expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-    expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
+    expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
   },
 );

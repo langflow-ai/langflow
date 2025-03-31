@@ -48,7 +48,6 @@ class AnthropicModelComponent(LCModelComponent):
             value=0.1,
             info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,
         ),
         MessageTextInput(
             name="base_url",
@@ -139,7 +138,7 @@ class AnthropicModelComponent(LCModelComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
+        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
             try:
                 if len(self.api_key) == 0:
                     ids = ANTHROPIC_MODELS

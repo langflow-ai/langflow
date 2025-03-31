@@ -1,35 +1,35 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import IconComponent from "../../components/common/genericIconComponent";
 import { NoticeAlertType } from "../../types/alerts";
 
 export default function NoticeAlert({
   title,
-  list = [],
-  id,
   link,
+  id,
   removeAlert,
 }: NoticeAlertType): JSX.Element {
   const [show, setShow] = useState(true);
+
   useEffect(() => {
-    if (show) {
+    const timeoutId = setTimeout(() => {
+      setShow(false);
+      // Wait for the leave transition before calling removeAlert
       setTimeout(() => {
-        setShow(false);
-        setTimeout(() => {
-          removeAlert(id);
-        }, 500);
-      }, 5000);
-    }
-  }, [id, removeAlert, show]);
+        removeAlert(id);
+      }, 500); // match the duration of the leave transition
+    }, 5000); // auto-dismiss alert after 5 seconds
+
+    return () => clearTimeout(timeoutId); // Cleanup timeout on component unmount or re-render
+  }, [id, removeAlert]);
 
   const handleClick = () => {
     setShow(false);
+    // Wait for the leave transition before calling removeAlert
     setTimeout(() => {
       removeAlert(id);
-    }, 500);
+    }, 500); // Ensure the alert is removed after the animation
   };
 
   return (

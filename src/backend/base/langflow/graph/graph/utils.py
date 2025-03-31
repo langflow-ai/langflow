@@ -151,13 +151,10 @@ def update_target_handle(new_edge, g_nodes):
         dict: The updated edge.
     """
     target_handle = new_edge["data"]["targetHandle"]
-    if proxy := target_handle.get("proxy"):
-        proxy_id = proxy["id"]
-        for node in g_nodes:
-            if node["id"] == proxy_id:
-                set_new_target_handle(proxy_id, new_edge, target_handle, node)
-                break
-
+    if target_handle.get("proxy"):
+        proxy_id = target_handle["proxy"]["id"]
+        if node := next((n for n in g_nodes if n["id"] == proxy_id), None):
+            set_new_target_handle(proxy_id, new_edge, target_handle, node)
     return new_edge
 
 
@@ -182,18 +179,13 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
         "type": type_,
         "id": proxy_id,
     }
-
-    node_data = node["data"]["node"]
-    if node_data.get("flow"):
-        field_template_proxy = node_data["template"][field]["proxy"]
+    if node["data"]["node"].get("flow"):
         new_target_handle["proxy"] = {
-            "field": field_template_proxy["field"],
-            "id": field_template_proxy["id"],
+            "field": node["data"]["node"]["template"][field]["proxy"]["field"],
+            "id": node["data"]["node"]["template"][field]["proxy"]["id"],
         }
-
     if input_types := target_handle.get("inputTypes"):
         new_target_handle["inputTypes"] = input_types
-
     new_edge["data"]["targetHandle"] = new_target_handle
 
 
@@ -417,25 +409,25 @@ def find_all_cycle_edges(entry_point: str, edges: list[tuple[str, str]]) -> list
         graph[u].append(v)
 
     # Utility function to perform DFS
-    def dfs(v, visited, rec_stack, cycle_edges):
+    def dfs(v, visited, rec_stack):
         visited.add(v)
         rec_stack.add(v)
 
+        cycle_edges = []
+
         for neighbor in graph[v]:
             if neighbor not in visited:
-                dfs(neighbor, visited, rec_stack, cycle_edges)
+                cycle_edges += dfs(neighbor, visited, rec_stack)
             elif neighbor in rec_stack:
                 cycle_edges.append((v, neighbor))  # This edge causes a cycle
 
         rec_stack.remove(v)
+        return cycle_edges
 
     visited: set[str] = set()
     rec_stack: set[str] = set()
-    cycle_edges: list[tuple[str, str]] = []
 
-    dfs(entry_point, visited, rec_stack, cycle_edges)
-
-    return cycle_edges
+    return dfs(entry_point, visited, rec_stack)
 
 
 def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) -> bool:
@@ -465,7 +457,7 @@ def layered_topological_sort(
     predecessor_map: dict[str, list[str]],
     start_id: str | None = None,
     cycle_vertices: set[str] | None = None,
-    is_input_vertex: Callable[[str], bool] | None = None,  # noqa: ARG001
+    is_input_vertex: Callable[[str], bool] | None = None,
     *,
     is_cyclic: bool = False,
 ) -> list[list[str]]:
@@ -511,14 +503,12 @@ def layered_topological_sort(
         queue = deque(
             vertex_id
             for vertex_id in vertices_ids
-            if in_degree_map[vertex_id] == 0
-            # We checked if it is input but that caused the TextInput to be at the start
-            # or (is_input_vertex and is_input_vertex(vertex_id))
+            if in_degree_map[vertex_id] == 0 or (is_input_vertex and is_input_vertex(vertex_id))
         )
 
     layers: list[list[str]] = []
     visited = set()
-    cycle_counts = dict.fromkeys(vertices_ids, 0)
+    cycle_counts = {vertex: 0 for vertex in vertices_ids}
     current_layer = 0
 
     # Process the first layer separately to avoid duplicates

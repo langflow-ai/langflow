@@ -3,11 +3,10 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "Simple Agent",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-project"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -25,28 +24,21 @@ withEventDeliveryModes(
     await page.getByRole("heading", { name: "Simple Agent" }).first().click();
     await initialGPTsetup(page);
 
+    await page.getByTestId("button_run_chat output").last().click();
+
+    await page.waitForSelector("text=built successfully", {
+      timeout: 10000 * 60 * 3,
+    });
+
     await page.getByTestId("playground-btn-flow-io").click();
 
-    await page
-      .getByTestId("input-chat-playground")
-      .last()
-      .fill("Hello, tell me about Langflow.");
+    const textContents = await page
+      .getByTestId("div-chat-message")
+      .allTextContents();
 
-    await page.getByTestId("button-send").last().click();
+    const concatAllText = textContents.join(" ").toLowerCase();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
-    await stopButton.waitFor({ state: "visible", timeout: 30000 });
-
-    if (await stopButton.isVisible()) {
-      await expect(stopButton).toBeHidden({ timeout: 120000 });
-    }
-
-    const textContents = await page.getByTestId("div-chat-message").innerText();
-
-    expect(await page.getByTestId("header-icon").last().isVisible());
-    expect(await page.getByTestId("duration-display").last().isVisible());
-    expect(await page.getByTestId("icon-check").nth(0).isVisible());
-    expect(await page.getByTestId("icon-Check").nth(0).isVisible());
-    expect(textContents.length).toBeGreaterThan(30);
+    expect(concatAllText).toContain("hello! how can i assist you today?");
+    expect(concatAllText.length).toBeGreaterThan(20);
   },
 );

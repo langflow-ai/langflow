@@ -16,11 +16,11 @@ def test_files():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a Python file
         python_file = Path(temp_dir) / "test.py"
-        python_file.write_text("import langchain\nclass TestComponent:\n    pass", encoding="utf-8")
+        python_file.write_text("import langchain\nclass TestComponent:\n    pass")
 
         # Create a text file
         text_file = Path(temp_dir) / "test.txt"
-        text_file.write_text("This is a test file", encoding="utf-8")
+        text_file.write_text("This is a test file")
 
         # Create a binary file
         binary_file = Path(temp_dir) / "test.bin"
@@ -30,7 +30,7 @@ def test_files():
         no_access_dir = Path(temp_dir) / "no_access"
         no_access_dir.mkdir()
         no_access_file = no_access_dir / "secret.txt"
-        no_access_file.write_text("secret", encoding="utf-8")
+        no_access_file.write_text("secret")
         no_access_file.chmod(0o000)  # Remove all permissions
 
         yield temp_dir

@@ -15,7 +15,6 @@ interface IPostAddFlow {
   endpoint_name: string | undefined;
   icon: string | undefined;
   gradient: string | undefined;
-  tags: string[] | undefined;
 }
 
 export const usePostAddFlow: useMutationFunctionType<
@@ -35,7 +34,6 @@ export const usePostAddFlow: useMutationFunctionType<
       icon: payload.icon || null,
       gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
-      tags: payload.tags || null,
     });
     return response.data;
   };

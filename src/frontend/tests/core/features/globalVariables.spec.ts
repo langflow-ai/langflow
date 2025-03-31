@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "user must be able to save or delete a global variable",
@@ -22,19 +21,11 @@ test(
 
     await page
       .getByTestId("modelsOpenAI")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-openai").last().click();
-      });
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
 
-    await page.getByTestId("fit_view").click();
-
-    await initialGPTsetup(page, {
-      skipAdjustScreenView: true,
-      skipUpdateOldComponents: true,
-      skipAddNewApiKeys: true,
-      skipSelectGptModel: true,
-    });
+    await adjustScreenView(page);
 
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();

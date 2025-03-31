@@ -7,6 +7,7 @@ from langflow.schema import Data
 
 class WebhookComponent(Component):
     display_name = "Webhook"
+    description = "Defines a webhook input for the flow."
     name = "Webhook"
     icon = "webhook"
 
@@ -15,23 +16,7 @@ class WebhookComponent(Component):
             name="data",
             display_name="Payload",
             info="Receives a payload from external systems via HTTP POST.",
-            advanced=True,
-        ),
-        MultilineInput(
-            name="curl",
-            display_name="cURL",
-            value="CURL_WEBHOOK",
-            advanced=True,
-            input_types=[],
-        ),
-        MultilineInput(
-            name="endpoint",
-            display_name="Endpoint",
-            value="BACKEND_URL",
-            advanced=False,
-            copy_field=True,
-            input_types=[],
-        ),
+        )
     ]
     outputs = [
         Output(display_name="Data", name="output_data", method="build_data"),

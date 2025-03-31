@@ -10,8 +10,7 @@ from pydantic.v1 import Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
-from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import Data
 
 
 class GleanSearchAPISchema(BaseModel):
@@ -98,20 +97,19 @@ class GleanAPIWrapper(BaseModel):
 
 
 class GleanSearchAPIComponent(LCToolComponent):
-    display_name: str = "Glean Search API"
-    description: str = "Search using Glean's API."
-    documentation: str = "https://docs.langflow.org/Components/components-tools#glean-search-api"
-    icon: str = "Glean"
-
-    outputs = [
-        Output(display_name="Data", name="data", method="run_model"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
-    ]
+    display_name = "Glean Search API"
+    description = "Call Glean Search API"
+    name = "GleanAPI"
+    icon = "Glean"
 
     inputs = [
-        StrInput(name="glean_api_url", display_name="Glean API URL", required=True),
+        StrInput(
+            name="glean_api_url",
+            display_name="Glean API URL",
+            required=True,
+        ),
         SecretStrInput(name="glean_access_token", display_name="Glean Access Token", required=True),
-        MultilineInput(name="query", display_name="Query", required=True, tool_mode=True),
+        MultilineInput(name="query", display_name="Query", required=True),
         IntInput(name="page_size", display_name="Page Size", value=10),
         NestedDictInput(name="request_options", display_name="Request Options", required=False),
     ]
@@ -159,14 +157,3 @@ class GleanSearchAPIComponent(LCToolComponent):
             glean_api_url=glean_api_url,
             glean_access_token=glean_access_token,
         )
-
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Glean search results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the search results.
-        """
-        data = self.run_model()
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])

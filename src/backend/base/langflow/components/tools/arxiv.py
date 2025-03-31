@@ -6,7 +6,7 @@ from defusedxml.ElementTree import fromstring
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import Data
 
 
 class ArXivComponent(Component):
@@ -37,8 +37,7 @@ class ArXivComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="search_papers"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Papers", name="papers", method="search_papers"),
     ]
 
     def build_query_url(self) -> str:
@@ -113,7 +112,7 @@ class ArXivComponent(Component):
 
             # Validate URL scheme and host
             parsed_url = urlparse(url)
-            if parsed_url.scheme not in {"http", "https"}:
+            if parsed_url.scheme not in ("http", "https"):
                 error_msg = f"Invalid URL scheme: {parsed_url.scheme}"
                 raise ValueError(error_msg)
             if parsed_url.hostname != "export.arxiv.org":
@@ -149,14 +148,3 @@ class ArXivComponent(Component):
             return [error_data]
         else:
             return results
-
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Arxiv search results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the search results.
-        """
-        data = self.search_papers()
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])

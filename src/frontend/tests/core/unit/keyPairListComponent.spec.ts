@@ -27,7 +27,8 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.getByTestId("showmodel_kwargs").click();
     expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
@@ -69,7 +70,8 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.getByText("Close").last().click();
 
@@ -79,7 +81,8 @@ test(
       expect(true).toBeTruthy();
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await page.getByTestId("more-options-modal").click();
+      await page.getByTestId("advanced-button-modal").click();
 
       await page.locator('//*[@id="editNodekeypair0"]').click();
       await page

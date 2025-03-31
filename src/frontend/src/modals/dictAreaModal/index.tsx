@@ -1,8 +1,17 @@
-import useAlertStore from "@/stores/alertStore";
-import { useEffect, useRef, useState } from "react";
-import { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
+import "ace-builds/src-noconflict/ace";
+import "ace-builds/src-noconflict/ext-language_tools";
+import "ace-builds/src-noconflict/mode-python";
+import "ace-builds/src-noconflict/theme-github";
+import "ace-builds/src-noconflict/theme-twilight";
+// import "ace-builds/webpack-resolver";
+import { cloneDeep } from "lodash";
+import { useEffect, useState } from "react";
+import JsonView from "react18-json-view";
+import "react18-json-view/src/dark.css";
+import "react18-json-view/src/style.css";
 import IconComponent from "../../components/common/genericIconComponent";
-import JsonEditor from "../../components/core/jsonEditor";
+import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
 
 export default function DictAreaModal({
@@ -17,53 +26,41 @@ export default function DictAreaModal({
   disabled?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  ("");
-  const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
+  const isDark = useDarkStore((state) => state.dark);
+  const [componentValue, setComponentValue] = useState(value);
 
   useEffect(() => {
-    if (jsonEditorRef.current) {
-      jsonEditorRef.current.set({ json: value || {} });
-    }
+    setComponentValue(value);
   }, [value, open]);
 
   const handleSubmit = () => {
     if (onChange) {
-      try {
-        const componentValue = jsonEditorRef.current?.get() ?? { json: {} };
-        const jsonValue =
-          "json" in componentValue
-            ? JSON.parse(JSON.stringify(componentValue.json))
-            : JSON.parse(componentValue.text!);
-
-        onChange(jsonValue);
-        setOpen(false);
-      } catch (error) {
-        console.error("Error getting JSON:", error);
-        setErrorData({
-          title: "Error getting dictionary",
-          list: ["Check your dictionary format"],
-        });
-      }
+      onChange(componentValue);
+      setOpen(false);
     }
+  };
+
+  const handleJsonChange = (edit) => {
+    setComponentValue(edit.src);
+  };
+
+  const customizeCopy = (copy) => {
+    navigator.clipboard.writeText(JSON.stringify(copy));
   };
 
   const handleChangeType = (type: "array" | "object") => {
-    jsonEditorRef?.current?.set(typeChanged(type));
-  };
-
-  const typeChanged = (type: "array" | "object") => {
-    if (type === "array") {
-      if (value && Object.keys(value).length > 0) {
-        return { json: [value] };
+    setComponentValue((value) => {
+      if (type === "array") {
+        if (value && Object.keys(value).length > 0) {
+          return [value];
+        }
+        return [];
       }
-      return { json: [] };
-    }
-    if (value && Array.isArray(value) && value.length > 0) {
-      return { json: value[0] };
-    }
-    return { json: {} };
+      if (value && Array.isArray(value) && value.length > 0) {
+        return value[0];
+      }
+      return {};
+    });
   };
 
   const IteractiveReader = () => {
@@ -104,12 +101,13 @@ export default function DictAreaModal({
   const renderContent = () => (
     <BaseModal.Content>
       <div className="flex h-full w-full flex-col transition-all">
-        <JsonEditor
-          data={{ json: value }}
-          jsonRef={jsonEditorRef}
-          height="400px"
-          width="100%"
-          className="h-[400px] w-full overflow-visible"
+        <JsonView
+          theme="vscode"
+          editable={!!onChange}
+          enableClipboard
+          onChange={handleJsonChange}
+          src={cloneDeep(componentValue)}
+          customizeCopy={customizeCopy}
         />
       </div>
     </BaseModal.Content>
@@ -121,7 +119,6 @@ export default function DictAreaModal({
       open={open}
       disable={disabled}
       setOpen={setOpen}
-      className="h-auto min-h-[500px] overflow-visible"
       onSubmit={onChange ? handleSubmit : undefined}
     >
       <BaseModal.Trigger className="h-full" asChild>

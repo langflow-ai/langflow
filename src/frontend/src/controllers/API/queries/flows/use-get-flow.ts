@@ -8,7 +8,6 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IGetFlow {
   id: string;
-  public?: boolean;
 }
 
 // add types for error handling and success
@@ -20,7 +19,7 @@ export const useGetFlow: useMutationFunctionType<undefined, IGetFlow> = (
 
   const getFlowFn = async (payload: IGetFlow): Promise<FlowType> => {
     const response = await api.get<FlowType>(
-      `${getURL(payload.public ? "PUBLIC_FLOW" : "FLOWS")}/${payload.id}`,
+      `${getURL("FLOWS")}/${payload.id}`,
     );
 
     const flowsArrayToProcess = [response.data];

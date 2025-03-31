@@ -19,7 +19,7 @@ from typing_extensions import NotRequired, override
 
 from langflow.settings import DEV
 
-VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
 DEFAULT_LOG_FORMAT = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
@@ -231,21 +231,17 @@ def configure(
 
         if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
-        # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
-        # suggest directly print to stdout in production
-        log_stdout_pretty = os.getenv("LAGFLOW_PRETTY_LOGS", "true").lower() == "true"
-        if log_stdout_pretty:
-            logger.configure(
-                handlers=[
-                    {
-                        "sink": RichHandler(rich_tracebacks=True, markup=True),
-                        "format": log_format,
-                        "level": log_level.upper(),
-                    }
-                ]
-            )
-        else:
-            logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
+
+        # Configure loguru to use RichHandler
+        logger.configure(
+            handlers=[
+                {
+                    "sink": RichHandler(rich_tracebacks=True, markup=True),
+                    "format": log_format,
+                    "level": log_level.upper(),
+                }
+            ]
+        )
 
         if not log_file:
             cache_dir = Path(user_cache_dir("langflow"))

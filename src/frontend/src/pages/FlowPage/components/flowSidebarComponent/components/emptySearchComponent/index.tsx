@@ -1,3 +1,4 @@
+import React from "react";
 const NoResultsMessage = ({
   onClearSearch,
   message = "No components found.",

@@ -67,7 +67,6 @@ class OpenRouterComponent(LCModelComponent):
             value=0.7,
             range_spec=RangeSpec(min=0, max=2, step=0.01),
             info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
-            advanced=True,
         ),
         IntInput(
             name="max_tokens",

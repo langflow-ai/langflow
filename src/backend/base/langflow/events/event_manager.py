@@ -1,26 +1,21 @@
-from __future__ import annotations
-
+import asyncio
 import inspect
 import json
 import time
 import uuid
 from functools import partial
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
 from typing_extensions import Protocol
 
+from langflow.schema.log import LoggableType
 from langflow.schema.playground_events import create_event_by_type
-
-if TYPE_CHECKING:
-    import asyncio
-
-    from langflow.schema.log import LoggableType
 
 
 class EventCallback(Protocol):
-    def __call__(self, *, manager: EventManager, event_type: str, data: LoggableType): ...
+    def __call__(self, *, manager: "EventManager", event_type: str, data: LoggableType): ...
 
 
 class PartialEventCallback(Protocol):

@@ -73,14 +73,7 @@ def blockbuster(request):
                 .can_block_in("httpx/_client.py", "_init_transport")
                 .can_block_in("rich/traceback.py", "_render_stack")
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
-                .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
             )
-
-            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
-                bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
-
-            for func in ["os.path.abspath", "os.scandir"]:
-                bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
 
             (
                 bb.functions["os.path.abspath"]
@@ -110,7 +103,6 @@ def pytest_configure(config):
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.SIMPLE_API_TEST = data_path / "SimpleAPITest.json"
     pytest.MEMORY_CHATBOT_NO_LLM = data_path / "MemoryChatbotNoLLM.json"
-    pytest.ENV_VARIABLE_TEST = data_path / "env_variable_test.json"
     pytest.LOOP_TEST = data_path / "LoopTest.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
@@ -136,12 +128,11 @@ def get_text():
 
 
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
-    if not flow_id:
-        return
     stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
     transactions = await db.exec(stmt)
     for transaction in transactions:
         await db.delete(transaction)
+    await db.commit()
 
 
 async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
@@ -149,14 +140,8 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
     for flow_id in flow_ids:
         if not flow_id:
             continue
-        try:
-            await delete_vertex_builds_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
-        try:
-            await delete_transactions_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
+        await delete_vertex_builds_by_flow_id(session, flow_id)
+        await delete_transactions_by_flow_id(session, flow_id)
 
 
 @pytest.fixture
@@ -402,9 +387,8 @@ async def client_fixture(
 
 
 @pytest.fixture
-def runner(tmp_path):
-    env = {"LANGFLOW_DATABASE_URL": f"sqlite:///{tmp_path}/test.db"}
-    return CliRunner(env=env)
+def runner():
+    return CliRunner()
 
 
 @pytest.fixture
@@ -442,21 +426,12 @@ async def active_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    try:
-        async with db_manager.with_session() as session:
-            user = await session.get(User, user.id, options=[selectinload(User.flows)])
-            await _delete_transactions_and_vertex_builds(session, user.flows)
-            await session.commit()
-    except Exception as e:  # noqa: BLE001
-        logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
+    async with db_manager.with_session() as session:
+        user = await session.get(User, user.id, options=[selectinload(User.flows)])
+        await _delete_transactions_and_vertex_builds(session, user.flows)
+        await session.delete(user)
 
-    try:
-        async with db_manager.with_session() as session:
-            user = await session.get(User, user.id)
-            await session.delete(user)
-            await session.commit()
-    except Exception as e:  # noqa: BLE001
-        logger.exception(f"Error deleting user: {e}")
+        await session.commit()
 
 
 @pytest.fixture

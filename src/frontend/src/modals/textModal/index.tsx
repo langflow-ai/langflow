@@ -5,6 +5,8 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
 import { useState } from "react";
+import "react18-json-view/src/dark.css";
+import "react18-json-view/src/style.css";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import BaseModal from "../baseModal";
@@ -52,7 +54,6 @@ export default function TextModal({
               readonly={!editable}
               onChange={(text) => setInternalValue(text)}
               value={internalValue}
-              resizable={false}
               left={false}
             />
           </div>

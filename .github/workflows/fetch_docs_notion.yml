@@ -24,19 +24,26 @@ jobs:
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: yarn
-          cache-dependency-path: ./docs/yarn.lock
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install Node.js dependencies
         run: |
           cd docs
-          yarn install --frozen-lockfile
+          npm install --legacy-peer-deps
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Fetch Docs from Notion
         run: |
           cd docs
-          yarn pull
+          npm run pull
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DOCS_ROOT_PAGE_ID: ${{ secrets.NOTION_DOCS_ROOT_PAGE_ID }}

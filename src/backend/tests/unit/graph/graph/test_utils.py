@@ -673,13 +673,13 @@ def test_get_sorted_vertices_with_complex_cycle(graph_with_loop):
     # When is_cyclic is True and start_vertex_id is provided:
     # 1. The first layer will contain vertices with no predecessors and vertices that are part of the cycle
     # 2. This is because the cycle vertices are treated as having no dependencies in the initial sort
-    assert "OpenAI Embeddings" in first_layer, (
-        "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
-    )
+    assert (
+        "OpenAI Embeddings" in first_layer
+    ), "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
     assert "Playlist Extractor" in first_layer, "Input vertex 'Playlist Extractor' should be in first layer"
-    assert len(first_layer) == 2, (
-        f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
-    )
+    assert (
+        len(first_layer) == 2
+    ), f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
 
     # Verify that the remaining layers contain the rest of the vertices in the correct order
     # The graph structure shows:
@@ -748,14 +748,14 @@ def test_get_sorted_vertices_with_stop_at_chroma(graph_with_loop):
     # When is_cyclic is True and we have a stop component:
     # 1. The first layer will contain vertices with no predecessors and vertices that are part of the cycle
     # 2. This is because the cycle vertices are treated as having no dependencies in the initial sort
-    assert "OpenAI Embeddings" in first_layer, (
-        "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
-    )
+    assert (
+        "OpenAI Embeddings" in first_layer
+    ), "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
     assert "Playlist Extractor" in first_layer, "Input vertex 'Playlist Extractor' should be in first layer"
 
-    assert len(first_layer) == 2, (
-        f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
-    )
+    assert (
+        len(first_layer) == 2
+    ), f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
 
     # Verify that the remaining layers contain the rest of the vertices in the correct order
     # The graph structure shows:
@@ -848,9 +848,9 @@ def test_get_sorted_vertices_exact_sequence(graph_with_loop):
     # Check each vertex appears in the correct order
     assert sequence == expected_sequence, f"Sequence: {sequence}"
     # Verify the exact sequence
-    assert len(sequence) == len(expected_sequence), (
-        f"Expected sequence length {len(expected_sequence)}, but got {len(sequence)}"
-    )
+    assert len(sequence) == len(
+        expected_sequence
+    ), f"Expected sequence length {len(expected_sequence)}, but got {len(sequence)}"
 
 
 def test_get_sorted_vertices_with_unconnected_graph():
@@ -869,7 +869,7 @@ def test_get_sorted_vertices_with_unconnected_graph():
     predecessor_map = {vertex: data["predecessors"] for vertex, data in graph_dict.items()}
 
     def is_input_vertex(vertex_id: str) -> bool:
-        return vertex_id == "A"
+        return vertex_id in ["A"]
 
     def get_vertex_predecessors(vertex_id: str) -> list[str]:
         return predecessor_map[vertex_id]

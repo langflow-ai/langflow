@@ -54,10 +54,7 @@ export const usePostTemplateValue: useMutationFunctionType<
   > = mutate(
     ["usePostTemplateValue", { parameterId, nodeId }],
     postTemplateValueFn,
-    {
-      ...options,
-      retry: 0,
-    },
+    options,
   );
 
   return mutation;

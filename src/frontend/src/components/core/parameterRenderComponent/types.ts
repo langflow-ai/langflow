@@ -11,16 +11,12 @@ export type BaseInputProps<valueType = any> = {
   handleOnNewValue: handleOnNewValueType;
   disabled: boolean;
   nodeClass?: APIClassType;
-  helperText?: string;
   handleNodeClass?: (value: any, code?: string, type?: string) => void;
   readonly?: boolean;
   placeholder?: string;
   isToolMode?: boolean;
-  tooltip?: string;
   metadata?: any;
   nodeId?: string;
-  nodeInformationMetadata?: NodeInfoType;
-  hasRefreshButton?: boolean;
 };
 
 // Generic type for composing input props
@@ -54,9 +50,6 @@ export type ToggleComponentType = {
 
 export type FileComponentType = {
   fileTypes: Array<string>;
-  file_path?: string | string[];
-  isList?: boolean;
-  tempFile?: boolean;
 };
 
 export type PromptAreaComponentType = {
@@ -106,16 +99,4 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
-};
-
-export type TabComponentType = {
-  options: string[];
-};
-
-export type NodeInfoType = {
-  flowId: string;
-  nodeType: string;
-  flowName: string;
-  isAuth: boolean;
-  variableName: string;
 };

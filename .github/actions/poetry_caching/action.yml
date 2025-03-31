@@ -1,0 +1,99 @@
+# An action for setting up poetry install with caching.
+# Using a custom action since the default action does not
+# take poetry install groups into account.
+# Action code from:
+# https://github.com/actions/setup-python/issues/505#issuecomment-1273013236
+# Copy of https://github.com/langchain-ai/langchain/blob/2f8dd1a1619f25daa4737df4d378b1acd6ff83c4/.github/actions/poetry_setup/action.yml
+name: poetry-install-with-caching
+description: Poetry install with support for caching of dependency groups.
+
+inputs:
+  python-version:
+    description: Python version, supporting MAJOR.MINOR only
+    required: true
+
+  poetry-version:
+    description: Poetry version
+    required: true
+
+  cache-key:
+    description: Cache key to use for manual handling of caching
+    required: true
+
+  working-directory:
+    description: Directory whose poetry.lock file should be cached
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      name: Setup python ${{ inputs.python-version }}
+      id: setup-python
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - uses: actions/cache@v4
+      id: cache-bin-poetry
+      name: Cache Poetry binary - Python ${{ inputs.python-version }}
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MIN: "1"
+      with:
+        path: |
+          /opt/pipx/venvs/poetry
+        # This step caches the poetry installation, so make sure it's keyed on the poetry version as well.
+        key: bin-poetry-${{ runner.os }}-${{ runner.arch }}-py-${{ inputs.python-version }}-${{ inputs.poetry-version }}
+
+    - name: Refresh shell hashtable and fixup softlinks
+      if: steps.cache-bin-poetry.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        POETRY_VERSION: ${{ inputs.poetry-version }}
+        PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        set -eux
+
+        # Refresh the shell hashtable, to ensure correct `which` output.
+        hash -r
+
+        # `actions/cache@v3` doesn't always seem able to correctly unpack softlinks.
+        # Delete and recreate the softlinks pipx expects to have.
+        rm /opt/pipx/venvs/poetry/bin/python
+        cd /opt/pipx/venvs/poetry/bin
+        ln -s "$(which "python$PYTHON_VERSION")" python
+        chmod +x python
+        cd /opt/pipx_bin/
+        ln -s /opt/pipx/venvs/poetry/bin/poetry poetry
+        chmod +x poetry
+
+        # Ensure everything got set up correctly.
+        /opt/pipx/venvs/poetry/bin/python --version
+        /opt/pipx_bin/poetry --version
+
+    - name: Install poetry
+      if: steps.cache-bin-poetry.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        POETRY_VERSION: ${{ inputs.poetry-version || env.POETRY_VERSION }}
+        PYTHON_VERSION: ${{ inputs.python-version }}
+      # Install poetry using the python version installed by setup-python step.
+      run: |
+        pipx install "poetry==$POETRY_VERSION" --python '${{ steps.setup-python.outputs.python-path }}' --verbose
+        pipx ensurepath
+        # Ensure the poetry binary is available in the PATH.
+        # Test that the poetry binary is available.
+        poetry --version
+
+    - name: Restore pip and poetry cached dependencies
+      uses: actions/cache@v4
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MIN: "4"
+        WORKDIR: ${{ inputs.working-directory == '' && '.' || inputs.working-directory }}
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.cache/pypoetry/virtualenvs
+          ~/.cache/pypoetry/cache
+          ~/.cache/pypoetry/artifacts
+          ${{ env.WORKDIR }}/.venv
+        key: py-deps-${{ runner.os }}-${{ runner.arch }}-py-${{ inputs.python-version }}-poetry-${{ inputs.poetry-version }}-${{ inputs.cache-key }}-${{ hashFiles(format('{0}/**/poetry.lock', env.WORKDIR)) }}

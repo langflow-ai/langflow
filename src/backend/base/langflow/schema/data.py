@@ -8,7 +8,7 @@ from uuid import UUID
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
+from pydantic import BaseModel, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_data_url
@@ -21,8 +21,6 @@ class Data(BaseModel):
         data (dict, optional): Additional data associated with the record.
     """
 
-    model_config = ConfigDict(validate_assignment=True)
-
     text_key: str = "text"
     data: dict = {}
     default_value: str | None = ""
@@ -33,14 +31,8 @@ class Data(BaseModel):
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
             raise ValueError(msg)  # noqa: TRY004
-        if "data" not in values or values["data"] is None:
+        if not values.get("data"):
             values["data"] = {}
-        if not isinstance(values["data"], dict):
-            msg = (
-                f"Invalid data format: expected dictionary but got {type(values).__name__}."
-                " This will raise an error in version langflow==1.3.0."
-            )
-            logger.warning(msg)
         # Any other keyword should be added to the data dictionary
         for key in values:
             if key not in values["data"] and key not in {"text_key", "data", "default_value"}:
@@ -235,19 +227,6 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
-    def filter_data(self, filter_str: str) -> "Data":
-        """Filters the data dictionary based on the filter string.
-
-        Args:
-            filter_str (str): The filter string to apply to the data dictionary.
-
-        Returns:
-            Data: The filtered Data.
-        """
-        from langflow.template.utils import apply_json_filter
-
-        return apply_json_filter(self.data, filter_str)
-
 
 def custom_serializer(obj):
     if isinstance(obj, datetime):
@@ -259,8 +238,6 @@ def custom_serializer(obj):
         return str(obj)
     if isinstance(obj, BaseModel):
         return obj.model_dump()
-    if isinstance(obj, bytes):
-        return obj.decode("utf-8", errors="replace")
     # Add more custom serialization rules as needed
     msg = f"Type {type(obj)} not serializable"
     raise TypeError(msg)

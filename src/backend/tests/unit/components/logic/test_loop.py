@@ -1,15 +1,14 @@
 from uuid import UUID
 
-import orjson
 import pytest
 from httpx import AsyncClient
 from langflow.components.logic.loop import LoopComponent
 from langflow.memory import aget_messages
 from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
+from orjson import orjson
 
 from tests.base import ComponentTestBaseWithClient
-from tests.unit.build_utils import build_flow, get_build_events
 
 TEXT = (
     "lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet. "
@@ -63,25 +62,15 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(messages[1].text) > 0
 
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
-        """Test building a flow with a loop component."""
-        # Create the flow
+        # TODO: Add a test for the loop where the loop component gets updated even the component in json
         flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
 
-        # Start the build and get job_id
-        build_response = await build_flow(client, flow_id, logged_in_headers)
-        job_id = build_response["job_id"]
-        assert job_id is not None
-
-        # Get the events stream
-        events_response = await get_build_events(client, job_id, logged_in_headers)
-        assert events_response.status_code == 200
-
-        # Process the events stream
-        async for line in events_response.aiter_lines():
-            if not line:  # Skip empty lines
-                continue
-            # Process events if needed
-            # We could add specific assertions here for loop-related events
+        async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
+            async for line in r.aiter_lines():
+                # httpx split by \n, but ndjson sends two \n for each line
+                if line:
+                    # Process the line if needed
+                    pass
 
         await self.check_messages(flow_id)
 

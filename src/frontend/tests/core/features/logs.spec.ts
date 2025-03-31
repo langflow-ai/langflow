@@ -22,7 +22,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
-      timeout: 3000,
+      timeout: 1000,
     });
     let outdatedComponents = await page
       .getByTestId("icon-AlertTriangle")
@@ -39,7 +39,7 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    await page.getByTestId("icon-ChevronDown").first().click();
+    await page.getByTestId("icon-ChevronDown").click();
     await page.getByText("Logs").click();
     await page.getByText("No Data Available", { exact: true }).isVisible();
     await page.keyboard.press("Escape");
@@ -68,7 +68,7 @@ test(
     await page
       .getByText("Chat Output built successfully", { exact: true })
       .isVisible();
-    await page.getByTestId("icon-ChevronDown").first().click();
+    await page.getByTestId("icon-ChevronDown").click();
     await page.getByText("Logs").click();
 
     await page.getByText("timestamp").first().isVisible();

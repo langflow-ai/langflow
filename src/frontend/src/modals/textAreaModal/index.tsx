@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
   EDIT_TEXT_PLACEHOLDER,
-  TEXT_DIALOG_TITLE,
+  TEXT_DIALOG_SUBTITLE,
 } from "../../constants/constants";
 import { textModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
@@ -19,7 +19,6 @@ export default function ComponentTextModal({
   readonly = false,
   password,
   changeVisibility,
-  onCloseModal,
 }: textModalPropsType): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -28,12 +27,6 @@ export default function ComponentTextModal({
   useEffect(() => {
     if (typeof value === "string") setInputValue(value);
   }, [value, modalOpen]);
-
-  useEffect(() => {
-    if (!modalOpen) {
-      onCloseModal?.();
-    }
-  }, [modalOpen]);
 
   return (
     <BaseModal
@@ -45,17 +38,17 @@ export default function ComponentTextModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header>
+      <BaseModal.Header description={TEXT_DIALOG_SUBTITLE}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
+            <span className="pr-2" data-testid="modal-title">
+              {TEXT_DIALOG_SUBTITLE}
+            </span>
             <IconComponent
               name={"FileText"}
-              className="h-6 w-6 pr-1 text-primary"
+              className="h-6 w-6 pl-1 text-primary"
               aria-hidden="true"
             />
-            <span className="pl-2" data-testid="modal-title">
-              {TEXT_DIALOG_TITLE}
-            </span>
           </div>
           {password !== undefined && (
             <div>

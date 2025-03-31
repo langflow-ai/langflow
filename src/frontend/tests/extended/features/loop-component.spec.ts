@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -9,8 +8,6 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-
-    await addLegacyComponents(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -80,15 +77,20 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
-    await page
+    const secondParseDataOutput = await page
       .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(1)
-      .click();
+      .nth(2);
 
     const loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first()
-      .click();
+      .first();
+
+    // Connecting the second parse data to the loop item to test the wrong loop message
+
+    await secondParseDataOutput.hover();
+    await page.mouse.down();
+    await loopItemInput.hover();
+    await page.mouse.up();
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
@@ -109,65 +111,63 @@ test(
 
     // Loop Item -> Update Data
 
-    await page
+    const loopItemHandle = await page
       .getByTestId("handle-loopcomponent-shownode-item-right")
-      .first()
-      .click();
-    await page
+      .first();
+    const updateDataInput = await page
       .getByTestId("handle-updatedata-shownode-data-left")
-      .first()
-      .click();
+      .first();
+
+    await loopItemHandle.hover();
+    await page.mouse.down();
+    await updateDataInput.hover();
+    await page.mouse.up();
 
     // URL -> Loop Data
-    await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
-      .first()
-      .click();
-    await page
+    const urlOutput = await page
+      .getByTestId("handle-url-shownode-data-right")
+      .first();
+    const loopInput = await page
       .getByTestId("handle-loopcomponent-shownode-data-left")
-      .first()
-      .click();
+      .first();
+
+    await urlOutput.hover();
+    await page.mouse.down();
+    await loopInput.hover();
+    await page.mouse.up();
 
     // Loop Done -> Parse Data
-    await page
+    const loopDoneHandle = await page
       .getByTestId("handle-loopcomponent-shownode-done-right")
-      .first()
-      .click();
-    await page
+      .first();
+    const parseDataInput = await page
       .getByTestId("handle-parsedata-shownode-data-left")
-      .first()
-      .click();
+      .first();
 
-    // Parse Data -> Chat Output
-    await page
-      .getByTestId("handle-parsedata-shownode-message-right")
-      .first()
-      .click();
-
-    await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
-      .first()
-      .click();
-
-    await zoomOut(page, 4);
+    await loopDoneHandle.hover();
+    await page.mouse.down();
+    await parseDataInput.hover();
+    await page.mouse.up();
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 100000,
-    });
-
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="expand-button-modal"]', {
-      timeout: 100000,
-    });
-
     await page.getByTestId("expand-button-modal").click();
+
+    // Parse Data -> Chat Output
+    const parseDataOutput = await page
+      .getByTestId("handle-parsedata-shownode-message-right")
+      .first();
+
+    const chatOutputInput = await page
+      .getByTestId("handle-chatoutput-shownode-text-left")
+      .first();
+
+    await parseDataOutput.hover();
+    await page.mouse.down();
+    await chatOutputInput.hover();
+    await page.mouse.up();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
@@ -204,15 +204,14 @@ test(
     await page.getByText("Delete").first().click();
 
     // Update Data -> Loop Item (left side)
-
-    await page
+    const updateDataOutput = await page
       .getByTestId("handle-updatedata-shownode-data-right")
-      .first()
-      .click();
-    await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first()
-      .click();
+      .first();
+
+    await updateDataOutput.hover();
+    await page.mouse.down();
+    await loopItemInput.hover();
+    await page.mouse.up();
 
     // Build and run
     await page.getByTestId("button_run_chat output").click();
@@ -232,6 +231,7 @@ test(
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
+    await page.getByRole("gridcell").nth(4).click();
 
     const output = await page.getByPlaceholder("Empty").textContent();
     expect(output).toContain("modified_value");

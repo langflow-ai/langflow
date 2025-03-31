@@ -18,13 +18,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: yarn
-          cache-dependency-path: ./docs/yarn.lock
+          cache: npm
+          cache-dependency-path: ./docs/package-lock.json
 
       - name: Install dependencies
-        run: cd docs && yarn install
+        run: cd docs && npm install --legacy-peer-deps
       - name: Build website
-        run: cd docs && yarn build
+        run: cd docs && npm run build
 
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus

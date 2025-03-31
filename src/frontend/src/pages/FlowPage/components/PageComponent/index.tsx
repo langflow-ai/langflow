@@ -2,6 +2,7 @@ import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
 import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
@@ -13,7 +14,6 @@ import {
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
-import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -79,13 +79,7 @@ const edgeTypes = {
   default: DefaultEdge,
 };
 
-export default function Page({
-  view,
-  setIsLoading,
-}: {
-  view?: boolean;
-  setIsLoading: (isLoading: boolean) => void;
-}): JSX.Element {
+export default function Page({ view }: { view?: boolean }): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
@@ -95,6 +89,7 @@ export default function Page({
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
   );
+
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance,
@@ -189,10 +184,6 @@ export default function Page({
     Object.keys(templates).length > 0 &&
     Object.keys(types).length > 0 &&
     !isFetching;
-
-  useEffect(() => {
-    setIsLoading(!showCanvas);
-  }, [showCanvas]);
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
@@ -560,7 +551,6 @@ export default function Page({
             onReconnectEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
-            elevateEdgesOnSelect={true}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionRadius={30}
@@ -572,13 +562,9 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
-            fitViewOptions={{
-              minZoom: 0.2,
-              maxZoom: 8,
-            }}
             className="theme-attribution"
-            minZoom={0.2}
-            maxZoom={3}
+            minZoom={0.01}
+            maxZoom={8}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}
@@ -625,9 +611,7 @@ export default function Page({
                 <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
-            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-              <UpdateAllComponents />
-            </div>
+            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
@@ -653,7 +637,7 @@ export default function Page({
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <CustomLoader remSize={30} />
+          <LoadingComponent remSize={30} />
         </div>
       )}
     </div>

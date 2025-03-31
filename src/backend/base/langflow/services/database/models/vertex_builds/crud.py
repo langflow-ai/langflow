@@ -143,3 +143,4 @@ async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID) -> No
     """
     stmt = delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id)
     await db.exec(stmt)
+    await db.commit()

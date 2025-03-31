@@ -11,8 +11,8 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 
 * [An OpenAI API key](https://platform.openai.com/)
 * [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
-	* An Astra DB application token scoped to read and write to the database
-	* A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
+	* An AstraDB application token
+	* [A collection in Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection)
 
 ## Open Langflow and start a new project
 
@@ -31,7 +31,7 @@ Continue to [Run the basic prompting flow](#run-basic-prompting-flow).
 
 The Basic Prompting flow will look like this when it's completed:
 
-![Completed basic prompting flow](/img/starter-flow-basic-prompting.png)
+![](/img/starter-flow-basic-prompting.png)
 
 To build the **Basic Prompting** flow, follow these steps:
 
@@ -46,7 +46,7 @@ The [OpenAI](components-models#openai) model component sends the user input and 
 
 You should now have a flow that looks like this:
 
-![Basic prompting flow with no connections](/img/quickstart-basic-prompt-no-connections.png)
+![](/img/quickstart-basic-prompt-no-connections.png)
 
 With no connections between them, the components won't interact with each other.
 You want data to flow from **Chat Input** to **Chat Output** through the connections between the components.
@@ -68,7 +68,7 @@ Add your OpenAI API key to the OpenAI model component, and add a prompt to the P
 
 1. Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s [Global Variables](/configuration-global-variables).
 
-	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**. 
+	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**.
 	Alternatively, click your username in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
 	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
 	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
@@ -111,7 +111,7 @@ If you don't want to create a blank flow, click **New Flow**, and then select **
 
 Adding vector RAG to the basic prompting flow will look like this when completed:
 
-![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
+![](/img/quickstart-add-document-ingestion.png)
 
 To build the flow, follow these steps:
 
@@ -120,39 +120,24 @@ To build the flow, follow these steps:
 The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) component connects to your **Astra DB** database.
 3. Click **Data**, select the **File** component, and then drag it to the canvas.
 The [File](/components-data#file) component loads files from your local machine.
-4. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
+3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
 The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
-5. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The [Data to Message](/components-processing#data-to-message) component converts the data from the **Astra DB** component into plain text.
-6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
+4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
+The [Parse Data](/components-processing#parse-data) component converts the data from the **Astra DB** component into plain text.
+5. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
-7. Connect the new components into the existing flow, so your flow looks like this:
+6. Connect the new components into the existing flow, so your flow looks like this:
 
-![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
+![](/img/quickstart-add-document-ingestion.png)
 
 8. Configure the **Astra DB** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
 	The component connects to your database and populates the menus with existing databases and collections.
 	2. Select your **Database**.
-	If you don't have a collection, select **New database**.
-	Complete the **Name**, **Cloud provider**, and **Region** fields, and then click **Create**. **Database creation takes a few minutes**.
 	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
-	:::info
-	If you select a collection embedded with NVIDIA through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the NVIDIA `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
-	:::
-
-9. If you don't have a collection, create a new one within the component.
-	1. Select **New collection**.
-	2. Complete the **Name**, **Embedding generation method**, **Embedding model**, and **Dimensions** fields, and then click **Create**.
-
-		Your choice for the **Embedding generation method** and **Embedding model** depends on whether you want to use embeddings generated by a provider through Astra's vectorize service, or generated by a component in Langflow.
-
-		* To use embeddings generated by a provider through Astra's vectorize service, select the model from the **Embedding generation method** dropdown menu, and then select the model from the **Embedding model** dropdown menu.
-		* To use embeddings generated by a component in Langflow, select **Bring your own** for both the **Embedding generation method** and **Embedding model** fields. In this starter project, the option for the embeddings method and model is the **OpenAI Embeddings** component connected to the **Astra DB** component.
-		* The **Dimensions** value must match the dimensions of your collection. This field is **not required** if you use embeddings generated through Astra's vectorize service. You can find this value in the **Collection** in your [Astra DB deployment](https://astra.datastax.com).
-
-		For more information, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
-
+	If you don't have a collection, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).
+	4. Select **Embedding Model** to bring your own embeddings model, which is the connected **OpenAI Embeddings** component.
+	The **Dimensions** value must match the dimensions of your collection. This value can be found in your **Collection** in your [Astra DB deployment](https://astra.datastax.com).
 
 If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
 
@@ -188,6 +173,6 @@ This example used movie data, but the RAG pattern can be used with any data you 
 
 Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
 
-Publish this flow as an [API](/concepts-publish) and call it from your external applications.
+Expose this flow as an [API](/concepts-api) and call it from your external applications.
 
 For more on the **Astra DB** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).

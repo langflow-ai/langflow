@@ -61,9 +61,6 @@ class CustomComponent(BaseComponent):
     """The description of the component. Defaults to None."""
     icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
-    priority: int | None = None
-    """The priority of the component in the category. Lower priority means it will be displayed first. Defaults to None.
-    """
 
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.

@@ -40,7 +40,8 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
@@ -125,7 +126,8 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await page.getByTestId("more-options-modal").click();
+      await page.getByTestId("advanced-button-modal").click();
 
       await page.getByText("Close").last().click();
 

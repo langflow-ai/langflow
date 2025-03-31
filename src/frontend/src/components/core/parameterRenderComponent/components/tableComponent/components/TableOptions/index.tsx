@@ -10,7 +10,6 @@ export default function TableOptions({
   deleteRow,
   hasSelection,
   stateChange,
-  paginationInfo,
   addRow,
   tableOptions,
 }: {
@@ -21,7 +20,6 @@ export default function TableOptions({
   hasSelection: boolean;
   stateChange: boolean;
   tableOptions?: TableOptionsTypeAPI;
-  paginationInfo?: string;
 }): JSX.Element {
   return (
     <div className={cn("absolute bottom-3 left-6")}>
@@ -59,9 +57,7 @@ export default function TableOptions({
                   name="Copy"
                   className={cn(
                     "h-5 w-5 transition-all",
-                    hasSelection
-                      ? "text-primary"
-                      : "cursor-not-allowed text-placeholder-foreground",
+                    hasSelection ? "text-primary" : "text-muted-foreground",
                   )}
                 />
               </Button>
@@ -90,7 +86,7 @@ export default function TableOptions({
                   className={cn(
                     "h-5 w-5 transition-all",
                     !hasSelection
-                      ? "cursor-not-allowed text-placeholder-foreground"
+                      ? "text-muted-foreground"
                       : "text-primary hover:text-status-red",
                   )}
                 />
@@ -113,21 +109,12 @@ export default function TableOptions({
                 strokeWidth={2}
                 className={cn(
                   "h-5 w-5 transition-all",
-                  !stateChange
-                    ? "cursor-not-allowed text-placeholder-foreground"
-                    : "text-primary",
+                  !stateChange ? "text-muted-foreground" : "text-primary",
                 )}
               />
             </Button>
           </ShadTooltip>
         </div>
-        {paginationInfo && (
-          <div className="ml-2 text-xs text-muted-foreground">
-            <ShadTooltip content="Pagination Info">
-              <span>{paginationInfo}</span>
-            </ShadTooltip>
-          </div>
-        )}
       </div>
     </div>
   );

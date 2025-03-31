@@ -15,7 +15,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
   setOpenCategories,
   dataFilter,
   nodeColors,
-  uniqueInputsComponents,
+  chatInputAdded,
   onDragStart,
   sensitiveSort,
 }: {
@@ -24,10 +24,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
   setOpenCategories;
   dataFilter: any;
   nodeColors: any;
-  uniqueInputsComponents: {
-    chatInput: boolean;
-    webhookInput: boolean;
-  };
+  chatInputAdded: boolean;
   onDragStart: (
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
@@ -87,7 +84,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
             item={item}
             dataFilter={dataFilter}
             nodeColors={nodeColors}
-            uniqueInputsComponents={uniqueInputsComponents}
+            chatInputAdded={chatInputAdded}
             onDragStart={onDragStart}
             sensitiveSort={sensitiveSort}
           />

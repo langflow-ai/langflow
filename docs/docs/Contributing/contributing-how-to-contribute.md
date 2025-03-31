@@ -93,8 +93,8 @@ git remote add fork https://github.com/<your_git_username>/langflow.git
 
 ```bash
 cd docs
-yarn install
-yarn start
+npm install
+npm run start
 ```
 
 The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.

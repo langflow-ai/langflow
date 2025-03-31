@@ -25,14 +25,12 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.12"
+          - "3.13"
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v3
         with:

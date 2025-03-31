@@ -15,8 +15,8 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - run: uv run ruff check --fix-only .
-      - run: uv run ruff format . --config pyproject.toml
-      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+      - run: uv run ruff format .
+      - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c
       - name: Minimize uv cache
         run: uv cache prune --ci
 
@@ -30,13 +30,13 @@ jobs:
 
       - name: "Install dependencies"
         run: |
-          uv sync
+          uv sync --frozen
           uv pip install -e .
 
       - name: Run starter projects update
         run: uv run python scripts/ci/update_starter_projects.py
 
-      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+      - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c
 
       - name: Minimize uv cache
         run: uv cache prune --ci

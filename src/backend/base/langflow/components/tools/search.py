@@ -5,7 +5,7 @@ from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 from langflow.custom import Component
 from langflow.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -31,7 +31,6 @@ class SearchComponent(Component):
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def _build_wrapper(self):
@@ -78,12 +77,3 @@ class SearchComponent(Component):
             result_string += item.text + "\n"
         self.status = result_string
         return Message(text=result_string)
-
-    def as_dataframe(self) -> DataFrame:
-        """Convert the search results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the search results.
-        """
-        data = self.fetch_content()
-        return DataFrame(data)

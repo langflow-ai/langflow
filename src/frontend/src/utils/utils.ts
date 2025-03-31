@@ -1,5 +1,4 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
-import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor";
 import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
@@ -47,9 +46,9 @@ export function toNormalCase(str: string): string {
     .split("_")
     .map((word, index) => {
       if (index === 0) {
-        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
+        return word[0].toUpperCase() + word.slice(1).toLowerCase();
       }
-      return word?.toLowerCase();
+      return word.toLowerCase();
     })
     .join(" ");
 
@@ -57,9 +56,9 @@ export function toNormalCase(str: string): string {
     .split("-")
     .map((word, index) => {
       if (index === 0) {
-        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
+        return word[0].toUpperCase() + word.slice(1).toLowerCase();
       }
-      return word?.toLowerCase();
+      return word.toLowerCase();
     })
     .join(" ");
 }
@@ -69,11 +68,11 @@ export function normalCaseToSnakeCase(str: string): string {
     .split(" ")
     .map((word, index) => {
       if (index === 0) {
-        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
+        return word[0].toUpperCase() + word.slice(1).toLowerCase();
       }
-      return word?.toLowerCase();
+      return word.toLowerCase();
     })
-    ?.join("_");
+    .join("_");
 }
 
 export function toTitleCase(
@@ -82,41 +81,41 @@ export function toTitleCase(
 ): string {
   if (!str) return "";
   let result = str
-    ?.split("_")
-    ?.map((word, index) => {
+    .split("_")
+    .map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
-      return checkUpperWords(word?.toLowerCase());
+      return checkUpperWords(word.toLowerCase());
     })
     .join(" ");
 
   return result
-    ?.split("-")
-    ?.map((word, index) => {
+    .split("-")
+    .map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
-      return checkUpperWords(word?.toLowerCase());
+      return checkUpperWords(word.toLowerCase());
     })
-    ?.join(" ");
+    .join(" ");
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string): string {
-  const words = str?.split(" ")?.map((word) => {
-    return upperCaseWords.includes(word?.toLowerCase())
-      ? word?.toUpperCase()
-      : word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
+  const words = str.split(" ").map((word) => {
+    return upperCaseWords.includes(word.toLowerCase())
+      ? word.toUpperCase()
+      : word[0].toUpperCase() + word.slice(1).toLowerCase();
   });
 
-  return words?.join(" ");
+  return words.join(" ");
 }
 
 export function buildInputs(): string {
@@ -267,7 +266,6 @@ export function groupByFamily(
     return (
       template?.type &&
       template?.show &&
-      !template?.advanced &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template?.input_types &&
@@ -469,20 +467,7 @@ export const logHasMessage = (
   if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((outputLog) => outputLog?.message);
   }
-  return !!outputs?.message;
-};
-
-export const logFirstMessage = (
-  data: VertexDataTypeAPI,
-  outputName: string | undefined,
-) => {
-  if (!outputName || !data?.outputs) return false;
-  for (const key of Object.keys(data.outputs)) {
-    if (logHasMessage(data, key)) {
-      return key === outputName;
-    }
-  }
-  return false;
+  return outputs?.message;
 };
 
 export const logTypeIsUnknown = (
@@ -539,7 +524,7 @@ export function brokenEdgeMessage({
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
-  const colDefs = columns.map((col) => {
+  const colDefs = columns.map((col, index) => {
     let newCol: ColDef = {
       headerName: col.display_name,
       field: col.name,
@@ -547,7 +532,6 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       filter: col.filterable,
       context: col.description ? { info: col.description } : {},
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
-      hide: col.hidden,
       valueParser: (params: ValueParserParams) => {
         const { context, newValue, colDef, oldValue } = params;
         if (
@@ -579,24 +563,8 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       newCol.cellRendererParams = {
         formatter: col.formatter,
       };
-
-      if (
-        col.formatter !== FormatterType.text ||
-        col.edit_mode !== "inline" ||
-        col.options
-      ) {
-        if (col.options && col.formatter === FormatterType.text) {
-          newCol.cellEditor = TableDropdownCellEditor;
-          newCol.cellEditorPopup = false;
-          newCol.cellEditorParams = {
-            values: col.options,
-          };
-          newCol.autoHeight = false;
-          newCol.cellClass = "no-border !py-2";
-        } else if (
-          col.edit_mode === "popover" &&
-          col.formatter === FormatterType.text
-        ) {
+      if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
+        if (col.edit_mode === "popover") {
           newCol.wrapText = false;
           newCol.autoHeight = false;
           newCol.cellEditor = "agLargeTextCellEditor";
@@ -604,12 +572,6 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellEditorParams = {
             maxLength: 100000000,
           };
-        } else if (col.formatter === FormatterType.boolean) {
-          newCol.cellRenderer = TableAutoCellRender;
-          newCol.editable = false;
-          newCol.autoHeight = false;
-          newCol.cellClass = "no-border !py-2";
-          newCol.type = "boolean";
         } else {
           newCol.cellRenderer = TableAutoCellRender;
         }
@@ -633,7 +595,6 @@ export function generateBackendColumnsFromValue(
       sortable: !tableOptions?.block_sort,
       filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
-      hidden: false,
     };
 
     // Attempt to infer the default value from the data, if possible
@@ -777,7 +738,7 @@ export const formatName = (name) => {
     .join(" ");
 
   const firstWord =
-    formattedName.split(" ")[0].charAt(0) +
+    formattedName.split(" ")[0].charAt(0).toUpperCase() +
     formattedName.split(" ")[0].slice(1);
 
   return { formattedName, firstWord };
@@ -790,68 +751,3 @@ export const isStringArray = (value: unknown): value is string[] => {
 };
 
 export const stringToBool = (str) => (str === "false" ? false : true);
-
-// Filter out null/undefined options
-export const filterNullOptions = (opts: any[]): any[] => {
-  return opts.filter((opt) => opt !== null && opt !== undefined);
-};
-
-/**
- * Gets a cookie value by its name
- * @param {string} name - The name of the cookie to retrieve
- * @returns {string | undefined} The cookie value if found, undefined otherwise
- */
-export function getCookie(name: string): string | undefined {
-  const cookie = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${name}=`));
-
-  if (cookie) {
-    return cookie.split("=")[1];
-  }
-  return undefined;
-}
-
-/**
- * Interface for cookie options
- */
-export interface CookieOptions {
-  path?: string;
-  domain?: string;
-  maxAge?: number;
-  expires?: Date;
-  secure?: boolean;
-  sameSite?: "Strict" | "Lax" | "None";
-}
-
-/**
- * Sets a cookie with the specified name, value, and optional configuration
- * @param {string} name - The name of the cookie
- * @param {string} value - The value to store in the cookie
- * @param {CookieOptions} options - Optional configuration for the cookie
- */
-export function setCookie(
-  name: string,
-  value: string,
-  options: CookieOptions = {},
-): void {
-  const {
-    path = "/",
-    domain,
-    maxAge,
-    expires,
-    secure = true,
-    sameSite = "Strict",
-  } = options;
-
-  let cookieString = `${name}=${encodeURIComponent(value)}`;
-
-  if (path) cookieString += `; path=${path}`;
-  if (domain) cookieString += `; domain=${domain}`;
-  if (maxAge) cookieString += `; max-age=${maxAge}`;
-  if (expires) cookieString += `; expires=${expires.toUTCString()}`;
-  if (secure) cookieString += "; secure";
-  if (sameSite) cookieString += `; SameSite=${sameSite}`;
-
-  document.cookie = cookieString;
-}

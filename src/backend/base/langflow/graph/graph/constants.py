@@ -1,13 +1,5 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
 from langflow.graph.schema import CHAT_COMPONENTS
 from langflow.utils.lazy_load import LazyLoadDictBase
-
-if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
-    from langflow.graph.vertex.vertex_types import CustomComponentVertex
 
 
 class Finish:
@@ -30,7 +22,7 @@ class VertexTypesDict(LazyLoadDictBase):
         self._types = _import_vertex_types
 
     @property
-    def vertex_type_map(self) -> dict[str, type[Vertex]]:
+    def vertex_type_map(self):
         return self.all_types_dict
 
     def _build_dict(self):
@@ -40,7 +32,7 @@ class VertexTypesDict(LazyLoadDictBase):
             "Custom": ["Custom Tool", "Python Function"],
         }
 
-    def get_type_dict(self) -> dict[str, type[Vertex]]:
+    def get_type_dict(self):
         types = self._types()
         return {
             "CustomComponent": types.CustomComponentVertex,
@@ -48,7 +40,7 @@ class VertexTypesDict(LazyLoadDictBase):
             **dict.fromkeys(CHAT_COMPONENTS, types.InterfaceVertex),
         }
 
-    def get_custom_component_vertex_type(self) -> type[CustomComponentVertex]:
+    def get_custom_component_vertex_type(self):
         return self._types().CustomComponentVertex
 
 

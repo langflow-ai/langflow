@@ -4,7 +4,7 @@ import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { InputProps, TableComponentType } from "../../types";
@@ -65,17 +65,10 @@ export default function TableNodeComponent({
     };
   }, []);
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
-  const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
-  // Add useEffect to sync with incoming value changes
-  useEffect(() => {
-    setTempValue(cloneDeep(value));
-  }, [value]);
-
   const componentColumns = columns
     ? columns
-    : generateBackendColumnsFromValue(tempValue ?? [], table_options);
+    : generateBackendColumnsFromValue(value ?? [], table_options);
   let AgColumns = FormatColumns(componentColumns);
   // add info to each column
   AgColumns = AgColumns.map((col) => {
@@ -100,7 +93,7 @@ export default function TableNodeComponent({
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      setTempValue(rows);
+      handleOnNewValue({ value: rows });
     }
   }
   function deleteRow() {
@@ -116,7 +109,8 @@ export default function TableNodeComponent({
     if (agGrid.current && selectedNodes.length > 0) {
       const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
       setSelectedNodes([]);
-      setTempValue([...tempValue, ...toDuplicate]);
+      const rows: any = [];
+      handleOnNewValue({ value: [...value, ...toDuplicate] });
     }
   }
   function addRow() {
@@ -124,23 +118,12 @@ export default function TableNodeComponent({
     componentColumns.forEach((column) => {
       newRow[column.name] = column.default ?? null; // Use the default value if available
     });
-    setTempValue([...tempValue, newRow]);
+    handleOnNewValue({ value: [...value, newRow] });
   }
 
   function updateComponent() {
     setAllRows();
   }
-
-  function handleSave() {
-    handleOnNewValue({ value: tempValue });
-    setIsModalOpen(false);
-  }
-
-  function handleCancel() {
-    setTempValue(cloneDeep(value));
-    setIsModalOpen(false);
-  }
-
   const editable = componentColumns
     .map((column) => {
       const isCustomEdit =
@@ -166,8 +149,6 @@ export default function TableNodeComponent({
     >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
-          open={isModalOpen}
-          setOpen={setIsModalOpen}
           stopEditingWhenCellsLoseFocus={true}
           tableIcon={table_icon}
           tableOptions={table_options}
@@ -184,18 +165,12 @@ export default function TableNodeComponent({
           pagination={!table_options?.hide_options}
           addRow={addRow}
           onDelete={deleteRow}
-          gridOptions={{
-            ensureDomOrder: true,
-            suppressRowClickSelection: true,
-          }}
           onDuplicate={duplicateRow}
           displayEmptyAlert={false}
           className="h-full w-full"
           columnDefs={AgColumns}
-          rowData={tempValue}
+          rowData={value}
           context={{ field_parsers: table_options?.field_parsers }}
-          onSave={handleSave}
-          onCancel={handleCancel}
         >
           <Button
             disabled={disabled}

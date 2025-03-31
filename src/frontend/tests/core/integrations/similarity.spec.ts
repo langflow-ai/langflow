@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -17,10 +16,7 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await addLegacyComponents(page);
-
     //first component
-
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
     await page.waitForSelector("text=OpenAI Embeddings", {
@@ -199,7 +195,7 @@ test(
     //connection 4
     const textEmbedderOutput_1 = await page
       .getByTestId("handle-textembeddercomponent-shownode-embedding data-right")
-      .nth(1);
+      .nth(2);
     await textEmbedderOutput_1.hover();
     await page.mouse.down();
     await embeddingSimilarityInput.hover();

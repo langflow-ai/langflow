@@ -1,8 +1,6 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -16,10 +14,7 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
-import {
-  ENABLE_CUSTOM_PARAM,
-  ENABLE_FILE_MANAGEMENT,
-} from "@/customization/feature-flags";
+import { ENABLE_CUSTOM_PARAM } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
@@ -43,12 +38,10 @@ import { SelectOptions } from "./components/select-options";
 type SideBarFoldersButtonsComponentProps = {
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
-  handleFilesClick?: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
-  handleFilesClick,
 }: SideBarFoldersButtonsComponentProps) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -59,10 +52,9 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
-  const checkPathFiles = pathname.includes("files");
 
   const checkPathName = (itemId: string) => {
-    if (urlWithoutPath && itemId === myCollectionId && !checkPathFiles) {
+    if (urlWithoutPath && itemId === myCollectionId) {
       return true;
     }
     return currentFolder.includes(itemId);
@@ -445,21 +437,6 @@ const SideBarFoldersButtonsComponent = ({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      {ENABLE_FILE_MANAGEMENT && (
-        <SidebarFooter className="border-t">
-          <div className="flex w-full items-center gap-2 p-2">
-            <SidebarMenuButton
-              isActive={checkPathFiles}
-              onClick={() => handleFilesClick?.()}
-              size="md"
-              className="text-[13px]"
-            >
-              <ForwardedIconComponent name="File" />
-              My Files
-            </SidebarMenuButton>
-          </div>
-        </SidebarFooter>
-      )}
     </Sidebar>
   );
 };

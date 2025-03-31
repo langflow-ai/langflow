@@ -4,7 +4,6 @@ from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
 from langflow.memory import aget_messages
 from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
@@ -71,7 +70,6 @@ class MemoryComponent(Component):
     outputs = [
         Output(display_name="Data", name="messages", method="retrieve_messages"),
         Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     async def retrieve_messages(self) -> Data:
@@ -83,11 +81,6 @@ class MemoryComponent(Component):
 
         if sender == "Machine and User":
             sender = None
-
-        if self.memory and not hasattr(self.memory, "aget_messages"):
-            memory_name = type(self.memory).__name__
-            err_msg = f"External Memory object ({memory_name}) must have 'aget_messages' method."
-            raise AttributeError(err_msg)
 
         if self.memory:
             # override session_id
@@ -118,12 +111,3 @@ class MemoryComponent(Component):
         stored_text = data_to_text(self.template, await self.retrieve_messages())
         self.status = stored_text
         return Message(text=stored_text)
-
-    async def as_dataframe(self) -> DataFrame:
-        """Convert the retrieved messages into a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the message data.
-        """
-        messages = await self.retrieve_messages()
-        return DataFrame(messages)

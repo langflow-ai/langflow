@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -79,7 +79,6 @@ to access financial data and market information from Yahoo Finance."""
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def run_model(self) -> list[Data]:
@@ -141,12 +140,3 @@ to access financial data and market information from Yahoo Finance."""
             data_list = [Data(text=result, data={"result": result})]
 
         return data_list
-
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Yahoo search results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the search results.
-        """
-        data = self.fetch_content()
-        return DataFrame(data)

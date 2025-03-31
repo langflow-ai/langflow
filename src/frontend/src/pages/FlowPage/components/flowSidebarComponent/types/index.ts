@@ -1,10 +1,6 @@
 import { APIClassType, APIDataType } from "@/types/api";
 import { Dispatch, SetStateAction } from "react";
 
-export interface NodeColors {
-  [key: string]: string;
-}
-
 export interface CategoryGroupProps {
   dataFilter: APIDataType;
   sortedCategories: string[];
@@ -16,57 +12,15 @@ export interface CategoryGroupProps {
   openCategories: string[];
   setOpenCategories: (categories: string[]) => void;
   search: string;
-  nodeColors: NodeColors;
+  nodeColors: {
+    [key: string]: string;
+  };
+  chatInputAdded: boolean;
   onDragStart: (
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
-  uniqueInputsComponents: {
-    chatInput: boolean;
-    webhookInput: boolean;
-  };
-}
-
-export interface SidebarGroupProps {
-  BUNDLES: any;
-  search: string;
-  sortedCategories: string[];
-  dataFilter: APIDataType;
-  nodeColors: NodeColors;
-  onDragStart: (
-    event: React.DragEvent<HTMLDivElement>,
-    data: { type: string; node?: APIClassType },
-  ) => void;
-  sensitiveSort: (a: string, b: string) => number;
-  openCategories: string[];
-  setOpenCategories: (
-    categories: string[] | ((prev: string[]) => string[]),
-  ) => void;
-  handleKeyDownInput: (
-    event: React.KeyboardEvent<HTMLDivElement>,
-    name: string,
-  ) => void;
-  uniqueInputsComponents: UniqueInputsComponents;
-}
-
-export interface BundleItemProps {
-  item: {
-    name: string;
-    display_name: string;
-    icon: string;
-  };
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  dataFilter: APIDataType;
-  nodeColors: NodeColors;
-  uniqueInputsComponents: UniqueInputsComponents;
-  onDragStart: (
-    event: React.DragEvent<any>,
-    data: { type: string; node?: APIClassType },
-  ) => void;
-  sensitiveSort: (a: string, b: string) => number;
-  handleKeyDownInput: (event: React.KeyboardEvent<any>, name: string) => void;
 }
 
 export interface SidebarHeaderComponentProps {
@@ -95,9 +49,4 @@ export interface SidebarHeaderComponentProps {
   setFilterEdge: (edge: any[]) => void;
   setFilterData: Dispatch<SetStateAction<APIDataType>>;
   data: APIDataType;
-}
-
-export interface UniqueInputsComponents {
-  chatInput: boolean;
-  webhookInput: boolean;
 }

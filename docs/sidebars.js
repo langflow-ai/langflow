@@ -39,9 +39,7 @@ module.exports = {
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
-        "Concepts/concepts-publish",
-        "Concepts/concepts-file-management",
-        "Concepts/concepts-voice-mode",
+        "Concepts/concepts-api",
       ],
     },
     {
@@ -49,7 +47,6 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
-        "Components/components-bundles",
         "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
@@ -82,7 +79,6 @@ module.exports = {
         "Configuration/configuration-auto-saving",
         "Configuration/configuration-backend-only",
         "Configuration/configuration-cli",
-        "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         "Configuration/configuration-security-best-practices"
@@ -90,81 +86,25 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Develop",
-      items: [
-        "Develop/develop-overview",
-        "Develop/develop-application",
-        "Develop/install-custom-dependencies",
-        "Develop/memory",
-        "Develop/session-id",
-        "Develop/logging",
-      ],
-    },
-    {
-      type: "category",
       label: "Deployment",
       items: [
-        {
-          type:"doc",
-          id: "Deployment/deployment-overview",
-          label: "Deployment overview"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-docker",
-          label: "Docker"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-gcp",
-          label: "Google Cloud Platform"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-hugging-face-spaces",
-          label: "Hugging Face Spaces"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-railway",
-          label: "Railway"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-render",
-          label: "Render"
-        }
-      ],
-    },
-    {
-      type: "category",
-      label: "API reference",
-      items: [
-        {
-          type: "link",
-          label: "API documentation",
-          href: "/api",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-reference-api-examples",
-          label: "API examples",
-        },
+        "Deployment/deployment-docker",
+        "Deployment/deployment-gcp",
+        "Deployment/deployment-hugging-face-spaces",
+        "Deployment/deployment-kubernetes",
+        "Deployment/deployment-railway",
+        "Deployment/deployment-render",
       ],
     },
     {
       type: "category",
       label: "Integrations",
       items: [
-        "Integrations/Apify/integrations-apify",
-        "Integrations/Arize/integrations-arize",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
+        "Integrations/integrations-langfuse",
+        "Integrations/integrations-langsmith",
+        "Integrations/integrations-langwatch",
         {
           type: 'category',
           label: 'Google',
@@ -173,18 +113,6 @@ module.exports = {
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
           ],
         },
-        "Integrations/integrations-langfuse",
-        "Integrations/integrations-langsmith",
-        "Integrations/integrations-langwatch",
-        {
-          type: 'category',
-          label: 'MCP (Model Context Protocol)',
-          items: [
-            'Integrations/MCP/integrations-mcp',
-            'Integrations/MCP/mcp-component-astra',
-          ],
-        },
-        "Integrations/integrations-opik",
         {
           type: "category",
           label: "Notion",
@@ -192,14 +120,6 @@ module.exports = {
             "Integrations/Notion/integrations-notion",
             "Integrations/Notion/notion-agent-conversational",
             "Integrations/Notion/notion-agent-meeting-notes",
-          ],
-        },
-        {
-          type: "category",
-          label: "NVIDIA",
-          items: [
-            "Integrations/Nvidia/integrations-nvidia-ingest",
-            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
           ],
         },
       ],
@@ -210,11 +130,26 @@ module.exports = {
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-components",
-        "Contributing/contributing-component-tests",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-telemetry",
+      ],
+    },
+    {
+      type: "category",
+      label: "API reference",
+      items: [
+        {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "API examples",
+        },
+        {
+          type: "link",
+          label: "API documentation",
+          href: "/api",
+        },
       ],
     },
     {
@@ -227,30 +162,6 @@ module.exports = {
           href: "https://github.com/langflow-ai/langflow/releases/latest",
         },
       ],
-    },
-    {
-      type: "category",
-      label: "Support",
-      items: [
-        {
-          type: "doc",
-          id: "Support/luna-for-langflow",
-          label: "Luna for Langflow",
-        },
-      ],
-    },
-    {
-      type: "html",
-      className: "sidebar-ad",
-      value: `
-        <a href="https://astra.datastax.com/signup?type=langflow" target="_blank" class="menu__link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-          <div class="sidebar-ad-text-container">
-            <span class="sidebar-ad-text">Use Langflow in the cloud</span>
-            <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for DataStax Langflow</span>
-          </div>
-        </a>
-      `,
     },
   ],
 };

@@ -29,20 +29,26 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.getByText("openai").last().click();
+    await page.getByText("openai").first().click();
     await page.keyboard.press("Delete");
 
     //connection 1
 
-    await page
+    const elementPrompt = await page
       .getByTestId("handle-prompt-shownode-prompt message-right")
-      .first()
-      .click();
+      .first();
+    await elementPrompt.hover();
+    await page.mouse.down();
 
-    await page
+    await page.locator('//*[@id="react-flow-id"]').hover();
+
+    const elementChatOutput = await page
       .getByTestId("handle-chatoutput-shownode-text-left")
-      .first()
-      .click();
+      .first();
+    await elementChatOutput.hover();
+    await page.mouse.up();
+
+    await page.locator('//*[@id="react-flow-id"]').hover();
 
     await page.getByTestId("button_open_prompt_modal").click();
 
@@ -52,7 +58,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully");
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -64,22 +70,21 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByText("Prompt", { exact: true }).last().click();
+    await page.getByText("Prompt", { exact: true }).click();
 
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
-    });
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByText("Freeze", { exact: true }).first().click();
+    await page.getByText("Freeze", { exact: true }).last().click();
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 
     expect(page.locator(".border-ring-frozen")).toHaveCount(1);
 
+    await page.locator('//*[@id="react-flow-id"]').click();
+
     await page.getByTestId("button_open_prompt_modal").click();
 
-    await page.getByTestId("edit-prompt-sanitized").last().click();
+    await page.getByTestId("edit-prompt-sanitized").first().click();
 
     await page
       .getByTestId("modal-promptarea_prompt_template")
@@ -97,8 +102,8 @@ test(
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    textContents2.forEach((text) => {
-      expect(text).toBe(concatAllText);
-    });
+    const concatAllText2 = textContents2.join(" ");
+
+    expect(concatAllText2).toBe(concatAllText);
   },
 );

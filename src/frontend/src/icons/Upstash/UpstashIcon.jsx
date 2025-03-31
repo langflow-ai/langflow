@@ -1,3 +1,5 @@
+import React from "react";
+
 const UpstashIcon = (props) => (
   <svg
     width="256px"

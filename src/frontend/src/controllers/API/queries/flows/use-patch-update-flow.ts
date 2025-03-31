@@ -7,13 +7,12 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPatchUpdateFlow {
   id: string;
-  name?: string;
-  data?: ReactFlowJsonObject;
-  description?: string;
-  folder_id?: string | null | undefined;
-  endpoint_name?: string | null | undefined;
+  name: string;
+  data: ReactFlowJsonObject;
+  description: string;
+  folder_id: string | null | undefined;
+  endpoint_name: string | null | undefined;
   locked?: boolean | null | undefined;
-  access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<
@@ -22,11 +21,15 @@ export const usePatchUpdateFlow: useMutationFunctionType<
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const PatchUpdateFlowFn = async ({
-    id,
-    ...payload
-  }: IPatchUpdateFlow): Promise<any> => {
-    const response = await api.patch(`${getURL("FLOWS")}/${id}`, payload);
+  const PatchUpdateFlowFn = async (payload: IPatchUpdateFlow): Promise<any> => {
+    const response = await api.patch(`${getURL("FLOWS")}/${payload.id}`, {
+      name: payload.name,
+      data: payload.data,
+      description: payload.description,
+      folder_id: payload.folder_id || null,
+      endpoint_name: payload.endpoint_name || null,
+      locked: payload.locked || false,
+    });
 
     return response.data;
   };

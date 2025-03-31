@@ -1,8 +1,9 @@
 import asyncio
 import inspect
+from pathlib import Path
 from typing import Any
 
-from anyio import Path
+from aiofile import async_open
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.schemas import UpdateCustomComponentRequest
@@ -35,8 +36,8 @@ async def test_get_config(client: AsyncClient):
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
     path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
-
-    code = await path.read_text(encoding="utf-8")
+    async with async_open(path, encoding="utf-8") as f:
+        code = await f.read()
     frontend_node: dict[str, Any] = {"outputs": []}
     request = UpdateCustomComponentRequest(
         code=code,
@@ -56,7 +57,7 @@ async def test_update_component_outputs(client: AsyncClient, logged_in_headers: 
 async def test_update_component_model_name_options(client: AsyncClient, logged_in_headers: dict):
     """Test that model_name options are updated when selecting a provider."""
     component = AgentComponent()
-    component_node, _cc_instance = build_custom_component_template(
+    component_node, cc_instance = build_custom_component_template(
         component,
     )
 
@@ -68,7 +69,8 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     # we are at str/backend/tests/unit/api/v1/test_endpoints.py
     # find the file by using the class AgentComponent
     agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
-    code = await Path(agent_component_file).read_text(encoding="utf-8")
+    async with async_open(agent_component_file, encoding="utf-8") as f:
+        code = await f.read()
 
     # Create the request to update the component
     request = UpdateCustomComponentRequest(
@@ -88,12 +90,12 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     assert "template" in result
     assert "model_name" in result["template"]
     assert isinstance(result["template"]["model_name"]["options"], list)
-    assert len(result["template"]["model_name"]["options"]) > 0, (
-        f"Model names: {result['template']['model_name']['options']}"
-    )
-    assert current_model_names != result["template"]["model_name"]["options"], (
-        f"Current model names: {current_model_names}, New model names: {result['template']['model_name']['options']}"
-    )
+    assert (
+        len(result["template"]["model_name"]["options"]) > 0
+    ), f"Model names: {result['template']['model_name']['options']}"
+    assert (
+        current_model_names != result["template"]["model_name"]["options"]
+    ), f"Current model names: {current_model_names}, New model names: {result['template']['model_name']['options']}"
     # Now test with Custom provider
     template["agent_llm"]["value"] = "Custom"
     request.field_value = "Custom"

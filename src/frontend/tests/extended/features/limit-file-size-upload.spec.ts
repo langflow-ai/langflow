@@ -41,7 +41,8 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
     await page.getByText("Close").last().click();
 
     await page.getByText("Playground", { exact: true }).last().click();
@@ -83,7 +84,7 @@ test(
 
     await expect(
       page.getByText(
-        `The file size is too large. Please select a file smaller than ${(maxFileSizeUpload * 1024).toFixed(2)} KB`,
+        `The file size is too large. Please select a file smaller than ${maxFileSizeUpload}MB`,
       ),
     ).toBeVisible();
   },

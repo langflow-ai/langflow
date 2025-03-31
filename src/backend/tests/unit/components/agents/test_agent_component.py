@@ -78,8 +78,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
         assert "Anthropic" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == []
-        options = updated_config["model_name"]["options"]
-        assert any("sonnet" in option.lower() for option in options), f"Options: {options}"
+        assert any(
+            "sonnet" in option.lower() for option in updated_config["model_name"]["options"]
+        ), f"Options: {updated_config['model_name']['options']}"
 
         # Test updating build config for Custom
         updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
@@ -95,7 +96,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "model_name" not in updated_config
 
 
-@pytest.mark.usefixtures("client")
 @pytest.mark.api_key_required
 async def test_agent_component_with_calculator():
     # Mock inputs
@@ -113,7 +113,6 @@ async def test_agent_component_with_calculator():
         model_name="gpt-4o",
         llm_type="OpenAI",
         temperature=temperature,
-        _session_id=str(uuid4()),
     )
 
     response = await agent.message_response()

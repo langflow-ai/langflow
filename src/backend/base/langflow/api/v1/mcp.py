@@ -2,16 +2,16 @@ import asyncio
 import base64
 import json
 import logging
-from collections.abc import Awaitable, Callable
+import traceback
+from contextlib import suppress
 from contextvars import ContextVar
-from functools import wraps
-from typing import Annotated, Any, ParamSpec, TypeVar
+from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -19,59 +19,31 @@ from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 from starlette.background import BackgroundTasks
 
-from langflow.api.v1.chat import build_flow_and_stream
+from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
-from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
-from langflow.services.deps import (
-    get_db_service,
-    get_settings_service,
-    get_storage_service,
-    session_scope,
-)
+from langflow.services.deps import get_db_service, get_session, get_settings_service, get_storage_service
 from langflow.services.storage.utils import build_content_type_from_extension
 
 logger = logging.getLogger(__name__)
+if False:
+    logger.setLevel(logging.DEBUG)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
-T = TypeVar("T")
-P = ParamSpec("P")
+    # Enable debug logging for MCP package
+    mcp_logger = logging.getLogger("mcp")
+    mcp_logger.setLevel(logging.DEBUG)
+    if not mcp_logger.handlers:
+        mcp_logger.addHandler(handler)
 
-
-def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
-    """Decorator to handle MCP endpoint errors consistently."""
-
-    @wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        try:
-            return await func(*args, **kwargs)
-        except Exception as e:
-            msg = f"Error in {func.__name__}: {e!s}"
-            logger.exception(msg)
-            raise
-
-    return wrapper
-
-
-async def with_db_session(operation: Callable[[Any], Awaitable[T]]) -> T:
-    """Execute an operation within a database session context."""
-    async with session_scope() as session:
-        return await operation(session)
-
-
-class MCPConfig:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.enable_progress_notifications = None
-        return cls._instance
-
-
-def get_mcp_config():
-    return MCPConfig()
+    logger.debug("MCP module loaded - debug logging enabled")
 
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
@@ -98,7 +70,7 @@ async def handle_list_prompts():
 async def handle_list_resources():
     resources = []
     try:
-        db_service = get_db_service()
+        session = await anext(get_session())
         storage_service = get_storage_service()
         settings_service = get_settings_service()
 
@@ -108,30 +80,31 @@ async def handle_list_resources():
 
         base_url = f"http://{host}:{port}".rstrip("/")
 
-        async with db_service.with_session() as session:
-            flows = (await session.exec(select(Flow))).all()
+        flows = (await session.exec(select(Flow))).all()
 
-            for flow in flows:
-                if flow.id:
-                    try:
-                        files = await storage_service.list_files(flow_id=str(flow.id))
-                        for file_name in files:
-                            # URL encode the filename
-                            safe_filename = quote(file_name)
-                            resource = types.Resource(
-                                uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
-                                name=file_name,
-                                description=f"File in flow: {flow.name}",
-                                mimeType=build_content_type_from_extension(file_name),
-                            )
-                            resources.append(resource)
-                    except FileNotFoundError as e:
-                        msg = f"Error listing files for flow {flow.id}: {e}"
-                        logger.debug(msg)
-                        continue
+        for flow in flows:
+            if flow.id:
+                try:
+                    files = await storage_service.list_files(flow_id=str(flow.id))
+                    for file_name in files:
+                        # URL encode the filename
+                        safe_filename = quote(file_name)
+                        resource = types.Resource(
+                            uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
+                            name=file_name,
+                            description=f"File in flow: {flow.name}",
+                            mimeType=build_content_type_from_extension(file_name),
+                        )
+                        resources.append(resource)
+                except FileNotFoundError as e:
+                    msg = f"Error listing files for flow {flow.id}: {e}"
+                    logger.debug(msg)
+                    continue
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
         logger.exception(msg)
+        trace = traceback.format_exc()
+        logger.exception(trace)
         raise
     return resources
 
@@ -171,6 +144,8 @@ async def handle_read_resource(uri: str) -> bytes:
     except Exception as e:
         msg = f"Error reading resource {uri}: {e!s}"
         logger.exception(msg)
+        trace = traceback.format_exc()
+        logger.exception(trace)
         raise
 
 
@@ -178,55 +153,51 @@ async def handle_read_resource(uri: str) -> bytes:
 async def handle_list_tools():
     tools = []
     try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
-            flows = (await session.exec(select(Flow))).all()
+        session = await anext(get_session())
+        flows = (await session.exec(select(Flow))).all()
 
-            for flow in flows:
-                if flow.user_id is None:
-                    continue
+        for flow in flows:
+            if flow.user_id is None:
+                continue
 
-                flow_name = "_".join(flow.name.lower().split())
-                tool = types.Tool(
-                    name=flow_name,
-                    description=f"{flow.id}: {flow.description}"
-                    if flow.description
-                    else f"Tool generated from flow: {flow_name}",
-                    inputSchema=json_schema_from_flow(flow),
-                )
-                tools.append(tool)
+            tool = types.Tool(
+                name=str(flow.id),  # Use flow.id instead of name
+                description=f"{flow.name}: {flow.description}"
+                if flow.description
+                else f"Tool generated from flow: {flow.name}",
+                inputSchema=json_schema_from_flow(flow),
+            )
+            tools.append(tool)
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         logger.exception(msg)
+        trace = traceback.format_exc()
+        logger.exception(trace)
         raise
     return tools
 
 
 @server.call_tool()
-@handle_mcp_errors
-async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+async def handle_call_tool(
+    name: str, arguments: dict, *, enable_progress_notifications: bool = Depends(get_enable_progress_notifications)
+) -> list[types.TextContent]:
     """Handle tool execution requests."""
-    mcp_config = get_mcp_config()
-    if mcp_config.enable_progress_notifications is None:
-        settings_service = get_settings_service()
-        mcp_config.enable_progress_notifications = settings_service.settings.mcp_server_enable_progress_notifications
+    try:
+        session = await anext(get_session())
+        background_tasks = BackgroundTasks()
 
-    background_tasks = BackgroundTasks()
-    current_user = current_user_ctx.get()
+        current_user = current_user_ctx.get()
+        flow = (await session.exec(select(Flow).where(Flow.id == UUID(name)))).first()
 
-    async def execute_tool(session):
-        # get flow id from name
-        flow = await get_flow_snake_case(name, current_user.id, session)
         if not flow:
-            msg = f"Flow with name '{name}' not found"
+            msg = f"Flow with id '{name}' not found"
             raise ValueError(msg)
-        flow_id = flow.id
 
         # Process inputs
         processed_inputs = dict(arguments)
 
         # Initial progress notification
-        if mcp_config.enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
+        if enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
             await server.request_context.session.send_progress_notification(
                 progress_token=progress_token, progress=0.0, total=1.0
             )
@@ -237,7 +208,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         )
 
         async def send_progress_updates():
-            if not (mcp_config.enable_progress_notifications and server.request_context.meta.progressToken):
+            if not (enable_progress_notifications and server.request_context.meta.progressToken):
                 return
 
             try:
@@ -249,66 +220,70 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     progress += 0.1
                     await asyncio.sleep(1.0)
             except asyncio.CancelledError:
-                if mcp_config.enable_progress_notifications:
+                # Send final 100% progress
+                if enable_progress_notifications:
                     await server.request_context.session.send_progress_notification(
                         progress_token=progress_token, progress=1.0, total=1.0
                     )
                 raise
 
+        db_service = get_db_service()
         collected_results = []
-        try:
-            progress_task = asyncio.create_task(send_progress_updates())
-
+        async with db_service.with_session() as async_session:
             try:
-                response = await build_flow_and_stream(
-                    flow_id=flow_id,
-                    inputs=input_request,
-                    background_tasks=background_tasks,
-                    current_user=current_user,
-                )
+                progress_task = asyncio.create_task(send_progress_updates())
 
-                async for line in response.body_iterator:
-                    if not line:
-                        continue
-                    try:
-                        event_data = json.loads(line)
-                        if event_data.get("event") == "end_vertex":
-                            message = (
-                                event_data.get("data", {})
-                                .get("build_data", {})
-                                .get("data", {})
-                                .get("results", {})
-                                .get("message", {})
-                                .get("text", "")
-                            )
-                            if message:
-                                collected_results.append(types.TextContent(type="text", text=str(message)))
-                    except json.JSONDecodeError:
-                        msg = f"Failed to parse event data: {line}"
-                        logger.warning(msg)
-                        continue
+                try:
+                    response = await build_flow(
+                        flow_id=UUID(name),
+                        inputs=input_request,
+                        background_tasks=background_tasks,
+                        current_user=current_user,
+                        session=async_session,
+                    )
 
-                return collected_results
-            finally:
-                progress_task.cancel()
-                await asyncio.wait([progress_task])
-                if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
-                    raise exc
+                    async for line in response.body_iterator:
+                        if not line:
+                            continue
+                        try:
+                            event_data = json.loads(line)
+                            if event_data.get("event") == "end_vertex":
+                                message = (
+                                    event_data.get("data", {})
+                                    .get("build_data", {})
+                                    .get("data", {})
+                                    .get("results", {})
+                                    .get("message", {})
+                                    .get("text", "")
+                                )
+                                if message:
+                                    collected_results.append(types.TextContent(type="text", text=str(message)))
+                        except json.JSONDecodeError:
+                            msg = f"Failed to parse event data: {line}"
+                            logger.warning(msg)
+                            continue
 
-        except Exception:
-            if mcp_config.enable_progress_notifications and (
-                progress_token := server.request_context.meta.progressToken
-            ):
-                await server.request_context.session.send_progress_notification(
-                    progress_token=progress_token, progress=1.0, total=1.0
-                )
-            raise
+                    return collected_results
+                finally:
+                    progress_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await progress_task
+            except Exception as e:
+                msg = f"Error in async session: {e}"
+                logger.exception(msg)
+                raise
 
-    try:
-        return await with_db_session(execute_tool)
     except Exception as e:
+        context = server.request_context
+        # Send error progress if there's an exception
+        if enable_progress_notifications and (progress_token := context.meta.progressToken):
+            await server.request_context.session.send_progress_notification(
+                progress_token=progress_token, progress=1.0, total=1.0
+            )
         msg = f"Error executing tool {name}: {e!s}"
         logger.exception(msg)
+        trace = traceback.format_exc()
+        logger.exception(trace)
         raise
 
 
@@ -358,10 +333,11 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                 logger.info("Client disconnected from SSE connection")
             except asyncio.CancelledError:
                 logger.info("SSE connection was cancelled")
-                raise
             except Exception as e:
                 msg = f"Error in MCP: {e!s}"
                 logger.exception(msg)
+                trace = traceback.format_exc()
+                logger.exception(trace)
                 raise
     finally:
         current_user_ctx.reset(token)
@@ -369,8 +345,4 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 
 @router.post("/")
 async def handle_messages(request: Request):
-    try:
-        await sse.handle_post_message(request.scope, request.receive, request._send)
-    except BrokenResourceError as e:
-        logger.info("MCP Server disconnected")
-        raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e
+    await sse.handle_post_message(request.scope, request.receive, request._send)

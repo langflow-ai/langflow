@@ -9,8 +9,6 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from aiofile import async_open
-from anyio import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
@@ -21,36 +19,17 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.logging import logger
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHeader
+from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
-from langflow.utils.compression import compress_response
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
-
-
-async def _verify_fs_path(path: str | None) -> None:
-    if path:
-        path_ = Path(path)
-        if not await path_.exists():
-            await path_.touch()
-
-
-async def _save_flow_to_fs(flow: Flow) -> None:
-    if flow.fs_path:
-        async with async_open(flow.fs_path, "w") as f:
-            try:
-                await f.write(flow.model_dump_json())
-            except OSError:
-                logger.exception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
 
 
 async def _new_flow(
@@ -60,8 +39,6 @@ async def _new_flow(
     user_id: UUID,
 ):
     try:
-        await _verify_fs_path(flow.fs_path)
-
         """Create a new flow."""
         if flow.user_id is None:
             flow.user_id = user_id
@@ -147,9 +124,6 @@ async def create_flow(
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
         await session.commit()
         await session.refresh(db_flow)
-
-        await _save_flow_to_fs(db_flow)
-
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -239,12 +213,8 @@ async def read_flows(
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
-                # Convert to FlowHeader objects and compress the response
-                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-                return compress_response(flow_headers)
-
-            # Compress the full flows response
-            return compress_response(flows)
+                return [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+            return flows
 
         stmt = stmt.where(Flow.folder_id == folder_id)
         return await paginate(session, stmt, params=params)
@@ -284,21 +254,6 @@ async def read_flow(
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
-@router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
-async def read_public_flow(
-    *,
-    session: DbSession,
-    flow_id: UUID,
-):
-    """Read a public flow."""
-    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
-    if access_type is not AccessTypeEnum.PUBLIC:
-        raise HTTPException(status_code=403, detail="Flow is not public")
-
-    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
-
-
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 async def update_flow(
     *,
@@ -328,8 +283,6 @@ async def update_flow(
         for key, value in update_data.items():
             setattr(db_flow, key, value)
 
-        await _verify_fs_path(db_flow.fs_path)
-
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
@@ -342,8 +295,6 @@ async def update_flow(
         session.add(db_flow)
         await session.commit()
         await session.refresh(db_flow)
-
-        await _save_flow_to_fs(db_flow)
 
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -430,7 +381,6 @@ async def upload_file(
         await session.commit()
         for db_flow in response_list:
             await session.refresh(db_flow)
-            await _save_flow_to_fs(db_flow)
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -543,10 +493,7 @@ async def read_basic_examples(
             return []
 
         # Get all flows in the starter folder
-        flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
-
-        # Return compressed response using our utility function
-        return compress_response(flows)
+        return (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

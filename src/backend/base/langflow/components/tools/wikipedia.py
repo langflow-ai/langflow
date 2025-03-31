@@ -3,7 +3,7 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 from langflow.custom import Component
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -28,7 +28,7 @@ class WikipediaComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Text", name="text", method="fetch_content_text"),
     ]
 
     def fetch_content(self) -> list[Data]:
@@ -53,12 +53,3 @@ class WikipediaComponent(Component):
             load_all_available_meta=self.load_all_available_meta,
             doc_content_chars_max=self.doc_content_chars_max,
         )
-
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Wikipedia results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the Wikipedia results.
-        """
-        data = self.fetch_content()
-        return DataFrame(data)

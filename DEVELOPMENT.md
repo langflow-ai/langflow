@@ -101,7 +101,7 @@ Pre-commit hooks will help keep your changes clean and well-formatted.
  Install pre-commit hooks by running the following commands:
 
 ```bash
-uv sync
+uv sync --dev
 uv run pre-commit install
 ```
 
@@ -168,8 +168,8 @@ In the *Documentation Terminal* (from the project root directory), run the follo
 
 ```bash
 cd docs
-yarn install
-yarn start
+npm install
+npm run start
 ```
 
 If the frontend service is running on port `3000` you might be prompted `Would you like to run the app on another port instead?`, in which case answer "yes". You will get output similar to:
@@ -182,11 +182,11 @@ At which point you can navigate to http://localhost:3001/ in a browser and view 
 
 ## Adding or Modifying a Component
 
-Components reside in folders under `src/backend/base/langflow`, and their unit tests under `src/backend/base/tests/unit/components`. 
+Components reside in folders under `src/backend/base/langflow`, and their unit tests under `src/backend/base/tests/unit/components`.
 
 ### Adding a Component
 
-Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser. 
+Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser.
 
 > [!TIP]
 > It is faster to copy-paste the component code from your editor into the UI *without* saving in the source code in the editor, and once you are satisfied it is working you can save (restarting the backend) and refresh the browser to confirm it is present.
@@ -221,7 +221,7 @@ Once you are happy your changes are complete, commit them and push the changes t
 
 ## Some Quirks!
 
-You may observe some quirky things: 
+You may observe some quirky things:
 
 ### Testing
 

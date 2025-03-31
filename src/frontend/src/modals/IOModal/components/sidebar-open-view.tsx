@@ -1,6 +1,5 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { useVoiceStore } from "@/stores/voiceStore";
 import IconComponent from "../../../components/common/genericIconComponent";
 import { SidebarOpenViewProps } from "../types/sidebar-open-view";
 import SessionSelector from "./IOFieldView/components/session-selector";
@@ -12,12 +11,7 @@ export const SidebarOpenView = ({
   handleDeleteSession,
   visibleSession,
   selectedViewField,
-  playgroundPage,
 }: SidebarOpenViewProps) => {
-  const setNewSessionCloseVoiceAssistant = useVoiceStore(
-    (state) => state.setNewSessionCloseVoiceAssistant,
-  );
-
   return (
     <>
       <div className="flex flex-col pl-3">
@@ -39,7 +33,6 @@ export const SidebarOpenView = ({
                   onClick={(_) => {
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);
-                    setNewSessionCloseVoiceAssistant(true);
                   }}
                 >
                   <IconComponent
@@ -58,7 +51,6 @@ export const SidebarOpenView = ({
               selectedView={selectedViewField}
               key={index}
               session={session}
-              playgroundPage={playgroundPage}
               deleteSession={(session) => {
                 handleDeleteSession(session);
                 if (selectedViewField?.id === session) {

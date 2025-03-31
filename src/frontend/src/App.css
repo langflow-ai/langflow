@@ -66,6 +66,8 @@ body {
 }
 
 .jv-indent {
+  overflow-y: auto !important;
+  max-height: 310px !important;
   border-radius: 10px;
 }
 
@@ -124,12 +126,11 @@ body {
 /* This CSS is to not apply the border for the column having 'no-border' class */
 .no-border.ag-cell:focus {
   border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
 }
 .no-border.ag-cell {
   border: none !important;
-  outline: none !important;
+  outline: none;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
@@ -218,8 +219,4 @@ code {
   border: 0px !important;
   box-shadow: none !important;
   border-radius: 0px !important;
-}
-
-.cm-gutters {
-  display: none !important;
 }

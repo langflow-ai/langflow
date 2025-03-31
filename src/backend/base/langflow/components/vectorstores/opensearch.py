@@ -4,7 +4,6 @@ from typing import Any
 from langchain_community.vectorstores import OpenSearchVectorSearch
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from langflow.io import (
     BoolInput,
     DropdownInput,
@@ -18,7 +17,6 @@ from langflow.io import (
 from langflow.schema import Data
 
 
-@vector_store_connection
 class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
     """OpenSearch Vector Store with advanced, customizable search capabilities."""
 
@@ -132,9 +130,6 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "OpenSearchVectorSearch") -> None:
         """Adds documents to the Vector Store."""
-        # Convert DataFrame to Data if needed using parent's method
-        self.ingest_data = self._prepare_ingest_data()
-
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

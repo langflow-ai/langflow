@@ -13,14 +13,12 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.13"
+          - "3.12"
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Register problem matcher
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
       - name: Run Ruff Check

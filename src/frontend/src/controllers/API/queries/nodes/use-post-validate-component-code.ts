@@ -40,11 +40,11 @@ export const usePostValidateComponentCode: useMutationFunctionType<
     CustomComponentRequest,
     ResponseErrorTypeAPI,
     IPostValidateComponentCode
-  > = mutate(["usePostValidateComponentCode"], postValidateComponentCodeFn, {
-    ...options,
-    retry: 0,
-    retryDelay: 0,
-  });
+  > = mutate(
+    ["usePostValidateComponentCode"],
+    postValidateComponentCodeFn,
+    options,
+  );
 
   return mutation;
 };
