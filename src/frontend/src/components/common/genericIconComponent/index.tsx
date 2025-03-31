@@ -37,10 +37,10 @@ export const ForwardedIconComponent = memo(
         // Load the icon if we have a name
         if (name && typeof name === "string") {
           getNodeIcon(name)
-            .then(component => {
+            .then((component) => {
               setTargetIcon(component);
             })
-            .catch(error => {
+            .catch((error) => {
               console.error(`Error loading icon ${name}:`, error);
               setIconError(true);
             });

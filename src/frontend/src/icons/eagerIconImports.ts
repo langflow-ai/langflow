@@ -1,11 +1,11 @@
 // Import all icons eagerly
-import { AIMLIcon } from "@/icons/AIML";
 import { AgentQLIcon } from "@/icons/AgentQL";
+import { AIMLIcon } from "@/icons/AIML";
 import { AirbyteIcon } from "@/icons/Airbyte";
 import { AnthropicIcon } from "@/icons/Anthropic";
 import { ApifyIcon, ApifyWhiteIcon } from "@/icons/Apify";
-import { ArXivIcon } from "@/icons/ArXiv";
 import { ArizeIcon } from "@/icons/Arize";
+import { ArXivIcon } from "@/icons/ArXiv";
 import { AssemblyAIIcon } from "@/icons/AssemblyAI";
 import { AstraDBIcon } from "@/icons/AstraDB";
 import { AthenaIcon } from "@/icons/athena";
@@ -35,15 +35,20 @@ import { GitBookIcon } from "@/icons/GitBook";
 import { GitLoaderIcon } from "@/icons/GitLoader";
 import { GleanIcon } from "@/icons/Glean";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { GmailIcon } from "@/icons/gmail";
 import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
-import { GmailIcon } from "@/icons/gmail";
-import { GradientInfinity, GradientSave, GradientUngroup } from "@/icons/GradientSparkles";
+import {
+  GradientInfinity,
+  GradientSave,
+  GradientUngroup,
+} from "@/icons/GradientSparkles";
 import { GroqIcon } from "@/icons/Groq";
 import { HackerNewsIcon } from "@/icons/hackerNews";
 import { HCDIcon } from "@/icons/HCD";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
+import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
@@ -78,8 +83,8 @@ import { SambaNovaIcon } from "@/icons/SambaNova";
 import { ScrapeGraph } from "@/icons/ScrapeGraphAI";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SearxIcon } from "@/icons/Searx";
-import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { SerperIcon } from "@/icons/Serper";
+import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { ShareIcon } from "@/icons/Share";
 import { Share2Icon } from "@/icons/Share2";
 import { default as SlackIcon } from "@/icons/Slack/SlackIcon";
@@ -92,7 +97,6 @@ import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
 import { VectaraIcon } from "@/icons/VectaraIcon";
 import { VertexAIIcon } from "@/icons/VertexAI";
-import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { WeaviateIcon } from "@/icons/Weaviate";
 import { default as WikipediaIcon } from "@/icons/Wikipedia/Wikipedia";
 import { default as WolframIcon } from "@/icons/Wolfram/Wolfram";
@@ -206,4 +210,4 @@ export const eagerIconsMapping = {
   xAI: XAIIcon,
   YouTube: YouTubeSvgIcon,
   ZepMemory: ZepMemoryIcon,
-}; 
+};
