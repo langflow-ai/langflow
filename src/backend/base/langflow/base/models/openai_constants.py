@@ -1,6 +1,10 @@
 OPENAI_MODEL_NAMES = [
     "gpt-4o-mini",
+    "o3-mini",
     "gpt-4o",
+    "o1",
+    "o1-pro",
+    "o1-mini",
     "gpt-4.5-preview",
     "gpt-4-turbo",
     "gpt-4-turbo-preview",
