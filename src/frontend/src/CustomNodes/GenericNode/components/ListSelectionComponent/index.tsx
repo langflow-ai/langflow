@@ -3,13 +3,13 @@ import SearchBarComponent from "@/components/core/parameterRenderComponent/compo
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { cn } from "@/utils/utils";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
-  options: any[];
   onClose: () => void;
+  options: any[];
   setSelectedList: (action: any[]) => void;
   selectedList: any[];
   searchCategories?: string[];
@@ -39,7 +39,7 @@ const ListItem = ({
       {item.icon && (
         <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
       )}
-      <span className="truncate font-semibold">{item.name}</span>
+      <span className="truncate text-sm">{item.name}</span>
       {"metaData" in item && item.metaData && (
         <span className="text-gray-500">{item.metaData}</span>
       )}
@@ -69,6 +69,13 @@ const ListSelectionComponent = ({
   limit = 1,
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    // Reset search when dialog opens
+    if (open) {
+      setSearch("");
+    }
+  }, [open]);
 
   const filteredList = useMemo(() => {
     if (!search.trim()) {
@@ -110,20 +117,15 @@ const ListSelectionComponent = ({
           },
         ]);
         onClose();
-        setSearch("");
       }
     },
-    [selectedList, setSelectedList, onClose, limit],
+    [selectedList, setSelectedList, limit, onClose],
   );
 
-  const handleCloseDialog = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
   return (
-    <Dialog open={open} onOpenChange={handleCloseDialog}>
-      <DialogContent className="flex !w-auto w-fit min-w-[20vw] max-w-[50vw] flex-col">
-        <div className="flex items-center justify-between">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="flex max-h-[50vh] min-h-[30vh] flex-col rounded-xl">
+        <div className="flex items-center justify-between pb-4">
           <SearchBarComponent
             searchCategories={searchCategories}
             search={search}
@@ -133,13 +135,13 @@ const ListSelectionComponent = ({
             unstyled
             size="icon"
             className="ml-auto h-[38px]"
-            onClick={handleCloseDialog}
+            onClick={onClose}
           >
             <ForwardedIconComponent name="x" />
           </Button>
         </div>
 
-        <div className="flex max-h-[80vh] flex-col gap-1 overflow-y-auto">
+        <div className="flex flex-col gap-1 overflow-y-auto">
           {filteredList.length > 0 ? (
             filteredList.map((item, index) => (
               <ListItem
