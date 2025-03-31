@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -11,8 +12,9 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    //first component
+    await addLegacyComponents(page);
 
+    //first component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
     await page.waitForSelector('[data-testid="inputsText Input"]', {
@@ -262,17 +264,7 @@ test(
 
     await page.getByText("Split Text", { exact: true }).click();
 
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
-    });
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
-      timeout: 1000,
-    });
-
-    await page.getByText("Freeze", { exact: true }).click();
+    await page.getByText("Freeze").first().click();
 
     await page.waitForTimeout(3000);
 
