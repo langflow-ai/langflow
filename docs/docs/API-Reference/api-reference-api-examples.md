@@ -547,13 +547,14 @@ curl -X POST \
 
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
-There are `/v1` and `/v2` versions of the `/files` endpoint. The `/v2` version offers several improvements over `/v1`:
+There are `/v1` and `/v2` versions of the `/files` endpoint.
+The `/v2` version offers several improvements over `/v1`:
 
-* In v1, files were organized by `flow_id`. In v2, files are organized by `user_id`.
-This means files are accessed based on user ownership, and not flow ownership.
-* In v2, files are tracked in the Langflow database, and can be added or deleted in bulk.
+* In v1, files are organized by `flow_id`. In v2, files are organized by `user_id`.
+This means files are accessed based on user ownership, and not tied to specific flows.
+You can upload a file one time, and use it with multiple flows.
+* In v2, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one-by-one.
 * 
-
 
 ### Upload file
 
@@ -561,12 +562,6 @@ Upload a file to an existing flow.
 
 This example uploads `the_oscar_award.csv`.
 
-```
-  </TabItem>
-</Tabs>
-```
-
-```
 <Tabs>
   <TabItem value="v2" label="v2" default>
 
@@ -614,7 +609,8 @@ curl -X POST \
 }
 ```
 
-```
+  </TabItem>
+</Tabs>
 
 #### Upload image files
 
