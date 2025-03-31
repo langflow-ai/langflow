@@ -219,16 +219,15 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         self.expiration_time = expiration_time
 
     # check connection
-    def is_connected(self) -> bool:
-        """Check if the Redis client is connected."""
+    # change to keep async safe
+    async def is_connected(self) -> bool:
         import redis
 
         try:
-            asyncio.run(self._client.ping())
-        except redis.exceptions.ConnectionError:
-            logger.exception("RedisCache could not connect to the Redis server")
+            await self._client.ping()  # 直接使用await
+            return True
+        except (redis.ConnectionError, redis.TimeoutError):
             return False
-        return True
 
     @override
     async def get(self, key, lock=None):
