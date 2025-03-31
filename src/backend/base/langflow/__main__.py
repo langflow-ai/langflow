@@ -591,7 +591,8 @@ def api_key(
 
     unmasked_api_key = asyncio.run(aapi_key())
     # Create a banner to display the API key and tell the user it won't be shown again
-    api_key_banner(unmasked_api_key)
+    if unmasked_api_key:
+        api_key_banner(unmasked_api_key)
 
 
 def show_version(*, value: bool):
