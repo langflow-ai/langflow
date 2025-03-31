@@ -84,7 +84,7 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
 
 2. Add the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable as follows:
 
-   ```plaintext title=".env"
+   ```text title=".env"
    LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=VARIABLE1,VARIABLE2
    ```
 
@@ -157,7 +157,7 @@ When adding global variables from the environment, the following limitations app
 :::tip
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file:
 
-```plaintext title=".env"
+```text title=".env"
 LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false
 ```
 
