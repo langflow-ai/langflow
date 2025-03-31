@@ -22,8 +22,8 @@
 
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap"><link rel="stylesheet" href="/assets/css/styles.b2eb940a.css">
-<script src="/assets/js/runtime~main.73fa8a30.js" defer="defer"></script>
-<script src="/assets/js/main.a3a3fa39.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.7c47ee98.js" defer="defer"></script>
+<script src="/assets/js/main.ec942a35.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NK5M4ZT8" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -40,31 +40,31 @@
           </div>
         </a>
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Tutorials</span><meta itemprop="position" content="1"></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">Document QA</span><meta itemprop="position" content="2"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Document QA</h1></header><p>Build a question-and-answer chatbot with a document loaded from local memory.</p>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="6555c100a30e4a21954af25e2e05403a">Prerequisites<a href="#6555c100a30e4a21954af25e2e05403a" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
-<hr>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
 <li><a href="/get-started-installation">Langflow installed and running</a></li>
 <li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">OpenAI API key created</a></li>
 </ul>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="204500104f024553aab2b633bb99f603">Create the document QA flow<a href="#204500104f024553aab2b633bb99f603" class="hash-link" aria-label="Direct link to Create the document QA flow" title="Direct link to Create the document QA flow">​</a></h2>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-the-document-qa-flow">Create the document QA flow<a href="#create-the-document-qa-flow" class="hash-link" aria-label="Direct link to Create the document QA flow" title="Direct link to Create the document QA flow">​</a></h2>
 <ol>
 <li>From the Langflow dashboard, click <strong>New Flow</strong>.</li>
 <li>Select <strong>Document QA</strong>.</li>
 <li>The <strong>Document QA</strong> flow is created.</li>
 </ol>
-<p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-document-qa-5bcc799ecdc4c136281079972402019b.png" width="2960" height="1214" class="img_ev3q"></p>
-<p>This flow is composed of a standard chatbot with the <strong>Chat Input</strong>, <strong>Prompt</strong>, <strong>OpenAI</strong>, and <strong>Chat Output</strong> components, but it also incorporates a <strong>File</strong> component, which loads a file from your local machine. <strong>Parse Data</strong> is used to convert the data from <strong>File</strong> into the <strong>Prompt</strong> component as <code>{Document}</code>. The <strong>Prompt</strong> component is instructed to answer questions based on the contents of <code>{Document}</code>. This gives the <strong>OpenAI</strong> component context it would not otherwise have access to.</p>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="f58fcc2b9e594156a829b1772b6a7191">Run the document QA flow<a href="#f58fcc2b9e594156a829b1772b6a7191" class="hash-link" aria-label="Direct link to Run the document QA flow" title="Direct link to Run the document QA flow">​</a></h3>
+<p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-document-qa-79583cca9932646d9e3c7630692c26d0.png" width="2890" height="1038" class="img_ev3q"></p>
+<p>This flow is composed of a chatbot with the <strong>Chat Input</strong>, <strong>Prompt</strong>, <strong>OpenAI</strong>, and <strong>Chat Output</strong> components, but also incorporates a <strong>File</strong> component, which loads a file from your local machine. <strong>Parse Data</strong> is used to convert the data from <strong>File</strong> into the <strong>Prompt</strong> component as <code>{Document}</code>.</p>
+<p>The <strong>Prompt</strong> component is instructed to answer questions based on the contents of <code>{Document}</code>. This gives the <strong>OpenAI</strong> component context it would not otherwise have access to.</p>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-the-document-qa-flow">Run the document QA flow<a href="#run-the-document-qa-flow" class="hash-link" aria-label="Direct link to Run the document QA flow" title="Direct link to Run the document QA flow">​</a></h3>
 <ol>
 <li>
-<p>To select a document to load, in the <strong>File</strong> component, click the <strong>Path</strong> field. Select a local file, and then click <strong>Open</strong>. The file name appears in the field.</p>
+<p>Add your <strong>OpenAI API key</strong> to the <strong>Open AI</strong> model component.</p>
 </li>
 <li>
-<p>Click the <strong>Playground</strong> button. Here you can chat with the AI that has access to your document&#x27;s content.</p>
+<p>To select a document to load, in the <strong>File</strong> component, click the <strong>Select files</strong> button. Select a local file or a file loaded with <a href="/concepts-file-management">File management</a>, and then click <strong>Select file</strong>. The file name appears in the component.</p>
 </li>
 <li>
-<p>Type in a question about the document content and press Enter. You should see a contextual response.</p>
+<p>Click the <strong>Playground</strong> button. Enter a question about the loaded document&#x27;s content. You should receive a contextual response indicating that the AI has read your document.</p>
 </li>
-</ol></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/tutorials-blog-writer"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Blog writer</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/tutorials-memory-chatbot"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Memory chatbot</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#6555c100a30e4a21954af25e2e05403a" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#204500104f024553aab2b633bb99f603" class="table-of-contents__link toc-highlight">Create the document QA flow</a><ul><li><a href="#f58fcc2b9e594156a829b1772b6a7191" class="table-of-contents__link toc-highlight">Run the document QA flow</a></li></ul></li></ul></div></div></div></div></main></div></div></div><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
+</ol></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/tutorials-blog-writer"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Blog writer</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/tutorials-memory-chatbot"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Memory chatbot</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#create-the-document-qa-flow" class="table-of-contents__link toc-highlight">Create the document QA flow</a><ul><li><a href="#run-the-document-qa-flow" class="table-of-contents__link toc-highlight">Run the document QA flow</a></li></ul></li></ul></div></div></div></div></main></div></div></div><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
 </body>
 </html>
