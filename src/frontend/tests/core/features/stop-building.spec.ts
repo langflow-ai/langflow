@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
@@ -10,6 +11,8 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     //first component
 

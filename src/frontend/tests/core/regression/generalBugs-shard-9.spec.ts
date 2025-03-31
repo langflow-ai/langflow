@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 test(
@@ -28,11 +29,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("message history");
 
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
-    await page.getByTestId("sidebar-legacy-switch").click();
+    await addLegacyComponents(page);
 
     // Locate the canvas element
     const canvas = page.locator("#react-flow-id"); // Update the selector if needed

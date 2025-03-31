@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -8,6 +9,8 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -146,13 +149,23 @@ test(
       .first()
       .click();
 
+    await zoomOut(page, 4);
+
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
 
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 100000,
+    });
+
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="expand-button-modal"]', {
+      timeout: 100000,
+    });
 
     await page.getByTestId("expand-button-modal").click();
 

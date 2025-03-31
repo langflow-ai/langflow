@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -19,11 +20,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
-    await page.getByTestId("sidebar-legacy-switch").click();
+    await addLegacyComponents(page);
 
     await page.waitForSelector('[data-testid="prototypesPython Function"]', {
       timeout: 3000,
