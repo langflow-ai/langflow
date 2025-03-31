@@ -89,7 +89,7 @@ class S3BucketRetrieverComponent(Component):
             aws_secret_access_key=self.aws_secret_access_key,
         )
 
-    def retrieve_files(self) -> Data | list[Data]:
+    def retrieve_files(self) -> Data | list[Data | None]:
         """Retrieve files from the S3 bucket based on the specified prefix and object name.
 
         Returns:
