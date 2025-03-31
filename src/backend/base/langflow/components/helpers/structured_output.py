@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING, cast
-
 from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
@@ -17,9 +15,6 @@ from langflow.io import (
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
-
-if TYPE_CHECKING:
-    from langflow.field_typing.constants import LanguageModel
 
 
 class StructuredOutputComponent(Component):
@@ -161,7 +156,7 @@ class StructuredOutputComponent(Component):
         )
 
         try:
-            llm_with_structured_output = cast("LanguageModel", create_extractor(self.llm, tools=[output_model]))
+            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
             raise TypeError(msg) from exc
