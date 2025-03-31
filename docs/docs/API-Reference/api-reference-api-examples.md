@@ -562,7 +562,7 @@ This example uploads `the_oscar_award.csv` from a local machine to Langflow.
 
 The `/v1` and `/v2` endpoints handle the uploaded file differently.
 
-The `/v2/files` endpoint uploads the file to the authenticated Langflow user, and doesn't require a value for `flow_id`.
+The `/v2/files` endpoint uploads the file to the authenticated Langflow user's database at the path `{user_id}/{file_id}{file_extension}`. The upload file call to `v2/files` doesn't require a value for `flow_id`.
 
 <Tabs>
   <TabItem value="v2" label="v2" default>
