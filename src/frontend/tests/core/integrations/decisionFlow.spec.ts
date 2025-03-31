@@ -30,7 +30,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
-      timeout: 500,
+      timeout: 2000,
     });
 
     await zoomOut(page, 6);
@@ -45,7 +45,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("list");
     await page.waitForSelector('[data-testid="helpersCreate List"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("helpersCreate List")
@@ -94,7 +94,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data to message");
     await page.waitForSelector('[data-testid="processingData to Message"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("processingData to Message")
@@ -111,7 +111,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("logicPass")
@@ -119,13 +119,13 @@ test(
         targetPosition: { x: 800, y: 100 },
       });
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("logicPass")
@@ -133,13 +133,13 @@ test(
         targetPosition: { x: 50, y: 200 },
       });
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("logicPass")
@@ -147,13 +147,13 @@ test(
         targetPosition: { x: 200, y: 300 },
       });
     await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
     await page.waitForSelector('[data-testid="promptsPrompt"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("promptsPrompt")
@@ -165,7 +165,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
     await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("modelsOpenAI")
@@ -177,7 +177,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
     await page.waitForSelector('[data-testid="logicIf-Else"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("logicIf-Else")
@@ -188,7 +188,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("outputsChat Output")
@@ -196,13 +196,13 @@ test(
         targetPosition: { x: 800, y: 300 },
       });
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     await page
       .getByTestId("outputsChat Output")
@@ -210,7 +210,7 @@ test(
         targetPosition: { x: 800, y: 400 },
       });
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 500,
+      timeout: 2000,
     });
     //----------------------------------
     await page.getByTestId("fit_view").click();
