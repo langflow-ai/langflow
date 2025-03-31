@@ -4671,7 +4671,7 @@ requires-dist = [
     { name = "kubernetes", specifier = "==31.0.0" },
     { name = "langchain", specifier = "==0.3.10" },
     { name = "langchain-anthropic", specifier = "==0.3.0" },
-    { name = "langchain-astradb", directory = "../langchain-datastax/libs/astradb" },
+    { name = "langchain-astradb", specifier = "==0.6.0" },
     { name = "langchain-aws", specifier = "==0.2.7" },
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
