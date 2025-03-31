@@ -547,7 +547,7 @@ curl -X POST \
 
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
-There are `/v1` and `/v2` versions of the `/files` endpoint.
+There are `/v1` and `/v2` versions of the `/files` endpoints.
 The `files/v2` version offers several improvements over `/v1`:
 
 * In `v1`, files are organized by `flow_id`. In `v2`, files are organized by `user_id`.
@@ -556,52 +556,21 @@ You can upload a file to Langflow one time, and use it with multiple flows.
 * In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 * Responses from the `/v2` endpoint contain more descriptive metadata.
 
-### Upload file
+## V1 Endpoints
 
-This example uploads `the_oscar_award.csv` from a local machine to Langflow.
+### Upload file (v1)
 
-The `/v1` and `/v2` endpoints handle the uploaded file differently.
-
-The `/v2/files` endpoint uploads the file to the authenticated Langflow user's database at the path `{user_id}/{file_id}{file_extension}`. The upload file call to `v2/files` doesn't require a value for `flow_id`.
+Upload a file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
 
 <Tabs>
-  <TabItem value="v2" label="v2" default>
-
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@the_oscar_award.csv"
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```json
-{
-  "id":"c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
-  "name":"the_oscar_award",
-  "path":"6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.csv",
-  "size":970358,
-  "provider":null
-}
-```
-
-  </TabItem>
-</Tabs>
-
-The `files/v1` endpoint uploads the file to an existing flow, and returns less metadata.
-
-<Tabs>
-  <TabItem value="v1" label="v1" default>
+  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@the_oscar_award.csv"
+  -F "file=@your_file.txt"
 ```
 
   </TabItem>
@@ -610,14 +579,14 @@ curl -X POST \
 ```json
 {
   "flowId": "92f9a4c5-cfc8-4656-ae63-1f0881163c28",
-  "file_path": "92f9a4c5-cfc8-4656-ae63-1f0881163c28/2024-12-30_15-19-43_the_oscar_award.csv"
+  "file_path": "92f9a4c5-cfc8-4656-ae63-1f0881163c28/2024-12-30_15-19-43_your_file.txt"
 }
 ```
 
   </TabItem>
 </Tabs>
 
-#### Upload image files
+### Upload image files (v1)
 
 Send image files to the Langflow API for AI analysis.
 
@@ -640,6 +609,7 @@ The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<
 
 2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
 Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
+To find your Chat input component's ID, use the [](#)
 
 ```bash
 curl -X POST \
@@ -662,8 +632,7 @@ Your chatbot describes the image file you sent.
 "text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
 ```
 
-
-### List files
+### List files (v1)
 
 List all files associated with a specific flow.
 
@@ -682,7 +651,7 @@ curl -X GET \
 ```json
 {
   "files": [
-    "2024-12-30_15-19-43_the_oscar_award.csv"
+    "2024-12-30_15-19-43_your_file.txt"
   ]
 }
 ```
@@ -690,79 +659,40 @@ curl -X GET \
   </TabItem>
 </Tabs>
 
-### Download file
+### Download file (v1)
 
-Download a specific file for a given flow.
-
-To look up the file name in Langflow, use the `/list` endpoint.
-
-This example downloads the `2024-12-30_15-19-43_the_oscar_award.csv` file from Langflow to a file named `output-file.csv`.
-
-The `--output` flag is optional.
+Download a specific file from a flow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv" \
+  "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
   -H "accept: application/json" \
-  --output output-file.csv
+  --output downloaded_file.txt
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
 ```text
-The file contents.
+File contents downloaded to downloaded_file.txt
 ```
 
   </TabItem>
 </Tabs>
 
-### Download image
-
-Download an image file for a given flow.
-
-To look up the file name in Langflow, use the `/list` endpoint.
-
-This example downloads the `2024-12-30_15-42-44_image-file.png` file from Langflow to a file named `output-image.png`.
-
-The `--output` flag is optional.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
-  -H "accept: application/json" \
-  --output output-image.png
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```text
-Image file content.
-```
-
-  </TabItem>
-</Tabs>
-
-
-### Delete file
+### Delete file (v1)
 
 Delete a specific file from a flow.
-
-This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
+  "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
   -H "accept: application/json"
 ```
 
@@ -771,7 +701,203 @@ curl -X DELETE \
 
 ```json
 {
-  "message": "File 2024-12-30_15-42-44_image-file.png deleted successfully"
+  "message": "File 2024-12-30_15-19-43_your_file.txt deleted successfully"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## V2 Endpoints
+
+### Upload file (v2)
+
+Upload a file to your user account. The file can be used across multiple flows.
+
+The file is uploaded in the format `{user_id}\{file_id}.{file_extension}`.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X POST \
+  "$LANGFLOW_URL/api/v2/files" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@your_file.txt"
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "id": "c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
+  "name": "your_file",
+  "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt",
+  "size": 1234,
+  "provider": null
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Upload image files (v2)
+
+Send image files to the Langflow `/v2/files` endpoint for AI analysis.
+
+The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
+For more information, see [Supported environment variables](/environment-variables#supported-variables).
+
+1. To send an image to your flow with the API, POST the image file to the `/api/v2/files` endpoint:
+
+```bash
+curl -X POST "$LANGFLOW_URL/api/v2/files" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@image-file.png"
+```
+
+The file is uploaded in the format `{user_id}\{file_id}.{file_extension}`, and the API returns metadata about the uploaded file:
+
+```json
+{
+  "id":"685c825a-556f-40f0-b5ed-fa82eb1ade99",
+  "name":"langflow-image",
+  "path":"6f17a73e-97d7-4519-a8d9-8e4c0be411bb/685c825a-556f-40f0-b5ed-fa82eb1ade99.png",
+  "size":2728251,
+  "provider":null
+}
+```
+
+2. Use the returned `file_id.file_extension` in the **Chat Input** component of a **Basic prompting** flow.
+Pass the value as an input in the **Tweaks** section of the curl call to Langflow:
+
+```bash
+curl -X POST \
+    "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
+    -H 'Content-Type: application/json'\
+    -d '{
+    "output_type": "chat",
+    "input_type": "chat",
+    "tweaks": {
+      "ChatInput-2MT6c": {
+        "files": "af371b64-6b15-47ac-a57b-b8c2791ea80a.png",
+        "input_value": "what do you see?"
+      }
+    }
+}'
+```
+
+Your chatbot describes the image file you sent:
+
+```text
+"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
+```
+
+### List files (v2)
+
+List all files associated with your user account.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v2/files" \
+  -H "accept: application/json"
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+[
+  {
+    "id": "c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
+    "name": "your_file",
+    "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt",
+    "size": 1234,
+    "provider": null
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Download file (v2)
+
+Download a specific file by its ID and file extension.
+
+:::tip
+You must specify the file type you expect in the `--output` value.
+:::
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v2/files/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34" \
+  -H "accept: application/json" \
+  --output downloaded_file.txt
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```text
+File contents downloaded to downloaded_file.txt
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete file (v2)
+
+Delete a specific file by its ID.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X DELETE \
+  "$LANGFLOW_URL/api/v2/files/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34" \
+  -H "accept: application/json"
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "message": "File deleted successfully"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete all files (v2)
+
+Delete all files associated with your user account.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X DELETE \
+  "$LANGFLOW_URL/api/v2/files" \
+  -H "accept: application/json"
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "message": "All files deleted successfully"
 }
 ```
 
