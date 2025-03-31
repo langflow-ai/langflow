@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -4822,6 +4823,7 @@ requires-dist = [
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
+provides-extras = ["deploy", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -4873,7 +4875,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -5099,6 +5101,7 @@ requires-dist = [
     { name = "validators", specifier = ">=0.34.0" },
     { name = "webrtcvad", specifier = ">=2.0.10" },
 ]
+provides-extras = ["postgresql", "deploy", "local", "all"]
 
 [package.metadata.requires-dev]
 dev = [
