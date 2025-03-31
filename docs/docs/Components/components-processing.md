@@ -294,10 +294,6 @@ This component converts [Message](/concepts-objects#message-object) objects to [
 
 ## Parser
 
-:::important
-This component is in **Beta** as of Langflow version 1.3, and is not yet fully supported.
-:::
-
 This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
 
 To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
