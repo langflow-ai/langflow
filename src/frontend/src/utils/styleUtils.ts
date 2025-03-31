@@ -5,6 +5,7 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { lucideIcons } from "../icons/lucideIcons";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 
 export const BG_NOISE =
   "url(data:image/png;base64,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)";
@@ -429,270 +430,11 @@ export const getLucideIconName = (name: string): string => {
   return map[name] || kebabCaseName;
 };
 
-export const nodeIconsMapping: Record<string, () => Promise<any>> = {
-  "AI/ML": () =>
-    import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
-  AgentQL: () =>
-    import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
-  Airbyte: () =>
-    import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
-  Anthropic: () =>
-    import("@/icons/Anthropic").then((mod) => ({ default: mod.AnthropicIcon })),
-  Apify: () =>
-    import("@/icons/Apify").then((mod) => ({ default: mod.ApifyIcon })),
-  ApifyWhite: () =>
-    import("@/icons/Apify").then((mod) => ({ default: mod.ApifyWhiteIcon })),
-  ArXiv: () =>
-    import("@/icons/ArXiv").then((mod) => ({ default: mod.ArXivIcon })),
-  Arize: () =>
-    import("@/icons/Arize").then((mod) => ({ default: mod.ArizeIcon })),
-  AssemblyAI: () =>
-    import("@/icons/AssemblyAI").then((mod) => ({
-      default: mod.AssemblyAIIcon,
-    })),
-  AstraDB: () =>
-    import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
-  Athena: () =>
-    import("@/icons/athena").then((mod) => ({ default: mod.AthenaIcon })),
-  AWS: () => import("@/icons/AWS").then((mod) => ({ default: mod.AWSIcon })),
-  AWSInverted: () =>
-    import("@/icons/AWSInverted").then((mod) => ({
-      default: mod.AWSInvertedIcon,
-    })),
-  Azure: () =>
-    import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
-  Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
-  // BotMessageSquare: () =>
-  //   import("@/icons/BotMessageSquare").then((mod) => ({
-  //     default: mod.BotMessageSquareIcon,
-  //   })),
-  BWPython: () =>
-    import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
-  Cassandra: () =>
-    import("@/icons/Cassandra").then((mod) => ({ default: mod.CassandraIcon })),
-  Chroma: () =>
-    import("@/icons/ChromaIcon").then((mod) => ({ default: mod.ChromaIcon })),
-  Clickhouse: () =>
-    import("@/icons/Clickhouse").then((mod) => ({
-      default: mod.ClickhouseIcon,
-    })),
-  Cloudflare: () =>
-    import("@/icons/Cloudflare").then((mod) => ({
-      default: mod.CloudflareIcon,
-    })),
-  Cohere: () =>
-    import("@/icons/Cohere").then((mod) => ({ default: mod.CohereIcon })),
-  Composio: () =>
-    import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
-  Confluence: () =>
-    import("@/icons/Confluence").then((mod) => ({
-      default: mod.ConfluenceIcon,
-    })),
-  Couchbase: () =>
-    import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
-  CrewAI: () =>
-    import("@/icons/CrewAI").then((mod) => ({ default: mod.CrewAiIcon })),
-  DeepSeek: () =>
-    import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
-  Dropbox: () =>
-    import("@/icons/Dropbox").then((mod) => ({ default: mod.DropboxIcon })),
-  DuckDuckGo: () =>
-    import("@/icons/DuckDuckGo").then((mod) => ({
-      default: mod.DuckDuckGoIcon,
-    })),
-  ElasticsearchStore: () =>
-    import("@/icons/ElasticsearchStore").then((mod) => ({
-      default: mod.ElasticsearchIcon,
-    })),
-  Evernote: () =>
-    import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
-  Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
-  FacebookMessenger: () =>
-    import("@/icons/FacebookMessenger").then((mod) => ({
-      default: mod.FBIcon,
-    })),
-  Firecrawl: () =>
-    import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
-  FreezeAll: () =>
-    import("@/icons/freezeAll").then((mod) => ({ default: mod.freezeAllIcon })),
-  GitBook: () =>
-    import("@/icons/GitBook").then((mod) => ({ default: mod.GitBookIcon })),
-  GitLoader: () =>
-    import("@/icons/GitLoader").then((mod) => ({ default: mod.GitLoaderIcon })),
-  Glean: () =>
-    import("@/icons/Glean").then((mod) => ({ default: mod.GleanIcon })),
-  GlobeOk: () =>
-    import("@/icons/globe-ok").then((mod) => ({ default: mod.GlobeOkIcon })),
-  Google: () =>
-    import("@/icons/Google").then((mod) => ({ default: mod.GoogleIcon })),
-  GoogleDrive: () =>
-    import("@/icons/GoogleDrive").then((mod) => ({
-      default: mod.GoogleDriveIcon,
-    })),
-  GoogleGenerativeAI: () =>
-    import("@/icons/GoogleGenerativeAI").then((mod) => ({
-      default: mod.GoogleGenerativeAIIcon,
-    })),
-  Gmail: () =>
-    import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
-  GradientInfinity: () =>
-    import("@/icons/GradientSparkles").then((mod) => ({
-      default: mod.GradientInfinity,
-    })),
-  GradientSave: () =>
-    import("@/icons/GradientSparkles").then((mod) => ({
-      default: mod.GradientSave,
-    })),
-  GradientUngroup: () =>
-    import("@/icons/GradientSparkles").then((mod) => ({
-      default: mod.GradientUngroup,
-    })),
-  Groq: () => import("@/icons/Groq").then((mod) => ({ default: mod.GroqIcon })),
-  HackerNews: () =>
-    import("@/icons/hackerNews").then((mod) => ({
-      default: mod.HackerNewsIcon,
-    })),
-  HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
-  HuggingFace: () =>
-    import("@/icons/HuggingFace").then((mod) => ({
-      default: mod.HuggingFaceIcon,
-    })),
-  Icosa: () =>
-    import("@/icons/Icosa").then((mod) => ({ default: mod.IcosaIcon })),
-  IFixIt: () =>
-    import("@/icons/IFixIt").then((mod) => ({ default: mod.IFixIcon })),
-  javascript: () =>
-    import("@/icons/JSicon").then((mod) => ({ default: mod.JSIcon })),
-  LangChain: () =>
-    import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
-  Langwatch: () =>
-    import("@/icons/Langwatch").then((mod) => ({ default: mod.LangwatchIcon })),
-  LMStudio: () =>
-    import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
-  Maritalk: () =>
-    import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
-  Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
-  Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
-  Midjourney: () =>
-    import("@/icons/Midjorney").then((mod) => ({
-      default: mod.MidjourneyIcon,
-    })),
-  Milvus: () =>
-    import("@/icons/Milvus").then((mod) => ({ default: mod.MilvusIcon })),
-  Mistral: () =>
-    import("@/icons/mistral").then((mod) => ({ default: mod.MistralIcon })),
-  MongoDB: () =>
-    import("@/icons/MongoDB").then((mod) => ({ default: mod.MongoDBIcon })),
-  Needle: () =>
-    import("@/icons/Needle").then((mod) => ({ default: mod.NeedleIcon })),
-  NotDiamond: () =>
-    import("@/icons/NotDiamond").then((mod) => ({
-      default: mod.NotDiamondIcon,
-    })),
-  Notion: () =>
-    import("@/icons/Notion").then((mod) => ({ default: mod.NotionIcon })),
-  Novita: () =>
-    import("@/icons/Novita").then((mod) => ({ default: mod.NovitaIcon })),
-  NVIDIA: () =>
-    import("@/icons/Nvidia").then((mod) => ({ default: mod.NvidiaIcon })),
-  Olivya: () =>
-    import("@/icons/Olivya").then((mod) => ({ default: mod.OlivyaIcon })),
-  Ollama: () =>
-    import("@/icons/Ollama").then((mod) => ({ default: mod.OllamaIcon })),
-  OpenAI: () =>
-    import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
-  OpenRouter: () =>
-    import("@/icons/OpenRouter").then((mod) => ({
-      default: mod.OpenRouterIcon,
-    })),
-  OpenSearch: () =>
-    import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
-  Perplexity: () =>
-    import("@/icons/Perplexity").then((mod) => ({
-      default: mod.PerplexityIcon,
-    })),
-  Pinecone: () =>
-    import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
-  Postgres: () =>
-    import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
-  Python: () =>
-    import("@/icons/Python").then((mod) => ({ default: mod.PythonIcon })),
-  QDrant: () =>
-    import("@/icons/QDrant").then((mod) => ({ default: mod.QDrantIcon })),
-  QianFanChat: () =>
-    import("@/icons/QianFanChat").then((mod) => ({
-      default: mod.QianFanChatIcon,
-    })),
-  Redis: () =>
-    import("@/icons/Redis").then((mod) => ({ default: mod.RedisIcon })),
-  SambaNova: () =>
-    import("@/icons/SambaNova").then((mod) => ({ default: mod.SambaNovaIcon })),
-  ScrapeGraph: () =>
-    import("@/icons/ScrapeGraphAI").then((mod) => ({
-      default: mod.ScrapeGraph,
-    })),
-  SearchAPI: () =>
-    import("@/icons/SearchAPI").then((mod) => ({ default: mod.SearchAPIIcon })),
-  Searx: () =>
-    import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
-  SerpSearch: () =>
-    import("@/icons/SerpSearch").then((mod) => ({
-      default: mod.SerpSearchIcon,
-    })),
-  Serper: () =>
-    import("@/icons/Serper").then((mod) => ({ default: mod.SerperIcon })),
-  Share: () =>
-    import("@/icons/Share").then((mod) => ({ default: mod.ShareIcon })),
-  Share2: () =>
-    import("@/icons/Share2").then((mod) => ({ default: mod.Share2Icon })),
-  Slack: () =>
-    import("@/icons/Slack/SlackIcon").then((mod) => ({ default: mod.default })),
-  Spider: () =>
-    import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
-  Streamlit: () =>
-    import("@/icons/Streamlit").then((mod) => ({ default: mod.Streamlit })),
-  Supabase: () =>
-    import("@/icons/supabase").then((mod) => ({ default: mod.SupabaseIcon })),
-  Tavily: () =>
-    import("@/icons/Tavily").then((mod) => ({ default: mod.TavilyIcon })),
-  ThumbDownCustom: () =>
-    import("@/icons/thumbs").then((mod) => ({
-      default: mod.ThumbDownIconCustom,
-    })),
-  ThumbUpCustom: () =>
-    import("@/icons/thumbs").then((mod) => ({
-      default: mod.ThumbUpIconCustom,
-    })),
-  Unstructured: () =>
-    import("@/icons/Unstructured").then((mod) => ({
-      default: mod.UnstructuredIcon,
-    })),
-  Upstash: () =>
-    import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
-  Vectara: () =>
-    import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
-  VertexAI: () =>
-    import("@/icons/VertexAI").then((mod) => ({ default: mod.VertexAIIcon })),
-  WatsonxAI: () =>
-    import("@/icons/IBMWatsonx").then((mod) => ({
-      default: mod.WatsonxAiIcon,
-    })),
-  Weaviate: () =>
-    import("@/icons/Weaviate").then((mod) => ({ default: mod.WeaviateIcon })),
-  Wikipedia: () =>
-    import("@/icons/Wikipedia/Wikipedia").then((mod) => ({
-      default: mod.default,
-    })),
-  Wolfram: () =>
-    import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
-  xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),
-  YouTube: () =>
-    import("@/icons/Youtube").then((mod) => ({ default: mod.YouTubeSvgIcon })),
-  ZepMemory: () =>
-    import("@/icons/ZepMemory").then((mod) => ({ default: mod.ZepMemoryIcon })),
-};
+// Initialize icon mappings based on if we want to support lazy loading for cloud
+const iconMappingsPromise = ENABLE_DATASTAX_LANGFLOW
+  ? import("../icons/lazyIconImports").then(module => module.lazyIconsMapping)
+  : import("../icons/eagerIconImports").then(module => module.eagerIconsMapping);
 
-// Create a map of eagerly loaded icons to prevent unnecessary lazy loading
 export const eagerLoadedIconsMap = {
   // Custom icons
   GradientSave: GradientSave,
@@ -710,19 +452,23 @@ export const eagerLoadedIconsMap = {
 };
 
 // Function to get a lazy-loaded icon component
-export const getNodeIcon = (name: string) => {
+export const getNodeIcon = async (name: string) => {
   const iconName = nodeIconToDisplayIconMap[name];
 
+  // Always check eagerly loaded icons first
   if (eagerLoadedIconsMap[iconName || name]) {
     return eagerLoadedIconsMap[iconName || name];
   }
 
-  if (nodeIconsMapping[iconName || name]) {
-    return lazy(nodeIconsMapping[iconName || name]);
+  const iconMappings = await iconMappingsPromise;
+  
+  if (iconMappings[iconName || name]) {
+    return ENABLE_DATASTAX_LANGFLOW
+      ? lazy(iconMappings[iconName || name])
+      : iconMappings[iconName || name];
   }
 
   const lucideIconName = getLucideIconName(iconName || name);
-
   if (dynamicIconImports[lucideIconName]) {
     try {
       return lazy(dynamicIconImports[lucideIconName]);
@@ -735,16 +481,17 @@ export const getNodeIcon = (name: string) => {
   return lazy(() =>
     Promise.resolve({
       default: () => null,
-    }),
+    })
   );
 };
 
-export const iconExists = (name: string): boolean => {
+export const iconExists = async (name: string): Promise<boolean> => {
   const iconName = nodeIconToDisplayIconMap[name] || name;
+  const iconMappings = await iconMappingsPromise;
 
   return !!(
     eagerLoadedIconsMap[iconName] ||
-    nodeIconsMapping[iconName] ||
+    iconMappings[iconName] ||
     dynamicIconImports[getLucideIconName(iconName)]
   );
 };

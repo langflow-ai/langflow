@@ -23,30 +23,31 @@ export const ForwardedIconComponent = memo(
     ) => {
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
+      const [TargetIcon, setTargetIcon] = useState<any>(null);
 
       useEffect(() => {
-        // Reset error state when icon name changes
+        // Reset states when icon name changes
         setIconError(false);
+        setTargetIcon(null);
 
         const timer = setTimeout(() => {
           setShowFallback(true);
         }, 30);
 
+        // Load the icon if we have a name
+        if (name && typeof name === "string") {
+          getNodeIcon(name)
+            .then(component => {
+              setTargetIcon(component);
+            })
+            .catch(error => {
+              console.error(`Error loading icon ${name}:`, error);
+              setIconError(true);
+            });
+        }
+
         return () => clearTimeout(timer);
       }, [name]);
-
-      // Get the lazy-loaded icon component
-      let TargetIcon;
-
-      // Only try to load an icon if we have a name
-      if (name && typeof name === "string") {
-        try {
-          TargetIcon = getNodeIcon(name);
-        } catch (error) {
-          console.error(`Error loading icon ${name}:`, error);
-          setIconError(true);
-        }
-      }
 
       const style = {
         strokeWidth: strokeWidth ?? 1.5,
