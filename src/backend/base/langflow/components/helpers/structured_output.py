@@ -176,8 +176,8 @@ class StructuredOutputComponent(Component):
             input_value=self.input_value,
             config=config_dict,
         )
-        if "responses" in result:
-            result = result["responses"][0].model_dump()
+        if responses := result.get("responses"):
+            result = responses[0].model_dump()
         if isinstance(result, BaseModel):
             result = result.model_dump()
         if result and "objects" in result:
