@@ -185,15 +185,13 @@ def create_class(code, class_name):
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
-    replacements = {
-        "from langflow import CustomComponent": "from langflow.custom import CustomComponent",
-        "from langflow.interface.custom.custom_component import CustomComponent": "from langflow.custom import CustomComponent",
-    }
-    for old, new in replacements.items():
-        code = code.replace(old, new)
+    code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
+    code = code.replace(
+        "from langflow.interface.custom.custom_component import CustomComponent",
+        "from langflow.custom import CustomComponent",
+    )
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
-
     try:
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
