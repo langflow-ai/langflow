@@ -260,7 +260,7 @@ This component allows you to call the Serper.dev Google Search API.
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
 
-## MCP Server
+## MCP server
 
 This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools.
 
@@ -298,16 +298,16 @@ For more information, see [MCP integrations](/integrations-mcp).
 ### MCP Server-Sent Events (SSE) mode
 
 1. In the **MCP Server** component, select **SSE**.
-2. A default address the **MCP SSE URL** field.
-3. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+A default address appears in the **MCP SSE URL** field.
+2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
 The default value is `http://localhost:7860/api/v1/mcp/sse`.
-4. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
-5. Click the **Tools** field.
+3. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
+4. Click the **Tools** field.
 All of your flows are listed as tools.
-6. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
+5. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
 The flow looks like this:
 ![MCP server component](/img/mcp-server-component-sse.png)
-7. Open the **Playground** and chat with your tool.
+6. Open the **Playground** and chat with your tool.
 The agent chooses the correct tool based on your query.
 
 ### Inputs

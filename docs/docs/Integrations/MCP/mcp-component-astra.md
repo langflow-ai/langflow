@@ -10,7 +10,7 @@ Use the [MCP server component](/components-tools#mcp-server) to connect Langflow
 3. Create an [Astra DB Serverless (Vector) database](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html#create-vector-database), if you don't already have one.
 4. Get your database's **Astra DB API endpoint** and an **Astra DB application token** with the Database Administrator role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
 5. Create a [Simple agent starter project](/starter-projects-simple-agent).
-6. Remove the **URL** tool and replace it with an [MCP server component](/components-tools#mcp-server) component.
+6. Remove the **URL** tool and replace it with an [MCP server](/components-tools#mcp-server) component.
 The flow should look like this:
 ![MCP stdio component](/img/mcp-server-component.png)
 7. In the **MCP server** component, in the **MCP command** field, add the following code.
