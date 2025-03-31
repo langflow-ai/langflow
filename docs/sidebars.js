@@ -39,7 +39,9 @@ module.exports = {
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
-        "Concepts/concepts-api",
+        "Concepts/concepts-publish",
+        "Concepts/concepts-file-management",
+        "Concepts/concepts-voice-mode",
       ],
     },
     {
@@ -47,6 +49,7 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
+        "Components/components-bundles",
         "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
