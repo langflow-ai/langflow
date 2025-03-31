@@ -238,7 +238,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             tools_names = ", ".join([tool.name for tool in self.tools])
         return tools_names
 
-    async def to_toolkit(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()

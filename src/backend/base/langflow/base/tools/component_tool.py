@@ -317,7 +317,7 @@ class ComponentToolkit:
                     if tag in metadata_dict:
                         tool_metadata = metadata_dict[tag]
                         # Only include tools with status=True
-                        if tool_metadata.get("status", False):
+                        if tool_metadata.get("status", True):
                             tool.name = tool_metadata.get("name", tool.name)
                             tool.description = tool_metadata.get("description", tool.description)
                             if tool_metadata.get("commands"):
