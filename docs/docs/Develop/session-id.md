@@ -38,4 +38,3 @@ Add a [Message store](/components-helpers#message-store) component to a flow to 
 Messages can be retrieved by `session_id` from the `/monitor` endpoint in the API. For more information, see the [API examples](https://docs.langflow.org/api-reference-api-examples#get-messages).
 
 For an example of session ID in action, see [Use Session IDs in Langflow](https://www.youtube.com/watch?v=nJiF_eF21MY).
-
