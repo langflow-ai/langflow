@@ -201,9 +201,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
                 k: v for k, v in dict_options.get("authentication", {}).items() if k and v
             }
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
-            embedding_dict = {
-                "collection_vector_service_options": VectorServiceOptions.from_dict(dict_options)
-            }
+            embedding_dict = {"collection_vector_service_options": VectorServiceOptions.from_dict(dict_options)}
             collection_embedding_api_key = self.embedding.get("collection_embedding_api_key")
             if collection_embedding_api_key:
                 embedding_dict["collection_embedding_api_key"] = collection_embedding_api_key

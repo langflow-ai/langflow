@@ -595,9 +595,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 ),
                 "icon": self.get_provider_icon(collection=col),
                 "model": (
-                        col.definition.vector.service.model_name
-                        if col.definition.vector and col.definition.vector.service
-                        else None
+                    col.definition.vector.service.model_name
+                    if col.definition.vector and col.definition.vector.service
+                    else None
                 ),
             }
             for col in collection_list
