@@ -547,14 +547,54 @@ curl -X POST \
 
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
+There are `/v1` and `/v2` versions of the `/files` endpoint. The `/v2` version offers several improvements over `/v1`:
+
+* In v1, files were organized by `flow_id`. In v2, files are organized by `user_id`.
+This means files are accessed based on user ownership, and not flow ownership.
+* In v2, files are tracked in the Langflow database, and can be added or deleted in bulk.
+* 
+
+
 ### Upload file
 
 Upload a file to an existing flow.
 
 This example uploads `the_oscar_award.csv`.
 
+```
+  </TabItem>
+</Tabs>
+```
+
+```
 <Tabs>
-  <TabItem value="curl" label="curl" default>
+  <TabItem value="v2" label="v2" default>
+
+```bash
+curl -X POST \
+  "$LANGFLOW_URL/api/v2/files" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@the_oscar_award.csv"
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "id":"c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
+  "name":"the_oscar_award",
+  "path":"6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.csv",
+  "size":970358,
+  "provider":null
+}
+```
+
+  </TabItem>
+</Tabs>
+
+<Tabs>
+  <TabItem value="v1" label="v1" default>
 
 ```bash
 curl -X POST \
@@ -574,8 +614,7 @@ curl -X POST \
 }
 ```
 
-  </TabItem>
-</Tabs>
+```
 
 #### Upload image files
 
