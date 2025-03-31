@@ -87,6 +87,18 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Develop",
+      items: [
+        "Develop/develop-overview",
+        "Develop/develop-application",
+        "Develop/install-custom-dependencies",
+        "Develop/memory",
+        "Develop/session-id",
+        "Develop/logging",
+      ],
+    },
+    {
+      type: "category",
       label: "Deployment",
       items: [
         {
