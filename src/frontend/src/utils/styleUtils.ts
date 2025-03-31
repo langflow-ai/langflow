@@ -294,6 +294,7 @@ import {
   GradientSave,
   GradientUngroup,
 } from "../icons/GradientSparkles";
+import { GridGainIcon } from "../icons/GridGain";
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
@@ -680,6 +681,7 @@ export const nodeIconsLucide: iconsType = {
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
   Clickhouse: ClickhouseIcon,
+  GridGain: GridGainIcon,
   Cloudflare: CloudflareIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
