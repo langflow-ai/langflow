@@ -136,7 +136,7 @@ async def update_params_with_load_from_db_fields(
         if key is None:
             logger.warning(f"Could not get value for {field}. Setting it to None.")
             if not fallback_to_env_vars:
-                raise ValueError(f"Variable for {field} not found and fallback is disabled.")
+                raise ValueError(field)
 
     return params
 
