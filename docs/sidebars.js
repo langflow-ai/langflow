@@ -39,7 +39,9 @@ module.exports = {
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
-        "Concepts/concepts-api",
+        "Concepts/concepts-publish",
+        "Concepts/concepts-file-management",
+        "Concepts/concepts-voice-mode",
       ],
     },
     {
@@ -47,6 +49,7 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
+        "Components/components-bundles",
         "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
@@ -83,6 +86,18 @@ module.exports = {
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         "Configuration/configuration-security-best-practices"
+      ],
+    },
+    {
+      type: "category",
+      label: "Develop",
+      items: [
+        "Develop/develop-overview",
+        "Develop/develop-application",
+        "Develop/install-custom-dependencies",
+        "Develop/memory",
+        "Develop/session-id",
+        "Develop/logging",
       ],
     },
     {

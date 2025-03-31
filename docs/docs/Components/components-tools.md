@@ -222,6 +222,10 @@ This component allows you to call the Glean Search API.
 
 ## Google Search API
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component allows you to call the Google Search API.
 
 ### Inputs
@@ -360,6 +364,10 @@ The component dynamically updates its configuration based on the provided Python
 
 ## Python REPL Tool
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
 ### Inputs
@@ -414,6 +422,10 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 | result_tool | Tool | SearXNG search tool for use in LangChain   |
 
 ## Search API
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
@@ -479,6 +491,10 @@ This component performs searches using the Tavily AI search engine, which is opt
 
 ## Wikidata
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component performs a search using the Wikidata API.
 
 ### Inputs
@@ -496,6 +512,10 @@ This component performs a search using the Wikidata API.
 
 
 ## Wikipedia API
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component creates a tool for searching and retrieving information from Wikipedia.
 
