@@ -187,7 +187,8 @@ def create_class(code, class_name):
 
     replacements = {
         "from langflow import CustomComponent": "from langflow.custom import CustomComponent",
-        "from langflow.interface.custom.custom_component import CustomComponent": "from langflow.custom import CustomComponent",
+        "from langflow.interface.custom.custom_component import CustomComponent":
+            "from langflow.custom import CustomComponent",
     }
     for old, new in replacements.items():
         code = code.replace(old, new)
