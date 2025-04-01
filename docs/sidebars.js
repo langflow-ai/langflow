@@ -39,7 +39,9 @@ module.exports = {
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
-        "Concepts/concepts-api",
+        "Concepts/concepts-publish",
+        "Concepts/concepts-file-management",
+        "Concepts/concepts-voice-mode",
       ],
     },
     {
@@ -47,6 +49,7 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
+        "Components/components-bundles",
         "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
@@ -79,6 +82,7 @@ module.exports = {
         "Configuration/configuration-auto-saving",
         "Configuration/configuration-backend-only",
         "Configuration/configuration-cli",
+        "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         "Configuration/configuration-security-best-practices"
@@ -86,12 +90,34 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Develop",
+      items: [
+        "Develop/develop-overview",
+        "Develop/develop-application",
+        "Develop/install-custom-dependencies",
+        "Develop/memory",
+        "Develop/session-id",
+        "Develop/logging",
+      ],
+    },
+    {
+      type: "category",
       label: "Deployment",
       items: [
+        {
+          type:"doc",
+          id: "Deployment/deployment-overview",
+          label: "Deployment overview"
+        },
         {
           type: "doc",
           id: "Deployment/deployment-docker",
           label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes",
+          label: "Kubernetes"
         },
         {
           type: "doc",
@@ -102,11 +128,6 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-hugging-face-spaces",
           label: "Hugging Face Spaces"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
         },
         {
           type: "doc",
@@ -144,15 +165,6 @@ module.exports = {
         "Integrations/Arize/integrations-arize",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
-        "Integrations/integrations-langfuse",
-        "Integrations/integrations-langsmith",
-        "Integrations/integrations-langwatch",
-        "Integrations/integrations-opik",
-        {
-          type: "doc",
-          id: "Integrations/integrations-mcp",
-          label: "MCP (Model context protocol)"
-        },
         {
           type: 'category',
           label: 'Google',
@@ -161,6 +173,18 @@ module.exports = {
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
           ],
         },
+        "Integrations/integrations-langfuse",
+        "Integrations/integrations-langsmith",
+        "Integrations/integrations-langwatch",
+        {
+          type: 'category',
+          label: 'MCP (Model Context Protocol)',
+          items: [
+            'Integrations/MCP/integrations-mcp',
+            'Integrations/MCP/mcp-component-astra',
+          ],
+        },
+        "Integrations/integrations-opik",
         {
           type: "category",
           label: "Notion",
