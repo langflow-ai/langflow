@@ -89,7 +89,7 @@ This action immediately invalidates the key and prevents it from being used agai
 
 These are credentials for external services like OpenAI. They can be added to Langflow with the `.env` file or in the Langflow UI.
 
-Component API keys set in the UI override those set in the environment variables.
+Component API keys that are set in the UI override those that are set in the environment variables.
 
 ### Add component API keys with the .env file
 

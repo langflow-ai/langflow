@@ -89,7 +89,7 @@ LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
-When set to `True`, new users are automatically activated and can log in without requiring explicit activation by the superuser from the **Admin page**.
+When this option is set to `True`, new users are automatically activated and can log in without requiring explicit activation by the superuser from the **Admin page**.
 By default, this variable is set to `False`.
 
 ```text
@@ -100,13 +100,13 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 
 Start a secure Langflow server with authentication enabled and secret key encryption using the variables described in [Authentication configuration values](/configuration-authentication#authentication-configuration-values).
 
-Once logged in as a superuser, you will create a new user on your server.
+Once you are logged in as a superuser, create a new user on your server.
 
 ### Start the Langflow server
 
 1. Create a `.env` file and populate it with values for a secure server.
 This server creates a superuser account, requires users to log in before using Langflow, and encrypts secrets with `LANGFLOW_SECRET_KEY`, which is added in the next step.
-Create a `.env` file with this configuration:
+Create a `.env` file with the following configuration:
 
 ```text
 LANGFLOW_AUTO_LOGIN=False
@@ -118,7 +118,7 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 
 2. Generate a secret key for encrypting sensitive data.
 
-Generate your secret key using one of these commands:
+Generate your secret key using one of the following commands:
 
 <Tabs>
 <TabItem value="unix" label="macOS/Linux">
@@ -158,9 +158,9 @@ uv run langflow run --env-file .env
 
 5. Verify the server is running. The default location is `http://localhost:7860`.
 
-### Manage users as administrator
+### Manage users as an administrator
 
-1. To complete your first time login as superuser, go to `http://localhost:7860/login`.
+1. To complete your first-time login as a superuser, go to `http://localhost:7860/login`.
 2. Log in with your superuser credentials:
 * Username: Value of `LANGFLOW_SUPERUSER` (for example, `administrator`)
 * Password: Value of `LANGFLOW_SUPERUSER_PASSWORD` (for example, `securepassword`)
@@ -174,7 +174,7 @@ Click your user profile image, and then click **Admin Page**.
 
 As a superuser, you can create users, set permissions, reset passwords, and delete accounts.
 
-4. To create a user, click **New User** and complete the fields:
+4. To create a user, click **New User**, and then complete the following fields:
 * Username
 * Password and Confirm Password
 * Select **Active** and deselect **Superuser** for the new user.
