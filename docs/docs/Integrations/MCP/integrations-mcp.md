@@ -110,7 +110,7 @@ MCP clients like Claude for Desktop and Cursor "see" Langflow as a single MCP se
 This can confuse agents, who don't know that flow `adbbf8c7-0a34-493b-90ea-5e8b42f78b66` is a Document Q&A flow for a specific text file.
 To prevent this behavior, name and describe your flows clearly for agentic use. Imagine your names and descriptions as function names and code comments, with a clear statement of what problem they solve.
 
-For example, you have created a [Document Q&A](/tutorials-document-qa) flow that loads a sample resume for an LLM to chat with, and you want Cursor to use the tool.
+For example, you have created a [Document Q&A](/document-qa) flow that loads a sample resume for an LLM to chat with, and you want Cursor to use the tool.
 
 1. Click **Flow name**, and then select **Edit Details**.
 2. The **Name** field should make it clear what the flow does, both to a user and to the agent. For example, name it `Document QA for Resume`.

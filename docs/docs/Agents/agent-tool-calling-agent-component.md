@@ -54,7 +54,7 @@ Point **API Request** to an online rules document, tell your agent `You are a fu
 * You need to learn a new software language quickly.
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal`, and start learning.
 
-See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [math agent tutorial project](/tutorials-math-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
+See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [math agent project](/math-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
 
 ### Edit a tool's metadata
 

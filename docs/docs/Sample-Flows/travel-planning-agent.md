@@ -1,6 +1,6 @@
 ---
 title: Travel planning agent
-slug: /tutorials-travel-planning-agent
+slug: /travel-planning-agent
 ---
 
 Build a **Travel Planning Agent** flow for an agentic application using the multiple Tool-calling agents.

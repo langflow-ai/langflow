@@ -41,7 +41,7 @@ To store messages in local Langflow memory, add a [Message store](/components-he
 
 To retrieve messages from local Langflow memory, add a [Message history](/components-helpers#message-history) component to your flow.
 
-For an example of using local chat memory, see the [Memory chatbot](/tutorials-memory-chatbot) starter flow.
+For an example of using local chat memory, see the [Memory chatbot](/memory-chatbot) starter flow.
 
 To store or retrieve chat messages from external memory, connect the **External memory** port of the **Message store** or **Message history** component to a **Memory** component, like the [Astra DB chat memory](components-memories#astradbchatmemory-component) component. An example flow looks like this:
 
