@@ -286,7 +286,7 @@ export function VoiceAssistant({
         audioContextRef.current = null;
       }
     };
-  }, []);
+  }, [setShowAudioInput]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
