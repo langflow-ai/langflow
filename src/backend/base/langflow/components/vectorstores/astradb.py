@@ -158,7 +158,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="api_endpoint",
             display_name="Astra DB API Endpoint",
             info="The API Endpoint for the Astra DB instance. Supercedes database selection.",
-            advanced=True,
+            show=False,
         ),
         DropdownInput(
             name="collection_name",
@@ -169,7 +169,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             real_time_refresh=True,
             dialog_inputs=asdict(NewCollectionInput()),
             combobox=True,
-            advanced=True,
+            show=False,
         ),
         StrInput(
             name="keyspace",
@@ -177,21 +177,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Optional keyspace within Astra DB to use for the collection.",
             advanced=True,
         ),
-        DropdownInput(
-            name="embedding_choice",
-            display_name="Embedding Model or Astra Vectorize",
-            info="Choose an embedding model or use Astra Vectorize.",
-            options=["Embedding Model", "Astra Vectorize"],
-            value="Embedding Model",
-            advanced=True,
-            real_time_refresh=True,
-        ),
         HandleInput(
             name="embedding_model",
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
             required=False,
+            show=False,
         ),
         *LCVectorStoreComponent.inputs,
         DropdownInput(
@@ -723,7 +715,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             collection_config["value"] = ""
 
         # Set advanced status based on database selection
-        collection_config["advanced"] = not build_config["database_name"]["value"]
+        collection_config["show"] = bool(build_config["database_name"]["value"])
 
         return build_config
 
@@ -750,10 +742,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if database_config["value"] not in database_config["options"]:
             database_config["value"] = ""
             build_config["api_endpoint"]["value"] = ""
-            build_config["collection_name"]["advanced"] = True
+            build_config["collection_name"]["show"] = False
 
         # Set advanced status based on token presence
-        database_config["advanced"] = not build_config["token"]["value"]
+        database_config["show"] = bool(build_config["token"]["value"])
 
         return build_config
 
@@ -761,12 +753,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         """Reset all build configuration options to default empty state."""
         # Reset database configuration
         database_config = build_config["database_name"]
-        database_config.update({"options": [], "options_metadata": [], "value": "", "advanced": True})
+        database_config.update({"options": [], "options_metadata": [], "value": "", "show": False})
         build_config["api_endpoint"]["value"] = ""
 
         # Reset collection configuration
         collection_config = build_config["collection_name"]
-        collection_config.update({"options": [], "options_metadata": [], "value": "", "advanced": True})
+        collection_config.update({"options": [], "options_metadata": [], "value": "", "show": False})
 
         return build_config
 
@@ -889,8 +881,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "options": build_config["collection_name"]["options"] + [field_value["01_new_collection_name"]],
             }
         )
-        build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
-        build_config["embedding_model"]["advanced"] = bool(provider)
+        build_config["embedding_model"]["show"] = not bool(provider)
+        build_config["embedding_model"]["required"] = not bool(provider)
         build_config["collection_name"]["options_metadata"].append(
             {
                 "records": 0,
@@ -941,6 +933,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["autodetect_collection"]["value"] = True
         build_config = self.reset_collection_list(build_config)
 
+        # Reset embedding model if collection selection changes
         if field_value and field_value not in build_config["collection_name"]["options"]:
             build_config["collection_name"]["options"].append(field_value)
             build_config["collection_name"]["options_metadata"].append(
@@ -956,10 +949,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if not field_value:
             return build_config
 
+        # Get the selected collection index
         index = build_config["collection_name"]["options"].index(field_value)
+
+        # Set the provider of the selected collection
         provider = build_config["collection_name"]["options_metadata"][index]["provider"]
-        build_config["embedding_model"]["advanced"] = bool(provider)
-        build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
+        build_config["embedding_model"]["show"] = not bool(provider)
+        build_config["embedding_model"]["required"] = not bool(provider)
+
         return build_config
 
     @check_cached_vector_store
@@ -976,7 +973,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the embedding model and additional params
         embedding_params = (
             {"embedding": self.embedding_model}
-            if self.embedding_model and self.embedding_choice == "Embedding Model"
+            if self.embedding_model
             else {}
         )
 
