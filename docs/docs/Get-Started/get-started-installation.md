@@ -79,24 +79,24 @@ To reinstall Langflow and all of its dependencies, add the `--force-reinstall` f
 python -m pip install langflow --force-reinstall
 ```
 
-
 ## Install Langflow Desktop
 
 :::important
-Langflow Desktop is only available for macOS.
+Langflow Desktop is available only for macOS.
 :::
 
 **Langflow Desktop** is a desktop version of Langflow.
 
 To install **Langflow Desktop**, follow these steps:
 
-1. Navigate to (url), and click **Download DMG**.
-2. Open the **Finder** and navigate to **Downloads**.
-3. Double-click the downloaded `*.dmg` file.
-4. To install Langflow, drag and drop the application icon to the **Applications** folder.
-5. When the installation completes, open the Langflow application.
+1. Navigate to [Langflow Desktop](www.langflow.org/desktop).
+2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+3. Open the **Finder** and navigate to **Downloads**.
+4. Double-click the downloaded `*.dmg` file.
+5. To install Langflow Desktop, drag and drop the application icon to the **Applications** folder.
+6. When the installation completes, open the Langflow application.
 
-The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, then starts.
+The application first checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
 
 ## DataStax Langflow {#datastax-langflow}
 
