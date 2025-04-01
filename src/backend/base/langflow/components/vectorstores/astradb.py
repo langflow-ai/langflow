@@ -161,6 +161,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             show=False,
         ),
         DropdownInput(
+            name="keyspace",
+            display_name="Keyspace",
+            info="Optional keyspace within Astra DB to use for the collection.",
+            advanced=True,
+            options=[],
+            real_time_refresh=True,
+        ),
+        DropdownInput(
             name="collection_name",
             display_name="Collection",
             info="The name of the collection within Astra DB where the vectors will be stored.",
@@ -170,12 +178,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             dialog_inputs=asdict(NewCollectionInput()),
             combobox=True,
             show=False,
-        ),
-        StrInput(
-            name="keyspace",
-            display_name="Keyspace",
-            info="Optional keyspace within Astra DB to use for the collection.",
-            advanced=True,
         ),
         HandleInput(
             name="embedding_model",
@@ -423,12 +425,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
                 # Get the number of collections
                 try:
-                    _keyspace = db.keyspaces[0]
+                    # Get the number of collections in the database
                     num_collections = len(
                         client.get_database(
                             api_endpoint,
                             token=token,
-                            keyspace=_keyspace,
                         ).list_collection_names()
                     )
                 except Exception:  # noqa: BLE001
@@ -439,6 +440,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Add the database to the dictionary
                 db_info_dict[db.name] = {
                     "api_endpoint": api_endpoint,
+                    "keyspaces": db.keyspaces,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
                     "org_id": db.org_id if db.org_id else None,
@@ -449,7 +451,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return db_info_dict
 
     def get_database_list(self):
-        return self.get_database_list_static(token=self.token, environment=self.environment or "prod")
+        return self.get_database_list_static(
+            token=self.token,
+            environment=self.environment or "prod",
+        )
 
     @classmethod
     def get_api_endpoint_static(
@@ -504,7 +509,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if keyspace:
             return keyspace.strip()
 
-        return None
+        return "default_keyspace"
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
@@ -546,6 +551,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "status": info["status"],
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
+                    "keyspaces": info["keyspaces"],
                     "org_id": info["org_id"],
                 }
                 for name, info in self.get_database_list().items()
@@ -700,7 +706,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         """Reset collection list options based on provided configuration."""
         # Get collection options
         collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
-
         # Update collection configuration
         collection_config = build_config["collection_name"]
         collection_config.update(
@@ -806,6 +811,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if field_name == "database_name" and not isinstance(field_value, dict):
             return self._handle_database_selection(build_config, field_value)
 
+        if field_name == "keyspace":
+            return self.reset_collection_list(build_config)
+
         # Collection selection change
         if field_name == "collection_name" and not isinstance(field_value, dict):
             return self._handle_collection_selection(build_config, field_value)
@@ -837,6 +845,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "status": "PENDING",
                 "collections": 0,
                 "api_endpoint": None,
+                "keyspaces": [self.get_keyspace()],
                 "org_id": None,
             }
         )
@@ -910,9 +919,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if not org_id:
             return build_config
 
+        # Update the list of keyspaces based on the db info
+        build_config["keyspace"]["options"] = build_config["database_name"]["options_metadata"][index]["keyspaces"]
+        build_config["keyspace"]["value"] = (
+            build_config["keyspace"]["options"] and build_config["keyspace"]["options"][0]
+            if build_config["keyspace"]["value"] not in build_config["keyspace"]["options"]
+            else build_config["keyspace"]["value"]
+        )
+
         # Get the database id for the selected database
         db_id = self.get_database_id_static(api_endpoint=build_config["api_endpoint"]["value"])
-        keyspace = self.get_keyspace() or "default_keyspace"
+        keyspace = self.get_keyspace()
 
         # Update the helper text for the embedding provider field
         template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
