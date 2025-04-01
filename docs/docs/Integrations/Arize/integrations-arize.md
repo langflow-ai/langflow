@@ -3,18 +3,25 @@ title: Integrate Arize with Langflow
 slug: /integrations-arize
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 Arize is a tool built on [OpenTelemetry](https://opentelemetry.io/) and [OpenInference](https://docs.arize.com/phoenix/reference/open-inference) for monitoring and optimizing LLM applications.
 
-To add tracing to your Langflow application, add the `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables to your Langflow application.
+To add tracing to your Langflow application, add Arize environment variables to your Langflow application.
+Arize begins monitoring and 
 
 ## Prerequisites
 
-* If you are using the [standard Arize platform](https://docs.arize.com/arize), you need an **Arize Space ID** and **API API Key**.
+* If you are using the [standard Arize platform](https://docs.arize.com/arize), you need an **Arize Space ID** and **Arize API Key**.
 * If you are using the open-source [Arize Phoenix platform](https://docs.arize.com/phoenix), you need an **Arize Phoenix API key**.
 
 ## Connect Arize to Langflow
 
-1. To retrieve your **Arize Space ID** and **API API Key**, navigate to the [Arize dashboard](https://app.arize.com/).
+<Tabs>
+  <TabItem value="Arize Platform" label="Arize Platform" default>
+
+1. To retrieve your **Arize Space ID** and **Arize API Key**, navigate to the [Arize dashboard](https://app.arize.com/).
 2. Click **Settings**, and then click **Space Settings and Keys**.
 3. Copy the **SpaceID** and **API Key (Ingestion Service Account Key)** values.
 4. Create a `.env` file in the root of your Langflow application.
@@ -29,19 +36,32 @@ Replace the following:
 ARIZE_SPACE_ID=YOUR_ARIZE_SPACE_ID
 ARIZE_API_KEY=YOUR_ARIZE_API_KEY
 ```
+6. Save the `.env` file.
+7. Start your Langflow application with the values from the `.env` file.
+```bash
+uv run langflow run --env-file .env
+```
+  </TabItem>
+  <TabItem value="Arize Phoenix" label="Arize Phoenix">
 
-6. Optional: if you are using the [Arize Phoenix platform](https://docs.arize.com/phoenix), add the `PHOENIX_API_KEY` environment variable to your application instead of `ARIZE_SPACE_ID` and `ARIZE_API_KEY`.
+1. To retrieve your **Arize Phoenix API key**, navigate to the [Arize dashboard](https://app.phoenix.arize.com/).
+2. Click **API Key**.
+Copy the **API Key** value.
+3. Create a `.env` file in the root of your Langflow application.
+4. Add the `PHOENIX_API_KEY` environment variable to your application instead.
 Replace `YOUR_PHOENIX_API_KEY` with the Arize Phoenix API key copied from the Arize Phoenix platform.
 
 ```bash
 PHOENIX_API_KEY=YOUR_PHOENIX_API_KEY
 ```
-7. Save the `.env` file.
-8. Start your Langflow application with the values from the `.env` file.
 
+5. Save the `.env` file.
+6. Start your Langflow application with the values from the `.env` file.
 ```bash
 uv run langflow run --env-file .env
 ```
+  </TabItem>
+</Tabs>
 
 For more information, see the [Arize documentation](https://docs.arize.com/phoenix/tracing/integrations-tracing/langflow#go-to-arize-phoenix).
 
