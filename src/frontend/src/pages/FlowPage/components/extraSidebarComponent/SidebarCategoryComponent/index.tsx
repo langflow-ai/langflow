@@ -20,7 +20,7 @@ export function SidebarCategoryComponent({
       }
       button={{
         title: name,
-        Icon: getNodeIcon(name) ?? getNodeIcon("unknown"),
+        icon: name,
       }}
     >
       <div className="side-bar-components-gap">

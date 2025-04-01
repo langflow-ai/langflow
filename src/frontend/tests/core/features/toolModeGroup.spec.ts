@@ -24,7 +24,7 @@ test.describe("group node test", () => {
         .click({ modifiers: ["ControlOrMeta"] });
 
       await page.getByRole("button", { name: "Group" }).click();
-      await page.getByTestId("title-Group").click({ timeout: 500 });
+      await page.getByTestId("title-Group").click();
       await expect(page.getByTestId("tool-mode-button")).toBeHidden();
     },
   );
