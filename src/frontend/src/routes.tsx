@@ -45,10 +45,10 @@ const PlaygroundPage = lazy(() => import("./pages/Playground"));
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 
 // Get root path from environment variable set by Vite
-const rootPath = process.env.ROOT_PATH || '';
+const rootPath = process.env.ROOT_PATH || "";
 
 // Log the root path being used
-console.log('Using root path in routes:', rootPath || '(empty)');
+console.log("Using root path in routes:", rootPath || "(empty)");
 
 const router = createBrowserRouter(
   createRoutesFromElements([
