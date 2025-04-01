@@ -260,7 +260,7 @@ const ListSelectionComponent = ({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
-        className="flex max-h-[65vh] min-h-[30vh] flex-col rounded-xl"
+        className="flex max-h-[65vh] min-h-[15vh] flex-col rounded-xl"
         onKeyDown={handleKeyDown}
       >
         <div className="flex items-center justify-between">
