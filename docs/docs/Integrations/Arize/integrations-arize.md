@@ -46,17 +46,17 @@ uv run langflow run --env-file .env
 
 1. To retrieve your **Arize Phoenix API key**, navigate to the [Arize dashboard](https://app.phoenix.arize.com/).
 2. Click **API Key**.
-Copy the **API Key** value.
-3. Create a `.env` file in the root of your Langflow application.
-4. Add the `PHOENIX_API_KEY` environment variable to your application instead.
+3. Copy the **API Key** value.
+4. Create a `.env` file in the root of your Langflow application.
+5. Add the `PHOENIX_API_KEY` environment variable to your application instead.
 Replace `YOUR_PHOENIX_API_KEY` with the Arize Phoenix API key copied from the Arize Phoenix platform.
 
 ```bash
 PHOENIX_API_KEY=YOUR_PHOENIX_API_KEY
 ```
 
-5. Save the `.env` file.
-6. Start your Langflow application with the values from the `.env` file.
+6. Save the `.env` file.
+7. Start your Langflow application with the values from the `.env` file.
 ```bash
 uv run langflow run --env-file .env
 ```
