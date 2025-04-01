@@ -79,6 +79,25 @@ To reinstall Langflow and all of its dependencies, add the `--force-reinstall` f
 python -m pip install langflow --force-reinstall
 ```
 
+
+## Install Langflow Desktop
+
+:::important
+Langflow Desktop is only available for macOS.
+:::
+
+**Langflow Desktop** is a desktop version of Langflow.
+
+To install **Langflow Desktop**, follow these steps:
+
+1. Navigate to (url), and click **Download DMG**.
+2. Open the **Finder** and navigate to **Downloads**.
+Double-click the downloaded `*.dmg` file.
+3. To install Langflow, drag and drop the application icon to the **Applications** folder.
+4. When the installation completes, open the Langflow application.
+
+The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, then starts.
+
 ## DataStax Langflow {#datastax-langflow}
 
 **DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
