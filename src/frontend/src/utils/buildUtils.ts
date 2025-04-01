@@ -366,7 +366,7 @@ export async function buildFlowVertices({
         onGetOrderSuccess,
         onValidateNodes,
       };
-      return pollBuildEvents(
+      return await pollBuildEvents(
         eventsUrl,
         buildResults,
         verticesStartTimeMs,
