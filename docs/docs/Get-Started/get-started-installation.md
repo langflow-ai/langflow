@@ -89,7 +89,7 @@ Langflow Desktop is available only for macOS.
 
 To install **Langflow Desktop**, follow these steps:
 
-1. Navigate to [Langflow Desktop](www.langflow.org/desktop).
+1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
 2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
 3. Open the **Finder** and navigate to **Downloads**.
 4. Double-click the downloaded `*.dmg` file.
