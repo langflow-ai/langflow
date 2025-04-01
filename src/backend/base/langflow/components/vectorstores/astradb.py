@@ -971,11 +971,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         # Get the embedding model and additional params
-        embedding_params = (
-            {"embedding": self.embedding_model}
-            if self.embedding_model
-            else {}
-        )
+        embedding_params = {"embedding": self.embedding_model} if self.embedding_model else {}
 
         # Get the additional parameters
         additional_params = self.astradb_vectorstore_kwargs or {}
