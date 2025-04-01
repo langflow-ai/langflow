@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
@@ -22,26 +23,35 @@ const ListItem = ({
   isSelected,
   onClick,
   className,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   item: any;
   isSelected: boolean;
   onClick: () => void;
   className?: string;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) => (
   <Button
     key={item.id}
     unstyled
     size="sm"
-    className={cn("w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted", className)}
+    className={cn(
+      "group w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted",
+      className,
+    )}
     onClick={onClick}
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
   >
-    <div className="flex items-center gap-2">
+    <div className="flex w-full items-center gap-2">
       {item.icon && (
         <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
       )}
-      <span className="truncate text-sm">{item.name}</span>
+      <div className="truncate text-sm">{item.name}</div>
       {"metaData" in item && item.metaData && (
-        <span className="text-gray-500">{item.metaData}</span>
+        <div className="text-gray-500">{item.metaData}</div>
       )}
       {isSelected ? (
         <ForwardedIconComponent
@@ -52,7 +62,17 @@ const ListItem = ({
           )}
         />
       ) : (
-        <span className="ml-auto flex h-4 w-4" />
+        <div className="ml-auto flex items-center justify-start rounded-md opacity-0 group-hover:opacity-100">
+          <div className="flex items-center pr-1.5 text-sm text-gray-500">
+            Select
+          </div>
+          <div className="flex items-center justify-center rounded-md bg-gray-200 p-1">
+            <ForwardedIconComponent
+              name="corner-down-left"
+              className="h-3 w-3 text-gray-500"
+            />
+          </div>
+        </div>
       )}
     </div>
   </Button>
@@ -69,13 +89,33 @@ const ListSelectionComponent = ({
   limit = 1,
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
+  const [hoveredItem, setHoveredItem] = useState<any | null>(null);
 
   useEffect(() => {
     // Reset search when dialog opens
     if (open) {
       setSearch("");
+      setHoveredItem(null);
     }
   }, [open]);
+
+  // Handle keyboard events
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && hoveredItem) {
+        handleSelectAction(hoveredItem);
+        onSelection?.(hoveredItem);
+      }
+    };
+
+    if (open) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, hoveredItem]);
 
   const filteredList = useMemo(() => {
     if (!search.trim()) {
@@ -156,6 +196,8 @@ const ListSelectionComponent = ({
                   handleSelectAction(item);
                   onSelection?.(item);
                 }}
+                onMouseEnter={() => setHoveredItem(item)}
+                onMouseLeave={() => setHoveredItem(null)}
               />
             ))
           ) : (
