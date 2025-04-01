@@ -101,6 +101,7 @@ const ListItem = ({
             </div>
           </div>
         ) : (
+          // Always show the check icon when selected, regardless of hover/focus state
           isSelected && (
             <ForwardedIconComponent
               name="check"
@@ -226,12 +227,18 @@ const ListSelectionComponent = ({
           if (hoveredItem) {
             e.preventDefault();
             handleSelectAction(hoveredItem);
-            onSelection?.(hoveredItem);
+            if (onSelection) {
+              onSelection(hoveredItem);
+            }
           }
+          break;
+        case "Escape":
+          e.preventDefault();
+          onClose();
           break;
       }
     },
-    [filteredList, hoveredItem, handleSelectAction, onSelection],
+    [filteredList, hoveredItem, handleSelectAction, onSelection, onClose],
   );
 
   // Detect mouse movement to switch from keyboard to mouse navigation
@@ -244,11 +251,10 @@ const ListSelectionComponent = ({
 
     if (open) {
       window.addEventListener("mousemove", handleMouseMove);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+      };
     }
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
   }, [open, isKeyboardNavActive]);
 
   return (
