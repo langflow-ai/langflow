@@ -194,6 +194,31 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=False,
         ),
         *LCVectorStoreComponent.inputs,
+        DropdownInput(
+            name="search_method",
+            display_name="Search Method",
+            info="Method to use for searching the vector store.",
+            options=["Vector Search", "Hybrid Search"],
+            value="Hybrid Search",
+            advanced=True,
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="reranker",
+            display_name="Reranker",
+            info="Reranker to use for the search.",
+            options=["llama-3-2-nv-rerankqa-1b-v2", "None"],
+            options_metadata=[{"icon": "NVIDIA"}, {"icon": "None"}],
+            value="llama-3-2-nv-rerankqa-1b-v2",
+            advanced=True,
+        ),
+        StrInput(
+            name="lexical_terms",
+            display_name="Lexical Terms",
+            info="Lexical terms to use for the search.",
+            advanced=True,
+            value="",
+        ),
         IntInput(
             name="number_of_results",
             display_name="Number of Search Results",
@@ -745,6 +770,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return build_config
 
+    def _handle_hybrid_search_options(self, build_config: dict) -> dict:
+        """Set hybrid search options in the build configuration."""
+        build_config["reranker"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
+        build_config["lexical_terms"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
+
+        return build_config
+
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update build configuration based on field name and value."""
         # Early return if no token provided
@@ -785,6 +817,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Collection selection change
         if field_name == "collection_name" and not isinstance(field_value, dict):
             return self._handle_collection_selection(build_config, field_value)
+
+        # Set the hybrid search options
+        if field_name == "search_method":
+            return self._handle_hybrid_search_options(build_config)
 
         return build_config
 
