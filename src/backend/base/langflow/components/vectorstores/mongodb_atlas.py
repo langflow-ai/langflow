@@ -2,10 +2,11 @@ import tempfile
 
 import certifi
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
+from pymongo.collection import Collection
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -14,6 +15,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     description = "MongoDB Atlas Vector Store with search capabilities"
     name = "MongoDBAtlasVector"
     icon = "MongoDB"
+    INSERT_MODES = ["append", "overwrite"]
 
     inputs = [
         SecretStrInput(name="mongodb_atlas_cluster_uri", display_name="MongoDB Atlas Cluster URI", required=True),
@@ -30,6 +32,14 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
         *LCVectorStoreComponent.inputs,
+        DropdownInput(
+            name="insert_mode",
+            display_name="Insert Mode",
+            options=INSERT_MODES,
+            value=INSERT_MODES[0],
+            info="How to insert new documents into the collection.",
+            advanced=True,
+        ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -96,15 +106,12 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents:
-            collection.drop()  # Drop collection to override the vector store
+            self.__insert_mode(collection)
+
             return MongoDBAtlasVectorSearch.from_documents(
                 documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
             )
-        return MongoDBAtlasVectorSearch(
-            embedding=self.embedding,
-            collection=collection,
-            index_name=self.index_name,
-        )
+        return MongoDBAtlasVectorSearch(embedding=self.embedding, collection=collection, index_name=self.index_name)
 
     def search_documents(self) -> list[Data]:
         from bson.objectid import ObjectId
@@ -125,3 +132,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             self.status = data
             return data
         return []
+
+    def __insert_mode(self, collection: Collection) -> None:
+        if self.insert_mode == "overwrite":
+            collection.drop()  # Drop collection to override the vector store
