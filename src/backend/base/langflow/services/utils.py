@@ -179,19 +179,10 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         session: The database session to use for the deletion
     """
     try:
-        # Delete transactions using bulk delete
-        # delete_stmt = delete(TransactionTable).where(
-        #     col(TransactionTable.id).in_(
-        #         select(TransactionTable.id)
-        #         .order_by(col(TransactionTable.timestamp).desc())
-        #         .offset(settings_service.settings.max_transactions_to_keep)
-        #     )
-        # )
         subquery = select(VertexBuildTable.id).order_by(
             col(VertexBuildTable.timestamp).desc()
         ).limit(settings_service.settings.max_vertex_builds_to_keep).subquery()
 
-        # 构建删除查询，通过 NOT IN 排除需要保留的记录
         delete_stmt = delete(VertexBuildTable).where(
             col(VertexBuildTable.id).in_(subquery)
         )
@@ -219,13 +210,10 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
             col(VertexBuildTable.timestamp).desc()
         ).limit(settings_service.settings.max_vertex_builds_to_keep).subquery()
 
-        # 构建删除查询，通过 NOT IN 排除需要保留的记录
         delete_stmt = delete(VertexBuildTable).where(
             col(VertexBuildTable.id).in_(subquery)
         )
 
-        # 构建删除查询
-        #delete_query = VertexBuildTable.delete().where(col(VertexBuildTable.id).in_(subquery))
         await session.exec(delete_stmt)
         await session.commit()
         logger.debug("Successfully cleaned up old vertex builds")
