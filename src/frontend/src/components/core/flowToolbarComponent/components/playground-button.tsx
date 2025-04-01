@@ -43,7 +43,12 @@ const DisabledButton = () => (
   </div>
 );
 
-const PlaygroundButton = ({ hasIO, open, setOpen, canvasOpen }: PlaygroundButtonProps) => {
+const PlaygroundButton = ({
+  hasIO,
+  open,
+  setOpen,
+  canvasOpen,
+}: PlaygroundButtonProps) => {
   return hasIO ? (
     <IOModal
       open={open}

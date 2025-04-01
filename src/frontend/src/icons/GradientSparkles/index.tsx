@@ -71,7 +71,12 @@ export const GradientUngroup = forwardRef<
           </linearGradient>
         </defs>
       </svg>
-      <ForwardedIconComponent name="Ungroup" stroke="url(#grad4)" ref={ref} {...props} />
+      <ForwardedIconComponent
+        name="Ungroup"
+        stroke="url(#grad4)"
+        ref={ref}
+        {...props}
+      />
     </>
   );
 });
