@@ -6,7 +6,7 @@ import {
   toolModeGradient,
 } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
@@ -30,7 +30,7 @@ export function NodeIcon({
   const [name, setName] = useState(types[dataType]);
 
   useEffect(() => {
-    iconExists(dataType).then(exists => {
+    iconExists(dataType).then((exists) => {
       setName(exists ? dataType : types[dataType]);
     });
   }, [dataType, types]);
