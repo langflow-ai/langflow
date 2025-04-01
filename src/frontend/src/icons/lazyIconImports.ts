@@ -105,12 +105,20 @@ export const lazyIconsMapping = {
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
     })),
+  GridHorizontal: () =>
+    import("@/icons/GridHorizontal").then((mod) => ({
+      default: mod.GridHorizontalIcon,
+    })),
   Groq: () => import("@/icons/Groq").then((mod) => ({ default: mod.GroqIcon })),
   HackerNews: () =>
     import("@/icons/hackerNews").then((mod) => ({
       default: mod.HackerNewsIcon,
     })),
   HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
+  HomeAssistant: () =>
+    import("@/icons/HomeAssistant").then((mod) => ({
+      default: mod.HomeAssistantIcon,
+    })),
   HuggingFace: () =>
     import("@/icons/HuggingFace").then((mod) => ({
       default: mod.HuggingFaceIcon,
