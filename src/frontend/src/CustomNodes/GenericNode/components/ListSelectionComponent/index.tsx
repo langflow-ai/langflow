@@ -4,7 +4,7 @@ import SearchBarComponent from "@/components/core/parameterRenderComponent/compo
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { cn } from "@/utils/utils";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
@@ -25,6 +25,7 @@ const ListItem = ({
   className,
   onMouseEnter,
   onMouseLeave,
+  isFocused,
 }: {
   item: any;
   isSelected: boolean;
@@ -32,16 +33,27 @@ const ListItem = ({
   className?: string;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  isFocused: boolean;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const itemRef = useRef<HTMLButtonElement>(null);
+
+  // Scroll into view when focused by keyboard
+  useEffect(() => {
+    if (isFocused && itemRef.current) {
+      itemRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [isFocused]);
 
   return (
     <Button
+      ref={itemRef}
       key={item.id}
       unstyled
       size="sm"
       className={cn(
         "group w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted",
+        isFocused && "bg-muted",
         className,
       )}
       onClick={onClick}
@@ -62,7 +74,7 @@ const ListItem = ({
         {"metaData" in item && item.metaData && (
           <div className="text-gray-500">{item.metaData}</div>
         )}
-        {isHovered ? (
+        {isHovered || isFocused ? (
           <div className="ml-auto flex items-center justify-start rounded-md">
             <div className="flex items-center pr-1.5 text-sm text-gray-500">
               Select
@@ -102,32 +114,7 @@ const ListSelectionComponent = ({
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
-
-  useEffect(() => {
-    // Reset search when dialog opens
-    if (open) {
-      setSearch("");
-      setHoveredItem(null);
-    }
-  }, [open]);
-
-  // Handle keyboard events
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && hoveredItem) {
-        handleSelectAction(hoveredItem);
-        onSelection?.(hoveredItem);
-      }
-    };
-
-    if (open) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, hoveredItem]);
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
 
   const filteredList = useMemo(() => {
     if (!search.trim()) {
@@ -138,6 +125,60 @@ const ListSelectionComponent = ({
       item.name.toLowerCase().includes(searchTerm),
     );
   }, [options, search]);
+
+  useEffect(() => {
+    // Reset search and focus when dialog opens or filtered list changes
+    if (open) {
+      setSearch("");
+      setHoveredItem(null);
+      if (filteredList.length > 0) {
+        setFocusedIndex(0);
+        setHoveredItem(filteredList[0]);
+      } else {
+        setFocusedIndex(-1);
+      }
+    }
+  }, [open, filteredList.length]);
+
+  // Handle keyboard events
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!open || filteredList.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const newIndex = prev < filteredList.length - 1 ? prev + 1 : 0;
+            setHoveredItem(filteredList[newIndex]);
+            return newIndex;
+          });
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const newIndex = prev > 0 ? prev - 1 : filteredList.length - 1;
+            setHoveredItem(filteredList[newIndex]);
+            return newIndex;
+          });
+          break;
+        case "Enter":
+          if (hoveredItem) {
+            handleSelectAction(hoveredItem);
+            onSelection?.(hoveredItem);
+          }
+          break;
+      }
+    };
+
+    if (open) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, filteredList, hoveredItem, focusedIndex]);
 
   const handleSelectAction = useCallback(
     (action: any) => {
@@ -208,8 +249,15 @@ const ListSelectionComponent = ({
                   handleSelectAction(item);
                   onSelection?.(item);
                 }}
-                onMouseEnter={() => setHoveredItem(item)}
-                onMouseLeave={() => setHoveredItem(null)}
+                onMouseEnter={() => {
+                  setHoveredItem(item);
+                  setFocusedIndex(index);
+                }}
+                onMouseLeave={() => {
+                  setHoveredItem(null);
+                  // Don't reset focused index on mouse leave
+                }}
+                isFocused={focusedIndex === index}
               />
             ))
           ) : (
