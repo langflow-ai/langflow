@@ -174,12 +174,12 @@ Click your user profile image, and then click **Admin Page**.
 
 As a superuser, you can create users, set permissions, reset passwords, and delete accounts.
 
-4. To create a user, click **New User**, and then complete the following fields:
-* Username
-* Password and Confirm Password
+4. To create a user, in the Langflow UI, click **New User**, and then complete the following fields:
+* **Username**
+* **Password** and **Confirm Password**
 * Select **Active** and deselect **Superuser** for the new user.
 **Active** users can log into the system and access their flows. **Inactive** users cannot log in or see their flows.
-A **Superuser** has full administrative priveleges.
+A **Superuser** has full administrative privileges.
 
 5. To complete user creation, click **Save**.
 Your new user appears in the **Admin Page**.
