@@ -90,13 +90,13 @@ const ListItem = ({
         )}
         {isHovered || isFocused ? (
           <div className="ml-auto flex items-center justify-start rounded-md">
-            <div className="flex items-center pr-1.5 text-sm text-gray-500">
+            <div className="flex items-center pr-1.5 text-sm text-muted-foreground">
               Select
             </div>
-            <div className="flex items-center justify-center rounded-md bg-gray-200 p-1">
+            <div className="flex items-center justify-center rounded-md bg-border p-1">
               <ForwardedIconComponent
                 name="corner-down-left"
-                className="h-3 w-3 text-gray-500"
+                className="h-3 w-3 text-muted-foreground"
               />
             </div>
           </div>
