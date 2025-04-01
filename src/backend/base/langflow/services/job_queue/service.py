@@ -8,6 +8,14 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.services.base import Service
 
 
+class JobQueueNotFoundError(Exception):
+    """Exception raised when a job queue is not found."""
+
+    def __init__(self, job_id: str) -> None:
+        self.job_id = job_id
+        super().__init__(f"Job queue not found for job_id: {job_id}")
+
+
 class JobQueueService(Service):
     """Asynchronous service for managing job-specific queues and their associated tasks.
 
@@ -191,12 +199,11 @@ class JobQueueService(Service):
                 and the cleanup timestamp (if any).
         """
         if job_id not in self._queues:
-            msg = f"No queue found for job_id {job_id}"
-            logger.error(msg)
-            raise ValueError(msg)
+            logger.error(f"Job queue not found for job_id: {job_id}")
+            raise JobQueueNotFoundError(job_id)
 
         if self._closed:
-            msg = "Queue service is closed"
+            msg = f"Queue service is closed for job_id: {job_id}"
             logger.error(msg)
             raise RuntimeError(msg)
 
