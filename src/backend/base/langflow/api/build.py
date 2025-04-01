@@ -34,7 +34,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
-from langflow.services.job_queue.service import JobQueueService
+from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 
@@ -116,7 +116,7 @@ async def get_flow_events_response(
             logger.warning(f"Timeout while waiting for events for job {job_id}")
             raise HTTPException(status_code=408, detail="Timeout while waiting for events") from exc
 
-    except ValueError as exc:
+    except JobQueueNotFoundError as exc:
         logger.error(f"Job not found: {job_id}. Error: {exc!s}")
         raise HTTPException(status_code=404, detail=f"Job not found: {exc!s}") from exc
     except Exception as exc:
