@@ -115,6 +115,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         ]
         default_kwargs["ingest_data"] = [Data(data={"text": text, "metadata": {}}) for text in test_data]
         default_kwargs["number_of_results"] = 2
+        default_kwargs["insert_mode"] = "overwrite"
 
         # Create and initialize the component
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
