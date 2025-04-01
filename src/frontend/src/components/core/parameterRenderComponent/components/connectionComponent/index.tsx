@@ -230,8 +230,8 @@ const ConnectionComponent = ({
 
       <ListSelectionComponent
         open={open}
-        onSelection={handleSelection}
         onClose={handleCloseListSelectionDialog}
+        onSelection={handleSelection}
         searchCategories={searchCategory}
         setSelectedList={setSelectedItem}
         selectedList={selectedItem}
