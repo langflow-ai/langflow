@@ -1049,3 +1049,14 @@ export const DEBOUNCE_FIELD_LIST = [
   "FloatInput",
   "SliderInput",
 ];
+
+export const OPENAI_VOICES = [
+  { name: "alloy", value: "alloy" },
+  { name: "ash", value: "ash" },
+  { name: "ballad", value: "ballad" },
+  { name: "coral", value: "coral" },
+  { name: "echo", value: "echo" },
+  { name: "sage", value: "sage" },
+  { name: "shimmer", value: "shimmer" },
+  { name: "verse", value: "verse" },
+];

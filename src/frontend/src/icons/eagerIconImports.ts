@@ -49,6 +49,7 @@ import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { GroqIcon } from "@/icons/Groq";
 import { HackerNewsIcon } from "@/icons/hackerNews";
 import { HCDIcon } from "@/icons/HCD";
+import { HomeAssistantIcon } from "@/icons/HomeAssistant";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
 import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { IcosaIcon } from "@/icons/Icosa";
@@ -159,6 +160,7 @@ export const eagerIconsMapping = {
   Groq: GroqIcon,
   HackerNews: HackerNewsIcon,
   HCD: HCDIcon,
+  HomeAssistant: HomeAssistantIcon,
   HuggingFace: HuggingFaceIcon,
   Icosa: IcosaIcon,
   IFixIt: IFixIcon,
