@@ -378,6 +378,7 @@ class FlowDataRequest(BaseModel):
 
 
 class ConfigResponse(BaseModel):
+    root_path: str
     feature_flags: FeatureFlags
     serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
     serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH

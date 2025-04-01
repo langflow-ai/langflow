@@ -196,16 +196,12 @@ def create_app():
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
-    root_path = os.environ.get("LANGFLOW_ROOT_PATH", "")
+    settings = get_settings_service().settings
+    root_path = settings.root_path
 
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(
-        lifespan=lifespan,
-        title="Langflow",
-        version=__version__,
-        root_path=root_path
-    )
+    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__, root_path=root_path)
 
     app.add_middleware(
         ContentSizeLimitMiddleware,

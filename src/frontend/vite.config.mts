@@ -10,9 +10,10 @@ import {
   PORT,
   PROXY_TARGET,
 } from "./src/customization/config-constants";
+import { getBackendRootPath } from "./src/helpers/get-backend-rootpath";
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+export default defineConfig(async (configEnv) => {
+  const env = loadEnv(configEnv.mode, process.cwd(), "");
 
   const envLangflowResult = dotenv.config({
     path: path.resolve(__dirname, "../../.env"),
@@ -24,6 +25,8 @@ export default defineConfig(({ mode }) => {
 
   const target =
     env.VITE_PROXY_TARGET || PROXY_TARGET || "http://127.0.0.1:7860";
+
+  const rootPath = await getBackendRootPath(target);
 
   const port = Number(env.VITE_PORT) || PORT || 3000;
 
@@ -38,7 +41,7 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: env.LANGFLOW_ROOT_PATH || BASENAME || "",
+    base: rootPath || BASENAME || "",
     build: {
       outDir: "build",
     },
@@ -53,7 +56,7 @@ export default defineConfig(({ mode }) => {
       "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
-      "process.env.LANGFLOW_ROOT_PATH": JSON.stringify(env.LANGFLOW_ROOT_PATH),
+      "process.env.ROOT_PATH": JSON.stringify(rootPath || ""),
     },
     plugins: [react(), svgr(), tsconfigPaths()],
     server: {
