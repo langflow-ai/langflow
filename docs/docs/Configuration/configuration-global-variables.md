@@ -4,16 +4,17 @@ slug: /configuration-global-variables
 ---
 
 import Icon from "@site/src/components/icon";
-import ReactPlayer from "react-player";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 Global variables let you store and reuse generic input values and credentials across your projects.
-You can use a global variable in any text input field that displays the <Icon name="Globe" aria-label="Globe" /> **Globe** icon.
+You can use a global variable in any text input field that displays the <Icon name="Globe" aria-label="Globe" /> icon.
 
 Langflow stores global variables in its internal database, and encrypts the values using a secret key.
 
-## Create a global variable {#3543d5ef00eb453aa459b97ba85501e5}
+## Create a global variable
+
+To create a new global variable, follow these steps.
 
 1. In the Langflow UI, click your profile icon, and then select **Settings**.
 
@@ -25,20 +26,20 @@ Langflow stores global variables in its internal database, and encrypts the valu
 
 5. Optional: Select a **Type** for your global variable. The available types are **Generic** (default) and **Credential**.
 
-   No matter which **Type** you select, Langflow still encrypts the **Value** of the global variable.
+   Langflow encrypts both **Generic** and **Credential** type global variables. The difference is in how the variables are displayed in the UI.
+
+   Global variables of the **Generic** type are displayed in a standard input field with no masking.
+
+   Global variables of the **Credential** type are hidden in the UI and entered in a password-style input field that masks the value. They are also not allowed in session ID fields, where they would be exposed.
+   All default environment variables and variables sourced from the environment using `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` are automatically set as **Credential** type global variables.
 
 6. Enter the **Value** for your global variable.
 
-7. Optional: Use the **Apply To Fields** menu to select one or more fields that you want Langflow to automatically apply your global variable to. For example, if you select **OpenAI API Key**, Langflow will automatically apply the variable to any **OpenAI API Key** field.
+7. Optional: Use the **Apply To Fields** menu to select one or more fields that you want Langflow to automatically apply your global variable to. For example, if you select **OpenAI API Key**, Langflow automatically applies the variable to any **OpenAI API Key** field.
 
 8. Click **Save Variable**.
 
-You can now select your global variable from any text input field that displays the 🌐 icon.
-
-:::info
-Because values are encrypted, you can't view the actual values of your global variables.
-In **Settings > Global Variables**, the **Value** column shows the encrypted hash for **Generic** type variables, and shows nothing for **Credential** type variables.
-:::
+You can now select your global variable from any text input field that displays the <Icon name="Globe" aria-label="Globe" /> icon.
 
 ## Edit a global variable
 
@@ -68,11 +69,13 @@ Deleting a global variable permanently deletes any references to it from your ex
 
 The global variable, and any existing references to it, are deleted.
 
-## Add global variables from the environment {#76844a93dbbc4d1ba551ea1a4a89ccdd}
+## Add custom global variables from the environment
 
-### Custom environment variables
+You can use the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable to source custom global variables from your runtime environment.
+All global variables sourced from the environment are automatically set as **Credential** type global variables.
 
-You can use the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable to source global variables from your runtime environment.
+Langflow's [default global variables](#default-environment-variables) are already included in this list and are automatically sourced when detected.
+You can extend this list by setting `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` with your additional variables.
 
 <Tabs>
 
@@ -84,12 +87,18 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
 
 2. Add the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable as follows:
 
-   ```text title=".env"
+   You can specify the variables either as a comma-separated string with no spaces, or as a JSON list:
+
+   ```text
+   # Option 1: Comma-separated string (no spaces)
    LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=VARIABLE1,VARIABLE2
+
+   # Option 2: JSON list format
+   LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=["VARIABLE1", "VARIABLE2"]
    ```
 
-   Replace `VARIABLE1,VARIABLE2` with a comma-separated list (no spaces) of variables that you want Langflow to source from the environment.
-   For example, `my_key,some_string`.
+   Replace `VARIABLE1,VARIABLE2` with your additional variables that you want Langflow to source from the environment, such as `my_key,some_string` or `["my_key", "some_string"]`.
+   These are added to the default list of variables that Langflow already monitors.
 
 3. Save and close the file.
 
@@ -152,18 +161,22 @@ When adding global variables from the environment, the following limitations app
   To add additional parameters, such as the **Apply To Fields** parameter, you must edit the global variables in the Langflow UI.
 
 - Global variables that you add from the environment always have the **Credential** type.
-  :::
+:::
 
-:::tip
+
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file:
 
-```text title=".env"
+```text
 LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false
 ```
 
-:::
+If you want to automatically set fallback values for your global variables from environment variables, set the `LANGFLOW_FALLBACK_FROM_ENV_VAR` environment variable to `true` in your `.env` file. When this feature is enabled, if a global variable is not found, Langflow attempts to use an environment variable with the same name as a fallback.
 
-### Default environment variables
+```text
+LANGFLOW_FALLBACK_FROM_ENV_VAR=true
+```
+
+## Default environment variables
 
 Langflow automatically detects and converts some environment variables into global variables of the type **Credential**, which are applied to the specific fields in components that require them. Currently, the following variables are supported:
 
@@ -195,8 +208,5 @@ Langflow automatically detects and converts some environment variables into glob
 - `VECTARA_CORPUS_ID`
 - `VECTARA_CUSTOMER_ID`
 
+
 For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
-
-## Security best practices
-
-For information about securing your global variables and other sensitive data, see [Security best practices](/configuration-security-best-practices).
