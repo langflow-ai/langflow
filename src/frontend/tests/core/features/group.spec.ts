@@ -28,7 +28,7 @@ test.describe("group node test", () => {
         .click({ modifiers: ["ControlOrMeta"] });
 
       await page.getByRole("button", { name: "Group" }).click();
-      await page.getByTestId("title-Group").click();
+      await page.getByTestId("title-Group").click({ timeout: 500 });
       await page.getByTestId("edit-name-description-button").click();
       await page.getByTestId("input-title-Group").first().fill("test");
       await page.getByTestId("save-name-description-button").first().click();
