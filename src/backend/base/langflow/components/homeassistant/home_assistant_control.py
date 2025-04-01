@@ -25,7 +25,7 @@ class HomeAssistantControl(LCToolComponent):
         "Only action (turn_on, turn_off, toggle) and entity_id need to be provided."
     )
     documentation: str = "https://developers.home-assistant.io/docs/api/rest/"
-    icon: str = "HomeAssistantIcon"
+    icon: str = "HomeAssistant"
 
     # --- Input fields for LangFlow UI (token, URL) ---
     inputs = [
