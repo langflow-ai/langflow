@@ -29,7 +29,7 @@ To use your uploaded files in flows:
 2. To select a document to load, in the **File** component, click the **Select files** button.
 3. Select a file to upload, and then click **Select file**. The loaded file name appears in the component.
 
-For an example of using the **File** component in a flow, see the [Document QA tutorial project](/tutorials-document-qa).
+For an example of using the **File** component in a flow, see the [Document QA tutorial project](/document-qa).
 
 :::note
 If you prefer a one-time upload, the [File](/components-data#file) component still allows one-time uploads directly from your local machine.
