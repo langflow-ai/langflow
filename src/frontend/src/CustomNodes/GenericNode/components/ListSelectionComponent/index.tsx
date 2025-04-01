@@ -26,6 +26,7 @@ const ListItem = ({
   onMouseEnter,
   onMouseLeave,
   isFocused,
+  isKeyboardNavActive,
 }: {
   item: any;
   isSelected: boolean;
@@ -34,9 +35,17 @@ const ListItem = ({
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   isFocused: boolean;
+  isKeyboardNavActive: boolean;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const itemRef = useRef<HTMLButtonElement>(null);
+
+  // Clear hover state when keyboard navigation is active
+  useEffect(() => {
+    if (isKeyboardNavActive) {
+      setIsHovered(false);
+    }
+  }, [isKeyboardNavActive]);
 
   // Scroll into view when focused by keyboard
   useEffect(() => {
@@ -52,19 +61,24 @@ const ListItem = ({
       unstyled
       size="sm"
       className={cn(
-        "group w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted",
+        "group w-full rounded-md py-3 pl-3 pr-3",
+        !isKeyboardNavActive && "hover:bg-muted", // Only apply hover styles when not in keyboard nav
         isFocused && "bg-muted",
         className,
       )}
       onClick={onClick}
       onMouseEnter={() => {
-        setIsHovered(true);
-        onMouseEnter();
+        if (!isKeyboardNavActive) {
+          setIsHovered(true);
+          onMouseEnter();
+        }
       }}
       onMouseLeave={() => {
         setIsHovered(false);
         onMouseLeave();
       }}
+      // Disable pointer events during keyboard navigation
+      style={{ pointerEvents: isKeyboardNavActive ? "none" : "auto" }}
     >
       <div className="flex w-full items-center gap-2">
         {item.icon && (
@@ -115,6 +129,8 @@ const ListSelectionComponent = ({
   const [search, setSearch] = useState("");
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
+  const listContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredList = useMemo(() => {
     if (!search.trim()) {
@@ -125,60 +141,6 @@ const ListSelectionComponent = ({
       item.name.toLowerCase().includes(searchTerm),
     );
   }, [options, search]);
-
-  useEffect(() => {
-    // Reset search and focus when dialog opens or filtered list changes
-    if (open) {
-      setSearch("");
-      setHoveredItem(null);
-      if (filteredList.length > 0) {
-        setFocusedIndex(0);
-        setHoveredItem(filteredList[0]);
-      } else {
-        setFocusedIndex(-1);
-      }
-    }
-  }, [open, filteredList.length]);
-
-  // Handle keyboard events
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!open || filteredList.length === 0) return;
-
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault();
-          setFocusedIndex((prev) => {
-            const newIndex = prev < filteredList.length - 1 ? prev + 1 : 0;
-            setHoveredItem(filteredList[newIndex]);
-            return newIndex;
-          });
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setFocusedIndex((prev) => {
-            const newIndex = prev > 0 ? prev - 1 : filteredList.length - 1;
-            setHoveredItem(filteredList[newIndex]);
-            return newIndex;
-          });
-          break;
-        case "Enter":
-          if (hoveredItem) {
-            handleSelectAction(hoveredItem);
-            onSelection?.(hoveredItem);
-          }
-          break;
-      }
-    };
-
-    if (open) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, filteredList, hoveredItem, focusedIndex]);
 
   const handleSelectAction = useCallback(
     (action: any) => {
@@ -215,9 +177,86 @@ const ListSelectionComponent = ({
     [selectedList, setSelectedList, limit, onClose],
   );
 
+  // Reset focus state when filtered list changes
+  useEffect(() => {
+    if (open) {
+      if (filteredList.length > 0) {
+        setFocusedIndex(0);
+        setHoveredItem(filteredList[0]);
+      } else {
+        setFocusedIndex(-1);
+        setHoveredItem(null);
+      }
+    }
+  }, [open, filteredList.length]);
+
+  // Reset search when dialog opens
+  useEffect(() => {
+    if (open) {
+      setSearch("");
+      setIsKeyboardNavActive(false);
+    }
+  }, [open]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (filteredList.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setIsKeyboardNavActive(true);
+          setFocusedIndex((prev) => {
+            const newIndex = prev < filteredList.length - 1 ? prev + 1 : 0;
+            setHoveredItem(filteredList[newIndex]);
+            return newIndex;
+          });
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setIsKeyboardNavActive(true);
+          setFocusedIndex((prev) => {
+            const newIndex = prev > 0 ? prev - 1 : filteredList.length - 1;
+            setHoveredItem(filteredList[newIndex]);
+            return newIndex;
+          });
+          break;
+        case "Enter":
+          if (hoveredItem) {
+            e.preventDefault();
+            handleSelectAction(hoveredItem);
+            onSelection?.(hoveredItem);
+          }
+          break;
+      }
+    },
+    [filteredList, hoveredItem, handleSelectAction, onSelection],
+  );
+
+  // Detect mouse movement to switch from keyboard to mouse navigation
+  useEffect(() => {
+    const handleMouseMove = () => {
+      if (isKeyboardNavActive) {
+        setIsKeyboardNavActive(false);
+      }
+    };
+
+    if (open) {
+      window.addEventListener("mousemove", handleMouseMove);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [open, isKeyboardNavActive]);
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="flex max-h-[65vh] min-h-[30vh] flex-col rounded-xl">
+      <DialogContent
+        className="flex max-h-[65vh] min-h-[30vh] flex-col rounded-xl"
+        onKeyDown={handleKeyDown}
+      >
         <div className="flex items-center justify-between pb-4">
           <SearchBarComponent
             searchCategories={searchCategories}
@@ -234,7 +273,10 @@ const ListSelectionComponent = ({
           </Button>
         </div>
 
-        <div className="flex flex-col gap-1 overflow-y-auto">
+        <div
+          ref={listContainerRef}
+          className="flex flex-col gap-1 overflow-y-auto"
+        >
           {filteredList.length > 0 ? (
             filteredList.map((item, index) => (
               <ListItem
@@ -252,12 +294,14 @@ const ListSelectionComponent = ({
                 onMouseEnter={() => {
                   setHoveredItem(item);
                   setFocusedIndex(index);
+                  setIsKeyboardNavActive(false);
                 }}
                 onMouseLeave={() => {
                   setHoveredItem(null);
                   // Don't reset focused index on mouse leave
                 }}
                 isFocused={focusedIndex === index}
+                isKeyboardNavActive={isKeyboardNavActive}
               />
             ))
           ) : (
