@@ -201,12 +201,13 @@ class JobQueueService(Service):
             RuntimeError: If the service is closed.
         """
         if self._closed:
-            raise RuntimeError(f"Queue service is closed for job_id: {job_id}")
+            msg = f"Queue service is closed for job_id: {job_id}"
+            raise RuntimeError(msg)
 
         try:
             return self._queues[job_id]
-        except KeyError:
-            raise JobQueueNotFoundError(job_id)
+        except KeyError as exc:
+            raise JobQueueNotFoundError(job_id) from exc
 
     async def cleanup_job(self, job_id: str) -> None:
         """Clean up and release resources for a specific job.
