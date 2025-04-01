@@ -92,9 +92,9 @@ To install **Langflow Desktop**, follow these steps:
 
 1. Navigate to (url), and click **Download DMG**.
 2. Open the **Finder** and navigate to **Downloads**.
-Double-click the downloaded `*.dmg` file.
-3. To install Langflow, drag and drop the application icon to the **Applications** folder.
-4. When the installation completes, open the Langflow application.
+3. Double-click the downloaded `*.dmg` file.
+4. To install Langflow, drag and drop the application icon to the **Applications** folder.
+5. When the installation completes, open the Langflow application.
 
 The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, then starts.
 
