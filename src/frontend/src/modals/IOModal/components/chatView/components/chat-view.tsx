@@ -65,13 +65,6 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    console.log(
-      "messages",
-      messages.length === 0,
-      !isBuilding,
-      chatInputNode,
-      isTabHidden,
-    );
     const messagesFromMessagesStore: ChatMessageType[] = messages
       .filter(
         (message) =>
