@@ -28,9 +28,19 @@ export default defineConfig(async (configEnv) => {
 
   const rootPath = await getBackendRootPath(target);
 
+  let apiRoutesWithRoot = apiRoutes;
+  if (rootPath) {
+    apiRoutesWithRoot = apiRoutes.map(route => {
+      if (route.startsWith('^')) {
+        return `^${rootPath}${route.slice(1)}`;
+      }
+      return `${rootPath}${route}`;
+    });
+  }
+
   const port = Number(env.VITE_PORT) || PORT || 3000;
 
-  const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
+  const proxyTargets = apiRoutesWithRoot.reduce((proxyObj, route) => {
     proxyObj[route] = {
       target: target,
       changeOrigin: true,
