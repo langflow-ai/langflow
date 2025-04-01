@@ -261,6 +261,9 @@ class Settings(BaseSettings):
             logger.warning("Multi-worker environment detected, using direct event delivery")
             return "direct"
         return value
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
 
     @field_validator("dev")
     @classmethod
