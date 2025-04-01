@@ -44,6 +44,7 @@ uv run langflow run --env-file .env
 ```
 
 For more information, see the [Arize documentation](https://docs.arize.com/phoenix/tracing/integrations-tracing/langflow#go-to-arize-phoenix).
+
 ## Run a flow and view metrics in Arize
 
 1. In Langflow, select the [Simple agent](/starter-projects-simple-agent) starter project.
