@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -12,13 +13,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("retrievalqa");
 
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
-    await page.getByTestId("sidebar-legacy-switch").click();
-    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
-    await page.getByTestId("sidebar-options-trigger").click();
+    await addLegacyComponents(page);
 
     await page.waitForTimeout(1000);
     await page
@@ -26,7 +21,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     const outputElements = await page
       .getByTestId("handle-retrievalqa-shownode-text-right")
@@ -64,6 +59,8 @@ test(
       .getByTestId("handle-retrievalqa-shownode-language model-left")
       .all();
 
+    await page.waitForTimeout(1000);
+
     for (const element of rqaChainInputElements1) {
       if (await element.isVisible()) {
         visibleElementHandle = element;
@@ -71,7 +68,11 @@ test(
       }
     }
 
+    await page.waitForTimeout(500);
+
     await visibleElementHandle.hover().then(async () => {
+      await page.waitForTimeout(1000);
+
       await expect(
         page.getByText("Drag to connect compatible outputs").first(),
       ).toBeVisible();
@@ -101,7 +102,11 @@ test(
       }
     }
 
+    await page.waitForTimeout(500);
+
     await visibleElementHandle.hover().then(async () => {
+      await page.waitForTimeout(1000);
+
       await expect(
         page.getByText("Drag to connect compatible outputs").first(),
       ).toBeVisible();

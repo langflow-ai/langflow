@@ -38,6 +38,7 @@ export interface TableComponentProps extends AgGridReactProps {
   onDuplicate?: () => void;
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
+  paginationInfo?: string;
 }
 
 const TableComponent = forwardRef<
@@ -55,12 +56,12 @@ const TableComponent = forwardRef<
   ) => {
     let colDef = props.columnDefs
       .filter((col) => !col.hide)
-      .map((col, index) => {
+      .map((col, index, filteredArray) => {
         let newCol = {
           ...col,
         };
 
-        if (index !== props.columnDefs.length - 1) {
+        if (index !== filteredArray.length - 1) {
           newCol = {
             ...newCol,
             suppressSizeToFit: true,
@@ -123,7 +124,11 @@ const TableComponent = forwardRef<
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
-    const storeReference = props.columnDefs.map((e) => e.headerName).join("_");
+    // Only use visible columns for the store reference
+    const storeReference = props.columnDefs
+      .filter((col) => !col.hide)
+      .map((e) => e.headerName)
+      .join("_");
 
     const onGridReady = (params) => {
       // @ts-ignore
@@ -148,6 +153,8 @@ const TableComponent = forwardRef<
       setTimeout(() => {
         if (!realRef?.current?.api?.isDestroyed) {
           realRef?.current?.api?.hideOverlay();
+          // Force column fit after hiding overlay to ensure proper layout
+          realRef?.current?.api?.sizeColumnsToFit();
         }
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
@@ -168,7 +175,7 @@ const TableComponent = forwardRef<
 
       const containerWidth = containerElement.clientWidth;
 
-      // Get all columns
+      // Get only visible columns
       const columns = gridApi.getColumns();
       if (!columns) return;
 
@@ -227,9 +234,14 @@ const TableComponent = forwardRef<
           {...props}
           defaultColDef={{
             minWidth: 100,
+            suppressColumnsToolPanel: true, // Don't show hidden columns in tool panel
           }}
           animateRows={false}
-          gridOptions={{ colResizeDefault: "shift", ...props.gridOptions }}
+          gridOptions={{
+            colResizeDefault: "shift",
+            suppressColumnVirtualisation: false, // Enable column virtualization for better performance
+            ...props.gridOptions,
+          }}
           onColumnResized={onColumnResized}
           columnDefs={colDef}
           ref={(node) => {
@@ -257,6 +269,7 @@ const TableComponent = forwardRef<
           <TableOptions
             tableOptions={props.tableOptions}
             stateChange={columnStateChange}
+            paginationInfo={props.paginationInfo}
             hasSelection={realRef.current?.api?.getSelectedRows()?.length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
             deleteRow={props.onDelete ? props.onDelete : undefined}

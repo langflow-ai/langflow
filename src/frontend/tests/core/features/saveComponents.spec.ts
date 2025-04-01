@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { zoomOut } from "../../utils/zoom-out";
 test.describe("save component tests", () => {
   /// <reference lib="dom"/>
   test(
@@ -52,9 +52,7 @@ test.describe("save component tests", () => {
         .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
         .click();
 
-      await page.getByTestId("title-ChatOpenAI").click({
-        modifiers: ["Control"],
-      });
+      await zoomOut(page, 2);
 
       await page.getByTestId("title-Agent Initializer").click({
         modifiers: ["Control"],
@@ -103,9 +101,6 @@ test.describe("save component tests", () => {
       await page.mouse.up();
       await page.mouse.down();
       await page.getByTestId("fit_view").click();
-      await page.getByTestId("zoom_out").click();
-      await page.getByTestId("zoom_out").click();
-      await page.getByTestId("zoom_out").click();
       textArea = page.getByTestId("div-textarea-description");
       elementCountText = await textArea?.count();
       if (elementCountText > 0) {

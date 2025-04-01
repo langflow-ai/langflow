@@ -102,7 +102,7 @@ wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/hea
 
 3. Create a Dockerfile:
 ```dockerfile
-FROM langflowai/langflow:latest
+FROM langflowai/langflow-backend:latest
 RUN mkdir /app/flows
 COPY ./*json /app/flows/.
 ```
@@ -121,5 +121,5 @@ docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
-To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#langflow-runtime-deployment).
+To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#deploy-the-langflow-runtime).
 

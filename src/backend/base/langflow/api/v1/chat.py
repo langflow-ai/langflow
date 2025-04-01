@@ -6,7 +6,15 @@ import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
@@ -25,6 +33,7 @@ from langflow.api.utils import (
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
+    verify_public_flow_and_get_user,
 )
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
@@ -142,8 +151,29 @@ async def build_flow(
     log_builds: bool = True,
     current_user: CurrentActiveUser,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    flow_name: str | None = None,
 ):
-    """Build and process a flow, returning a job ID for event polling."""
+    """Build and process a flow, returning a job ID for event polling.
+
+    This endpoint requires authentication through the CurrentActiveUser dependency.
+    For public flows that don't require authentication, use the /build_public_tmp/{flow_id}/flow endpoint.
+
+    Args:
+        flow_id: UUID of the flow to build
+        background_tasks: Background tasks manager
+        inputs: Optional input values for the flow
+        data: Optional flow data
+        files: Optional files to include
+        stop_component_id: Optional ID of component to stop at
+        start_component_id: Optional ID of component to start from
+        log_builds: Whether to log the build process
+        current_user: The authenticated user
+        queue_service: Queue service for job management
+        flow_name: Optional name for the flow
+
+    Returns:
+        Dict with job_id that can be used to poll for build status
+    """
     # First verify the flow exists
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
@@ -161,6 +191,7 @@ async def build_flow(
         log_builds=log_builds,
         current_user=current_user,
         queue_service=queue_service,
+        flow_name=flow_name,
     )
     return {"job_id": job_id}
 
@@ -254,7 +285,9 @@ async def build_vertex(
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             graph = await build_graph_from_db(
-                flow_id=flow_id, session=await anext(get_session()), chat_service=chat_service
+                flow_id=flow_id,
+                session=await anext(get_session()),
+                chat_service=chat_service,
             )
         else:
             graph = cache.get("result")
@@ -293,7 +326,7 @@ async def build_vertex(
             outputs = {output_label: OutputValue(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, outputs=outputs)
             artifacts = {}
-            background_tasks.add_task(graph.end_all_traces, error=exc)
+            background_tasks.add_task(graph.end_all_traces_in_context(error=exc))
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
@@ -331,7 +364,7 @@ async def build_vertex(
             next_runnable_vertices = [graph.stop_vertex]
 
         if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
-            background_tasks.add_task(graph.end_all_traces)
+            background_tasks.add_task(graph.end_all_traces_in_context())
 
         build_response = VertexBuildResponse(
             inactivated_vertices=list(set(inactivated_vertices)),
@@ -450,7 +483,11 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
-@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse, deprecated=True)
+@router.get(
+    "/build/{flow_id}/{vertex_id}/stream",
+    response_class=StreamingResponse,
+    deprecated=True,
+)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
@@ -482,7 +519,93 @@ async def build_vertex_stream(
     """
     try:
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, get_chat_service()), media_type="text/event-stream"
+            _stream_vertex(str(flow_id), vertex_id, get_chat_service()),
+            media_type="text/event-stream",
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
+
+
+async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user):
+    queue_service = get_queue_service()
+    build_response = await build_flow(
+        flow_id=flow_id,
+        inputs=inputs,
+        background_tasks=background_tasks,
+        current_user=current_user,
+        queue_service=queue_service,
+    )
+    job_id = build_response["job_id"]
+    return await get_build_events(job_id, queue_service)
+
+
+@router.post("/build_public_tmp/{flow_id}/flow")
+async def build_public_tmp(
+    *,
+    background_tasks: LimitVertexBuildBackgroundTasks,
+    flow_id: uuid.UUID,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool | None = True,
+    flow_name: str | None = None,
+    request: Request,
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+):
+    """Build a public flow without requiring authentication.
+
+    This endpoint is specifically for public flows that don't require authentication.
+    It uses a client_id cookie to create a deterministic flow ID for tracking purposes.
+
+    The endpoint:
+    1. Verifies the requested flow is marked as public in the database
+    2. Creates a deterministic UUID based on client_id and flow_id
+    3. Uses the flow owner's permissions to build the flow
+
+    Requirements:
+    - The flow must be marked as PUBLIC in the database
+    - The request must include a client_id cookie
+
+    Args:
+        flow_id: UUID of the public flow to build
+        background_tasks: Background tasks manager
+        inputs: Optional input values for the flow
+        data: Optional flow data
+        files: Optional files to include
+        stop_component_id: Optional ID of component to stop at
+        start_component_id: Optional ID of component to start from
+        log_builds: Whether to log the build process
+        flow_name: Optional name for the flow
+        request: FastAPI request object (needed for cookie access)
+        queue_service: Queue service for job management
+
+    Returns:
+        Dict with job_id that can be used to poll for build status
+    """
+    try:
+        # Verify this is a public flow and get the associated user
+        client_id = request.cookies.get("client_id")
+        owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
+
+        # Start the flow build using the new flow ID
+        job_id = await start_flow_build(
+            flow_id=new_flow_id,
+            background_tasks=background_tasks,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds or False,
+            current_user=owner_user,
+            queue_service=queue_service,
+            flow_name=flow_name or f"{client_id}_{flow_id}",
+        )
+    except Exception as exc:
+        logger.exception("Error building public flow")
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"job_id": job_id}

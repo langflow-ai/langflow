@@ -10,8 +10,8 @@ This guide demonstrates deploying Langflow on a Kubernetes cluster.
 
 Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
 
-- Deploy the [Langflow IDE](deployment-kubernetes#langflow-ide-deployment) for the complete Langflow development environment.
-- Deploy the [Langflow runtime](/deployment-kubernetes#langflow-runtime-deployment) to deploy a standalone Langflow application in a more secure and stable environment.
+- Deploy the [Langflow IDE](#deploy-the-langflow-ide) for the complete Langflow development environment.
+- Deploy the [Langflow runtime](#deploy-the-langflow-runtime) to deploy a standalone Langflow application in a more secure and stable environment.
 
 ## Deploy the Langflow IDE
 
@@ -183,6 +183,14 @@ langflow:
 The runtime chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation, and security to ensure that applications run reliably and efficiently.
 
 The `langflow-runtime` Helm chart is available in the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-runtime).
+
+:::important
+By default, the [Langflow runtime Helm chart](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml#L46) enables `readOnlyRootFilesystem: true` as a security best practice. This setting prevents modifications to the container's root filesystem at runtime, which is a recommended security measure in production environments.
+
+Disabling `readOnlyRootFilesystem` reduces the security of your deployment. Only disable this setting if you understand the security implications and have implemented other security measures.
+
+For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+:::
 
 ### Prerequisites
 

@@ -219,3 +219,7 @@ code {
   box-shadow: none !important;
   border-radius: 0px !important;
 }
+
+.cm-gutters {
+  display: none !important;
+}

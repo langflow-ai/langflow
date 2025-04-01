@@ -12,6 +12,14 @@ class NVIDIAModelComponent(LCModelComponent):
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
+    try:
+        from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+        all_models = ChatNVIDIA().get_available_models()
+    except ImportError as e:
+        msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+        raise ImportError(msg) from e
+
     inputs = [
         *LCModelComponent._base_inputs,
         IntInput(
@@ -23,28 +31,33 @@ class NVIDIAModelComponent(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
+            info="The name of the NVIDIA model to use.",
             advanced=False,
-            options=[],
-            refresh_button=True,
+            value=None,
+            options=[model.id for model in all_models],
             combobox=True,
+            refresh_button=True,
+        ),
+        BoolInput(
+            name="detailed_thinking",
+            display_name="Detailed Thinking",
+            info="If true, the model will return a detailed thought process. Only supported by reasoning models.",
+            value=False,
+            show=False,
+        ),
+        BoolInput(
+            name="tool_model_enabled",
+            display_name="Enable Tool Models",
+            info="If enabled, only show models that support tool-calling.",
+            advanced=False,
+            value=False,
+            real_time_refresh=True,
         ),
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
             value="https://integrate.api.nvidia.com/v1",
-            refresh_button=True,
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
-            real_time_refresh=True,
-        ),
-        BoolInput(
-            name="tool_model_enabled",
-            display_name="Enable Tool Models",
-            info=(
-                "Select if you want to use models that can work with tools. If yes, only those models will be shown."
-            ),
-            advanced=False,
-            value=False,
-            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -52,14 +65,14 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The NVIDIA API Key.",
             advanced=False,
             value="NVIDIA_API_KEY",
-            real_time_refresh=True,
         ),
         SliderInput(
             name="temperature",
             display_name="Temperature",
             value=0.1,
-            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+            info="Run inference with this temperature.",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
         IntInput(
             name="seed",
@@ -71,21 +84,42 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
-        build_model = self.build_model()
-        if tool_model_enabled:
-            tool_models = [model for model in build_model.get_available_models() if model.supports_tools]
-            return [model.id for model in tool_models]
-        return [model.id for model in build_model.available_models]
+        try:
+            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
+        # Note: don't include the previous model, as it may not exist in available models from the new base url
+        model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
+        if tool_model_enabled:
+            tool_models = [m for m in model.get_available_models() if m.supports_tools]
+            return [m.id for m in tool_models]
+        return [m.id for m in model.available_models]
+
+    def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
+        if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:
             try:
                 ids = self.get_models(self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids
-                build_config["model_name"]["value"] = ids[0]
+
+                if "value" not in build_config["model_name"] or build_config["model_name"]["value"] is None:
+                    build_config["model_name"]["value"] = ids[0]
+                elif build_config["model_name"]["value"] not in ids:
+                    build_config["model_name"]["value"] = None
+
+                # TODO: use api to determine if model supports detailed thinking
+                if build_config["model_name"]["value"] == "nemotron":
+                    build_config["detailed_thinking"]["show"] = True
+                else:
+                    build_config["detailed_thinking"]["value"] = False
+                    build_config["detailed_thinking"]["show"] = False
             except Exception as e:
                 msg = f"Error getting model names: {e}"
+                build_config["model_name"]["value"] = None
+                build_config["model_name"]["options"] = []
                 raise ValueError(msg) from e
+
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
