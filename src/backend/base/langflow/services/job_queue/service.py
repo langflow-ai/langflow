@@ -65,9 +65,7 @@ class JobQueueService(Service):
         """Initialize the JobQueueService.
 
         Sets up the internal registry for job queues, initializes the cleanup task, and sets the service state
-        to active. The service includes a grace period mechanism for cleanup, where tasks marked for removal
-        (due to cancellation or failure) will persist in the system for CLEANUP_GRACE_PERIOD seconds before
-        being actually removed.
+        to active.
         """
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]] = {}
         self._cleanup_task: asyncio.Task | None = None
@@ -197,17 +195,18 @@ class JobQueueService(Service):
             tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:
                 A tuple containing the job's main queue, its linked event manager, the associated task (if any),
                 and the cleanup timestamp (if any).
+
+        Raises:
+            JobQueueNotFoundError: If the job_id is not found.
+            RuntimeError: If the service is closed.
         """
-        if job_id not in self._queues:
-            logger.error(f"Job queue not found for job_id: {job_id}")
-            raise JobQueueNotFoundError(job_id)
-
         if self._closed:
-            msg = f"Queue service is closed for job_id: {job_id}"
-            logger.error(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError(f"Queue service is closed for job_id: {job_id}")
 
-        return self._queues[job_id]
+        try:
+            return self._queues[job_id]
+        except KeyError:
+            raise JobQueueNotFoundError(job_id)
 
     async def cleanup_job(self, job_id: str) -> None:
         """Clean up and release resources for a specific job.
