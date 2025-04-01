@@ -1,4 +1,5 @@
 import asyncio
+import json
 from uuid import UUID, uuid4
 
 import pytest
@@ -414,9 +415,9 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(text_input_outputs) == 1
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
-    assert all(output.get("results").get("text").get("text") == "value1" for output in text_input_outputs), (
-        text_input_outputs
-    )
+    assert all(
+        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
+    ), text_input_outputs
 
 
 @pytest.mark.api_key_required
@@ -448,9 +449,9 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all(output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs), (
-        chat_input_outputs
-    )
+    assert all(
+        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
+    ), chat_input_outputs
 
 
 @pytest.mark.benchmark
@@ -504,9 +505,9 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     all_message_or_text_dicts = [
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
-    assert all(message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts), (
-        any_input_outputs
-    )
+    assert all(
+        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
+    ), any_input_outputs
 
 
 async def test_invalid_flow_id(client, created_api_key):
@@ -526,3 +527,95 @@ async def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     response = await client.get("api/v1/starter-projects/", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
+
+
+async def _run_single_stream_test(client: AsyncClient, flow_id: str, headers: dict, payload: dict):
+    """Helper coroutine to run and validate a single streaming request."""
+    received_events = []  # Track all event types in sequence
+    got_end_event = False
+    final_result = None
+
+    async with client.stream("POST", f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload) as response:
+        assert response.status_code == status.HTTP_200_OK, response.text
+        assert response.headers["content-type"].startswith("text/event-stream")
+
+        async for line in response.aiter_lines():
+            if not line or line.strip() == "":
+                continue
+
+            event_data = json.loads(line)
+            assert "event" in event_data, f"Event type missing in response line: {line}"
+            event_type = event_data["event"]
+            received_events.append(event_type)
+
+            if event_type == "add_message":
+                message_data = event_data["data"]
+                assert "sender_name" in message_data
+                assert "sender" in message_data
+                assert "session_id" in message_data
+                assert "text" in message_data
+
+            elif event_type == "token":
+                token_data = event_data["data"]
+                assert "chunk" in token_data
+
+            elif event_type == "end":
+                got_end_event = True
+                final_result = event_data["data"].get("result")
+                assert final_result is not None, "End event should contain result data"
+                break  # Exit loop after end event
+
+            elif event_type == "error":
+                pytest.fail(f"Received unexpected error event: {event_data['data']}")
+
+    # Assert we got the end event
+    assert got_end_event, "Stream did not receive an end event"
+
+    # Verify event sequence
+    assert "end" in received_events, "End event missing from event sequence"
+    assert received_events[-1] == "end", "Last event should be 'end'"
+
+    # Verify we got at least one message or token event before end
+    assert len(received_events) > 1, "Should receive events before the end event"
+    assert any(
+        event in ["add_message", "token"] for event in received_events
+    ), "Should receive at least one message or token event"
+
+    # Verify the final result structure in the end event
+    assert final_result is not None
+    assert "outputs" in final_result
+    assert "session_id" in final_result
+    outputs = final_result["outputs"]
+    assert len(outputs) == 1
+    outputs_dict = outputs[0]
+
+    # Verify the debug outputs in final result
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict["inputs"] == {"input_value": payload["input_value"]}
+    assert isinstance(outputs_dict.get("outputs"), list)
+
+    chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
+    assert len(chat_input_outputs) == 1
+    assert all(
+        output.get("results").get("message").get("text") == payload["input_value"] for output in chat_input_outputs
+    ), chat_input_outputs
+
+
+@pytest.mark.api_key_required
+@pytest.mark.benchmark
+async def test_concurrent_stream_run_with_input_type_chat(client: AsyncClient, simple_api_test, created_api_key):
+    """Test concurrent streaming requests to the run endpoint with chat input type."""
+    headers = {"x-api-key": created_api_key.api_key, "Accept": "text/event-stream", "Content-Type": "application/json"}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test concurrent streaming message",
+    }
+    num_concurrent_requests = 5  # Number of concurrent requests to test
+
+    tasks = [_run_single_stream_test(client, flow_id, headers, payload) for _ in range(num_concurrent_requests)]
+
+    # Run all streaming tests concurrently
+    await asyncio.gather(*tasks)
