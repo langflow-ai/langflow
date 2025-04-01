@@ -84,7 +84,7 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
 
 2. Add the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable as follows:
 
-   ```plaintext title=".env"
+   ```text title=".env"
    LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=VARIABLE1,VARIABLE2
    ```
 
@@ -157,7 +157,7 @@ When adding global variables from the environment, the following limitations app
 :::tip
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file:
 
-```plaintext title=".env"
+```text title=".env"
 LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false
 ```
 
@@ -167,29 +167,33 @@ LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false
 
 Langflow automatically detects and converts some environment variables into global variables of the type **Credential**, which are applied to the specific fields in components that require them. Currently, the following variables are supported:
 
-- `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
-- `GOOGLE_API_KEY`
-- `COHERE_API_KEY`
-- `GROQ_API_KEY`
-- `HUGGINGFACEHUB_API_TOKEN`
-- `SEARCHAPI_API_KEY`
-- `SERPAPI_API_KEY`
-- `AZURE_OPENAI_API_KEY`
-- `AZURE_OPENAI_API_VERSION`
-- `AZURE_OPENAI_API_INSTANCE_NAME`
-- `AZURE_OPENAI_API_DEPLOYMENT_NAME`
-- `AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME`
-- `PINECONE_API_KEY`
-- `ASTRA_DB_APPLICATION_TOKEN`
 - `ASTRA_DB_API_ENDPOINT`
-- `UPSTASH_VECTOR_REST_URL`
-- `UPSTASH_VECTOR_REST_TOKEN`
-- `VECTARA_CUSTOMER_ID`
-- `VECTARA_CORPUS_ID`
-- `VECTARA_API_KEY`
+- `ASTRA_DB_APPLICATION_TOKEN`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
+- `AZURE_OPENAI_API_DEPLOYMENT_NAME`
+- `AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME`
+- `AZURE_OPENAI_API_INSTANCE_NAME`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_API_VERSION`
+- `COHERE_API_KEY`
+- `COMPOSIO_API_KEY`
+- `GOOGLE_API_KEY`
+- `GROQ_API_KEY`
+- `HUGGINGFACEHUB_API_TOKEN`
+- `NOVITA_API_KEY`
+- `OPENAI_API_KEY`
+- `PINECONE_API_KEY`
+- `SAMBANOVA_API_KEY`
+- `SEARCHAPI_API_KEY`
+- `SERPAPI_API_KEY`
+- `TAVILY_API_KEY`
+- `UPSTASH_VECTOR_REST_TOKEN`
+- `UPSTASH_VECTOR_REST_URL`
+- `VECTARA_API_KEY`
+- `VECTARA_CORPUS_ID`
+- `VECTARA_CUSTOMER_ID`
 
 For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
 
