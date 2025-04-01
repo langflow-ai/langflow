@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 Arize is a tool built on [OpenTelemetry](https://opentelemetry.io/) and [OpenInference](https://docs.arize.com/phoenix/reference/open-inference) for monitoring and optimizing LLM applications.
 
 To add tracing to your Langflow application, add Arize environment variables to your Langflow application.
-Arize begins monitoring and 
+Arize begins monitoring and collecting telemetry data from your LLM applications automatically.
 
 ## Prerequisites
 
