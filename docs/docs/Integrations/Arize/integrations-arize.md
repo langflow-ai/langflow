@@ -10,7 +10,7 @@ To add tracing to your Langflow application, add the `ARIZE_SPACE_ID` and `ARIZE
 ## Prerequisites
 
 * If you are using the [standard Arize platform](https://docs.arize.com/arize), you need an **Arize Space ID** and **API API Key**.
-* If you are using the open-source [Arize Phoenix platform](https://docs.arize.com/phoenix), you need an Arize Phoenix API key and a project name.
+* If you are using the open-source [Arize Phoenix platform](https://docs.arize.com/phoenix), you need an **Arize Phoenix API key**.
 
 ## Connect Arize to Langflow
 
@@ -19,19 +19,31 @@ To add tracing to your Langflow application, add the `ARIZE_SPACE_ID` and `ARIZE
 3. Copy the **SpaceID** and **API Key (Ingestion Service Account Key)** values.
 4. Create a `.env` file in the root of your Langflow application.
 5. Add the `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables to your Langflow application.
-You do not need to specify the **Arize Project** name if you're using the standard Arize platform. The **Project** name in Arize is the same as the Langflow **Flow** name.
+You do not need to specify the **Arize Project** name if you're using the standard Arize platform.
+Replace the following:
+
+* YOUR_ARIZE_SPACE_ID: the **SpaceID** value copied from Arize
+* YOUR_ARIZE_API_KEY: the **API Key** value copied from Arize
 
 ```bash
-export ARIZE_SPACE_ID=<your-arize-space-id>
-export ARIZE_API_KEY=<your-arize-api-key>
+ARIZE_SPACE_ID=YOUR_ARIZE_SPACE_ID
+ARIZE_API_KEY=YOUR_ARIZE_API_KEY
 ```
 
-6. Start your Langflow application with the values from the `.env` file.
+6. Optional: if you are using the [Arize Phoenix platform](https://docs.arize.com/phoenix), add the `PHOENIX_API_KEY` environment variable to your application instead of `ARIZE_SPACE_ID` and `ARIZE_API_KEY`.
+Replace `YOUR_PHOENIX_API_KEY` with the Arize Phoenix API key copied from the Arize Phoenix platform.
+
+```bash
+PHOENIX_API_KEY=YOUR_PHOENIX_API_KEY
+```
+7. Save the `.env` file.
+8. Start your Langflow application with the values from the `.env` file.
 
 ```bash
 uv run langflow run --env-file .env
 ```
 
+For more information, see the [Arize documentation](https://docs.arize.com/phoenix/tracing/integrations-tracing/langflow#go-to-arize-phoenix).
 ## Run a flow and view metrics in Arize
 
 1. In Langflow, select the [Simple agent](/starter-projects-simple-agent) starter project.
