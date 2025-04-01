@@ -85,7 +85,7 @@ python -m pip install langflow --force-reinstall
 Langflow Desktop is available only for macOS.
 :::
 
-**Langflow Desktop** is a desktop version of Langflow.
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional **Version Management** feature for managing your Langflow version.
 
 To install **Langflow Desktop**, follow these steps:
 
@@ -97,6 +97,20 @@ To install **Langflow Desktop**, follow these steps:
 6. When the installation completes, open the Langflow application.
 
 The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
+
+### Manage your Langflow version in Langflow Desktop
+
+When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
+
+To manage your Langflow version in **Langflow Desktop**, follow these steps:
+
+1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
+Langflow Desktop's current version is displayed, with other version options listed after it.
+The **latest** version is always highlighted.
+2. To change your Langflow version, select another version.
+A confirmation pane containing the selected version's changelog appears.
+3. To change to the selected version, click **Confirm**.
+The application restarts with the new version installed.
 
 ## DataStax Langflow {#datastax-langflow}
 
