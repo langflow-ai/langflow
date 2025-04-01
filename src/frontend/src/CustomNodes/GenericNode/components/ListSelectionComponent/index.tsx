@@ -257,7 +257,7 @@ const ListSelectionComponent = ({
         className="flex max-h-[65vh] min-h-[30vh] flex-col rounded-xl"
         onKeyDown={handleKeyDown}
       >
-        <div className="flex items-center justify-between pb-4">
+        <div className="flex items-center justify-between">
           <SearchBarComponent
             searchCategories={searchCategories}
             search={search}
