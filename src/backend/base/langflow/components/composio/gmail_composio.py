@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from composio.client.collections import AppAuthScheme
@@ -9,12 +10,12 @@ from loguru import logger
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import (
     BoolInput,
-    DropdownInput,
     FileInput,
     IntInput,
     LinkInput,
     MessageTextInput,
     SecretStrInput,
+    SortableListInput,
     StrInput,
 )
 from langflow.io import Output
@@ -31,54 +32,54 @@ class ComposioGmailAPIComponent(LCToolComponent):
     _actions_data: dict = {
         "GMAIL_SEND_EMAIL": {
             "display_name": "Send Email",
-            "actions": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "action_fields": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
         },
         "GMAIL_FETCH_EMAILS": {
             "display_name": "Fetch Emails",
-            "actions": ["max_results", "query"],
+            "action_fields": ["max_results", "query"],
         },
         "GMAIL_GET_PROFILE": {
             "display_name": "Get User Profile",
-            "actions": [],
+            "action_fields": [],
         },
         "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
             "display_name": "Get Email By ID",
-            "actions": ["message_id"],
+            "action_fields": ["message_id"],
         },
         "GMAIL_CREATE_EMAIL_DRAFT": {
             "display_name": "Create Draft Email",
-            "actions": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "action_fields": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
         },
         "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
             "display_name": "Get Message By Thread ID",
-            "actions": ["thread_id"],
+            "action_fields": ["thread_id"],
         },
         "GMAIL_LIST_THREADS": {
             "display_name": "List Email Threads",
-            "actions": ["max_results", "query"],
+            "action_fields": ["max_results", "query"],
         },
         "GMAIL_REPLY_TO_THREAD": {
             "display_name": "Reply To Thread",
-            "actions": ["thread_id", "message_body", "recipient_email"],
+            "action_fields": ["thread_id", "message_body", "recipient_email"],
         },
         "GMAIL_LIST_LABELS": {
             "display_name": "List Email Labels",
-            "actions": [],
+            "action_fields": [],
         },
         "GMAIL_CREATE_LABEL": {
             "display_name": "Create Email Label",
-            "actions": ["label_name"],
+            "action_fields": ["label_name"],
         },
         "GMAIL_GET_PEOPLE": {
             "display_name": "Get Contacts",
-            "actions": [],
+            "action_fields": [],
         },
         "GMAIL_REMOVE_LABEL": {
             "display_name": "Delete Email Label",
-            "actions": ["label_id"],
+            "action_fields": ["label_id"],
         },
     }
-
+    _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
     _bool_variables = {"is_html", "include_spam_trash"}
 
     inputs = [
@@ -115,15 +116,18 @@ class ComposioGmailAPIComponent(LCToolComponent):
             refresh_button=True,
         ),
         # Non tool-mode input fields
-        DropdownInput(
+        SortableListInput(
             name="action",
             display_name="Action",
+            placeholder="Select Gmail action",
             options=[],
             value="",
             info="Select Gmail action to pass to the agent",
             show=True,
             real_time_refresh=True,
             required=True,
+            input_types=["None"],
+            limit=1,  # Limit to one selection since we only want one action at a time
         ),
         MessageTextInput(
             name="recipient_email",
@@ -317,7 +321,7 @@ class ComposioGmailAPIComponent(LCToolComponent):
             enum_name = getattr(Action, action_key)
             params = {}
             if action_key in self._actions_data:
-                for field in self._actions_data[action_key]["actions"]:
+                for field in self._actions_data[action_key]["action_fields"]:
                     value = getattr(self, field)
 
                     # Skip empty values
@@ -348,12 +352,20 @@ class ComposioGmailAPIComponent(LCToolComponent):
             msg = f"Failed to execute {display_name}: {e!s}"
             raise ValueError(msg) from e
 
-    def show_hide_fields(self, build_config: dict, field_value: Any):
-        all_fields = set()
-        for action_data in self._actions_data.values():
-            all_fields.update(action_data["actions"])
+    def sanitize_action_name(self, action_name: str) -> str:
+        """Convert action name to a more readable format."""
+        return self._actions_data[action_name]["display_name"] if action_name in self._actions_data else action_name
 
-        for field in all_fields:
+    def desanitize_action_name(self, action_name: str) -> str:
+        """Convert display name back to action key."""
+        for key, data in self._actions_data.items():
+            if data["display_name"] == action_name:
+                return key
+        return action_name
+
+    def show_hide_fields(self, build_config: dict, field_value: Any):
+        # Reset all fields to hidden first
+        for field in self._all_fields:
             build_config[field]["show"] = False
 
             if field in self._bool_variables:
@@ -361,15 +373,22 @@ class ComposioGmailAPIComponent(LCToolComponent):
             else:
                 build_config[field]["value"] = ""
 
-        action_key = field_value
-        if action_key not in self._actions_data:
-            for key, data in self._actions_data.items():
-                if data["display_name"] == action_key:
-                    action_key = key
-                    break
+        # Handle empty list or invalid input
+        if not field_value:
+            return
 
+        # Handle the case where field_value is a list from SortableListInput
+        if isinstance(field_value, list):
+            if not field_value:  # If list is empty
+                return
+            action_display_name = field_value[0]["name"]
+            action_key = self.desanitize_action_name(action_display_name)
+        else:
+            action_key = field_value
+
+        # Show relevant fields based on the action
         if action_key in self._actions_data:
-            for field in self._actions_data[action_key]["actions"]:
+            for field in self._actions_data[action_key]["action_fields"]:
                 build_config[field]["show"] = True
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
@@ -380,23 +399,23 @@ class ComposioGmailAPIComponent(LCToolComponent):
             if field_value:
                 build_config["action"]["show"] = False
 
-                all_fields = set()
-                for action_data in self._actions_data.values():
-                    all_fields.update(action_data["actions"])
-                for field in all_fields:
+
+                for field in self._all_fields:
                     build_config[field]["show"] = False
 
             else:
                 build_config["action"]["show"] = True
 
         if field_name == "action":
+            print(f"field_value: for Action is : {field_value}")
             self.show_hide_fields(build_config, field_value)
 
         if hasattr(self, "api_key") and self.api_key != "":
-            gmail_display_names = [
-                self._actions_data[action]["display_name"] for action in list(self._actions_data.keys())
+            # Update options format for SortableListInput
+            build_config["action"]["options"] = [
+                {"name": self.sanitize_action_name(action)}
+                for action in list(self._actions_data.keys())
             ]
-            build_config["action"]["options"] = gmail_display_names
 
             try:
                 toolset = self._build_wrapper()
@@ -465,12 +484,20 @@ class ComposioGmailAPIComponent(LCToolComponent):
         toolset = self._build_wrapper()
         tools = toolset.get_tools(actions=self._actions_data.keys())
         for tool in tools:
+            tool.name = re.sub(r"[^a-zA-Z0-9_-]", "-", self.sanitize_action_name(tool.name))
             tool.tags = [tool.name]  # Assigning tags directly
         return tools
 
     @property
     def enabled_tools(self):
-        return [
-            "GMAIL_SEND_EMAIL",
-            "GMAIL_FETCH_EMAILS",
+        selected_tools = [
+            re.sub(r"[^a-zA-Z0-9_-]", "-", self.sanitize_action_name("GMAIL_SEND_EMAIL")),
+            re.sub(r"[^a-zA-Z0-9_-]", "-", self.sanitize_action_name("GMAIL_FETCH_EMAILS")),
         ]
+        selected_actions = [re.sub(r"[^a-zA-Z0-9_-]", "-", action["name"]) for action in self.action]
+        for action in selected_actions:
+            if action not in selected_tools:
+                logger.warning(f"Action '{action}' is not in the selected tools.")
+                append_tool = re.sub(r"[^a-zA-Z0-9_-]", "-", self.sanitize_action_name(action))
+                selected_tools.append(append_tool)
+        return selected_tools
