@@ -66,13 +66,10 @@ export function ParameterRenderComponent({
       editNode,
       handleOnNewValue: handleOnNewValue as handleOnNewValueType,
       disabled,
-      nodeClass,
-      handleNodeClass,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
-      nodeId,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
     };
@@ -107,6 +104,9 @@ export function ParameterRenderComponent({
       return (
         <StrRenderComponent
           {...baseInputProps}
+          nodeId={nodeId}
+          nodeClass={nodeClass}
+          handleNodeClass={handleNodeClass}
           templateData={templateData}
           name={name}
           display_name={templateData.display_name ?? ""}
