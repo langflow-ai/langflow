@@ -32,51 +32,63 @@ const ListItem = ({
   className?: string;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-}) => (
-  <Button
-    key={item.id}
-    unstyled
-    size="sm"
-    className={cn(
-      "group w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted",
-      className,
-    )}
-    onClick={onClick}
-    onMouseEnter={onMouseEnter}
-    onMouseLeave={onMouseLeave}
-  >
-    <div className="flex w-full items-center gap-2">
-      {item.icon && (
-        <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <Button
+      key={item.id}
+      unstyled
+      size="sm"
+      className={cn(
+        "group w-full rounded-md py-3 pl-3 pr-3 hover:bg-muted",
+        className,
       )}
-      <div className="truncate text-sm">{item.name}</div>
-      {"metaData" in item && item.metaData && (
-        <div className="text-gray-500">{item.metaData}</div>
-      )}
-      {isSelected ? (
-        <ForwardedIconComponent
-          name="check"
-          className={cn(
-            "ml-auto flex h-4 w-4",
-            item.link === "validated" && "text-green-500",
-          )}
-        />
-      ) : (
-        <div className="ml-auto flex items-center justify-start rounded-md opacity-0 group-hover:opacity-100">
-          <div className="flex items-center pr-1.5 text-sm text-gray-500">
-            Select
+      onClick={onClick}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        onMouseEnter();
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        onMouseLeave();
+      }}
+    >
+      <div className="flex w-full items-center gap-2">
+        {item.icon && (
+          <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
+        )}
+        <div className="truncate text-sm">{item.name}</div>
+        {"metaData" in item && item.metaData && (
+          <div className="text-gray-500">{item.metaData}</div>
+        )}
+        {isHovered ? (
+          <div className="ml-auto flex items-center justify-start rounded-md">
+            <div className="flex items-center pr-1.5 text-sm text-gray-500">
+              Select
+            </div>
+            <div className="flex items-center justify-center rounded-md bg-gray-200 p-1">
+              <ForwardedIconComponent
+                name="corner-down-left"
+                className="h-3 w-3 text-gray-500"
+              />
+            </div>
           </div>
-          <div className="flex items-center justify-center rounded-md bg-gray-200 p-1">
+        ) : (
+          isSelected && (
             <ForwardedIconComponent
-              name="corner-down-left"
-              className="h-3 w-3 text-gray-500"
+              name="check"
+              className={cn(
+                "ml-auto flex h-4 w-4",
+                item.link === "validated" && "text-green-500",
+              )}
             />
-          </div>
-        </div>
-      )}
-    </div>
-  </Button>
-);
+          )
+        )}
+      </div>
+    </Button>
+  );
+};
 
 const ListSelectionComponent = ({
   open,
