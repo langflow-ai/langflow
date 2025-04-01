@@ -51,17 +51,17 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
     try:
         # Get max entries setting
         max_entries = get_settings_service().settings.max_transactions_to_keep
-        subquery = select(TransactionTable.id).where(
-            TransactionTable.flow_id == transaction.flow_id
-        ).order_by(
-            col(TransactionTable.timestamp).desc()
-        ).limit(
-            max_entries - 1
-        ).subquery()
+        subquery = (
+            select(TransactionTable.id)
+            .where(TransactionTable.flow_id == transaction.flow_id)
+            .order_by(col(TransactionTable.timestamp).desc())
+            .limit(max_entries - 1)
+            .subquery()
+        )
         select_subquery = select(subquery.c.id)
         delete_older = delete(TransactionTable).where(
             TransactionTable.flow_id == transaction.flow_id,
-            col(TransactionTable.id).in_(select_subquery) # Keep newest max_entries-1 plus the one we're adding
+            col(TransactionTable.id).in_(select_subquery),  # Keep newest max_entries-1 plus the one we're adding
         )
 
         # Add new entry and execute delete in same transaction
