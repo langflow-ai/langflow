@@ -41,7 +41,8 @@ export default function InputGlobalComponent({
     if (
       display_name &&
       unavailableFields &&
-      Object.keys(unavailableFields).includes(display_name)
+      Object.keys(unavailableFields).includes(display_name) &&
+      value === ""
     ) {
       return unavailableFields[display_name];
     }
