@@ -87,7 +87,7 @@ Langflow Desktop is available only for macOS.
 
 **Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional **Version Management** feature for managing your Langflow version.
 
-To install **Langflow Desktop**, follow these steps:
+To install Langflow Desktop, follow these steps:
 
 1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
 2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
@@ -100,9 +100,7 @@ The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your loc
 
 ### Manage your Langflow version in Langflow Desktop
 
-When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
-
-To manage your Langflow version in **Langflow Desktop**, follow these steps:
+To manage your Langflow version in Langflow Desktop, follow these steps:
 
 1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
 Langflow Desktop's current version is displayed, with other version options listed after it.
@@ -111,6 +109,8 @@ The **latest** version is always highlighted.
 A confirmation pane containing the selected version's changelog appears.
 3. To change to the selected version, click **Confirm**.
 The application restarts with the new version installed.
+
+When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
 
 ## DataStax Langflow {#datastax-langflow}
 
