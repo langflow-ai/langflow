@@ -156,6 +156,9 @@ If the flow streams the result back to you, your flow is being served, and can b
 The test application returns a large amount of text, so the example command used `?stream=true`. If you prefer, set `?stream=false` to use batching. For more information, see the [API examples](/api-reference-api-examples#run-flow).
 :::
 
+### 
+
+After ensuring the `/run` endpoint is serving your flow, 
 ## Deploy to Docker Hub and Kubernetes
 
 For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
