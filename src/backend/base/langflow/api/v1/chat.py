@@ -58,7 +58,7 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.job_queue.service import JobQueueService
+from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -231,6 +231,9 @@ async def cancel_build(
         logger.error(f"Failed to cancel flow build for job_id {job_id} (CancelledError caught)")
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
     except ValueError as exc:
+        # Job not found
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except JobQueueNotFoundError as exc:
         # Job not found
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except Exception as exc:
