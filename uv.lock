@@ -4445,7 +4445,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.3.0"
+version = "1.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "ag2" },
@@ -4801,7 +4801,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
