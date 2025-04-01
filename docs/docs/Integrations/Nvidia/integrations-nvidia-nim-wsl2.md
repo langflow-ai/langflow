@@ -24,7 +24,7 @@ To connect the NIM you've deployed with Langflow, add the **NVIDIA** model compo
 
 1. Create a [basic prompting flow](/get-started-quickstart).
 2. Replace the **OpenAI** model component with the **NVIDIA** component.
-3. In the **NVIDIA** component's **Base URL** field, add the URL where your NIM is accessible. If you followed your model's [deployment instructions](https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct/deploy?environment=wsl2.md), the value is `http://0.0.0.0:8000/v1`.
+3. In the **NVIDIA** component's **Base URL** field, add the URL where your NIM is accessible. If you followed your model's [deployment instructions](https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct/deploy?environment=wsl2.md), the value is `http://localhost:8000/v1`.
 4. In the **NVIDIA** component's **NVIDIA API Key** field, add your NVIDIA API Key.
 5. Select your model from the **Model Name** dropdown.
 6. Open the **Playground** and chat with your **NIM** model.
