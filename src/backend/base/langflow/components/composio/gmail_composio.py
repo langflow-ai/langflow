@@ -399,7 +399,6 @@ class ComposioGmailAPIComponent(LCToolComponent):
             if field_value:
                 build_config["action"]["show"] = False
 
-
                 for field in self._all_fields:
                     build_config[field]["show"] = False
 
@@ -413,8 +412,7 @@ class ComposioGmailAPIComponent(LCToolComponent):
         if hasattr(self, "api_key") and self.api_key != "":
             # Update options format for SortableListInput
             build_config["action"]["options"] = [
-                {"name": self.sanitize_action_name(action)}
-                for action in list(self._actions_data.keys())
+                {"name": self.sanitize_action_name(action)} for action in list(self._actions_data.keys())
             ]
 
             try:
