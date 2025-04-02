@@ -4,6 +4,7 @@ from typing import Any
 
 from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
+from composio.exceptions import ApiKeyError
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
 
@@ -43,13 +44,14 @@ class ComposioBaseComponent(Component):
         AuthInput(
             name="auth_link",
             value="",
+            auth_tooltip="Please insert a valid Composio API Key.",
         ),
         SortableListInput(
             name="action",
             display_name="Action",
             placeholder="Select action",
             options=[],
-            value="",
+            value="disabled",
             info="Select action to pass to the agent",
             helper_text="Please connect before selecting actions.",
             helper_text_metadata={"icon": "OctagonAlert", "variant": "destructive"},
@@ -169,12 +171,10 @@ class ComposioBaseComponent(Component):
             self.show_hide_fields(build_config, field_value)
             return build_config
         if field_name == "api_key" and len(field_value) == 0:
-            build_config["auth_link"]["value"] = "error"
-            build_config["auth_link"]["auth_tooltip"] = (
-                "Please provide a valid Composio API Key in the component settings"
-            )
+            build_config["auth_link"]["value"] = ""
+            build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
             build_config["action"]["options"] = []
-            build_config["action"]["helper_text"] = "Please provide a valid Composio API Key in the component settings"
+            build_config["action"]["helper_text"] = "Please connect before selecting actions."
             build_config["action"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
             return build_config
         if not hasattr(self, "api_key") or not self.api_key:
@@ -194,17 +194,31 @@ class ComposioBaseComponent(Component):
             try:
                 entity.get_connection(app=self.app_name)
                 build_config["auth_link"]["value"] = "validated"
-                build_config["auth_link"]["auth_tooltip"] = "Connected"
+                build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["action"]["helper_text"] = None
                 build_config["action"]["helper_text_metadata"] = {}
             except NoItemsFound:
                 auth_scheme = self._get_auth_scheme(self.app_name)
                 if auth_scheme and auth_scheme.auth_mode == "OAUTH2":
-                    build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
+                    try:
+                        build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
+                        build_config["auth_link"]["auth_tooltip"] = "Connect"
+                    except Exception as e:
+                        build_config["auth_link"]["value"] = "disabled"
+                        build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
+                        logger.error(f"Error checking auth status: {e}")
 
         except (ValueError, ConnectionError) as e:
             build_config["auth_link"]["value"] = "error"
             build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
+            logger.error(f"Error checking auth status: {e}")
+        except ApiKeyError as e:
+            build_config["auth_link"]["value"] = ""
+            build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
+            build_config["action"]["options"] = []
+            build_config["action"]["value"] = ""
+            build_config["action"]["helper_text"] = "Please connect before selecting actions."
+            build_config["action"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
             logger.error(f"Error checking auth status: {e}")
 
         # Handle disconnection
