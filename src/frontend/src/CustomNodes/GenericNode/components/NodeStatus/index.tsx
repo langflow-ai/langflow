@@ -1,14 +1,17 @@
-import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
-import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
-import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
-import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus, EventDeliveryType } from "@/constants/enums";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
+import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
+import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
+import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
+import useAlertStore from "@/stores/alertStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
@@ -57,6 +60,16 @@ export default function NodeStatus({
   const [validationString, setValidationString] = useState<string>("");
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [link, setLink] = useState("");
+  const [isPolling, setIsPolling] = useState(false);
+
+  const nodeAuth = Object.values(data.node?.template ?? {}).find(
+    (value) => value.type === "auth",
+  );
+
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const conditionSuccess =
     buildStatus === BuildStatus.BUILT ||
@@ -71,9 +84,95 @@ export default function NodeStatus({
   const setNode = useFlowStore((state) => state.setNode);
   const version = useDarkStore((state) => state.version);
   const config = useGetConfig();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const postTemplateValue = usePostTemplateValue({
+    parameterId: nodeAuth?.name ?? "auth",
+    nodeId: nodeId,
+    node: data.node,
+  });
+
   const shouldStreamEvents = () => {
-    // Get from useGetConfig store
     return config.data?.event_delivery === EventDeliveryType.STREAMING;
+  };
+
+  // Initialize connection state from node auth
+  useEffect(() => {
+    const connectionLink = nodeAuth?.value;
+
+    if (connectionLink) {
+      setLink(connectionLink);
+      if (connectionLink === "validated") {
+        setIsAuthenticated(true);
+      }
+    }
+  }, [data.node?.template]);
+
+  // Start polling when connection is initiated
+  const startPolling = () => {
+    window.open(link, "_blank");
+    stopPolling();
+
+    setLink("loading");
+    setIsPolling(true);
+
+    pollingInterval.current = setInterval(() => {
+      mutateTemplate(
+        { validate: data.node?.template?.auth?.value || "" },
+        data.node,
+        (newNode) => {
+          setNode(nodeId, (old) => ({
+            ...old,
+            data: { ...old.data, node: newNode },
+          }));
+        },
+        postTemplateValue,
+        setErrorData,
+        nodeAuth?.name ?? "auth_link",
+        () => {
+          if (link === "validated") {
+            stopPolling();
+            setIsAuthenticated(true);
+          }
+        },
+        data.node.tool_mode,
+      );
+    }, 3000);
+
+    pollingTimeout.current = setTimeout(() => {
+      stopPolling(link !== "");
+    }, 9000);
+  };
+
+  const handleDisconnect = () => {
+    mutateTemplate(
+      "disconnect",
+      data.node,
+      (newNode) => {
+        setNode(nodeId, (old) => ({
+          ...old,
+          data: { ...old.data, node: newNode },
+        }));
+      },
+      postTemplateValue,
+      setErrorData,
+      nodeAuth?.name ?? "auth_link",
+      () => {
+        setIsAuthenticated(false);
+        setLink("");
+      },
+      data.node.tool_mode,
+    );
+  };
+
+  const stopPolling = (resetLink = false) => {
+    setIsPolling(false);
+    if (resetLink) {
+      setLink("");
+    }
+
+    if (pollingInterval.current) clearInterval(pollingInterval.current);
+    if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
   };
 
   function handlePlayWShortcut() {
@@ -107,6 +206,7 @@ export default function NodeStatus({
         : "";
     return cn(frozen ? frozenClass : className, updateClass);
   };
+
   const getNodeBorderClassName = (
     selected: boolean | undefined,
     buildStatus: BuildStatus | undefined,
@@ -181,7 +281,6 @@ export default function NodeStatus({
         : "Loader2"
       : "Play";
 
-  // Keep the existing icon classes
   const iconClasses = cn(
     "play-button-icon",
     isHovered ? "text-foreground" : "text-placeholder-foreground",
@@ -198,7 +297,7 @@ export default function NodeStatus({
 
   return showNode ? (
     <>
-      <div className="flex flex-shrink-0 items-center">
+      <div className="flex flex-shrink-0 items-center gap-1">
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
             styleClasses={cn(
@@ -242,6 +341,67 @@ export default function NodeStatus({
             </Badge>
           )}
         </div>
+        {nodeAuth && (
+          <ShadTooltip
+            content={link === "error" ? "Connection error" : "Connect"}
+          >
+            <div>
+              {showNode && (
+                <Button
+                  unstyled
+                  disabled={link === "" || link === "error"}
+                  className={cn(
+                    "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
+                    isAuthenticated &&
+                      "border-accent-emerald-foreground hover:border-accent-amber-foreground",
+                  )}
+                  onClick={() => {
+                    if (link === "error") return;
+                    if (isAuthenticated) {
+                      handleDisconnect();
+                    } else {
+                      startPolling();
+                    }
+                  }}
+                  data-testid={`button_connect_` + display_name.toLowerCase()}
+                >
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <IconComponent
+                      name={
+                        isAuthenticated
+                          ? "Link"
+                          : link === "loading"
+                            ? "Loader2"
+                            : "AlertTriangle"
+                      }
+                      className={cn(
+                        "h-3 w-3 transition-opacity",
+                        link === "error"
+                          ? "text-destructive"
+                          : isAuthenticated
+                            ? "text-accent-emerald-foreground"
+                            : "text-accent-amber-foreground",
+                        link === "loading" && "animate-spin",
+                        isAuthenticated && "group-hover:opacity-0",
+                      )}
+                      strokeWidth={ICON_STROKE_WIDTH}
+                    />
+                  </div>
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <IconComponent
+                      name={"Unlink"}
+                      className={cn(
+                        "h-3 w-3 text-accent-amber-foreground opacity-0 transition-opacity",
+                        isAuthenticated && "group-hover:opacity-100",
+                      )}
+                      strokeWidth={ICON_STROKE_WIDTH}
+                    />
+                  </div>
+                </Button>
+              )}
+            </div>
+          </ShadTooltip>
+        )}
         <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}
