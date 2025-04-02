@@ -4,7 +4,7 @@ from typing import Any
 
 from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
-from composio_langchain import Action, ComposioToolSet
+from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
 
 from langflow.custom import Component
@@ -88,18 +88,18 @@ class ComposioBaseComponent(Component):
         Output(name="data", display_name="Data", method="as_data"),
         Output(name="message", display_name="Message", method="as_message"),
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
-
     ]
 
-    def as_message(self)->Message:
+    def as_message(self) -> Message:
         result = self.execute_action()
         return Message(text=str(result))
 
-    def as_dataframe(self)->DataFrame:
+    def as_dataframe(self) -> DataFrame:
         result = DataFrame(self.execute_action())
         self.status = result
         return result
-    def as_data(self)->Data:
+
+    def as_data(self) -> Data:
         result = self.execute_action()
         return Data(results=result)
 
