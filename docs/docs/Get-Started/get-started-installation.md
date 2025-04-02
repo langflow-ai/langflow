@@ -3,11 +3,10 @@ title: Install Langflow
 slug: /get-started-installation
 ---
 
-You can deploy Langflow either locally or as a hosted service with [**Datastax Langflow**](#datastax-langflow).
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-## Install Langflow locally
-
-Install Langflow locally with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
+Install and run Langflow with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
 
 ### Prerequisites
 
@@ -15,71 +14,118 @@ Install Langflow locally with [uv (recommended)](https://docs.astral.sh/uv/getti
 - [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
 - Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
 
-### Install Langflow with pip or pipx
+### Install and run Langflow
 
-Install Langflow with uv:
+1. To install Langflow, use one of the following commands:
+
+<Tabs>
+<TabItem value="uv" label="uv" default>
 
 ```bash
 uv pip install langflow
 ```
 
-Install Langflow with pip:
+</TabItem>
+<TabItem value="pip" label="pip" default>
 
 ```bash
-python -m pip install langflow
+pip install langflow
 ```
 
-Install Langflow with pipx using the Python 3.10 executable:
+</TabItem>
+
+<TabItem value="pipx" label="pipx" default>
 
 ```bash
+# Install Langflow with pipx using the Python 3.10 executable
 pipx install langflow --python python3.10
 ```
 
-## Run Langflow
+</TabItem>
+</Tabs>
 
-1. To run Langflow with uv, enter the following command.
+
+2. To run Langflow, use one of the following commands:
+
+<Tabs>
+    <TabItem value="uv" label="uv" default>
 
 ```bash
 uv run langflow run
 ```
 
-2. To run Langflow with pip, enter the following command.
+</TabItem>
+<TabItem value="Python" label="Python" default>
 
 ```bash
 python -m langflow run
 ```
 
-3. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
+</TabItem>
+</Tabs>
 
-Now that Langflow is running, follow the [Quickstart](/get-started-quickstart) to create your first flow.
+3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+
+After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
 ## Manage Langflow versions
 
-To upgrade Langflow to the latest version with uv, use the uv pip upgrade command.
+* To upgrade Langflow to the latest version, use one of the following commands:
+
+<Tabs>
+<TabItem value="uv" label="uv" default>
 
 ```bash
 uv pip install langflow -U
 ```
 
-To upgrade Langflow to the latest version, use the pip upgrade command.
+</TabItem>
+<TabItem value="pip" label="pip" default>
 
 ```bash
-python -m pip install langflow -U
+pip install langflow -U
 ```
 
-To install a specific version of the Langflow package, add the required version to the command.
+</TabItem>
+</Tabs>
+
+* To install a specific version of the Langflow package, add the required version to the command.
+<Tabs>
+<TabItem value="uv" label="uv" default>
 
 ```bash
-python -m pip install langflow==1.1
+uv pip install langflow==1.3.0
 ```
 
-To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
+</TabItem>
+<TabItem value="pip" label="pip" default>
 
 ```bash
-python -m pip install langflow --force-reinstall
+pip install langflow==1.3.0
 ```
 
-## DataStax Langflow {#datastax-langflow}
+</TabItem>
+</Tabs>
+
+* To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
+<Tabs>
+<TabItem value="uv" label="uv" default>
+
+```bash
+uv pip install langflow --force-reinstall
+```
+
+</TabItem>
+<TabItem value="pip" label="pip" default>
+
+```bash
+pip install langflow --force-reinstall
+```
+
+</TabItem>
+</Tabs>
+
+## Install DataStax Langflow {#datastax-langflow}
 
 **DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
 
