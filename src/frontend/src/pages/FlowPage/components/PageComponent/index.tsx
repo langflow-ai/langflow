@@ -573,6 +573,7 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             selectionMode={SelectionMode.Partial}
             deleteKeyCode={[]}
+            multiSelectionKeyCode={["Shift"]}
             fitView={isEmptyFlow.current ? false : true}
             fitViewOptions={{
               minZoom: 0.2,
