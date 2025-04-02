@@ -103,12 +103,14 @@ class ComposioBaseComponent(Component):
 
     def desanitize_action_name(self, action_name: str) -> str:
         """Convert display name to action key using lookup."""
-        self._build_action_maps()
+        # Build maps if they are not built yet.
+        if not self._display_to_key_map:
+            self._build_action_maps()
         return self._display_to_key_map.get(action_name, action_name)
 
     def _get_action_fields(self, action_key: str) -> set:
         """Get fields for an action."""
-        return set(self._actions_data[action_key]["action_fields"]) if action_key in self._actions_data else set()
+        return set(self._actions_data.get(action_key, {}).get("action_fields", []))
 
     def _build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper."""
@@ -127,30 +129,26 @@ class ComposioBaseComponent(Component):
         """Optimized field visibility updates by only modifying show values."""
         if not field_value:
             for field in self._all_fields:
-                build_config[field]["show"] = False
-                if field in self._bool_variables:
-                    build_config[field]["value"] = False
-                else:
-                    build_config[field]["value"] = ""
+                field_config = build_config[field]
+                field_config["show"] = False
+                field_config["value"] = False if field in self._bool_variables else ""
             return
 
-        action_key = None
-        if isinstance(field_value, list) and field_value:
-            action_key = self.desanitize_action_name(field_value[0]["name"])
-        else:
-            action_key = field_value
+        action_key = (
+            self.desanitize_action_name(field_value[0]["name"])
+            if isinstance(field_value, list) and field_value
+            else field_value
+        )
 
         fields_to_show = self._get_action_fields(action_key)
 
         for field in self._all_fields:
             should_show = field in fields_to_show
-            if build_config[field]["show"] != should_show:
-                build_config[field]["show"] = should_show
+            field_config = build_config[field]
+            if field_config["show"] != should_show:
+                field_config["show"] = should_show
                 if not should_show:
-                    if field in self._bool_variables:
-                        build_config[field]["value"] = False
-                    else:
-                        build_config[field]["value"] = ""
+                    field_config["value"] = False if field in self._bool_variables else ""
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Optimized build config updates."""
