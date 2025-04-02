@@ -67,10 +67,8 @@ export default function IOModal({
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
-  setPlaygroundPage(!!playgroundPage);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
