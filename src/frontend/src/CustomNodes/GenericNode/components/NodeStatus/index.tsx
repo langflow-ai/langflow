@@ -68,6 +68,8 @@ export default function NodeStatus({
     (value) => value.type === "auth",
   );
 
+  const connectionLink = nodeAuth?.value;
+
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -98,13 +100,11 @@ export default function NodeStatus({
 
   // Initialize connection state from node auth
   useEffect(() => {
-    const connectionLink = nodeAuth?.value;
-
-    if (connectionLink) {
-      setLink(connectionLink);
-      if (connectionLink === "validated") {
-        setIsAuthenticated(true);
-      }
+    setLink(connectionLink);
+    if (connectionLink === "validated") {
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
     }
   }, [data.node?.template]);
 
@@ -344,9 +344,7 @@ export default function NodeStatus({
           )}
         </div>
         {nodeAuth && (
-          <ShadTooltip
-            content={link === "error" ? "Connection error" : "Connect"}
-          >
+          <ShadTooltip content={nodeAuth.auth_tooltip || "Connect"}>
             <div>
               {showNode && (
                 <Button
@@ -354,8 +352,11 @@ export default function NodeStatus({
                   disabled={link === "" || link === "error"}
                   className={cn(
                     "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
-                    isAuthenticated &&
-                      "border-accent-emerald-foreground hover:border-accent-amber-foreground",
+                    link === "error"
+                      ? "border-destructive text-destructive"
+                      : isAuthenticated &&
+                          "border-accent-emerald-foreground hover:border-accent-amber-foreground",
+                    link === "" && "cursor-not-allowed opacity-50",
                   )}
                   onClick={() => {
                     if (link === "error") return;
