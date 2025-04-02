@@ -198,6 +198,27 @@ const config = {
             from: "/components-rag",
           },
           {
+            to: "/configuration-authentication",
+            from: [
+              "/configuration-security-best-practices",
+              "/Configuration/configuration-security-best-practices"
+            ],
+          },
+          {
+            to: "/configuration-environment-variables",
+            from: [
+              "/configuration-auto-saving",
+              "/Configuration/configuration-auto-saving"
+            ],
+          },
+          {
+            to: "/configuration-environment-variables",
+            from: [
+              "/configuration-backend-only",
+              "/Configuration/configuration-backend-only"
+            ],
+          },
+          {
             to: "/concepts-publish",
             from: [
               "/concepts-api",
