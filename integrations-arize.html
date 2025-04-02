@@ -22,8 +22,8 @@
 
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap"><link rel="stylesheet" href="/assets/css/styles.b2eb940a.css">
-<script src="/assets/js/runtime~main.9f9ac8bf.js" defer="defer"></script>
-<script src="/assets/js/main.4faf5c99.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.c9dac6dc.js" defer="defer"></script>
+<script src="/assets/js/main.e2810d45.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NK5M4ZT8" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -40,27 +40,42 @@
           </div>
         </a>
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Integrations</span><meta itemprop="position" content="1"></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">Arize</span><meta itemprop="position" content="2"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Integrate Arize with Langflow</h1></header><style>[data-ch-theme="github-dark"] {  --ch-t-colorScheme: dark;--ch-t-foreground: #c9d1d9;--ch-t-background: #0d1117;--ch-t-lighter-inlineBackground: #0d1117e6;--ch-t-editor-background: #0d1117;--ch-t-editor-foreground: #c9d1d9;--ch-t-editor-lineHighlightBackground: #6e76811a;--ch-t-editor-rangeHighlightBackground: #ffffff0b;--ch-t-editor-infoForeground: #3794FF;--ch-t-editor-selectionBackground: #264F78;--ch-t-focusBorder: #1f6feb;--ch-t-tab-activeBackground: #0d1117;--ch-t-tab-activeForeground: #c9d1d9;--ch-t-tab-inactiveBackground: #010409;--ch-t-tab-inactiveForeground: #8b949e;--ch-t-tab-border: #30363d;--ch-t-tab-activeBorder: #0d1117;--ch-t-editorGroup-border: #30363d;--ch-t-editorGroupHeader-tabsBackground: #010409;--ch-t-editorLineNumber-foreground: #6e7681;--ch-t-input-background: #0d1117;--ch-t-input-foreground: #c9d1d9;--ch-t-input-border: #30363d;--ch-t-icon-foreground: #8b949e;--ch-t-sideBar-background: #010409;--ch-t-sideBar-foreground: #c9d1d9;--ch-t-sideBar-border: #30363d;--ch-t-list-activeSelectionBackground: #6e768166;--ch-t-list-activeSelectionForeground: #c9d1d9;--ch-t-list-hoverBackground: #6e76811a;--ch-t-list-hoverForeground: #c9d1d9; }</style>
+<!-- -->
 <p>Arize is a tool built on <a href="https://opentelemetry.io/" target="_blank" rel="noopener noreferrer">OpenTelemetry</a> and <a href="https://docs.arize.com/phoenix/reference/open-inference" target="_blank" rel="noopener noreferrer">OpenInference</a> for monitoring and optimizing LLM applications.</p>
-<p>To add tracing to your Langflow application, add the <code>ARIZE_SPACE_ID</code> and <code>ARIZE_API_KEY</code> environment variables to your Langflow application.</p>
+<p>To add tracing to your Langflow application, add Arize environment variables to your Langflow application.
+Arize begins monitoring and collecting telemetry data from your LLM applications automatically.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
-<li>If you are using the <a href="https://docs.arize.com/arize" target="_blank" rel="noopener noreferrer">standard Arize platform</a>, you need an <strong>Arize Space ID</strong> and <strong>API API Key</strong>.</li>
-<li>If you are using the open-source <a href="https://docs.arize.com/phoenix" target="_blank" rel="noopener noreferrer">Arize Phoenix platform</a>, you need an Arize Phoenix API key and a project name.</li>
+<li>If you are using the <a href="https://docs.arize.com/arize" target="_blank" rel="noopener noreferrer">standard Arize platform</a>, you need an <strong>Arize Space ID</strong> and <strong>Arize API Key</strong>.</li>
+<li>If you are using the open-source <a href="https://docs.arize.com/phoenix" target="_blank" rel="noopener noreferrer">Arize Phoenix platform</a>, you need an <strong>Arize Phoenix API key</strong>.</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="connect-arize-to-langflow">Connect Arize to Langflow<a href="#connect-arize-to-langflow" class="hash-link" aria-label="Direct link to Connect Arize to Langflow" title="Direct link to Connect Arize to Langflow">​</a></h2>
-<ol>
-<li>To retrieve your <strong>Arize Space ID</strong> and <strong>API API Key</strong>, navigate to the <a href="https://app.arize.com/" target="_blank" rel="noopener noreferrer">Arize dashboard</a>.</li>
+<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Arize Platform</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Arize Phoenix</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
+<li>To retrieve your <strong>Arize Space ID</strong> and <strong>Arize API Key</strong>, navigate to the <a href="https://app.arize.com/" target="_blank" rel="noopener noreferrer">Arize dashboard</a>.</li>
 <li>Click <strong>Settings</strong>, and then click <strong>Space Settings and Keys</strong>.</li>
 <li>Copy the <strong>SpaceID</strong> and <strong>API Key (Ingestion Service Account Key)</strong> values.</li>
 <li>Create a <code>.env</code> file in the root of your Langflow application.</li>
 <li>Add the <code>ARIZE_SPACE_ID</code> and <code>ARIZE_API_KEY</code> environment variables to your Langflow application.
-You do not need to specify the <strong>Arize Project</strong> name if you&#x27;re using the standard Arize platform. The <strong>Project</strong> name in Arize is the same as the Langflow <strong>Flow</strong> name.</li>
-</ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>export ARIZE_SPACE_ID=&lt;your-arize-space-id&gt;</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>export ARIZE_API_KEY=&lt;your-arize-api-key&gt;</span></div></div><br></code></div></div>
-<ol start="6">
+You do not need to specify the <strong>Arize Project</strong> name if you&#x27;re using the standard Arize platform.
+Replace the following:</li>
+</ol><ul>
+<li>YOUR_ARIZE_SPACE_ID: the <strong>SpaceID</strong> value copied from Arize</li>
+<li>YOUR_ARIZE_API_KEY: the <strong>API Key</strong> value copied from Arize</li>
+</ul><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ARIZE_SPACE_ID=YOUR_ARIZE_SPACE_ID</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ARIZE_API_KEY=YOUR_ARIZE_API_KEY</span></div></div><br></code></div></div><ol start="6">
+<li>Save the <code>.env</code> file.</li>
 <li>Start your Langflow application with the values from the <code>.env</code> file.</li>
-</ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run --env-file .env</span></div></div><br></code></div></div>
+</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run --env-file .env</span></div></div><br></code></div></div></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><ol>
+<li>To retrieve your <strong>Arize Phoenix API key</strong>, navigate to the <a href="https://app.phoenix.arize.com/" target="_blank" rel="noopener noreferrer">Arize dashboard</a>.</li>
+<li>Click <strong>API Key</strong>.</li>
+<li>Copy the <strong>API Key</strong> value.</li>
+<li>Create a <code>.env</code> file in the root of your Langflow application.</li>
+<li>Add the <code>PHOENIX_API_KEY</code> environment variable to your application instead.
+Replace <code>YOUR_PHOENIX_API_KEY</code> with the Arize Phoenix API key that you copied from the Arize Phoenix platform.</li>
+</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>PHOENIX_API_KEY=YOUR_PHOENIX_API_KEY</span></div></div><br></code></div></div><ol start="6">
+<li>Save the <code>.env</code> file.</li>
+<li>Start your Langflow application with the values from the <code>.env</code> file.</li>
+</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run --env-file .env</span></div></div><br></code></div></div></div></div></div>
+<p>For more information, see the <a href="https://docs.arize.com/phoenix/tracing/integrations-tracing/langflow#go-to-arize-phoenix" target="_blank" rel="noopener noreferrer">Arize documentation</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-a-flow-and-view-metrics-in-arize">Run a flow and view metrics in Arize<a href="#run-a-flow-and-view-metrics-in-arize" class="hash-link" aria-label="Direct link to Run a flow and view metrics in Arize" title="Direct link to Run a flow and view metrics in Arize">​</a></h2>
 <ol>
 <li>In Langflow, select the <a href="/starter-projects-simple-agent">Simple agent</a> starter project.</li>
