@@ -3,7 +3,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
 from astrapy import DataAPIClient, Database
-from astrapy.info import CollectionDescriptor
+from astrapy.info import CollectionDescriptor, CollectionLexicalOptions, CollectionRerankOptions
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
 
@@ -192,7 +192,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="search_method",
             display_name="Search Method",
             info="Method to use for searching the vector store.",
-            options=["Vector Search", "Hybrid Search"],
+            options=["Hybrid Search", "Vector Search"],
             value="Hybrid Search",
             advanced=True,
             real_time_refresh=True,
@@ -379,6 +379,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
+        search_method: str = "Hybrid Search",
     ):
         # Build vectorize options, if needed
         vectorize_options = None
@@ -396,15 +397,26 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = "Collection name is required to create a new collection."
             raise ValueError(msg)
 
-        _AstraDBCollectionEnvironment(
-            new_collection_name,
-            token=token,
-            api_endpoint=api_endpoint,
-            keyspace=keyspace,
-            environment=environment or "prod",
-            embedding_dimension=dimension,
-            collection_vector_service_options=vectorize_options,
-        )
+        # Enable the reranker and lexical options if hybrid search is selected
+        rerank_bool = search_method == "Hybrid Search"
+
+        # TODO: ONLY pass rerank and lexical if enviroment is "dev" change this soon
+        base_args = {
+            "collection_name": new_collection_name,
+            "token": token,
+            "api_endpoint": api_endpoint,
+            "keyspace": keyspace,
+            "environment": environment or "prod",
+            "embedding_dimension": dimension,
+            "collection_vector_service_options": vectorize_options,
+        }
+
+        # Add optional arguments only if environment is "dev"
+        if environment == "dev":
+            base_args["collection_rerank"] = CollectionRerankOptions(enabled=rerank_bool)
+            base_args["collection_lexical"] = CollectionLexicalOptions(enabled=rerank_bool)
+
+        _AstraDBCollectionEnvironment(**base_args)
 
     @classmethod
     def get_database_list_static(cls, token: str, environment: str | None = None):
@@ -878,6 +890,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 dimension=field_value.get("04_dimension") if embedding_provider == "Bring your own" else None,
                 embedding_generation_provider=embedding_provider,
                 embedding_generation_model=field_value.get("03_embedding_generation_model"),
+                search_method=build_config["search_method"]["value"],
             )
         except Exception as e:
             msg = f"Error creating collection: {e}"
