@@ -18,6 +18,8 @@ from langflow.inputs import (
 )
 from langflow.io import Output
 from langflow.logging import logger
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 
@@ -84,8 +86,23 @@ class ComposioBaseComponent(Component):
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
     outputs = [
-        Output(name="text", display_name="Response", method="execute_action"),
+        Output(name="data", display_name="Data", method="as_data"),
+        Output(name="message", display_name="Message", method="as_message"),
+        Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
+
     ]
+
+    def as_message(self)->Message:
+        result = self.execute_action()
+        return Message(text=str(result))
+
+    def as_dataframe(self)->DataFrame:
+        result = DataFrame(self.execute_action())
+        self.status = result
+        return result
+    def as_data(self)->Data:
+        result = self.execute_action()
+        return Data(results=result)
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""
@@ -238,42 +255,5 @@ class ComposioBaseComponent(Component):
         return list(self._default_tools.union(action["name"].replace(" ", "-") for action in self.action))
 
     @abstractmethod
-    def execute_action(self) -> Message:
+    def execute_action(self) -> dict:
         """Execute action and return response as Message."""
-        toolset = self._build_wrapper()
-
-        try:
-            self._build_action_maps()
-            action_key = self.action
-            if action_key not in self._actions_data:
-                action_key = self._display_to_key_map.get(action_key, action_key)
-
-            enum_name = getattr(Action, action_key)
-            params = {}
-            if action_key in self._actions_data:
-                for field in self._actions_data[action_key]["action_fields"]:
-                    value = getattr(self, field)
-
-                    if value is None or value == "":
-                        continue
-
-                    if field in ["cc", "bcc", "label_ids"] and value:
-                        value = [item.strip() for item in value.split(",")]
-
-                    if field in self._bool_variables:
-                        value = bool(value)
-
-                    params[field] = value
-
-            result = toolset.execute_action(
-                action=enum_name,
-                params=params,
-            )
-
-            self.status = result
-            return Message(text=str(result))
-        except Exception as e:
-            logger.error(f"Error executing action: {e}")
-            display_name = self.sanitize_action_name(self.action)
-            msg = f"Failed to execute {display_name}: {e!s}"
-            raise ValueError(msg) from e
