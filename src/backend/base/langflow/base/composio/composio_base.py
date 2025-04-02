@@ -56,7 +56,6 @@ class ComposioBaseComponent(Component):
             show=True,
             real_time_refresh=True,
             required=True,
-            input_types=["None"],
             limit=1,
         ),
     ]
