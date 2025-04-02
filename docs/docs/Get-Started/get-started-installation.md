@@ -26,7 +26,7 @@ uv pip install langflow
 ```
 
 </TabItem>
-<TabItem value="pip" label="pip" default>
+<TabItem value="pip" label="pip">
 
 ```bash
 pip install langflow
@@ -34,7 +34,7 @@ pip install langflow
 
 </TabItem>
 
-<TabItem value="pipx" label="pipx" default>
+<TabItem value="pipx" label="pipx">
 
 ```bash
 # Install Langflow with pipx using the Python 3.10 executable
@@ -48,14 +48,14 @@ pipx install langflow --python python3.10
 2. To run Langflow, use one of the following commands:
 
 <Tabs>
-    <TabItem value="uv" label="uv" default>
+    <TabItem value="uv" label="uv">
 
 ```bash
 uv run langflow run
 ```
 
 </TabItem>
-<TabItem value="Python" label="Python" default>
+<TabItem value="Python" label="Python">
 
 ```bash
 python -m langflow run
@@ -80,7 +80,7 @@ uv pip install langflow -U
 ```
 
 </TabItem>
-<TabItem value="pip" label="pip" default>
+<TabItem value="pip" label="pip">
 
 ```bash
 pip install langflow -U
@@ -98,7 +98,7 @@ uv pip install langflow==1.3.0
 ```
 
 </TabItem>
-<TabItem value="pip" label="pip" default>
+<TabItem value="pip" label="pip">
 
 ```bash
 pip install langflow==1.3.0
@@ -116,7 +116,7 @@ uv pip install langflow --force-reinstall
 ```
 
 </TabItem>
-<TabItem value="pip" label="pip" default>
+<TabItem value="pip" label="pip">
 
 ```bash
 pip install langflow --force-reinstall
@@ -133,7 +133,7 @@ pip install langflow --force-reinstall
 
 This is a list of possible issues that you may encounter when installing and running Langflow.
 
-### No `langflow.__main__` module
+* No `langflow.__main__` module
 
 When you try to run Langflow with the command `langflow run`, you encounter the following error:
 
@@ -145,7 +145,7 @@ When you try to run Langflow with the command `langflow run`, you encounter the 
 2. If that doesn't work, reinstall the latest Langflow version with `python -m pip install langflow -U`.
 3. If that doesn't work, reinstall Langflow and its dependencies with `python -m pip install langflow --pre -U --force-reinstall`.
 
-### Langflow runTraceback
+* Langflow runTraceback
 
 When you try to run Langflow using the command `langflow run`, you encounter the following error:
 
@@ -158,7 +158,7 @@ There are two possible reasons for this error:
 1. You've installed Langflow using `pip install langflow` but you already had a previous version of Langflow installed in your system. In this case, you might be running the wrong executable. To solve this issue, run the correct executable by running `python -m langflow run` instead of `langflow run`. If that doesn't work, try uninstalling and reinstalling Langflow with `python -m pip install langflow --pre -U`.
 2. Some version conflicts might have occurred during the installation process. Run `python -m pip install langflow --pre -U --force-reinstall` to reinstall Langflow and its dependencies.
 
-### Something went wrong running migrations
+* Something went wrong running migrations
 
 ```bash
 > Something went wrong running migrations. Please, run 'langflow migration --fix'
@@ -175,7 +175,7 @@ This error can occur during Langflow upgrades when the new version can't overrid
 
 If you wish to retain your files, back them up before clearing the folder.
 
-### Langflow installation freezes at pip dependency resolution
+* Langflow installation freezes at pip dependency resolution
 
 Installing Langflow with `pip install langflow` slowly fails with this error message:
 
