@@ -457,7 +457,7 @@ export function VoiceAssistant({
                     variant={"outlineAmber"}
                     size={"icon"}
                     data-testid="voice-assistant-settings-icon-without-openai"
-                    className="group h-8 w-8 hover:bg-accent-amber"
+                    className="h-8 w-8"
                   >
                     <IconComponent
                       name="Key"
