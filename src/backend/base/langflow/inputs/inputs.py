@@ -488,6 +488,7 @@ class AuthInput(BaseInputMixin, MetadataTraceMixin):
     """
 
     field_type: SerializableFieldTypes = FieldTypes.AUTH
+    show: bool = False
 
 
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
@@ -603,6 +604,7 @@ class DefaultPromptField(Input):
 
 InputTypes: TypeAlias = (
     Input
+    | AuthInput
     | DefaultPromptField
     | BoolInput
     | DataInput
