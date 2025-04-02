@@ -29,7 +29,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, session_scope
 from loguru import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
@@ -655,13 +655,13 @@ async def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
 
 
 @pytest.fixture(name="starter_project")
-async def get_starter_project(active_user):
+async def get_starter_project(client, active_user):  # noqa: ARG001
     # once the client is created, we can get the starter project
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         stmt = (
             select(Flow)
             .where(Flow.folder.has(Folder.name == STARTER_FOLDER_NAME))
-            .where(Flow.name == "Basic Prompting (Hello, World)")
+            .where(Flow.name == "Basic Prompting")
         )
         flow = (await session.exec(stmt)).first()
         if not flow:
@@ -669,7 +669,17 @@ async def get_starter_project(active_user):
             raise ValueError(msg)
 
         # ensure openai api key is set
-        get_openai_api_key()
+        openai_api_key = get_openai_api_key()
+        data_as_json = json.dumps(flow.data)
+        data_as_json = data_as_json.replace("OPENAI_API_KEY", openai_api_key)
+        # also replace `"load_from_db": true` with `"load_from_db": false`
+        if '"load_from_db": true' in data_as_json:
+            data_as_json = data_as_json.replace('"load_from_db": true', '"load_from_db": false')
+        if '"load_from_db": true' in data_as_json:
+            msg = "load_from_db should be false"
+            raise ValueError(msg)
+        flow.data = json.loads(data_as_json)
+
         new_flow_create = FlowCreate(
             name=flow.name,
             description=flow.description,
