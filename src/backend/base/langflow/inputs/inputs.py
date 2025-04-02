@@ -477,6 +477,19 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
 
 
+class AuthInput(BaseInputMixin, MetadataTraceMixin):
+    """Represents an authentication input field.
+
+    This class represents an authentication input field and provides functionality for handling authentication values.
+    It inherits from the `BaseInputMixin` and `AuthMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.AUTH.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.AUTH
+
+
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a list selection input field.
 
@@ -484,7 +497,7 @@ class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, T
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
     Attributes:
-        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BUTTON.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SORTABLE_LIST.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
