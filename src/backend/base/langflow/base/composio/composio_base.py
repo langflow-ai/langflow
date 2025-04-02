@@ -4,7 +4,7 @@ from typing import Any
 
 from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
-from composio_langchain import Action, ComposioToolSet
+from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
 
 from langflow.custom import Component
@@ -73,33 +73,33 @@ class ComposioBaseComponent(Component):
             limit=1,
         ),
     ]
-    _all_fields = set()
-    _bool_variables = set()
-    _actions_data = {}
-    _default_tools = set()
-    _readonly_actions = frozenset()
-    _action_fields_cache = {}
-    _display_to_key_map = {}
-    _key_to_display_map = {}
-    _sanitized_names = {}
+    _all_fields: set[str] = set()
+    _bool_variables: set[str] = set()
+    _actions_data: dict[str, dict[str, Any]] = {}
+    _default_tools: set[str] = set()
+    _readonly_actions: frozenset[str] = frozenset()
+    _action_fields_cache: dict[str, set[str]] = {}
+    _display_to_key_map: dict[str, str] = {}
+    _key_to_display_map: dict[str, str] = {}
+    _sanitized_names: dict[str, str] = {}
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
     outputs = [
         Output(name="data", display_name="Data", method="as_data"),
         Output(name="message", display_name="Message", method="as_message"),
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
-
     ]
 
-    def as_message(self)->Message:
+    def as_message(self) -> Message:
         result = self.execute_action()
         return Message(text=str(result))
 
-    def as_dataframe(self)->DataFrame:
+    def as_dataframe(self) -> DataFrame:
         result = DataFrame(self.execute_action())
         self.status = result
         return result
-    def as_data(self)->Data:
+
+    def as_data(self) -> Data:
         result = self.execute_action()
         return Data(results=result)
 
@@ -123,8 +123,10 @@ class ComposioBaseComponent(Component):
         self._build_action_maps()
         return self._display_to_key_map.get(action_name, action_name)
 
-    def _get_action_fields(self, action_key: str) -> set:
+    def _get_action_fields(self, action_key: str | None) -> set[str]:
         """Get fields for an action."""
+        if action_key is None:
+            return set()
         return set(self._actions_data[action_key]["action_fields"]) if action_key in self._actions_data else set()
 
     def _build_wrapper(self) -> ComposioToolSet:
@@ -222,7 +224,7 @@ class ComposioBaseComponent(Component):
         toolset = self._build_wrapper()
         try:
             return toolset.get_auth_scheme_for_app(app=app_name.lower())
-        except Exception:
+        except (ValueError, ConnectionError, NoItemsFound):
             logger.exception(f"Error getting auth scheme for {app_name}")
             return None
 
@@ -232,14 +234,14 @@ class ComposioBaseComponent(Component):
 
     def configure_tools(self, toolset: ComposioToolSet) -> list[Tool]:
         tools = toolset.get_tools(actions=self._actions_data.keys())
-        return [
-            tool
-            for tool in tools
-            if not (
-                setattr(tool, "name", self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name)))
-                or setattr(tool, "tags", [tool.name])
-            )
-        ]
+        configured_tools = []
+        for tool in tools:
+            # Set the sanitized name
+            tool.name = self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
+            # Set the tags
+            tool.tags = [tool.name]
+            configured_tools.append(tool)
+        return configured_tools
 
     async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
@@ -253,5 +255,5 @@ class ComposioBaseComponent(Component):
         return list(self._default_tools.union(action["name"].replace(" ", "-") for action in self.action))
 
     @abstractmethod
-    def execute_action(self) -> dict:
+    def execute_action(self) -> list[dict]:
         """Execute action and return response as Message."""

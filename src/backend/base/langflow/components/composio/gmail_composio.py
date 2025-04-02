@@ -10,7 +10,6 @@ from langflow.inputs import (
     MessageTextInput,
 )
 from langflow.logging import logger
-from langflow.schema.message import Message
 
 
 class ComposioGmailAPIComponent(ComposioBaseComponent):
@@ -282,7 +281,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             info="Id of the attachment",
             show=False,
             required=True,
-            advanced=False
+            advanced=False,
         ),
         MessageTextInput(
             name="file_name",
@@ -290,7 +289,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             info="File name of the attachment file",
             show=False,
             required=True,
-            advanced=False
+            advanced=False,
         ),
         FileInput(
             name="attachment",
@@ -351,9 +350,9 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             result = toolset.execute_action(
                 action=enum_name,
                 params=params,
-            ).get("data",[])
-        # Assuming 'result' is the output from the executed action
-        # Retrieve the first key from the result dictionary and get its value
+            ).get("data", [])
+            # Assuming 'result' is the output from the executed action
+            # Retrieve the first key from the result dictionary and get its value
             if result:  # Check if result is not empty
                 key = next(iter(result))  # Get the first key from the dictionary
                 return result.get(key)
@@ -364,7 +363,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
             msg = f"Failed to execute {display_name}: {e!s}"
             raise ValueError(msg) from e
-
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return super().update_build_config(build_config, field_value, field_name)
