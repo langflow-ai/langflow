@@ -77,6 +77,9 @@ export type StrRenderComponentType = {
   templateData: Partial<InputFieldType>;
   name: string;
   display_name: string;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
 };
 
 export type InputListComponentType = {
@@ -91,6 +94,9 @@ export type DropDownComponentType = {
   name: string;
   dialogInputs?: any;
   optionsMetaData?: any[];
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
 };
 
 export type TextAreaComponentType = {

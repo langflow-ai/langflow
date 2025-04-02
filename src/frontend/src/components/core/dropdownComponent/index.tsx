@@ -47,6 +47,9 @@ export default function Dropdown({
   editNode = false,
   id = "",
   children,
+  nodeId,
+  nodeClass,
+  handleNodeClass,
   name,
   dialogInputs,
   ...baseInputProps
@@ -76,14 +79,13 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { nodeClass, nodeId, handleNodeClass, tooltip, helperText } =
-    baseInputProps;
+  const { helperText } = baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
-    parameterId: name || "",
-    nodeId: nodeId || "",
-    node: nodeClass!,
+    parameterId: name,
+    nodeId: nodeId,
+    node: nodeClass,
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
