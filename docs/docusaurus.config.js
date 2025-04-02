@@ -205,15 +205,10 @@ const config = {
             ],
           },
           {
-            to: "/configuration-environment-variables",
+            to: "/environment-variables",
             from: [
               "/configuration-auto-saving",
-              "/Configuration/configuration-auto-saving"
-            ],
-          },
-          {
-            to: "/configuration-environment-variables",
-            from: [
+              "/Configuration/configuration-auto-saving",
               "/configuration-backend-only",
               "/Configuration/configuration-backend-only"
             ],

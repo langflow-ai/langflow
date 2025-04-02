@@ -83,7 +83,6 @@ module.exports = {
         "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
-        "Configuration/configuration-objects",
       ],
     },
     {
