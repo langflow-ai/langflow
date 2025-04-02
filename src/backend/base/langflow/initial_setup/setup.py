@@ -1021,6 +1021,8 @@ async def get_initialized_version() -> str:
         str: The initialized version of Langflow.
     """
     settings_service = get_settings_service()
+    if not settings_service.settings.config_dir:
+        return "0.0.0"
     path = Path(settings_service.settings.config_dir).joinpath("initialized_version")
     return read_version_from_file(path)
 
@@ -1034,6 +1036,8 @@ async def set_initialized_version(cur_version: str | None = None) -> None:
     if not cur_version:
         return
     settings_service = get_settings_service()
+    if not settings_service.settings.config_dir:
+        return
     path = Path(settings_service.settings.config_dir).joinpath("initialized_version")
     write_version_to_file(path, cur_version)
 
