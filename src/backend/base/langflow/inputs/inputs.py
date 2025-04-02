@@ -12,6 +12,7 @@ from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
 
 from .input_mixin import (
+    AuthMixin,
     BaseInputMixin,
     ConnectionMixin,
     DatabaseLoadMixin,
@@ -477,7 +478,7 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
 
 
-class AuthInput(BaseInputMixin, MetadataTraceMixin):
+class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
     """Represents an authentication input field.
 
     This class represents an authentication input field and provides functionality for handling authentication values.
