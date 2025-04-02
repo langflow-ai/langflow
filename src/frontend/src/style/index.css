@@ -191,7 +191,7 @@
 
     --zinc-foreground: 240 5.9% 90%;
 
-    --accent-amber: 21.7 77.8% 26.5%;
+    --accent-amber: 48, 96%, 89%;
     --accent-amber-foreground: 26 90.5% 37.1%;
     --red-foreground: 0 90.6% 70.8%;
   }
@@ -447,7 +447,7 @@
 
     --zinc-foreground: 240 5.2% 33.9%;
 
-    --accent-amber: 48 96.5% 88.8%;
+    --accent-amber: 22, 78%, 26%;
     --accent-amber-foreground: 45.9 96.7% 64.5%;
     --red-foreground: 0 72.2% 50.6%;
   }
