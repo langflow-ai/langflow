@@ -579,9 +579,10 @@ export default function Page({
             className="theme-attribution"
             minZoom={0.2}
             maxZoom={3}
-            zoomOnScroll={!view}
+            zoomOnScroll={false}
             zoomOnPinch={!view}
-            panOnDrag={!view}
+            panOnScroll={!view}
+            selectionOnDrag={!view}
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
