@@ -9,11 +9,10 @@ from langchain_core.tools import Tool
 
 from langflow.custom import Component
 from langflow.inputs import (
-    LinkInput,
+    AuthInput,
     MessageTextInput,
     SecretStrInput,
     SortableListInput,
-    StrInput,
 )
 from langflow.io import Output
 from langflow.logging import logger
@@ -41,23 +40,9 @@ class ComposioBaseComponent(Component):
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
         ),
-        LinkInput(
+        AuthInput(
             name="auth_link",
-            display_name="Authentication Link",
             value="",
-            info="Click to authenticate with OAuth2",
-            dynamic=True,
-            show=False,
-            placeholder="Click to authenticate",
-        ),
-        StrInput(
-            name="auth_status",
-            display_name="Auth Status",
-            value="Not Connected",
-            info="Current authentication status",
-            dynamic=True,
-            show=False,
-            refresh_button=True,
         ),
         SortableListInput(
             name="action",
@@ -173,9 +158,6 @@ class ComposioBaseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Optimized build config updates."""
-        build_config["auth_status"]["show"] = True
-        build_config["auth_status"]["advanced"] = False
-        build_config["auth_link"]["show"] = False
 
         if field_name == "tool_mode":
             build_config["action"]["show"] = not field_value
@@ -203,19 +185,29 @@ class ComposioBaseComponent(Component):
 
             try:
                 entity.get_connection(app=self.app_name)
-                build_config["auth_status"]["value"] = "✅"
-                build_config["auth_link"]["show"] = False
+                build_config["auth_link"]["value"] = "validated"
             except NoItemsFound:
                 auth_scheme = self._get_auth_scheme(self.app_name)
                 if auth_scheme and auth_scheme.auth_mode == "OAUTH2":
-                    build_config["auth_link"]["show"] = True
-                    build_config["auth_link"]["advanced"] = False
                     build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
-                    build_config["auth_status"]["value"] = "Click link to authenticate"
 
         except (ValueError, ConnectionError) as e:
-            build_config["auth_status"]["value"] = f"Error: {e!s}"
+            build_config["auth_link"]["value"] = "error"
             logger.error(f"Error checking auth status: {e}")
+
+        # Handle disconnection
+        if field_name == "auth_link" and field_value == "disconnect":
+            try:
+                toolset = self._build_wrapper()
+                entity = toolset.client.get_entity(id=self.entity_id)
+                self.disconnect_connection(entity, self.app_name)
+                build_config["auth_link"]["value"] = ""
+                build_config["action"]["show"] = False
+                build_config["action"]["options"] = []
+                build_config["action"]["value"] = ""
+            except Exception as e:
+                build_config["auth_link"]["value"] = "error"
+                logger.error(f"Error disconnecting: {e}")
 
         return build_config
 
@@ -231,6 +223,17 @@ class ComposioBaseComponent(Component):
     def _initiate_default_connection(self, entity: Any, app: str) -> str:
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
         return connection.redirectUrl
+
+    def disconnect_connection(self, entity: Any, app: str) -> None:
+        """Disconnect a Composio connection."""
+        try:
+            # Get the connection first
+            connection = entity.get_connection(app=app)
+            # Delete the connection using the integrations collection
+            entity.client.integrations.remove(id=connection.integrationId)
+        except Exception as e:
+            logger.error(f"Error disconnecting from {app}: {e}")
+            raise ValueError(f"Failed to disconnect from {app}: {e}") from e
 
     def configure_tools(self, toolset: ComposioToolSet) -> list[Tool]:
         tools = toolset.get_tools(actions=self._actions_data.keys())
