@@ -169,7 +169,15 @@ class ComposioBaseComponent(Component):
         if field_name == "action":
             self.show_hide_fields(build_config, field_value)
             return build_config
-
+        if field_name == "api_key" and len(field_value) == 0:
+            build_config["auth_link"]["value"] = "error"
+            build_config["auth_link"]["auth_tooltip"] = (
+                "Please provide a valid Composio API Key in the component settings"
+            )
+            build_config["action"]["options"] = []
+            build_config["action"]["helper_text"] = "Please provide a valid Composio API Key in the component settings"
+            build_config["action"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
+            return build_config
         if not hasattr(self, "api_key") or not self.api_key:
             return build_config
 
