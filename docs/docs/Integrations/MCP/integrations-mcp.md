@@ -54,7 +54,7 @@ This example assumes the default Langflow server address of `http://127.0.0.1:78
 4. Save the `mcp.json` file, and then click the **Reload** icon.
 5. Your Langflow server is now available to Cursor as an MCP server, and all of its flows are registered as tools.
 You can now use your flows as tools in Cursor.
-Cursor determines when to use tools based on your queries, and will request permissions when necessary.
+Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
 </TabItem>
 
