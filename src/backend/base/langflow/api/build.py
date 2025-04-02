@@ -237,6 +237,7 @@ async def generate_flow_events(
             flow_name = result.first()
 
         return await build_graph_from_data(
+            session=fresh_session,
             flow_id=flow_id_str,
             payload=data.model_dump(),
             user_id=str(current_user.id),

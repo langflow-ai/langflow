@@ -69,3 +69,8 @@ class BaseTracer(ABC):
     @abstractmethod
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         raise NotImplementedError
+
+    @abstractmethod
+    def get_required_variable_names(self) -> list[str]:
+        """Returns a list of variable names required to configure the service."""
+        raise NotImplementedError

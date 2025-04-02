@@ -6,15 +6,16 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from loguru import logger
 
 from langflow.services.base import Service
+from langflow.services.deps import get_variable_service
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from langchain.callbacks.base import BaseCallbackHandler
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.custom.custom_component.component import Component
     from langflow.graph.vertex.base import Vertex
@@ -162,13 +163,19 @@ class TracingService(Service):
                 trace_id=trace_context.run_id,
             )
 
-    def _initialize_langfuse_tracer(self, trace_context: TraceContext) -> None:
+    async def _initialize_langfuse_tracer(self, trace_context: TraceContext, session: AsyncSession) -> None:
         langfuse_tracer = _get_langfuse_tracer()
+        variable_names = langfuse_tracer.get_required_variable_names()
+        variables = await self.get_varaibles_from_db(session, trace_context.user_id, variable_names)
+
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
             trace_id=trace_context.run_id,
+            public_key=variables.get("LANGFUSE_PUBLIC_KEY"),
+            secret_key=variables.get("LANGFUSE_SECRET_KEY"),
+            host=variables.get("LANGFUSE_HOST"),
             user_id=trace_context.user_id,
             session_id=trace_context.session_id,
         )
@@ -193,8 +200,17 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    async def get_varaibles_from_db(self, session, user_id, variable_names):
+        variable_service = get_variable_service()
+        result = {}
+        for var in await variable_service.get_all(UUID(user_id), session):
+            if var.name in variable_names:
+                result[var.name] = await variable_service.get_variable(UUID(user_id), var.name, "", session)
+        return result
+
     async def start_tracers(
         self,
+        session: AsyncSession,
         run_id: UUID,
         run_name: str,
         user_id: str | None,
@@ -213,11 +229,17 @@ class TracingService(Service):
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
             trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id)
             trace_context_var.set(trace_context)
-            await self._start(trace_context)
+
+            await self._start(trace_context, session, user_id)
+
             self._initialize_langsmith_tracer(trace_context)
+
             self._initialize_langwatch_tracer(trace_context)
-            self._initialize_langfuse_tracer(trace_context)
+
+            await self._initialize_langfuse_tracer(trace_context, session)
+
             self._initialize_arize_phoenix_tracer(trace_context)
+
             self._initialize_opik_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")

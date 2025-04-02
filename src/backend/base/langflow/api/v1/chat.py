@@ -248,6 +248,7 @@ async def build_vertex(
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
     current_user: CurrentActiveUser,
+    session: DbSession,
 ) -> VertexBuildResponse:
     """Build a vertex instead of the entire graph.
 
@@ -258,6 +259,7 @@ async def build_vertex(
         inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.
         files (List[str], optional): The files to use. Defaults to None.
         current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
+        session (AsyncSession, optional): The session dependency. Defaults to Depends
 
     Returns:
         VertexBuildResponse: The response containing the built vertex information.
@@ -291,7 +293,7 @@ async def build_vertex(
             )
         else:
             graph = cache.get("result")
-            await graph.initialize_run()
+            await graph.initialize_run(session)
         vertex = graph.get_vertex(vertex_id)
 
         try:
