@@ -138,6 +138,10 @@ class DatabaseLoadMixin(BaseModel):
     load_from_db: bool = Field(default=True)
 
 
+class AuthMixin(BaseModel):
+    auth_tooltip: str | None = Field(default="")
+
+
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
     file_path: list[str] | str | None = Field(default="")

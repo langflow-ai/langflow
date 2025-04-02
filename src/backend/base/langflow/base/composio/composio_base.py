@@ -160,7 +160,6 @@ class ComposioBaseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Optimized build config updates."""
-
         if field_name == "tool_mode":
             build_config["action"]["show"] = not field_value
             for field in self._all_fields:
@@ -188,6 +187,9 @@ class ComposioBaseComponent(Component):
             try:
                 entity.get_connection(app=self.app_name)
                 build_config["auth_link"]["value"] = "validated"
+                build_config["auth_link"]["auth_tooltip"] = "Connected"
+                build_config["action"]["helper_text"] = None
+                build_config["action"]["helper_text_metadata"] = {}
             except NoItemsFound:
                 auth_scheme = self._get_auth_scheme(self.app_name)
                 if auth_scheme and auth_scheme.auth_mode == "OAUTH2":
@@ -195,6 +197,7 @@ class ComposioBaseComponent(Component):
 
         except (ValueError, ConnectionError) as e:
             build_config["auth_link"]["value"] = "error"
+            build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
             logger.error(f"Error checking auth status: {e}")
 
         # Handle disconnection
@@ -205,15 +208,18 @@ class ComposioBaseComponent(Component):
                 toolset = self._build_wrapper()
                 entity = toolset.client.get_entity(id=self.entity_id)
                 self.disconnect_connection(entity, self.app_name)
-                build_config["auth_link"]["value"] = ""
+                build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
+                build_config["auth_link"]["auth_tooltip"] = "Connect"
                 build_config["action"]["helper_text"] = "Please connect before selecting actions."
                 build_config["action"]["helper_text_metadata"] = {
                     "icon": "OctagonAlert",
                     "variant": "destructive",
                 }
+                build_config["action"]["options"] = []
                 build_config["action"]["value"] = ""
             except Exception as e:
                 build_config["auth_link"]["value"] = "error"
+                build_config["auth_link"]["auth_tooltip"] = "Failed to disconnect from the app."
                 logger.error(f"Error disconnecting: {e}")
         if field_name == "auth_link" and field_value == "validated":
             build_config["action"]["helper_text"] = ""
