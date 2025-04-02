@@ -161,10 +161,26 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
+        {
+          type: 'category',
+          label: 'MCP (Model Context Protocol)',
+          items: [
+            'Integrations/MCP/integrations-mcp',
+            'Integrations/MCP/mcp-component-astra',
+          ],
+        },
         "Integrations/Apify/integrations-apify",
-        "Integrations/Arize/integrations-arize",
+        {
+          type: "doc",
+          id: "Integrations/Arize/integrations-arize",
+          label: "Arize",
+        },
         "Integrations/integrations-assemblyai",
-        "Integrations/Composio/integrations-composio",
+        {
+          type: "doc",
+          id: "Integrations/Composio/integrations-composio",
+          label: "Composio",
+        },
         {
           type: 'category',
           label: 'Google',
@@ -176,14 +192,6 @@ module.exports = {
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
-        {
-          type: 'category',
-          label: 'MCP (Model Context Protocol)',
-          items: [
-            'Integrations/MCP/integrations-mcp',
-            'Integrations/MCP/mcp-component-astra',
-          ],
-        },
         "Integrations/integrations-opik",
         {
           type: "category",
