@@ -200,6 +200,8 @@ class ComposioBaseComponent(Component):
         # Handle disconnection
         if field_name == "auth_link" and field_value == "disconnect":
             try:
+                for field in self._all_fields:
+                    build_config[field]["show"] = False
                 toolset = self._build_wrapper()
                 entity = toolset.client.get_entity(id=self.entity_id)
                 self.disconnect_connection(entity, self.app_name)
@@ -213,6 +215,9 @@ class ComposioBaseComponent(Component):
             except Exception as e:
                 build_config["auth_link"]["value"] = "error"
                 logger.error(f"Error disconnecting: {e}")
+        if field_name == "auth_link" and field_value == "validated":
+            build_config["action"]["helper_text"] = ""
+            build_config["action"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
 
         return build_config
 
