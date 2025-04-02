@@ -145,6 +145,8 @@ export default function NodeStatus({
   };
 
   const handleDisconnect = () => {
+    setIsPolling(true);
+    setIsAuthenticated(false);
     mutateTemplate(
       "disconnect",
       data.node,
@@ -159,7 +161,7 @@ export default function NodeStatus({
       nodeAuth?.name ?? "auth_link",
       () => {
         setIsAuthenticated(false);
-        setLink("");
+        setIsPolling(false);
       },
       data.node.tool_mode,
     );
