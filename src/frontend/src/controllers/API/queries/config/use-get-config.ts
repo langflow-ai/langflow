@@ -52,7 +52,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
       setFeatureFlags(data.feature_flags);
-      setWebhookPollingInterval(data.webhook_polling_interval);
+      setWebhookPollingInterval(data.webhook_polling_interval ?? 5000);
     }
     return data;
   };
