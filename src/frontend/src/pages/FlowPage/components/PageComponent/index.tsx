@@ -30,6 +30,7 @@ import {
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
+  SelectionMode,
 } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
@@ -570,6 +571,7 @@ export default function Page({
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
+            selectionMode={SelectionMode.Partial}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
             fitViewOptions={{
@@ -579,8 +581,7 @@ export default function Page({
             className="theme-attribution"
             minZoom={0.2}
             maxZoom={3}
-            zoomOnScroll={false}
-            zoomOnPinch={!view}
+            panOnDrag={[1, 2]}
             panOnScroll={!view}
             selectionOnDrag={!view}
             panActivationKeyCode={""}
