@@ -160,7 +160,6 @@ class ComposioBaseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Optimized build config updates."""
-
         if field_name == "tool_mode":
             build_config["action"]["show"] = not field_value
             for field in self._all_fields:
