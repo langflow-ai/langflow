@@ -370,7 +370,7 @@ export default function NodeStatus({
                       name={
                         isAuthenticated
                           ? "Link"
-                          : link === "loading"
+                          : isPolling
                             ? "Loader2"
                             : "AlertTriangle"
                       }
@@ -381,7 +381,7 @@ export default function NodeStatus({
                           : isAuthenticated
                             ? "text-accent-emerald-foreground"
                             : "text-accent-amber-foreground",
-                        link === "loading" && "animate-spin",
+                        isPolling && "animate-spin",
                         isAuthenticated && "group-hover:opacity-0",
                       )}
                       strokeWidth={ICON_STROKE_WIDTH}
