@@ -1,44 +1,41 @@
 ---
-title: API pane
-slug: /concepts-api
+title: Publish flows
+slug: /concepts-publish
 ---
-
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The **API** pane presents code templates for integrating your flow into external applications.
+Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow via API endpoints, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
+
+## API access
+
+The **API** pane presents code templates for integrating your flow into external applications.
 
 ![](/img/api-pane.png)
 
 <Tabs>
 
-<TabItem value="curl" label="curl" default>
+<TabItem value="Python" label="Python">
 
-The **cURL** tab displays sample code for posting a query to your flow. Modify the `input_value` to change your input message. Copy the code and run it to post a query to your flow and get the result.
-
-</TabItem>
-
-<TabItem value="Python API" label="Python API">
-
-The **Python API** tab displays code to interact with your flow using the Python HTTP `requests` library.
-
-To use the `requests` library:
+The **Python** tab displays code to interact with your flow using the Python `requests` library.
 
 1. Copy and paste the code into a Python script.
-2. Run the script and pass your message with it.
+2. Run the script.
 
 ```python
 python3 python-test-script.py --message="tell me about something interesting"
 ```
 
+The response content depends on your flow. Make sure the endpoint returns a successful response.
+
 </TabItem>
 
-<TabItem value="JS API" label="JS API" default>
+<TabItem value="JavaScript" label="JavaScript" default>
 
-The **JavaScript API** tab displays code to interact with your flow in JavaScript.
+The **JavaScript API** tab displays code to interact with your flow in JavaScript.
 
 1. Copy and paste the code into a JavaScript file.
-2. Run the script with any necessary arguments for your flow:
+2. Run the script.
 
 ```plain
 node test-script.js "tell me about something interesting"
@@ -47,43 +44,43 @@ node test-script.js "tell me about something interesting"
 The response content depends on your flow. Make sure the endpoint returns a successful response.
 
 </TabItem>
+<TabItem value="curl" label="curl" default>
 
-<TabItem value="Python code" label="Python code" default>
+The **cURL** tab displays sample code for posting a query to your flow.
 
+Copy the code and run it to post a query to your flow and get the result.
 
-The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
-
-To use your code in a Python application using the Langflow runtime, you have to first download your flow’s JSON file.
-
-1. In your **Workspace**, click **Settings**, and then select **Export**.
-
-2. Download the flow to your local machine. Make sure the flow path in the script matches the flow’s location on your machine.
-
-3. Copy and paste the code from the **Python Code** tab into a Python script file.
-
-4. Run the script:
-
-```python
-python python-test-script.py
-```
+The response content depends on your flow. Make sure the endpoint returns a successful response.
 
 </TabItem>
-
 </Tabs>
 
-## Chat Widget
+### Temporary overrides
 
-The **Chat Widget HTML** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
+The **Temporary overrides** tab displays the available parameters for your flow.
+Modifying the parameters changes the code parameters across all windows.
+For example, changing the **Chat Input** component's `input_value` changes that value across all API calls to the `/run` endpoint of this flow.
 
-The **Langflow Chat Widget** is a powerful web component that enables communication with a Langflow project. This widget allows for a chat interface embedding, allowing the integration of Langflow into web applications effortlessly.
+### Send files to your flow with the API
 
-You can get the HTML code embedded with the chat by clicking the Code button at the Sidebar after building a flow.
+For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files).
 
-Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read below to learn how to use it with HTML, React and Angular.
+### Webhook cURL
 
-### Embed the chat widget into HTML
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
 
-To embed the chat widget into any HTML page, insert the code snippet. inside a `<body>` tag.
+```bash
+curl -X POST \
+  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  -H 'Content-Type: application/json'\
+  -d '{"any": "data"}'
+```
+
+To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
+
+## Embed into site
+
+The **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js""></script>
@@ -98,13 +95,13 @@ To embed the chat widget into any HTML page, insert the code snippet. inside a 
 
 ### Embed the chat widget with React
 
-To embed the Chat Widget using React, insert this `<script>` tag into the React _index.html_ file, inside the `<body>`tag:
+To embed the Chat Widget using React, add this `<script>` tag to the React `index.html` file inside a `<body>`tag.
 
 ```javascript
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
-Declare your Web Component and encapsulate it in a React component.
+1. Declare your web component and encapsulate it in a React component.
 
 ```javascript
 declare global {
@@ -128,25 +125,25 @@ export default function ChatWidget({ className }) {
   );
 }
 ```
-
-Place the component anywhere in your code to display the Chat Widget.
+2. Place the component anywhere in your code to display the chat widget.
 
 ### Embed the chat widget with Angular
 
-To use the chat widget in Angular, first add this `<script>` tag into the Angular _index.html_ file, inside the `<body>` tag.
+To use the chat widget in Angular, add this `<script>` tag to the Angular `index.html` file inside a `<body>` tag.
 
 ```javascript
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
-When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add `CUSTOM_ELEMENTS_SCHEMA` to the module's `@NgModule.schemas`.
+When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add `CUSTOM_ELEMENTS_SCHEMA` to the module's `@NgModule.schemas`.
+`CUSTOM_ELEMENTS_SCHEMA` is a built-in schema that allows custom elements in your Angular templates, and suppresses warnings related to unknown elements like `langflow-chat`.
 
-- Open the module file (it typically ends with _.module.ts_) where you'd add the `langflow-chat` web component.
-- Import `CUSTOM_ELEMENTS_SCHEMA` at the top of the file:
+1. Open the module file `.module.ts` where you want to add the `langflow-chat` web component.
+2. Import `CUSTOM_ELEMENTS_SCHEMA` at the top of the `.module.ts` file:
 
 `import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';`
 
-- Add `CUSTOM_ELEMENTS_SCHEMA` to the 'schemas' array inside the '@NgModule' decorator:
+3. Add `CUSTOM_ELEMENTS_SCHEMA` to the 'schemas' array inside the '@NgModule' decorator:
 
 ```javascript
 @NgModule({
@@ -163,26 +160,17 @@ When you use a custom web component in an Angular template, the Angular compiler
 export class YourModule { }
 ```
 
-In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `langflow-chat` tag to include the Chat Widget in your component's view:
+4. In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `langflow-chat` tag to include the chat widget in your component's view:
 
 ```javascript
 <langflow-chat  chat_inputs='{"your_key":"value"}'  chat_input_field="your_chat_key"  flow_id="your_flow_id"  host_url="langflow_url"></langflow-chat>
 ```
 
-:::tip
+### Chat widget configuration
 
-`CUSTOM_ELEMENTS_SCHEMA` is a built-in schema that allows Angular to recognize custom elements. Adding `CUSTOM_ELEMENTS_SCHEMA` tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like `langflow-chat`. Notice that you can only use the Chat Widget in components that are part of the module where you added `CUSTOM_ELEMENTS_SCHEMA`.
+Use the widget API to customize your Chat Widget.
 
-:::
-
-## Chat widget configuration
-
-Use the widget API to customize your Chat Widget:
-
-:::caution
 Props with the type JSON need to be passed as stringified JSONs, with the format \{"key":"value"\}.
-:::
-
 
 | Prop                  | Type    | Required | Description                                                                                                                                                      |
 | --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -210,25 +198,11 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
 | window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
 
+## Shareable playground
 
-## Tweaks
+The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
 
-The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
+You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
-## Send image files to your flow with the API
-
-For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files).
-
-## Webhook cURL
-
-When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
-
-```bash
-curl -X POST \
-  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
-  -H 'Content-Type: application/json'\
-  -d '{"any": "data"}'
-  ```
-
-To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
+If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
 

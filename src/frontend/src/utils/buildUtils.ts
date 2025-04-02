@@ -184,7 +184,11 @@ async function pollBuildEvents(
     });
 
     if (!response.ok) {
-      throw new Error("Error polling build events");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail ||
+          "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
+      );
     }
 
     const data = await response.json();
@@ -362,7 +366,7 @@ export async function buildFlowVertices({
         onGetOrderSuccess,
         onValidateNodes,
       };
-      return pollBuildEvents(
+      return await pollBuildEvents(
         eventsUrl,
         buildResults,
         verticesStartTimeMs,
@@ -377,7 +381,8 @@ export async function buildFlowVertices({
       return;
     }
     onBuildError!("Error Building Flow", [
-      (error as Error).message || "An unexpected error occurred",
+      (error as Error).message ||
+        "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
     ]);
     throw error;
   }
