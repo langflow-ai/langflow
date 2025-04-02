@@ -80,8 +80,8 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1

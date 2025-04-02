@@ -104,7 +104,7 @@ jobs:
         # We need to print $3 because langflow-base is a dependency of langflow
         # For langlow we'd use print $2
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
           url="https://pypi.org/pypi/langflow-base/json"
           if [ ${{ inputs.nightly }} == true ]; then
             url="https://pypi.org/pypi/langflow-base-nightly/json"
