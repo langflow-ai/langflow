@@ -1161,6 +1161,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "search_type": self._map_search_type(),
                 "k": self.number_of_results,
                 "score_threshold": self.search_score_threshold,
+                "lexical_query": self.lexical_terms or None,
             }
         elif self.advanced_search_filter:
             args = {
@@ -1181,6 +1182,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Search input: {self.search_query}")
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
+        self.log(f"Lexical terms: {self.lexical_terms}")
 
         try:
             search_args = self._build_search_args()
