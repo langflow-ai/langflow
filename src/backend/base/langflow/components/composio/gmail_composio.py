@@ -50,6 +50,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
             "display_name": "Get Message By Thread ID",
             "action_fields": ["thread_id"],
+            "get_result_field": False,
         },
         "GMAIL_LIST_THREADS": {
             "display_name": "List Email Threads",
@@ -74,6 +75,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_REMOVE_LABEL": {
             "display_name": "Delete Email Label",
             "action_fields": ["label_id"],
+            "get_result_field": False,
         },
     }
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
@@ -356,7 +358,11 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             ).get("data", [])
             # Assuming 'result' is the output from the executed action
             # Retrieve the first key from the result dictionary and get its value
-            if len(result) != 1 and not self._actions_data.get(action_key, {}).get("result_field"):
+            if (
+                len(result) != 1
+                and not self._actions_data.get(action_key, {}).get("result_field")
+                and self._actions_data.get(action_key, {}).get("get_result_field")
+            ):
                 msg = f"Expected a dict with a single key, got {len(result)} keys: {result.keys()}"
                 raise ValueError(msg)
             if result:
