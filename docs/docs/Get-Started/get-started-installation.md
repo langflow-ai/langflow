@@ -3,10 +3,10 @@ title: Install Langflow
 slug: /get-started-installation
 ---
 
-Langflow can be installed in three ways:
+Langflow can be installed in two ways:
+
 * As a [Python package](#install-langflow-locally)
 * As a [standalone desktop application](#install-langflow-desktop)
-* As a [cloud hosted service](#datastax-langflow)
 
 ## Install Langflow locally
 
@@ -89,11 +89,11 @@ Langflow Desktop is in **Alpha**.
 Development is ongoing, and the features and functionality are subject to change.
 :::
 
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional **Version Management** feature for managing your Langflow version.
+
 :::important
 Langflow Desktop is available only for macOS.
 :::
-
-**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional **Version Management** feature for managing your Langflow version.
 
 To install Langflow Desktop, follow these steps:
 
@@ -108,6 +108,8 @@ The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your loc
 
 ### Manage your Langflow version in Langflow Desktop
 
+When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
+
 To manage your Langflow version in Langflow Desktop, follow these steps:
 
 1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
@@ -117,12 +119,6 @@ The **latest** version is always highlighted.
 A confirmation pane containing the selected version's changelog appears.
 3. To change to the selected version, click **Confirm**.
 The application restarts with the new version installed.
-
-When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
-
-## DataStax Langflow {#datastax-langflow}
-
-**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
 
 ## Common installation issues
 
