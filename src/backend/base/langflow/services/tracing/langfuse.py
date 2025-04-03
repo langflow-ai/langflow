@@ -29,6 +29,9 @@ class LangFuseTracer(BaseTracer):
         trace_type: str,
         project_name: str,
         trace_id: UUID,
+        public_key: str | None = None,
+        secrect_key: str | None = None,
+        host: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
     ) -> None:
@@ -36,13 +39,33 @@ class LangFuseTracer(BaseTracer):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
+        self.public_key = public_key
+        self.secrect_key = secrect_key
+        self.host = host
         self.user_id = user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = OrderedDict()  # spans that are not ended
 
+        if self.host is not None:
+            os.environ["LANGFUSE_HOST"] = self.host
+
+        if self.public_key is not None:
+            os.environ["LANGFUSE_PUBLIC_KEY"] = self.public_key
+
+        if self.secrect_key is not None:
+            os.environ["LANGFUSE_SECRET_KEY"] = self.secrect_key
+
         config = self._get_config()
         self._ready: bool = self.setup_langfuse(config) if config else False
+
+    @staticmethod
+    def get_required_variable_names():
+        return [
+            "LANGFUSE_SECRET_KEY",
+            "LANGFUSE_PUBLIC_KEY",
+            "LANGFUSE_HOST",
+        ]
 
     @property
     def ready(self):
