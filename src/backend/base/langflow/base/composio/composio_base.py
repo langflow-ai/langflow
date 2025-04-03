@@ -55,7 +55,7 @@ class ComposioBaseComponent(Component):
             value="disabled",
             info="Select action to pass to the agent",
             helper_text="Please connect before selecting actions.",
-            helper_text_metadata={"icon": "OctagonAlert", "variant": "destructive"},
+            helper_text_metadata={"variant": "destructive"},
             show=True,
             real_time_refresh=True,
             required=True,
@@ -173,13 +173,14 @@ class ComposioBaseComponent(Component):
 
         if field_name == "action":
             self.show_hide_fields(build_config, field_value)
-            return build_config
+            if build_config["auth_link"]["value"] == "validated":
+                return build_config
         if field_name == "api_key" and len(field_value) == 0:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
             build_config["action"]["options"] = []
             build_config["action"]["helper_text"] = "Please connect before selecting actions."
-            build_config["action"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
+            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
             return build_config
         if not hasattr(self, "api_key") or not self.api_key:
             return build_config
@@ -222,7 +223,7 @@ class ComposioBaseComponent(Component):
             build_config["action"]["options"] = []
             build_config["action"]["value"] = ""
             build_config["action"]["helper_text"] = "Please connect before selecting actions."
-            build_config["action"]["helper_text_metadata"] = {"icon": "OctagonAlert", "variant": "destructive"}
+            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
             logger.error(f"Error checking auth status: {e}")
 
         # Handle disconnection
@@ -237,7 +238,6 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["auth_tooltip"] = "Connect"
                 build_config["action"]["helper_text"] = "Please connect before selecting actions."
                 build_config["action"]["helper_text_metadata"] = {
-                    "icon": "OctagonAlert",
                     "variant": "destructive",
                 }
                 build_config["action"]["options"] = []
