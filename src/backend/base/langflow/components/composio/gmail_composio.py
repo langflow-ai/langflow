@@ -354,6 +354,9 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             ).get("data", [])
             # Assuming 'result' is the output from the executed action
             # Retrieve the first key from the result dictionary and get its value
+            if len(result) != 1 and not self._actions_data.get(action_key, {}).get("result_field"):
+                msg = f"Expected a dict with a single key, got {len(result)} keys: {result.keys()}"
+                raise ValueError(msg)
             if result:
                 key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
                 return result.get(key)
