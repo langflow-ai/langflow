@@ -1,4 +1,5 @@
 from .inputs import (
+    AuthInput,
     BoolInput,
     CodeInput,
     ConnectionInput,
@@ -29,6 +30,7 @@ from .inputs import (
 )
 
 __all__ = [
+    "AuthInput",
     "BoolInput",
     "CodeInput",
     "ConnectionInput",

@@ -855,3 +855,13 @@ export function setCookie(
 
   document.cookie = cookieString;
 }
+
+/**
+ * Converts a string to snake_case
+ * Example: "New York" becomes "new_york"
+ * @param {string} str - The string to convert
+ * @returns {string} The snake_case string
+ */
+export function testIdCase(str: string): string {
+  return str.toLowerCase().replace(/\s+/g, "_");
+}

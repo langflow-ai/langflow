@@ -68,6 +68,7 @@ const SearchBarComponent = ({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         inputClassName="border-none focus:ring-0"
+        data-testid="search_bar_input"
       />
     </div>
   );

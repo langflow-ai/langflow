@@ -26,6 +26,7 @@ class FieldTypes(str, Enum):
     NESTED_DICT = "NestedDict"
     SORTABLE_LIST = "sortableList"
     CONNECTION = "connect"
+    AUTH = "auth"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
@@ -135,6 +136,10 @@ class ListableInputMixin(BaseModel):
 # Specific mixin for fields needing database interaction
 class DatabaseLoadMixin(BaseModel):
     load_from_db: bool = Field(default=True)
+
+
+class AuthMixin(BaseModel):
+    auth_tooltip: str | None = Field(default="")
 
 
 # Specific mixin for fields needing file interaction

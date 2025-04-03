@@ -3,7 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
-import { cn } from "@/utils/utils";
+import { cn, testIdCase } from "@/utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Update interface with better types
@@ -27,6 +27,7 @@ const ListItem = ({
   onMouseLeave,
   isFocused,
   isKeyboardNavActive,
+  dataTestId,
 }: {
   item: any;
   isSelected: boolean;
@@ -36,6 +37,7 @@ const ListItem = ({
   onMouseLeave: () => void;
   isFocused: boolean;
   isKeyboardNavActive: boolean;
+  dataTestId: string;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const itemRef = useRef<HTMLButtonElement>(null);
@@ -58,6 +60,7 @@ const ListItem = ({
     <Button
       ref={itemRef}
       key={item.id}
+      data-testid={dataTestId}
       unstyled
       size="sm"
       className={cn(
@@ -308,6 +311,7 @@ const ListSelectionComponent = ({
                 }}
                 isFocused={focusedIndex === index}
                 isKeyboardNavActive={isKeyboardNavActive}
+                dataTestId={`list_item_${testIdCase(item.name)}`}
               />
             ))
           ) : (

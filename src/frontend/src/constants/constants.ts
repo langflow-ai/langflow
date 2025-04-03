@@ -657,6 +657,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "tab",
   "sortableList",
   "connect",
+  "auth",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
