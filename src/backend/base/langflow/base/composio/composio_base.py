@@ -83,9 +83,12 @@ class ComposioBaseComponent(Component):
         return Message(text=str(result))
 
     def as_dataframe(self) -> DataFrame:
-        result = DataFrame(self.execute_action())
-        self.status = result
-        return result
+        result = self.execute_action()
+        # If the result is a dict, pandas will raise ValueError: If using all scalar values, you must pass an index
+        # So we need to make sure the result is a list of dicts
+        if isinstance(result, dict):
+            result = [result]
+        return DataFrame(result)
 
     def as_data(self) -> Data:
         result = self.execute_action()
