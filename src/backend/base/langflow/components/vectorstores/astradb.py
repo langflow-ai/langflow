@@ -3,9 +3,10 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
 from astrapy import DataAPIClient, Database
+from astrapy.data.info.reranking import RerankServiceOptions
 from astrapy.info import CollectionDescriptor, CollectionLexicalOptions, CollectionRerankOptions
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
-from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
+from langchain_astradb.utils.astradb import HybridSearchMode, _AstraDBCollectionEnvironment
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
@@ -137,12 +138,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             real_time_refresh=True,
             input_types=[],
         ),
-        StrInput(
+        DropdownInput(
             name="environment",
             display_name="Environment",
             info="The environment for the Astra DB API Endpoint.",
+            options=["prod", "test", "dev"],
+            value="prod",
             advanced=True,
             real_time_refresh=True,
+            combobox=True,
         ),
         DropdownInput(
             name="database_name",
@@ -193,7 +197,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Search Method",
             info="Method to use for searching the vector store.",
             options=["Hybrid Search", "Vector Search"],
-            value="Hybrid Search",
+            value="Vector Search",
             advanced=True,
             real_time_refresh=True,
         ),
@@ -201,15 +205,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="reranker",
             display_name="Reranker",
             info="Reranker to use for the search.",
-            options=["llama-3-2-nv-rerankqa-1b-v2", "None"],
-            options_metadata=[{"icon": "NVIDIA"}, {"icon": "None"}],
-            value="llama-3-2-nv-rerankqa-1b-v2",
+            show=False,
             advanced=True,
         ),
         StrInput(
             name="lexical_terms",
             display_name="Lexical Terms",
             info="Lexical terms to use for the search.",
+            show=False,
             advanced=True,
             value="",
         ),
@@ -282,12 +285,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # TODO: Programmatically fetch the regions for each cloud provider
         return {
             "dev": {
+                "Amazon Web Services": {
+                    "id": "aws",
+                    "regions": ["us-west-2"],
+                },
                 "Google Cloud Platform": {
                     "id": "gcp",
-                    "regions": ["us-central1"],
+                    "regions": ["us-central1", "europe-west4"],
                 },
             },
-            # TODO: Check test regions
             "test": {
                 "Google Cloud Platform": {
                     "id": "gcp",
@@ -379,12 +385,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
+        reranker: str | None = None,
     ):
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
             providers = cls.get_vectorize_providers(
-                token=token, environment=environment or "prod", api_endpoint=api_endpoint
+                token=token, environment=environment, api_endpoint=api_endpoint
             )
             vectorize_options = VectorServiceOptions(
                 provider=providers.get(embedding_generation_provider, [None, []])[0],
@@ -402,15 +409,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "token": token,
             "api_endpoint": api_endpoint,
             "keyspace": keyspace,
-            "environment": environment or "prod",
+            "environment": environment,
             "embedding_dimension": dimension,
             "collection_vector_service_options": vectorize_options,
         }
 
         # Add optional arguments only if environment is "dev"
-        if environment == "dev":  # TODO: Remove conditional check soon
-            base_args["collection_rerank"] = CollectionRerankOptions(enabled=True)
-            base_args["collection_lexical"] = CollectionLexicalOptions(enabled=True)
+        if environment == "dev" and reranker:  # TODO: Remove conditional check soon
+            # Split the reranker field into a provider a model name
+            provider, _ = reranker.split("/")
+            base_args["collection_rerank"] = CollectionRerankOptions(
+                service=RerankServiceOptions(
+                    provider=provider,
+                    model_name=reranker
+                ),
+            )
+            base_args["collection_lexical"] = CollectionLexicalOptions(analyzer="STANDARD")
 
         _AstraDBCollectionEnvironment(**base_args)
 
@@ -461,7 +475,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_database_list(self):
         return self.get_database_list_static(
             token=self.token,
-            environment=self.environment or "prod",
+            environment=self.environment,
         )
 
     @classmethod
@@ -495,7 +509,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_api_endpoint(self):
         return self.get_api_endpoint_static(
             token=self.token,
-            environment=self.environment or "prod",
+            environment=self.environment,
             api_endpoint=self.api_endpoint,
             database_name=self.database_name,
         )
@@ -521,7 +535,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = DataAPIClient(environment=self.environment or "prod")
+            client = DataAPIClient(environment=self.environment)
 
             return client.get_database(
                 api_endpoint or self.get_api_endpoint(),
@@ -535,7 +549,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
             if not database:
-                client = DataAPIClient(environment=self.environment or "prod")
+                client = DataAPIClient(environment=self.environment)
 
                 database = client.get_database(
                     self.get_api_endpoint(),
@@ -642,7 +656,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get vectorize providers
         vectorize_providers_api = self.get_vectorize_providers(
             token=self.token,
-            environment=self.environment or "prod",
+            environment=self.environment,
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
@@ -738,7 +752,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         database_options = self._initialize_database_options()
 
         # Update cloud provider options
-        env = self.environment or "prod"
+        env = self.environment
         template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
         template["02_cloud_provider"]["options"] = list(self.map_cloud_providers()[env].keys())
 
@@ -777,8 +791,42 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _handle_hybrid_search_options(self, build_config: dict) -> dict:
         """Set hybrid search options in the build configuration."""
+        # Detect what hybrid options are available
+        # Get the admin object
+        client = DataAPIClient(environment=self.environment)
+        admin_client = client.get_admin()
+        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)
+
+        # We will try to get the reranking providers to see if its hybrid emabled
+        try:
+            providers = db_admin.find_reranking_providers()
+            build_config["reranker"]["options"] = [
+                model.name
+                for provider_data in providers.reranking_providers.values()
+                for model in provider_data.models
+            ]
+            build_config["reranker"]["options_metadata"] = [
+                {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
+                for provider in providers.reranking_providers.values()
+                for model in provider.models
+            ]
+            build_config["reranker"]["value"] = build_config["reranker"]["options"][0]
+
+            # Set the default search field to hybrid search
+            build_config["search_method"]["options"] = ["Hybrid Search", "Vector Search"]
+            build_config["search_method"]["value"] = "Hybrid Search"
+        except Exception as _:  # noqa: BLE001
+            build_config["reranker"]["options"] = []
+            build_config["reranker"]["options_metadata"] = []
+
+            # Set the default search field to vector search
+            build_config["search_method"]["options"] = ["Vector Search"]
+            build_config["search_method"]["value"] = "Vector Search"
+
+        # Set reranker and lexical terms options based on search method
         build_config["reranker"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
         build_config["lexical_terms"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
+        build_config["lexical_terms"]["advanced"] = build_config["search_method"]["value"] != "Hybrid Search"
 
         return build_config
 
@@ -826,10 +874,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if field_name == "collection_name" and not isinstance(field_value, dict):
             return self._handle_collection_selection(build_config, field_value)
 
-        # Set the hybrid search options
-        if field_name == "search_method":
-            return self._handle_hybrid_search_options(build_config)
-
         return build_config
 
     async def _create_new_database(self, build_config: dict, field_value: dict) -> None:
@@ -860,7 +904,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _update_cloud_regions(self, build_config: dict, field_value: dict) -> dict:
         """Update cloud provider regions in build config."""
-        env = self.environment or "prod"
+        env = self.environment
         cloud_provider = field_value["02_cloud_provider"]
 
         # Update the region options based on the selected cloud provider
@@ -886,6 +930,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 dimension=field_value.get("04_dimension") if embedding_provider == "Bring your own" else None,
                 embedding_generation_provider=embedding_provider,
                 embedding_generation_model=field_value.get("03_embedding_generation_model"),
+                reranker=self.reranker,
             )
         except Exception as e:
             msg = f"Error creating collection: {e}"
@@ -950,6 +995,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Reset provider options
         build_config = self.reset_provider_options(build_config)
+
+        # Handle hybrid search options
+        build_config = self._handle_hybrid_search_options(build_config)
 
         return self.reset_collection_list(build_config)
 
@@ -1027,6 +1075,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
 
+        # Choose HybridSearchMode based on the selected param
+        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == "Hybrid Search" else HybridSearchMode.OFF
+
         # Attempt to build the Vector Store object
         try:
             vector_store = AstraDBVectorStore(
@@ -1035,7 +1086,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 api_endpoint=database.api_endpoint,
                 namespace=database.keyspace,
                 collection_name=self.collection_name,
-                environment=self.environment or "prod",
+                environment=self.environment,
+                # Hybrid Search Parameters
+                hybrid_search=hybrid_search_mode,
+                collection_lexical=self.lexical_terms,
                 # Astra DB Usage Tracking Parameters
                 ext_callers=[(f"{langflow_prefix}langflow", __version__)],
                 # Astra DB Vector Store Parameters
