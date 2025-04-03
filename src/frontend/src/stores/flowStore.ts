@@ -23,7 +23,7 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
@@ -599,6 +599,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent,
     session,
     stream = true,
+    eventDelivery = EventDeliveryType.STREAMING,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -607,6 +608,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent?: boolean;
     session?: string;
     stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => {
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
@@ -834,6 +836,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       logBuilds: get().onFlowPage,
       playgroundPage,
       stream,
+      eventDelivery,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();

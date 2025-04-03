@@ -55,10 +55,12 @@ from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
     get_session,
+    get_settings_service,
     get_telemetry_service,
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.settings.service import SettingsService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -152,6 +154,7 @@ async def build_flow(
     current_user: CurrentActiveUser,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     """Build and process a flow, returning a job ID for event polling.
 
@@ -170,6 +173,7 @@ async def build_flow(
         current_user: The authenticated user
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
+        settings_service: Settings service
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -193,7 +197,13 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    return {"job_id": job_id}
+    if settings_service.settings.event_delivery != "direct":
+        return {"job_id": job_id}
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        stream=True,
+    )
 
 
 @router.get("/build/{job_id}/events")

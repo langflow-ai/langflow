@@ -389,7 +389,7 @@ class ConfigResponse(BaseModel):
     webhook_polling_interval: int
     public_flow_cleanup_interval: int
     public_flow_expiration: int
-    event_delivery: Literal["polling", "streaming"]
+    event_delivery: Literal["polling", "streaming", "direct"]
 
 
 class CancelFlowResponse(BaseModel):
