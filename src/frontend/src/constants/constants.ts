@@ -655,6 +655,8 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "link",
   "slider",
   "tab",
+  "sortableList",
+  "connect",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -1048,4 +1050,15 @@ export const DEBOUNCE_FIELD_LIST = [
   "IntInput",
   "FloatInput",
   "SliderInput",
+];
+
+export const OPENAI_VOICES = [
+  { name: "alloy", value: "alloy" },
+  { name: "ash", value: "ash" },
+  { name: "ballad", value: "ballad" },
+  { name: "coral", value: "coral" },
+  { name: "echo", value: "echo" },
+  { name: "sage", value: "sage" },
+  { name: "shimmer", value: "shimmer" },
+  { name: "verse", value: "verse" },
 ];
