@@ -3,7 +3,10 @@ title: Install Langflow
 slug: /get-started-installation
 ---
 
-You can deploy Langflow either locally or as a hosted service with [**Datastax Langflow**](#datastax-langflow).
+Langflow can be installed in three ways:
+* As a [Python package](#install-langflow-locally)
+* As a [standalone desktop application ](#install-langflow-desktop)
+* As a [cloud hosted service](#datastax-langflow)
 
 ## Install Langflow locally
 
@@ -80,6 +83,11 @@ python -m pip install langflow --force-reinstall
 ```
 
 ## Install Langflow Desktop
+
+:::important
+Langflow Desktop is in **Alpha**.
+Development is ongoing, and the features and functionality are subject to change.
+:::
 
 :::important
 Langflow Desktop is available only for macOS.
