@@ -213,7 +213,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Lexical Terms",
             info="Lexical terms to use for the search.",
             show=False,
-            advanced=True,
             value="",
         ),
         IntInput(
@@ -390,7 +389,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
-            providers = cls.get_vectorize_providers(token=token, environment=environment, api_endpoint=api_endpoint)
+            providers = cls.get_vectorize_providers(
+                token=token, environment=environment, api_endpoint=api_endpoint
+            )
             vectorize_options = VectorServiceOptions(
                 provider=providers.get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
@@ -417,7 +418,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Split the reranker field into a provider a model name
             provider, _ = reranker.split("/")
             base_args["collection_rerank"] = CollectionRerankOptions(
-                service=RerankServiceOptions(provider=provider, model_name=reranker),
+                service=RerankServiceOptions(
+                    provider=provider,
+                    model_name=reranker
+                ),
             )
             base_args["collection_lexical"] = CollectionLexicalOptions(analyzer="STANDARD")
 
@@ -796,7 +800,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         try:
             providers = db_admin.find_reranking_providers()
             build_config["reranker"]["options"] = [
-                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models
+                model.name
+                for provider_data in providers.reranking_providers.values()
+                for model in provider_data.models
             ]
             build_config["reranker"]["options_metadata"] = [
                 {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
@@ -818,8 +824,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Set reranker and lexical terms options based on search method
         build_config["reranker"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
-        build_config["lexical_terms"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
-        build_config["lexical_terms"]["advanced"] = build_config["search_method"]["value"] != "Hybrid Search"
 
         return build_config
 
@@ -1023,6 +1027,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["embedding_model"]["show"] = not bool(provider)
         build_config["embedding_model"]["required"] = not bool(provider)
 
+        # Grab the collection object
+        database = self.get_database_object(api_endpoint=build_config["api_endpoint"]["value"])
+        collection = database.get_collection(
+            name=field_value,
+            keyspace=build_config["keyspace"]["value"],
+        )
+
+        # Check if hybrid and lexical are enabled
+        col_options = collection.options()
+        hyb_enabled = col_options.rerank and col_options.rerank.enabled
+        lex_enabled = col_options.lexical and col_options.lexical.enabled
+        user_hyb_enabled = build_config["search_method"]["value"] == "Hybrid Search"
+
+        # Show lexical terms if the collection is hybrid enabled
+        build_config["lexical_terms"]["show"] = hyb_enabled and lex_enabled and user_hyb_enabled
+
         return build_config
 
     @check_cached_vector_store
@@ -1082,7 +1102,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 environment=self.environment,
                 # Hybrid Search Parameters
                 hybrid_search=hybrid_search_mode,
-                collection_lexical=self.lexical_terms,
                 # Astra DB Usage Tracking Parameters
                 ext_callers=[(f"{langflow_prefix}langflow", __version__)],
                 # Astra DB Vector Store Parameters
