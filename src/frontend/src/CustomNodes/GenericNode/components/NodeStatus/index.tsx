@@ -290,11 +290,15 @@ export default function NodeStatus({
     }
   };
 
-  const getConnectionButtonClasses = (
+  const getConnectionButtonClasses: (
     connectionLink: string,
     isAuthenticated: boolean,
     isPolling: boolean,
-  ) => {
+  ) => string = (
+    connectionLink: string,
+    isAuthenticated: boolean,
+    isPolling: boolean,
+  ): string => {
     return cn(
       "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
       connectionLink === "error"
@@ -306,11 +310,15 @@ export default function NodeStatus({
     );
   };
 
-  const getConnectionIconClasses = (
+  const getConnectionIconClasses: (
     connectionLink: string,
     isAuthenticated: boolean,
     isPolling: boolean,
-  ) => {
+  ) => string = (
+    connectionLink: string,
+    isAuthenticated: boolean,
+    isPolling: boolean,
+  ): string => {
     return cn(
       "h-3 w-3 transition-opacity",
       connectionLink === "error"
