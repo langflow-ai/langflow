@@ -9,7 +9,7 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
 import { flushSync } from "react-dom";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
@@ -41,6 +41,7 @@ type BuildVerticesParams = {
   session?: string;
   playgroundPage?: boolean;
   stream?: boolean;
+  eventDelivery?: EventDeliveryType;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -139,7 +140,8 @@ export async function buildFlowVerticesWithFallback(
 ) {
   logFlowLoad("Starting flow load");
   try {
-    // Use shouldUsePolling() to determine stream mode
+    // Use the event_delivery parameter directly
+    console.log("params", params);
     return await buildFlowVertices({ ...params });
   } catch (e: any) {
     if (
@@ -199,6 +201,7 @@ async function pollBuildEvents(
     }
 
     // Process the event
+    console.log("Processing event:", data.event);
     const event = JSON.parse(data.event);
     const result = await onEvent(
       event.event,
@@ -241,6 +244,7 @@ export async function buildFlowVertices({
   session,
   playgroundPage,
   stream = true,
+  eventDelivery,
 }: BuildVerticesParams) {
   const inputs = {};
 
@@ -256,6 +260,11 @@ export async function buildFlowVertices({
   }
   if (logBuilds !== undefined) {
     queryParams.append("log_builds", logBuilds.toString());
+  }
+
+  // Add stream parameter when using direct event delivery
+  if (eventDelivery === EventDeliveryType.DIRECT) {
+    queryParams.append("stream", "true");
   }
 
   if (queryParams.toString()) {
@@ -283,6 +292,58 @@ export async function buildFlowVertices({
   }
 
   try {
+    // If event_delivery is direct, we'll stream from the build endpoint directly
+    console.log("event_delivery", eventDelivery);
+    if (eventDelivery === EventDeliveryType.DIRECT) {
+      const buildController = new AbortController();
+      buildController.signal.addEventListener("abort", () => {
+        onBuildStopped && onBuildStopped();
+      });
+      useFlowStore.getState().setBuildController(buildController);
+
+      const buildResults: Array<boolean> = [];
+      const verticesStartTimeMs: Map<string, number> = new Map();
+
+      return performStreamingRequest({
+        method: "POST",
+        url: buildUrl,
+        body: postData,
+        onData: async (event) => {
+          const type = event["event"];
+          const data = event["data"];
+          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
+            onBuildStart,
+            onBuildUpdate,
+            onBuildComplete,
+            onBuildError,
+            onGetOrderSuccess,
+            onValidateNodes,
+          });
+        },
+        onError: (statusCode) => {
+          if (statusCode === 404) {
+            throw new Error("Flow not found");
+          }
+          throw new Error("Error processing build events");
+        },
+        onNetworkError: (error: Error) => {
+          if (error.name === "AbortError") {
+            onBuildStopped && onBuildStopped();
+            return;
+          }
+          onBuildError!("Error Building Component", [
+            "Network error. Please check the connection to the server.",
+          ]);
+        },
+        buildController,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  try {
+    // Otherwise, use the existing two-step process (job_id + events endpoint)
     // First, start the build and get the job ID
     const buildResponse = await fetch(buildUrl, {
       method: "POST",

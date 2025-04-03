@@ -79,7 +79,11 @@ export default function NodeStatus({
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
     setValidationStatus(null);
-    buildFlow({ stopNodeId: nodeId, stream: shouldStreamEvents() });
+    buildFlow({
+      stopNodeId: nodeId,
+      stream: shouldStreamEvents(),
+      eventDelivery: config.data?.event_delivery,
+    });
   }
 
   const play = useShortcutsStore((state) => state.play);
@@ -170,7 +174,11 @@ export default function NodeStatus({
       return;
     }
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-    buildFlow({ stopNodeId: nodeId, stream: shouldStreamEvents() });
+    buildFlow({
+      stopNodeId: nodeId,
+      stream: shouldStreamEvents(),
+      eventDelivery: config.data?.event_delivery,
+    });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
 
