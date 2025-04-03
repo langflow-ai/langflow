@@ -31,6 +31,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_FETCH_EMAILS": {
             "display_name": "Fetch Emails",
             "action_fields": ["max_results", "query"],
+            "result_field": "messages",
         },
         "GMAIL_GET_PROFILE": {
             "display_name": "Get User Profile",
@@ -77,7 +78,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
     _bool_variables = {"is_html", "include_spam_trash"}
 
     # Cache for action fields mapping
-    _action_fields_cache = {}
+    _action_fields_cache: dict[str, set[str]] = {}
     _readonly_actions = frozenset(
         [
             "GMAIL_FETCH_EMAILS",
@@ -353,8 +354,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             ).get("data", [])
             # Assuming 'result' is the output from the executed action
             # Retrieve the first key from the result dictionary and get its value
-            if result:  # Check if result is not empty
-                key = next(iter(result))  # Get the first key from the dictionary
+            if result:
+                key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
                 return result.get(key)
             # self.status = result
             # return Message(text=str(result))
