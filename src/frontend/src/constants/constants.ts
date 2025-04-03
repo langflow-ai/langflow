@@ -657,6 +657,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "tab",
   "sortableList",
   "connect",
+  "auth",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -1062,3 +1063,6 @@ export const OPENAI_VOICES = [
   { name: "shimmer", value: "shimmer" },
   { name: "verse", value: "verse" },
 ];
+
+export const DEFAULT_POLLING_INTERVAL = 5000;
+export const DEFAULT_TIMEOUT = 30000;
