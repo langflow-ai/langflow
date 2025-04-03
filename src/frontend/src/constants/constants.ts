@@ -1063,3 +1063,6 @@ export const OPENAI_VOICES = [
   { name: "shimmer", value: "shimmer" },
   { name: "verse", value: "verse" },
 ];
+
+export const DEFAULT_POLLING_INTERVAL = 5000;
+export const DEFAULT_TIMEOUT = 30000;
