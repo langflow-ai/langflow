@@ -180,6 +180,7 @@ export default function IOModal({
           silent: true,
           session: sessionId,
           stream: shouldStreamEvents(),
+          eventDelivery: config.data?.event_delivery,
         }).catch((err) => {
           console.error(err);
         });
