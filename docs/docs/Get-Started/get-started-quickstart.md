@@ -19,7 +19,7 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 1. From the Langflow dashboard, click **New Flow**, and then select **Blank Flow**. A blank workspace opens where you can build your flow.
 
 :::tip
-If you don't want to create a blank flow, click **New Flow**, and then select **Basic Prompting** for a pre-built flow.
+If you want a pre-built flow, click **New Flow**, and then select **Basic Prompting**.
 Continue to [Run the basic prompting flow](#run-basic-prompting-flow).
 :::
 
@@ -68,8 +68,8 @@ Add your OpenAI API key to the OpenAI model component, and add a prompt to the P
 
 1. Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s [Global Variables](/configuration-global-variables).
 
-	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**. 
-	Alternatively, click your username in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
+	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**.
+	Alternatively, click your user icon in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
 	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
 	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
 
@@ -122,8 +122,8 @@ The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) com
 The [File](/components-data#file) component loads files from your local machine.
 4. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
 The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
-5. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The [Data to Message](/components-processing#data-to-message) component converts the data from the **Astra DB** component into plain text.
+5. Click **Processing**, select the **Parser** component, and then drag it to the canvas.
+The [Parser](/components-processing#parser) component converts the data from the **Astra DB** component into plain text.
 6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
 7. Connect the new components into the existing flow, so your flow looks like this:
