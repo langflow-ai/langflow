@@ -141,7 +141,6 @@ export async function buildFlowVerticesWithFallback(
   logFlowLoad("Starting flow load");
   try {
     // Use the event_delivery parameter directly
-    console.log("params", params);
     return await buildFlowVertices({ ...params });
   } catch (e: any) {
     if (
