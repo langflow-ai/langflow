@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
@@ -118,8 +118,23 @@ const SortableListComponent = ({
   }, []);
 
   const handleOpenListSelectionDialog = useCallback(() => {
-    setOpen(true);
-  }, []);
+    if (helperText) {
+      setShowHelperText(true);
+    } else {
+      setOpen(true);
+    }
+  }, [helperText]);
+
+  const [showHelperText, setShowHelperText] = useState(false);
+
+  useEffect(() => {
+    if (!helperText) {
+      setShowHelperText(false);
+    }
+    if (helperText && open) {
+      setOpen(false);
+    }
+  }, [helperText, open]);
 
   return (
     <div className="flex w-full flex-col">
@@ -159,7 +174,7 @@ const SortableListComponent = ({
         </div>
       )}
 
-      {helperText && (
+      {helperText && showHelperText && (
         <div className="pt-2">
           <HelperTextComponent
             helperText={helperText}
