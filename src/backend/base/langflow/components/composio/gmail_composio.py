@@ -97,8 +97,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Don't overwrite _actions_data since it's defined at class level
-        # Instead, just use it to initialize other fields
         self._all_fields = {
             field for action_data in self._actions_data.values() for field in action_data["action_fields"]
         }
@@ -356,8 +354,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                 action=enum_name,
                 params=params,
             ).get("data", [])
-            # Assuming 'result' is the output from the executed action
-            # Retrieve the first key from the result dictionary and get its value
             if (
                 len(result) != 1
                 and not self._actions_data.get(action_key, {}).get("result_field")
@@ -371,8 +367,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                     key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
                     return result.get(key)
                 return result
-            # self.status = result
-            # return Message(text=str(result))
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
