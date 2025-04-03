@@ -5,7 +5,7 @@ slug: /get-started-installation
 
 Langflow can be installed in three ways:
 * As a [Python package](#install-langflow-locally)
-* As a [standalone desktop application ](#install-langflow-desktop)
+* As a [standalone desktop application](#install-langflow-desktop)
 * As a [cloud hosted service](#datastax-langflow)
 
 ## Install Langflow locally
