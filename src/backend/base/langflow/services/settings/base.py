@@ -249,6 +249,7 @@ class Settings(BaseSettings):
         # because polling and streaming are not supported
         # in multi-worker environments
         if info.data.get("workers", 1) > 1:
+            logger.warning("Multi-worker environment detected, using direct event delivery")
             return "direct"
         return value
 
