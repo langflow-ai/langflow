@@ -18,7 +18,7 @@ Build a question-and-answer chatbot with a document loaded from local memory.
 
 ![](/img/starter-flow-document-qa.png)
 
-This flow is composed of a chatbot with the **Chat Input**, **Prompt**, **OpenAI**, and **Chat Output** components, but also incorporates a **File** component, which loads a file from your local machine. **Parse Data** is used to convert the data from **File** into the **Prompt** component as `{Document}`.
+This flow is composed of a chatbot with the **Chat Input**, **Prompt**, **OpenAI**, and **Chat Output** components, but also incorporates a **File** component, which loads a file from your local machine. The **Parser** component convers the data from the **File** component into the **Prompt** component as `{Document}`.
 
 The **Prompt** component is instructed to answer questions based on the contents of `{Document}`. This gives the **OpenAI** component context it would not otherwise have access to.
 
