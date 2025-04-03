@@ -96,10 +96,11 @@ class ComposioBaseComponent(Component):
     def _build_action_maps(self):
         """Build lookup maps for action names."""
         if not self._display_to_key_map:
-            self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
-            self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
+            actions_data_items = self._actions_data.items()
+            self._display_to_key_map = {data["display_name"]: key for key, data in actions_data_items}
+            self._key_to_display_map = {key: data["display_name"] for key, data in actions_data_items}
             self._sanitized_names = {
-                action: self._name_sanitizer.sub("-", self.sanitize_action_name(action))
+                action: self._name_sanitizer.sub("-", self._key_to_display_map.get(action, action))
                 for action in self._actions_data
             }
 
@@ -110,7 +111,8 @@ class ComposioBaseComponent(Component):
 
     def desanitize_action_name(self, action_name: str) -> str:
         """Convert display name to action key using lookup."""
-        self._build_action_maps()
+        if action_name not in self._display_to_key_map:
+            self._build_action_maps()
         return self._display_to_key_map.get(action_name, action_name)
 
     def _get_action_fields(self, action_key: str | None) -> set[str]:
