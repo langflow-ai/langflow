@@ -27,6 +27,9 @@ import IconComponent from "../../../../components/common/genericIconComponent";
 import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
 
+const POLLING_TIMEOUT = 21000;
+const POLLING_INTERVAL = 3000;
+
 export default function NodeStatus({
   nodeId,
   display_name,
@@ -120,11 +123,11 @@ export default function NodeStatus({
         () => {},
         data.node.tool_mode,
       );
-    }, 3000);
+    }, POLLING_INTERVAL);
 
     pollingTimeout.current = setTimeout(() => {
       stopPolling();
-    }, 21000);
+    }, POLLING_TIMEOUT);
   };
 
   useEffect(() => {
