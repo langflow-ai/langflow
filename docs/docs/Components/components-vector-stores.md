@@ -430,16 +430,22 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 
 ### Inputs
 
-| Name                     | Type         | Description                               |
-| ------------------------ | ------------ | ----------------------------------------- |
-| mongodb_atlas_cluster_uri | SecretString | MongoDB Atlas Cluster URI                 |
-| db_name                   | String       | Database name                             |
-| collection_name           | String       | Collection name                           |
-| index_name                | String       | Index name                                |
-| search_query              | String       | Query for similarity search               |
-| ingest_data               | Data         | Data to be ingested into the vector store |
-| embedding                 | Embeddings   | Embedding function to use                 |
-| number_of_results         | Integer      | Number of results to return in search     |
+| Name                      | Type         | Description                               |
+| ------------------------- | ------------ | ----------------------------------------- |
+| mongodb_atlas_cluster_uri | SecretString | The connection URI for your MongoDB Atlas cluster (required) |
+| enable_mtls               | Boolean      | Enable mutual TLS authentication (default: false) |
+| mongodb_atlas_client_cert | SecretString | Client certificate combined with private key for mTLS authentication (required if mTLS is enabled) |
+| db_name                   | String       | The name of the database to use (required) |
+| collection_name           | String       | The name of the collection to use (required) |
+| index_name                | String       | The name of the Atlas Search index, it should be a Vector Search (required) |
+| insert_mode               | String       | How to insert new documents into the collection (options: "append", "overwrite", default: "append") |
+| embedding                 | Embeddings   | The embedding model to use |
+| number_of_results         | Integer      | Number of results to return in similarity search (default: 4) |
+| index_field               | String       | The field to index (default: "embedding") |
+| filter_field              | String       | The field to filter the index |
+| number_dimensions         | Integer      | Embedding context length (default: 1536) |
+| similarity                | String       | The method used to measure similarity between vectors (options: "cosine", "euclidean", "dotProduct", default: "cosine") |
+| quantization              | String       | Quantization reduces memory costs by converting 32-bit floats to smaller data types (options: "scalar", "binary") |
 
 ### Outputs
 
