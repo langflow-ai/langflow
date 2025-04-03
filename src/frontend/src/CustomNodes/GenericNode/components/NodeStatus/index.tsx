@@ -334,6 +334,16 @@ export default function NodeStatus({
     );
   };
 
+  const getDataTestId = () => {
+    if (isAuthenticated && !isPolling) {
+      return `button_connected_${display_name.toLowerCase()}`;
+    }
+    if (connectionLink === "error") {
+      return `button_error_${display_name.toLowerCase()}`;
+    }
+    return `button_disconnected_${display_name.toLowerCase()}`;
+  };
+
   return showNode ? (
     <>
       <div className="flex flex-shrink-0 items-center gap-1">
@@ -393,7 +403,7 @@ export default function NodeStatus({
                     isPolling,
                   )}
                   onClick={handleClickConnect}
-                  data-testid={`button_connect_` + display_name.toLowerCase()}
+                  data-testid={getDataTestId()}
                 >
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent

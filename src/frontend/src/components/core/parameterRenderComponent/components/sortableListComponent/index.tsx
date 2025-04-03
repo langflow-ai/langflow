@@ -146,6 +146,7 @@ const SortableListComponent = ({
             role="combobox"
             onClick={handleOpenListSelectionDialog}
             className="dropdown-component-outline input-edit-node w-full py-2"
+            data-testid="button_open_list_selection"
           >
             <div className={cn("flex items-center text-sm font-semibold")}>
               {placeholder}
