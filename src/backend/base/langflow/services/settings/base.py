@@ -242,6 +242,16 @@ class Settings(BaseSettings):
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
+    @field_validator("event_delivery", mode="before")
+    @classmethod
+    def set_event_delivery(cls, value, info):
+        # If workers > 1, we need to use direct delivery
+        # because polling and streaming are not supported
+        # in multi-worker environments
+        if info.data.get("workers", 1) > 1:
+            return "direct"
+        return value
+
     @field_validator("dev")
     @classmethod
     def set_dev(cls, value):
