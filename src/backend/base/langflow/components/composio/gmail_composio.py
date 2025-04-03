@@ -320,10 +320,12 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         """Execute action and return response as Message."""
         toolset = self._build_wrapper()
 
+
         try:
             self._build_action_maps()
             # Get the display name from the action list
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else self.action
+            print(f"Executing action: {display_name}")
             # Use the display_to_key_map to get the action key
             action_key = self._display_to_key_map.get(display_name)
             if not action_key:

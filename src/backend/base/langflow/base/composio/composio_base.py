@@ -20,6 +20,7 @@ from langflow.logging import logger
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.services.deps import get_shared_component_cache_service
 
 
 class ComposioBaseComponent(Component):
@@ -73,22 +74,51 @@ class ComposioBaseComponent(Component):
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
     outputs = [
+        Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
         Output(name="data", display_name="Data", method="as_data"),
         Output(name="message", display_name="Message", method="as_message"),
-        Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
     ]
 
-    def as_message(self) -> Message:
-        result = self.execute_action()
-        return Message(text=str(result))
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        self._cache_service = get_shared_component_cache_service()
 
-    def as_dataframe(self) -> DataFrame:
-        result = DataFrame(self.execute_action())
-        self.status = result
+    async def get_final_output(self) -> list[dict]:
+        """Get the final output from cache or execute the action."""
+        cache_key = f"final_output_{self._id}"
+        
+        # Try to get from cache first
+        cached_result = await self._cache_service.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+            
+        # If not in cache, execute and store
+        result = self.execute_action()
+        await self._cache_service.set(cache_key, result)
         return result
 
-    def as_data(self) -> Data:
-        result = self.execute_action()
+    async def set_final_output(self, output: list[dict]) -> None:
+        """Set the final output in the cache."""
+        if not output:
+            output = self.execute_action()
+        cache_key = f"final_output_{self._id}"
+        await self._cache_service.set(cache_key, output)
+
+    async def as_message(self) -> Message:
+        """Get the output as a message."""
+        result = await self.get_final_output()
+        return Message(text=str(result))
+
+    async def as_dataframe(self) -> DataFrame:
+        """Get the output as a dataframe."""
+        result = await self.get_final_output()
+        df = DataFrame(result)
+        self.status = df
+        return df
+
+    async def as_data(self) -> Data:
+        """Get the output as data."""
+        result = await self.get_final_output()
         return Data(results=result)
 
     def _build_action_maps(self):
