@@ -281,6 +281,48 @@ export default function NodeStatus({
     return "Run component";
   };
 
+  const handleClickConnect = () => {
+    if (connectionLink === "error") return;
+    if (isAuthenticated) {
+      handleDisconnect();
+    } else {
+      startPolling();
+    }
+  };
+
+  const getConnectionButtonClasses = (
+    connectionLink: string,
+    isAuthenticated: boolean,
+    isPolling: boolean,
+  ) => {
+    return cn(
+      "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
+      connectionLink === "error"
+        ? "border-destructive text-destructive"
+        : isAuthenticated && !isPolling
+          ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
+          : "",
+      connectionLink === "" && "cursor-not-allowed opacity-50",
+    );
+  };
+
+  const getConnectionIconClasses = (
+    connectionLink: string,
+    isAuthenticated: boolean,
+    isPolling: boolean,
+  ) => {
+    return cn(
+      "h-3 w-3 transition-opacity",
+      connectionLink === "error"
+        ? "text-destructive"
+        : isAuthenticated && !isPolling
+          ? "text-accent-emerald-foreground"
+          : "text-accent-amber-foreground",
+      isPolling && "animate-spin",
+      isAuthenticated && !isPolling ? "group-hover:opacity-0" : "",
+    );
+  };
+
   return showNode ? (
     <>
       <div className="flex flex-shrink-0 items-center gap-1">
@@ -334,23 +376,12 @@ export default function NodeStatus({
                 <Button
                   unstyled
                   disabled={connectionLink === "" || connectionLink === "error"}
-                  className={cn(
-                    "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
-                    connectionLink === "error"
-                      ? "border-destructive text-destructive"
-                      : isAuthenticated && !isPolling
-                        ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
-                        : "",
-                    connectionLink === "" && "cursor-not-allowed opacity-50",
+                  className={getConnectionButtonClasses(
+                    connectionLink,
+                    isAuthenticated,
+                    isPolling,
                   )}
-                  onClick={() => {
-                    if (connectionLink === "error") return;
-                    if (isAuthenticated) {
-                      handleDisconnect();
-                    } else {
-                      startPolling();
-                    }
-                  }}
+                  onClick={handleClickConnect}
                   data-testid={`button_connect_` + display_name.toLowerCase()}
                 >
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -362,17 +393,10 @@ export default function NodeStatus({
                             ? "Link"
                             : "AlertTriangle"
                       }
-                      className={cn(
-                        "h-3 w-3 transition-opacity",
-                        connectionLink === "error"
-                          ? "text-destructive"
-                          : isAuthenticated && !isPolling
-                            ? "text-accent-emerald-foreground"
-                            : "text-accent-amber-foreground",
-                        isPolling && "animate-spin",
-                        isAuthenticated && !isPolling
-                          ? "group-hover:opacity-0"
-                          : "",
+                      className={getConnectionIconClasses(
+                        connectionLink,
+                        isAuthenticated,
+                        isPolling,
                       )}
                       strokeWidth={ICON_STROKE_WIDTH}
                     />
