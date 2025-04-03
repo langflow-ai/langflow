@@ -390,9 +390,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
-            providers = cls.get_vectorize_providers(
-                token=token, environment=environment, api_endpoint=api_endpoint
-            )
+            providers = cls.get_vectorize_providers(token=token, environment=environment, api_endpoint=api_endpoint)
             vectorize_options = VectorServiceOptions(
                 provider=providers.get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
@@ -419,10 +417,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Split the reranker field into a provider a model name
             provider, _ = reranker.split("/")
             base_args["collection_rerank"] = CollectionRerankOptions(
-                service=RerankServiceOptions(
-                    provider=provider,
-                    model_name=reranker
-                ),
+                service=RerankServiceOptions(provider=provider, model_name=reranker),
             )
             base_args["collection_lexical"] = CollectionLexicalOptions(analyzer="STANDARD")
 
@@ -801,9 +796,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         try:
             providers = db_admin.find_reranking_providers()
             build_config["reranker"]["options"] = [
-                model.name
-                for provider_data in providers.reranking_providers.values()
-                for model in provider_data.models
+                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models
             ]
             build_config["reranker"]["options_metadata"] = [
                 {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
