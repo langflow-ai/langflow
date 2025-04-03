@@ -200,7 +200,6 @@ async function pollBuildEvents(
     }
 
     // Process the event
-    console.log("Processing event:", data.event);
     const event = JSON.parse(data.event);
     const result = await onEvent(
       event.event,
