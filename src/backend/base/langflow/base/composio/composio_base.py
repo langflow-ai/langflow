@@ -238,9 +238,9 @@ class ComposioBaseComponent(Component):
                 }
                 build_config["action"]["options"] = []
                 build_config["action"]["value"] = ""
-            except Exception as e:
+            except (ValueError, ConnectionError, ApiKeyError) as e:
                 build_config["auth_link"]["value"] = "error"
-                build_config["auth_link"]["auth_tooltip"] = "Failed to disconnect from the app."
+                build_config["auth_link"]["auth_tooltip"] = f"Failed to disconnect from the app: {e}"
                 logger.error(f"Error disconnecting: {e}")
         if field_name == "auth_link" and field_value == "validated":
             build_config["action"]["helper_text"] = ""
@@ -270,7 +270,8 @@ class ComposioBaseComponent(Component):
             entity.client.integrations.remove(id=connection.integrationId)
         except Exception as e:
             logger.error(f"Error disconnecting from {app}: {e}")
-            raise ValueError(f"Failed to disconnect from {app}: {e}") from e
+            msg = f"Failed to disconnect from {app}: {e}"
+            raise ValueError(msg) from e
 
     def configure_tools(self, toolset: ComposioToolSet) -> list[Tool]:
         tools = toolset.get_tools(actions=self._actions_data.keys())

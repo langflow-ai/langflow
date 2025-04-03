@@ -11,10 +11,10 @@ class MockComposioToolSet:
         self.api_key = api_key
         self.client = MagicMock()
 
-    def get_tools(self, actions=None):
+    def get_tools(self, *_):
         return []
 
-    def execute_action(self, action=None, params=None):
+    def execute_action(self, *_, **__):
         return {"data": {"response": "mocked response"}}
 
 
@@ -26,6 +26,11 @@ class TestComposioBase(ComponentTestBaseWithoutClient):
                 return []
 
         return TestComponent
+
+    @pytest.fixture(autouse=True)
+    def mock_composio_toolset(self):
+        with patch("langflow.base.composio.composio_base.ComposioToolSet", MockComposioToolSet):
+            yield
 
     @pytest.fixture
     def default_kwargs(self):
@@ -46,17 +51,12 @@ class TestComposioBase(ComponentTestBaseWithoutClient):
             {"version": "1.1.1", "module": "composio", "file_name": DID_NOT_EXIST},
         ]
 
-    @pytest.fixture
-    def mock_composio_toolset(self):
-        with patch("langflow.base.composio.composio_base.ComposioToolSet", MockComposioToolSet):
-            yield
-
     def test_build_wrapper_no_api_key(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         with pytest.raises(ValueError, match="Please provide a valid Composio API Key in the component settings"):
             component._build_wrapper()
 
-    def test_build_wrapper_with_api_key(self, component_class, default_kwargs, mock_composio_toolset):
+    def test_build_wrapper_with_api_key(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         component.api_key = "test_key"
         wrapper = component._build_wrapper()
