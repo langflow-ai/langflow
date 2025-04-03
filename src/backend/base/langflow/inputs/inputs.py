@@ -426,7 +426,7 @@ class NestedDictInput(
     """
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
-    value: dict | Data | None = {}
+    value: dict | None = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
