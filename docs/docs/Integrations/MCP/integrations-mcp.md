@@ -68,7 +68,9 @@ For example, on the MacOS menu bar, click **Claude**, and then select **Settings
 2. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
 This creates a `claude_desktop_config.json` file if you don't already have one.
 3. Add the following code to `claude_desktop_config.json`.
-Your `args` may differ for your `uvx` and `Python` installations. To find the correct paths:
+Your `args` may differ for your `uvx` and `Python` installations. 
+
+Run one of the following to find the correct paths:
 
    1. To find the `uvx` path, run `which uvx` in your terminal. Replace `PATH/TO/UVX` with the `uvx` path from your system.
    2. To find the `python` path, run `which python` in your terminal. Replace `PATH/TO/PYTHON` with the Python path from your terminal.
