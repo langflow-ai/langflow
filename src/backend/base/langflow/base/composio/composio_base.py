@@ -74,8 +74,6 @@ class ComposioBaseComponent(Component):
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
     outputs = [
-        # Output(name="data", display_name="Data", method="as_data"),
-        # Output(name="message", display_name="Message", method="as_message"),
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
     ]
 
