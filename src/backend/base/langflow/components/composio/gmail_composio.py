@@ -31,6 +31,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_FETCH_EMAILS": {
             "display_name": "Fetch Emails",
             "action_fields": ["max_results", "query"],
+            "get_result_field": True,
             "result_field": "messages",
         },
         "GMAIL_GET_PROFILE": {
@@ -40,6 +41,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
             "display_name": "Get Email By ID",
             "action_fields": ["message_id"],
+            "get_result_field": False,
         },
         "GMAIL_CREATE_EMAIL_DRAFT": {
             "display_name": "Create Draft Email",
@@ -358,8 +360,11 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                 msg = f"Expected a dict with a single key, got {len(result)} keys: {result.keys()}"
                 raise ValueError(msg)
             if result:
-                key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
-                return result.get(key)
+                get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
+                if get_result_field:
+                    key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
+                    return result.get(key)
+                return result
             # self.status = result
             # return Message(text=str(result))
         except Exception as e:
