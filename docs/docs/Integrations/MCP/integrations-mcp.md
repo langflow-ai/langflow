@@ -68,12 +68,11 @@ For example, on the MacOS menu bar, click **Claude**, and then select **Settings
 2. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
 This creates a `claude_desktop_config.json` file if you don't already have one.
 3. Add the following code to `claude_desktop_config.json`.
-Your `args` may differ for your `uvx` and `Python` installations. 
 
-Run one of the following to find the correct paths:
+Your `args` may differ for your `uvx` and `Python` installations. To find your system paths, do the following:
 
-   1. To find the `uvx` path, run `which uvx` in your terminal. Replace `PATH/TO/UVX` with the `uvx` path from your system.
-   2. To find the `python` path, run `which python` in your terminal. Replace `PATH/TO/PYTHON` with the Python path from your terminal.
+4. To find the `uvx` path, run `which uvx` in your terminal. Replace `PATH/TO/UVX` with the `uvx` path from your system.
+5. To find the `python` path, run `which python` in your terminal. Replace `PATH/TO/PYTHON` with the Python path from your system.
 
 This command assumes the default Langflow server address of `http://127.0.0.1:7860`.
 
@@ -94,7 +93,7 @@ This command assumes the default Langflow server address of `http://127.0.0.1:78
 
 This code adds a new MCP server called `langflow` and starts the [mcp-sse-shim](https://github.com/phact/mcp-sse-shim) package using the specified Python interpreter and uvx.
 
-4. Restart Claude for Desktop.
+6. Restart Claude for Desktop.
 Your new tools are available in your chat window, and Langflow is available as an MCP server.
 
   * To view your tools, click the <Icon name="Hammer" aria-label="Tools" /> icon.
