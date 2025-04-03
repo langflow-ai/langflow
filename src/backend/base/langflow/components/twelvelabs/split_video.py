@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import BoolInput, IntInput, HandleInput
+from langflow.inputs import BoolInput, IntInput, HandleInput, StrInput, DropdownInput
 from langflow.schema import Data
 from langflow.template import Output
 import os
@@ -32,6 +32,19 @@ class SplitVideoComponent(Component):
             info="Duration of each clip in seconds",
             required=True,
             value=30,
+        ),
+        DropdownInput(
+            name="last_clip_handling",
+            display_name="Last Clip Handling",
+            info=(
+                "How to handle the final clip when it would be shorter than the specified duration:\n"
+                "- Truncate: Skip the final clip entirely if it's shorter than the specified duration\n"
+                "- Overlap Previous: Start the final clip earlier to maintain full duration, overlapping with previous clip\n"
+                "- Keep Short: Keep the final clip at its natural length, even if shorter than specified duration"
+            ),
+            options=["Truncate", "Overlap Previous", "Keep Short"],
+            value="Overlap Previous",
+            required=True,
         ),
         BoolInput(
             name="include_original",
@@ -103,6 +116,10 @@ class SplitVideoComponent(Component):
             # Create output directory for clips
             output_dir = self.get_output_dir(video_path)
             
+            # Get original video info
+            original_filename = os.path.basename(video_path)
+            original_name = os.path.splitext(original_filename)[0]
+            
             # List to store all video paths (including original if requested)
             video_paths = []
             
@@ -114,7 +131,15 @@ class SplitVideoComponent(Component):
                         "source": video_path,
                         "type": "video",
                         "clip_index": -1,  # -1 indicates original video
-                        "duration": total_duration
+                        "duration": total_duration,
+                        "original_video": {
+                            "name": original_name,
+                            "filename": original_filename,
+                            "path": video_path,
+                            "duration": total_duration,
+                            "total_clips": num_clips,
+                            "clip_duration": clip_duration
+                        }
                     }
                 }
                 video_paths.append(Data(data=original_data))
@@ -125,7 +150,18 @@ class SplitVideoComponent(Component):
                 end_time = min((i + 1) * clip_duration, total_duration)
                 duration = end_time - start_time
                 
-                # Skip if duration is too small
+                # Handle last clip if it's shorter
+                if i == num_clips - 1 and duration < clip_duration:
+                    if self.last_clip_handling == "Truncate":
+                        # Skip if the last clip would be too short
+                        continue
+                    elif self.last_clip_handling == "Overlap Previous" and i > 0:
+                        # Start from earlier to make full duration
+                        start_time = total_duration - clip_duration
+                        duration = clip_duration
+                    # For "Keep Short", we use the original start_time and duration
+                
+                # Skip if duration is too small (less than 1 second)
                 if duration < 1:
                     continue
                 
@@ -158,7 +194,23 @@ class SplitVideoComponent(Component):
                             "clip_index": i,
                             "start_time": start_time,
                             "end_time": end_time,
-                            "duration": duration
+                            "duration": duration,
+                            "original_video": {
+                                "name": original_name,
+                                "filename": original_filename,
+                                "path": video_path,
+                                "duration": total_duration,
+                                "total_clips": num_clips,
+                                "clip_duration": clip_duration
+                            },
+                            "clip": {
+                                "index": i,
+                                "total": num_clips,
+                                "duration": duration,
+                                "start_time": start_time,
+                                "end_time": end_time,
+                                "timestamp": f"{int(start_time//60):02d}:{int(start_time%60):02d} - {int(end_time//60):02d}:{int(end_time%60):02d}"
+                            }
                         }
                     }
                     video_paths.append(Data(data=clip_data))
