@@ -60,8 +60,6 @@ export default function NodeStatus({
   const [validationString, setValidationString] = useState<string>("");
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [link, setLink] = useState("");
   const [isPolling, setIsPolling] = useState(false);
 
   const nodeAuth = Object.values(data.node?.template ?? {}).find(
@@ -69,6 +67,7 @@ export default function NodeStatus({
   );
 
   const connectionLink = nodeAuth?.value;
+  const isAuthenticated = nodeAuth?.value === "validated";
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -98,22 +97,11 @@ export default function NodeStatus({
     return config.data?.event_delivery === EventDeliveryType.STREAMING;
   };
 
-  // Initialize connection state from node auth
-  useEffect(() => {
-    setLink(connectionLink);
-    if (connectionLink === "validated") {
-      setIsAuthenticated(true);
-    } else {
-      setIsAuthenticated(false);
-    }
-  }, [data.node?.template]);
-
   // Start polling when connection is initiated
   const startPolling = () => {
-    window.open(link, "_blank");
+    window.open(connectionLink, "_blank");
     stopPolling();
 
-    setLink("loading");
     setIsPolling(true);
 
     pollingInterval.current = setInterval(() => {
@@ -129,24 +117,24 @@ export default function NodeStatus({
         postTemplateValue,
         setErrorData,
         nodeAuth?.name ?? "auth_link",
-        () => {
-          if (link === "validated") {
-            stopPolling();
-            setIsAuthenticated(true);
-          }
-        },
+        () => {},
         data.node.tool_mode,
       );
     }, 3000);
 
     pollingTimeout.current = setTimeout(() => {
-      stopPolling(link !== "");
-    }, 9000);
+      stopPolling();
+    }, 21000);
   };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      stopPolling();
+    }
+  }, [isAuthenticated]);
 
   const handleDisconnect = () => {
     setIsPolling(true);
-    setIsAuthenticated(false);
     mutateTemplate(
       "disconnect",
       data.node,
@@ -160,18 +148,14 @@ export default function NodeStatus({
       setErrorData,
       nodeAuth?.name ?? "auth_link",
       () => {
-        setIsAuthenticated(false);
         setIsPolling(false);
       },
       data.node.tool_mode,
     );
   };
 
-  const stopPolling = (resetLink = false) => {
+  const stopPolling = () => {
     setIsPolling(false);
-    if (resetLink) {
-      setLink("");
-    }
 
     if (pollingInterval.current) clearInterval(pollingInterval.current);
     if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
@@ -349,17 +333,18 @@ export default function NodeStatus({
               {showNode && (
                 <Button
                   unstyled
-                  disabled={link === "" || link === "error"}
+                  disabled={connectionLink === "" || connectionLink === "error"}
                   className={cn(
                     "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
-                    link === "error"
+                    connectionLink === "error"
                       ? "border-destructive text-destructive"
-                      : isAuthenticated &&
-                          "border-accent-emerald-foreground hover:border-accent-amber-foreground",
-                    link === "" && "cursor-not-allowed opacity-50",
+                      : isAuthenticated && !isPolling
+                        ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
+                        : "",
+                    connectionLink === "" && "cursor-not-allowed opacity-50",
                   )}
                   onClick={() => {
-                    if (link === "error") return;
+                    if (connectionLink === "error") return;
                     if (isAuthenticated) {
                       handleDisconnect();
                     } else {
@@ -371,21 +356,23 @@ export default function NodeStatus({
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent
                       name={
-                        isAuthenticated
-                          ? "Link"
-                          : isPolling
-                            ? "Loader2"
+                        isPolling
+                          ? "Loader2"
+                          : isAuthenticated
+                            ? "Link"
                             : "AlertTriangle"
                       }
                       className={cn(
                         "h-3 w-3 transition-opacity",
-                        link === "error"
+                        connectionLink === "error"
                           ? "text-destructive"
-                          : isAuthenticated
+                          : isAuthenticated && !isPolling
                             ? "text-accent-emerald-foreground"
                             : "text-accent-amber-foreground",
                         isPolling && "animate-spin",
-                        isAuthenticated && "group-hover:opacity-0",
+                        isAuthenticated && !isPolling
+                          ? "group-hover:opacity-0"
+                          : "",
                       )}
                       strokeWidth={ICON_STROKE_WIDTH}
                     />
@@ -395,7 +382,9 @@ export default function NodeStatus({
                       name={"Unlink"}
                       className={cn(
                         "h-3 w-3 text-accent-amber-foreground opacity-0 transition-opacity",
-                        isAuthenticated && "group-hover:opacity-100",
+                        isAuthenticated && !isPolling
+                          ? "group-hover:opacity-100"
+                          : "",
                       )}
                       strokeWidth={ICON_STROKE_WIDTH}
                     />
