@@ -40,6 +40,7 @@ class ComposioBaseComponent(Component):
             required=True,
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
+            value="COMPOSIO_API_KEY",
         ),
         AuthInput(
             name="auth_link",
