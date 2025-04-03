@@ -319,14 +319,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             db_admin = admin_client.get_database_admin(api_endpoint, token=token)
 
             # Get the list of embedding providers
-            embedding_providers = db_admin.find_embedding_providers().as_dict()
+            embedding_providers = db_admin.find_embedding_providers()
 
             vectorize_providers_mapping = {}
             # Map the provider display name to the provider key and models
-            for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
+            for provider_key, provider_data in embedding_providers.embedding_providers.items():
                 # Get the provider display name and models
-                display_name = provider_data["displayName"]
-                models = [model["name"] for model in provider_data["models"]]
+                display_name = provider_data.display_name
+                models = [model.name for model in provider_data.models]
 
                 # Build our mapping
                 vectorize_providers_mapping[display_name] = [provider_key, models]
@@ -379,7 +379,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
-        search_method: str = "Hybrid Search",
     ):
         # Build vectorize options, if needed
         vectorize_options = None
@@ -397,10 +396,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = "Collection name is required to create a new collection."
             raise ValueError(msg)
 
-        # Enable the reranker and lexical options if hybrid search is selected
-        rerank_bool = search_method == "Hybrid Search"
-
-        # TODO: ONLY pass rerank and lexical if enviroment is "dev" change this soon
+        # Define the base arguments being passed to the create collection function
         base_args = {
             "collection_name": new_collection_name,
             "token": token,
@@ -412,9 +408,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         }
 
         # Add optional arguments only if environment is "dev"
-        if environment == "dev":
-            base_args["collection_rerank"] = CollectionRerankOptions(enabled=rerank_bool)
-            base_args["collection_lexical"] = CollectionLexicalOptions(enabled=rerank_bool)
+        if environment == "dev":  # TODO: Remove conditional check soon
+            base_args["collection_rerank"] = CollectionRerankOptions(enabled=True)
+            base_args["collection_lexical"] = CollectionLexicalOptions(enabled=True)
 
         _AstraDBCollectionEnvironment(**base_args)
 
@@ -890,7 +886,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 dimension=field_value.get("04_dimension") if embedding_provider == "Bring your own" else None,
                 embedding_generation_provider=embedding_provider,
                 embedding_generation_model=field_value.get("03_embedding_generation_model"),
-                search_method=build_config["search_method"]["value"],
             )
         except Exception as e:
             msg = f"Error creating collection: {e}"
