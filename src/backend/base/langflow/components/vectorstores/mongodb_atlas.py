@@ -18,7 +18,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     name = "MongoDBAtlasVector"
     icon = "MongoDB"
     INSERT_MODES = ["append", "overwrite"]
-    SIMILARITY_OPTIONS = ["cosine", "euclidean", "dot product"]
+    SIMILARITY_OPTIONS = ["cosine", "euclidean", "dotProduct"]
     QUANTIZATION_OPTIONS = ["scalar", "binary"]
     inputs = [
         SecretStrInput(name="mongodb_atlas_cluster_uri", display_name="MongoDB Atlas Cluster URI", required=True),
@@ -210,8 +210,4 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         ]
         if self.filter_field:
             fields.append({"type": "filter", "path": self.filter_field})
-        return SearchIndexModel(
-            definition={"fields": fields},
-            name=self.index_name,
-            type="vectorSearch",
-        )
+        return SearchIndexModel(definition={"fields": fields}, name=self.index_name, type="vectorSearch")
