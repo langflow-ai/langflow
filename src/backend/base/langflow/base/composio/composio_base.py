@@ -73,8 +73,8 @@ class ComposioBaseComponent(Component):
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
     outputs = [
-        Output(name="data", display_name="Data", method="as_data"),
-        Output(name="message", display_name="Message", method="as_message"),
+        # Output(name="data", display_name="Data", method="as_data"),
+        # Output(name="message", display_name="Message", method="as_message"),
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
     ]
 
@@ -203,7 +203,7 @@ class ComposioBaseComponent(Component):
                     try:
                         build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
-                    except Exception as e:
+                    except (ValueError, ConnectionError, ApiKeyError) as e:
                         build_config["auth_link"]["value"] = "disabled"
                         build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
                         logger.error(f"Error checking auth status: {e}")
