@@ -30,7 +30,12 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(name="db_name", display_name="Database Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
-        StrInput(name="index_name", display_name="Index Name", required=True),
+        StrInput(
+            name="index_name",
+            display_name="Index Name",
+            required=True,
+            info="The name of Atlas Search index, it should be a Vector Search.",
+        ),
         *LCVectorStoreComponent.inputs,
         DropdownInput(
             name="insert_mode",
