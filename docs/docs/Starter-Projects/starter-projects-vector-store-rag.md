@@ -47,7 +47,7 @@ The **Retriever Flow** (top of the screen) embeds the user's queries into vecto
 - **Chat Input** receives user input from the **Playground**.
 - **OpenAI Embeddings** converts the user query into vector form.
 - **Astra DB** performs similarity search using the query vector.
-- **Parse Data** processes the retrieved chunks.
+- **Parser** processes the retrieved chunks.
 - **Prompt** combines the user query with relevant context.
 - **OpenAI** generates the response using the prompt.
 - **Chat Output** returns the response to the **Playground**.
