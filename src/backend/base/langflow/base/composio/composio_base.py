@@ -98,12 +98,21 @@ class ComposioBaseComponent(Component):
     def _build_action_maps(self):
         """Build lookup maps for action names."""
         if not self._display_to_key_map:
-            self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
-            self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
-            self._sanitized_names = {
-                action: self._name_sanitizer.sub("-", self.sanitize_action_name(action))
-                for action in self._actions_data
-            }
+            display_to_key_temp = {}
+            key_to_display_temp = {}
+            sanitized_names_temp = {}
+            _name_sanitizer_local = self._name_sanitizer
+
+            for key, data in self._actions_data.items():
+                display_name = data.get("display_name", key)
+                sanitized_name = _name_sanitizer_local.sub("-", display_name)
+                display_to_key_temp[display_name] = key
+                key_to_display_temp[key] = display_name
+                sanitized_names_temp[key] = sanitized_name
+
+            self._display_to_key_map = display_to_key_temp
+            self._key_to_display_map = key_to_display_temp
+            self._sanitized_names = sanitized_names_temp
 
     def sanitize_action_name(self, action_name: str) -> str:
         """Convert action name to display name using lookup."""
