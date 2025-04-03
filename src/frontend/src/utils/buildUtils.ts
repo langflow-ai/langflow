@@ -291,7 +291,6 @@ export async function buildFlowVertices({
 
   try {
     // If event_delivery is direct, we'll stream from the build endpoint directly
-    console.log("event_delivery", eventDelivery);
     if (eventDelivery === EventDeliveryType.DIRECT) {
       const buildController = new AbortController();
       buildController.signal.addEventListener("abort", () => {
