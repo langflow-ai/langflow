@@ -315,7 +315,6 @@ async function performStreamingRequest({
         if (string.endsWith("}")) {
           const allString = current.join("") + string;
           let data: object;
-          console.log(allString);
           try {
             data = JSON.parse(allString);
             current = [];
