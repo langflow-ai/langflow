@@ -8,7 +8,7 @@ Build a question-and-answer chatbot with a document loaded from local memory.
 ## Prerequisites
 
 - [Langflow installed and running](/get-started-installation)
-- [OpenAI API key created](https://platform.openai.com/)
+- [An OpenAI API key created](https://platform.openai.com/)
 
 ## Create the document QA flow
 

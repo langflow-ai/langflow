@@ -9,12 +9,10 @@ This flow extends the Basic Prompting flow with the **URL** and **Parser** compo
 
 OpenAI uses this loaded data to generate a blog post, as instructed by the **Text Input** and **Prompt** components.
 
-
 ## Prerequisites
 
 - [Langflow installed and running](/get-started-installation)
-- [OpenAI API key created](https://platform.openai.com/)
-
+- [An OpenAI API key created](https://platform.openai.com/)
 
 ## Create the blog writer flow
 

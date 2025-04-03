@@ -15,7 +15,7 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 ## Prerequisites
 
 - [Langflow installed and running](/get-started-installation)
-- [OpenAI API key created](https://platform.openai.com/)
+- [An OpenAI API key created](https://platform.openai.com/)
 
 ## Create the basic prompting flow
 
