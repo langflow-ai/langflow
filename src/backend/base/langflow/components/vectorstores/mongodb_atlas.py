@@ -140,4 +140,4 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
     def __insert_mode(self, collection: Collection) -> None:
         if self.insert_mode == "overwrite":
-            collection.drop()  # Drop collection to override the vector store
+            collection.delete_many({})  # Delete all documents while preserving collection structure
