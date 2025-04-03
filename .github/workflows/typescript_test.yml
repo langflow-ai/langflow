@@ -220,12 +220,12 @@ jobs:
 
           echo "Total tests to run: $TEST_COUNT"
 
-          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 10
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 25
           SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
           if [ $SHARD_COUNT -lt 1 ]; then
             SHARD_COUNT=1
-          elif [ $SHARD_COUNT -gt 10 ]; then
-            SHARD_COUNT=10
+          elif [ $SHARD_COUNT -gt 25 ]; then
+            SHARD_COUNT=25
           fi
 
           # Create the matrix combinations string
