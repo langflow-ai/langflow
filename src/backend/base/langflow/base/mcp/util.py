@@ -155,7 +155,7 @@ class MCPSseClient:
                 return False, "Invalid URL format. Must include scheme (http/https) and host."
             # must not use client.head to validate the url, as SSE will keep the transport open and become timeout
             return True, ""
-        except (ValueError) as e:
+        except ValueError as e:
             return False, f"URL validation error: {e!s}"
 
     async def pre_check_redirect(self, url: str | None) -> str | None:
