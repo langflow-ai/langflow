@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { zoomOut } from "../../utils/zoom-out";
 test(
   "PromptTemplateComponent",
   { tag: ["@release", "@workspace"] },
@@ -82,8 +82,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     value =
       (await page
@@ -187,8 +186,8 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await zoomOut(page, 2);
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(

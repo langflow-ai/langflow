@@ -156,6 +156,11 @@ def run(
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,
     ),
+    webhook_polling_interval: int | None = typer.Option(  # noqa: ARG001
+        None,
+        help="Defines the polling interval for the webhook.",
+        show_default=False,
+    ),
 ) -> None:
     """Run Langflow."""
     # Register SIGTERM handler
@@ -586,7 +591,8 @@ def api_key(
 
     unmasked_api_key = asyncio.run(aapi_key())
     # Create a banner to display the API key and tell the user it won't be shown again
-    api_key_banner(unmasked_api_key)
+    if unmasked_api_key:
+        api_key_banner(unmasked_api_key)
 
 
 def show_version(*, value: bool):
