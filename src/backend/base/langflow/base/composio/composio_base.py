@@ -99,9 +99,10 @@ class ComposioBaseComponent(Component):
             self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
             self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
             self._sanitized_names = {
-                action: self._name_sanitizer.sub("-", self.sanitize_action_name(action))
+                action: self._name_sanitizer.sub("-", self._key_to_display_map.get(action, action))
                 for action in self._actions_data
             }
+            self._build_action_maps_called = True  # Set the flag to True after maps are built
 
     def sanitize_action_name(self, action_name: str) -> str:
         """Convert action name to display name using lookup."""
@@ -110,7 +111,8 @@ class ComposioBaseComponent(Component):
 
     def desanitize_action_name(self, action_name: str) -> str:
         """Convert display name to action key using lookup."""
-        self._build_action_maps()
+        if not self._build_action_maps_called:
+            self._build_action_maps()
         return self._display_to_key_map.get(action_name, action_name)
 
     def _get_action_fields(self, action_key: str | None) -> set[str]:
@@ -300,3 +302,7 @@ class ComposioBaseComponent(Component):
     @abstractmethod
     def execute_action(self) -> list[dict]:
         """Execute action and return response as Message."""
+
+    def __init__(self):
+        super().__init__()
+        self._build_action_maps_called = False  # Adding flag to ensure _build_action_maps is called only once
