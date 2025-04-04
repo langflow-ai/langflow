@@ -9,7 +9,6 @@ from threading import Lock, Semaphore
 from typing import TypedDict
 
 import orjson
-from langflow.settings import DEV
 from loguru import _defaults, logger
 from loguru._error_interceptor import ErrorInterceptor
 from loguru._file_sink import FileSink
@@ -17,6 +16,8 @@ from loguru._simple_sinks import AsyncSink
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 from typing_extensions import NotRequired, override
+
+from langflow.settings import DEV
 
 VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
