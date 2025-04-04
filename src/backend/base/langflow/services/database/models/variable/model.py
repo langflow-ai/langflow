@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from langflow.services.settings.utils import get_current_time_with_timezone
 from pydantic import ValidationInfo, field_validator
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.services.settings.utils import get_current_time_with_timezone
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 if TYPE_CHECKING:
@@ -47,9 +47,15 @@ class Variable(VariableBase, table=True):  # type: ignore[call-arg]
 
 
 class VariableCreate(VariableBase):
-    created_at: datetime | None = Field(default_factory=get_current_time_with_timezone, description="Creation time of the variable")
+    created_at: datetime | None = Field(
+        default_factory=get_current_time_with_timezone,
+        description="Creation time of the variable"
+    )
 
-    updated_at: datetime | None = Field(default_factory=get_current_time_with_timezone, description="Creation time of the variable")
+    updated_at: datetime | None = Field(
+        default_factory=get_current_time_with_timezone,
+        description="Last update time of the variable"
+    )
 
 
 class VariableRead(SQLModel):

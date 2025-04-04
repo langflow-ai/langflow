@@ -1,10 +1,10 @@
+import os
 import platform
+import zoneinfo
+from datetime import datetime, timezone
 from pathlib import Path
 
 from loguru import logger
-import zoneinfo
-import os
-from datetime import datetime, timezone
 
 
 def set_secure_permissions(file_path: Path) -> None:
@@ -42,23 +42,22 @@ def write_secret_to_file(path: Path, value: str) -> None:
 def read_secret_from_file(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
-def get_current_time_with_timezone(tz_str: str = None) -> datetime:
-    """
-    Get current time in the specified timezone.
-    
+def get_current_time_with_timezone(tz_str: str | None = None) -> datetime:
+    """Get current time in the specified timezone.
+
     Args:
         tz_str: Timezone string (default: None, which will use the value from LANGFLOW_TIMEZONE or "UTC")
-        
+
     Returns:
         Current datetime in the specified timezone
     """
     if tz_str is None:
         tz_str = os.environ.get("LANGFLOW_TIMEZONE", "UTC")
-    
+
     try:
         tz = zoneinfo.ZoneInfo(tz_str)
     except zoneinfo.ZoneInfoNotFoundError:
         tz = zoneinfo.ZoneInfo("UTC")
-    
+
     now_utc = datetime.now(timezone.utc)
     return now_utc.astimezone(tz)

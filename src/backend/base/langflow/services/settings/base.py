@@ -7,6 +7,7 @@ from shutil import copy2
 from typing import Any, Literal
 
 import orjson
+import pytz
 import yaml
 from aiofile import async_open
 from loguru import logger
@@ -19,7 +20,6 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 from typing_extensions import override
-import pytz
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
@@ -418,7 +418,8 @@ class Settings(BaseSettings):
     @classmethod
     def validate_timezone(cls, v):
         if v not in pytz.all_timezones:
-            raise ValueError(f"Invalid timezone: {v}. Please use a valid timezone from the pytz library.")
+            msg = f"Invalid timezone: {v}. Please use a valid timezone from the pytz library."
+            raise ValueError(msg)
         return v
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
