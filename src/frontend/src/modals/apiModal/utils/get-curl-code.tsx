@@ -1,3 +1,4 @@
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import { GetCodeType } from "@/types/tweaks";
 
@@ -62,8 +63,12 @@ export function getCurlWebhookCode({
 
   return `curl -X POST \\
   "${baseUrl}" \\
-  -H 'Content-Type: application/json'\\${
-    !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
+  -H 'Content-Type: application/json' \\${
+    isAuth ? `\n  -H 'x-api-key: <your api key>' \\` : ""
+  }${
+    ENABLE_DATASTAX_LANGFLOW
+      ? `\n  -H 'Authorization: Bearer <YOUR_APPLICATION_TOKEN>' \\`
+      : ""
   }
   -d '{"any": "data"}'
   `.trim();
