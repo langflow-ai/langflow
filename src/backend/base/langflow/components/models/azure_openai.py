@@ -25,6 +25,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2023-12-01-preview",
         "2024-02-15-preview",
         "2024-03-01-preview",
+        "2024-12-01-preview",
+        "2025-01-01-preview",
+        "2025-02-01-preview",
     ]
 
     inputs = [
