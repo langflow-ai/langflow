@@ -10,8 +10,10 @@ Each agent has an LLM model and a unique set of tools at its disposal, with **Pr
 Each successive agent in the flow builds on the work of the previous agent, creating a chain of reasoning for solving complex problems.
 
 ## Prerequisites
-- [An OpenAI API key](https://platform.openai.com/)
-- [A Tavily AI API key](https://www.tavily.com/)
+
+- [Langflow installed and running](/get-started-installation)
+- [An OpenAI API key created](https://platform.openai.com/)
+- [A Tavily AI API key created](https://www.tavily.com/)
 
 ## Open Langflow and create a new flow
 

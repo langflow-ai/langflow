@@ -19,7 +19,8 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 
 ## Prerequisites
 
-* [An OpenAI API key](https://platform.openai.com/)
+- [Langflow installed and running](/get-started-installation)
+* [An OpenAI API key created](https://platform.openai.com/)
 * [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with the following:
 	* An Astra DB application token scoped to read and write to the database
 	* A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
@@ -46,7 +47,7 @@ The **Retriever Flow** (top of the screen) embeds the user's queries into vecto
 - **Chat Input** receives user input from the **Playground**.
 - **OpenAI Embeddings** converts the user query into vector form.
 - **Astra DB** performs similarity search using the query vector.
-- **Parse Data** processes the retrieved chunks.
+- **Parser** processes the retrieved chunks.
 - **Prompt** combines the user query with relevant context.
 - **OpenAI** generates the response using the prompt.
 - **Chat Output** returns the response to the **Playground**.
