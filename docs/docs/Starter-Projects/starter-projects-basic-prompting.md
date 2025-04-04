@@ -34,7 +34,7 @@ The model will respond according to the prompt constructed in the **Prompt** c
 
 4. To examine the **Template**, in the **Prompt** component, click the **Template** field.
 
-```plain
+```text
 Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.
 ```
 

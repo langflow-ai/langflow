@@ -32,7 +32,7 @@ The **Parse Data** component converts the data coming from the **URL** component
 
 To examine the flow's prompt, click the **Template** field of the **Prompt** component.
 
-```plain
+```text
 Reference 1:
 
 {references}
