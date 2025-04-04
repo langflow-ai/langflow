@@ -258,6 +258,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  {
+    display_name: "Home Assistant",
+    name: "homeassistant",
+    icon: "HomeAssistant",
+  },
 ];
 
 export const categoryIcons: Record<string, string> = {
@@ -413,6 +418,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ScrapeGraphAI: "ScrapeGraph",
   ScrapeGraphSmartScraperApi: "ScrapeGraph",
   ScrapeGraphMarkdownifyApi: "ScrapeGraph",
+  Unlink: "UnlinkIcon",
   note: "StickyNote",
 };
 

@@ -103,7 +103,7 @@ async def handle_list_resources():
         settings_service = get_settings_service()
 
         # Build full URL from settings
-        host = getattr(settings_service.settings, "holst", "localhost")
+        host = getattr(settings_service.settings, "host", "localhost")
         port = getattr(settings_service.settings, "port", 3000)
 
         base_url = f"http://{host}:{port}".rstrip("/")
