@@ -417,7 +417,7 @@ class Settings(BaseSettings):
     @field_validator("timezone")
     @classmethod
     def validate_timezone(cls, v):
-        if v not in pytz.all_timezones:
+        if v not in pytz.all_timezones_set:
             raise ValueError(f"Invalid timezone: {v}. Please use a valid timezone from the pytz library.")
         return v
 
