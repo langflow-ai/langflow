@@ -12,10 +12,9 @@ from langflow.services.settings.utils import get_current_time_with_timezone
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
+
 class TransactionBase(SQLModel):
-    timestamp: datetime = Field(
-        default_factory=lambda: get_current_time_with_timezone()
-    )
+    timestamp: datetime = Field(default_factory=lambda: get_current_time_with_timezone())
     vertex_id: str = Field(nullable=False)
     target_id: str | None = Field(default=None)
     inputs: dict | None = Field(default=None, sa_column=Column(JSON))
