@@ -48,13 +48,11 @@ class Variable(VariableBase, table=True):  # type: ignore[call-arg]
 
 class VariableCreate(VariableBase):
     created_at: datetime | None = Field(
-        default_factory=get_current_time_with_timezone,
-        description="Creation time of the variable"
+        default_factory=get_current_time_with_timezone, description="Creation time of the variable"
     )
 
     updated_at: datetime | None = Field(
-        default_factory=get_current_time_with_timezone,
-        description="Last update time of the variable"
+        default_factory=get_current_time_with_timezone, description="Last update time of the variable"
     )
 
 

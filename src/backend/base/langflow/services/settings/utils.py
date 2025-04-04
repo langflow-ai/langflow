@@ -42,6 +42,7 @@ def write_secret_to_file(path: Path, value: str) -> None:
 def read_secret_from_file(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
+
 def get_current_time_with_timezone(tz_str: str | None = None) -> datetime:
     """Get current time in the specified timezone.
 
