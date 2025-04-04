@@ -1,11 +1,11 @@
 import { useTypesStore } from "@/stores/typesStore";
 import { FlowType } from "@/types/flow";
-import { nodeIconsLucide } from "@/utils/styleUtils";
+import { iconExists } from "@/utils/styleUtils";
 
 export const useGetTemplateStyle = (
   flowData: FlowType,
-): { getIcon: () => string } => {
-  const getIcon = () => {
+): { getIcon: () => Promise<string> } => {
+  const getIcon = async () => {
     if (
       flowData.is_component &&
       flowData.data?.nodes[0].type === "genericNode"
@@ -14,7 +14,7 @@ export const useGetTemplateStyle = (
       const isGroup = !!flowData.data?.nodes[0].data.node?.flow;
       const icon = flowData.data?.nodes[0].data.node?.icon;
       const types = useTypesStore((state) => state.types);
-      const name = nodeIconsLucide[dataType] ? dataType : types[dataType];
+      const name = (await iconExists(dataType)) ? dataType : types[dataType];
       const iconName = icon || (isGroup ? "group_components" : name);
       return iconName;
     } else {
