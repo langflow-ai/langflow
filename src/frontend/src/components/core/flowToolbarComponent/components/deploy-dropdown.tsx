@@ -137,7 +137,7 @@ export default function PublishDropdown() {
               hasIO
                 ? isPublished
                   ? encodeURI(`${domain}/playground/${flowId}`)
-                  : "Active to share a public version of this Playground"
+                  : "Activate to share a public version of this Playground"
                 : "Add a Chat Input or Chat Output to access your flow"
             }
           >
