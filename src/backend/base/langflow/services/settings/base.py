@@ -19,6 +19,7 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 from typing_extensions import override
+import pytz
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
@@ -242,6 +243,9 @@ class Settings(BaseSettings):
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
+    timezone: str = "UTC"
+    """The timezone to use for the timestamps."""
+
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
@@ -409,6 +413,13 @@ class Settings(BaseSettings):
 
         logger.debug(f"Components path: {value}")
         return value
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, v):
+        if v not in pytz.all_timezones:
+            raise ValueError(f"Invalid timezone: {v}. Please use a valid timezone from the pytz library.")
+        return v
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

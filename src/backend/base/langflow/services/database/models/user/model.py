@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from langflow.services.settings.utils import get_current_time_with_timezone
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -20,7 +21,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     profile_image: str | None = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
-    create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    create_at: datetime = Field(default_factory=lambda: get_current_time_with_timezone())
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = Field(default=None, nullable=True)
     api_keys: list["ApiKey"] = Relationship(

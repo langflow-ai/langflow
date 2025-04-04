@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
+from langflow.services.settings.utils import get_current_time_with_timezone
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -114,7 +115,7 @@ async def _new_flow(
                 flow.endpoint_name = f"{flow.endpoint_name}-1"
 
         db_flow = Flow.model_validate(flow, from_attributes=True)
-        db_flow.updated_at = datetime.now(timezone.utc)
+        db_flow.updated_at = get_current_time_with_timezone()
 
         if db_flow.folder_id is None:
             # Make sure flows always have a folder
@@ -332,7 +333,7 @@ async def update_flow(
 
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
-        db_flow.updated_at = datetime.now(timezone.utc)
+        db_flow.updated_at = get_current_time_with_timezone()
 
         if db_flow.folder_id is None:
             default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()

@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+
+from langflow.services.settings.utils import get_current_time_with_timezone
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -11,9 +13,10 @@ from langflow.serialization.serialization import serialize
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
-
 class TransactionBase(SQLModel):
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(
+        default_factory=lambda: get_current_time_with_timezone()
+    )
     vertex_id: str = Field(nullable=False)
     target_id: str | None = Field(default=None)
     inputs: dict | None = Field(default=None, sa_column=Column(JSON))

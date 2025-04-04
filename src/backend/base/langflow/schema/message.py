@@ -13,6 +13,7 @@ from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
+from langflow.services.settings.utils import get_current_time_with_timezone
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
@@ -42,7 +43,7 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: get_current_time_with_timezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
