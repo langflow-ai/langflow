@@ -105,8 +105,12 @@ wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/hea
 FROM langflowai/langflow-backend:latest
 RUN mkdir /app/flows
 COPY ./*json /app/flows/.
+ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
 ```
 The `COPY ./*json` command copies all JSON files in your current directory to the `/flows` folder.
+
+The `ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows` command sets the environment variable within the Docker container. By pointing it to `/app/flows`, you ensure that the application can find and utilize the JSON flow files that have been copied into that directory during the image build process.fkjdskfjds
+
 
 4. Build and run the image locally.
 ```shell
