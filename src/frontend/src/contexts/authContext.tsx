@@ -48,6 +48,9 @@ export function AuthProvider({ children }): React.ReactElement {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
+      setIsAuthenticated(true);
+      getUser();
+      getGlobalVariables();
     }
   }, []);
 
