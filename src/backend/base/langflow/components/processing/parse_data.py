@@ -10,6 +10,7 @@ class ParseDataComponent(Component):
     description = "Convert Data objects into Messages using any {field_name} from input data."
     icon = "message-square"
     name = "ParseData"
+    legacy = True
     metadata = {
         "legacy_name": "Parse Data",
     }

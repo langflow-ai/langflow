@@ -7,6 +7,7 @@ import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GridHorizontalIcon } from "@/icons/GridHorizontal";
+import { HomeAssistantIcon } from "@/icons/HomeAssistant";
 import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
@@ -252,6 +253,7 @@ import {
   Type,
   Undo,
   Ungroup,
+  UnlinkIcon,
   Unplug,
   Upload,
   User,
@@ -609,6 +611,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  {
+    display_name: "Home Assistant",
+    name: "homeassistant",
+    icon: "HomeAssistant",
+  },
 ];
 
 export const categoryIcons = {
@@ -719,6 +726,7 @@ export const nodeIconsLucide: iconsType = {
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
   FirecrawlCrawlApi: FirecrawlIcon,
+  Unlink: UnlinkIcon,
   FirecrawlScrapeApi: FirecrawlIcon,
   FirecrawlMapApi: FirecrawlIcon,
   FirecrawlExtractApi: FirecrawlIcon,
@@ -815,6 +823,7 @@ export const nodeIconsLucide: iconsType = {
   Arize: ArizeIcon,
   Apify: ApifyIcon,
   ApifyWhite: ApifyWhiteIcon,
+  HomeAssistant: HomeAssistantIcon,
 
   //Node Icons
   model_specs: FileSliders,
