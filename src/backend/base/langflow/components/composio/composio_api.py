@@ -9,7 +9,7 @@ from composio import Action, App
 # Third-party imports
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
-from languru import logger
+from loguru import logger
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent

@@ -1,0 +1,1 @@
+# ruff: noqa: A005
