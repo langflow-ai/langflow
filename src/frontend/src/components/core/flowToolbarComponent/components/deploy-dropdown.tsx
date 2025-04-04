@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
@@ -145,25 +146,30 @@ export default function PublishDropdown() {
               )}
               data-testid="shareable-playground"
             >
-              <DropdownMenuItem
-                disabled={!hasIO || !isPublished}
-                className="deploy-dropdown-item group flex-1"
-                onClick={() => {
-                  if (hasIO) {
-                    if (isPublished) {
-                      window.open(`${domain}/playground/${flowId}`, "_blank");
-                    }
-                  }
-                }}
+              <CustomLink
+                className={cn(
+                  "flex-1",
+                  !hasIO || !isPublished
+                    ? "pointer-events-none cursor-default"
+                    : "",
+                )}
+                to={`/playground/${flowId}`}
+                target="_blank"
               >
-                <div className="group-hover:bg-accent">
-                  <IconComponent
-                    name="Globe"
-                    className={`${groupStyle} icon-size mr-2`}
-                  />
-                  <span>Shareable Playground</span>
-                </div>
-              </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!hasIO || !isPublished}
+                  className="deploy-dropdown-item group flex-1"
+                  onClick={() => {}}
+                >
+                  <div className="group-hover:bg-accent">
+                    <IconComponent
+                      name="Globe"
+                      className={`${groupStyle} icon-size mr-2`}
+                    />
+                    <span>Shareable Playground</span>
+                  </div>
+                </DropdownMenuItem>
+              </CustomLink>
               <div className={`z-50 mr-2 text-foreground`}>
                 <Switch
                   data-testid="publish-switch"
