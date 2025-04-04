@@ -9,7 +9,7 @@ import { LoadingPage } from "../LoadingPage";
 
 export function AppAuthenticatedPage() {
   useCustomPostAuth();
-  
+
   // Now that we're authenticated, fetch all the required data
   const { isFetched: typesLoaded } = useGetTypes({ enabled: true });
   useGetGlobalVariables({ enabled: typesLoaded });

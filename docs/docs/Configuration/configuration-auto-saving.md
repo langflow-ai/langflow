@@ -17,7 +17,7 @@ When Langflow is in auto-saving mode, all changes are saved automatically. Auto-
 
 ## Disable auto-saving {#environment}
 
-To disable auto-saving, 
+To disable auto-saving,
 
 1. Set an environment variable in your `.env` file.
 

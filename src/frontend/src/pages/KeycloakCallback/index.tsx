@@ -9,7 +9,7 @@ import { useKeycloakAuth } from "@/hooks/useKeycloakAuth";
 
 /**
  * Keycloak callback handler component.
- * 
+ *
  * This component is rendered when the user is redirected back from Keycloak
  * after a successful authentication. It handles the OAuth callback flow,
  * exchanging the authorization code for access tokens, and then redirects

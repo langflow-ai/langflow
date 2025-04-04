@@ -21,7 +21,7 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
   uv sync --extra nv-ingest
   uv run langflow run
   ```
-  
+
   * If you are installing Langflow from the Python Package Index:
   ```bash
   source **YOUR_LANGFLOW_VENV**/bin/activate

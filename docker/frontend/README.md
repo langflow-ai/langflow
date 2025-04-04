@@ -219,7 +219,7 @@ The NGINX configuration template has several important sections:
    ```nginx
    worker_processes auto;
    pid /tmp/nginx.pid;
-   
+
    events {
        worker_connections ${WORKER_CONNECTIONS};
        multi_accept on;
@@ -235,7 +235,7 @@ The NGINX configuration template has several important sections:
        include /etc/nginx/mime.types;
        default_type application/octet-stream;
        charset utf-8;
-       
+
        # Temp paths for unprivileged user
        client_body_temp_path /tmp/client_temp;
        proxy_temp_path       /tmp/proxy_temp;
@@ -252,14 +252,14 @@ The NGINX configuration template has several important sections:
    sendfile on;
    tcp_nopush on;
    tcp_nodelay on;
-   
+
    # Timeouts
    keepalive_timeout 65;
    client_body_timeout ${CLIENT_TIMEOUT};
    client_header_timeout ${CLIENT_TIMEOUT};
    send_timeout 10;
    client_max_body_size ${CLIENT_MAX_BODY_SIZE};
-   
+
    # Caching settings
    open_file_cache max=1000 inactive=20s;
    open_file_cache_valid 30s;
@@ -303,19 +303,19 @@ The NGINX configuration template has several important sections:
    # Handle frontend routes with HTML5 history API
    location / {
        try_files $uri $uri/ /index.html;
-       
+
        # Handle JS and CSS files with content hashes first
        location ~* "-[a-zA-Z0-9]{8}\.(js|css)$" {
            expires 1y;
            add_header Cache-Control "public, immutable";
        }
-       
+
        # Cache strategy for other asset files
        location /assets/ {
            expires 30d;
            add_header Cache-Control "public, no-transform";
        }
-       
+
        # Don't cache HTML
        location ~* \.html$ {
            expires -1;
@@ -342,12 +342,12 @@ The NGINX configuration template has several important sections:
        proxy_buffering off;
        proxy_cache off;
        proxy_read_timeout 300s;
-       
+
        # Add error intercept for better debugging
        proxy_intercept_errors on;
        error_page 502 504 = @api_down;
    }
-   
+
    # API down fallback
    location @api_down {
        default_type application/json;
@@ -368,7 +368,7 @@ The NGINX configuration template has several important sections:
        add_header Content-Type application/json;
        return 200 '{"status":"ok","service":"nginx"}';
    }
-   
+
    # Health check endpoints for the backend service
    location /health_check {
        proxy_pass ${BACKEND_URL};
@@ -389,7 +389,7 @@ The NGINX configuration template has several important sections:
        access_log off;
        log_not_found off;
    }
-   
+
    location ~ ~$ {
        deny all;
        access_log off;
@@ -421,15 +421,15 @@ The startup script handles several important tasks:
    ```bash
    #!/bin/sh
    set -e
-   
+
    # Logging function
    log() {
        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
        echo "[$timestamp] $1"
    }
-   
+
    log "Initializing NGINX configuration"
-   
+
    # Define writable directory for the final config
    CONFIG_DIR="$(mktemp -d /tmp/nginx.XXXXXX)"
    log "Created temporary configuration directory: $CONFIG_DIR"
@@ -443,7 +443,7 @@ The startup script handles several important tasks:
    # Define default log formats
    JSON_LOG_FORMAT="log_format json_logs escape=json '{\"time_local\":\"\\$time_local\",\"remote_addr\":\"\\$remote_addr\",...}';"
    DEFAULT_LOG_FORMAT="log_format main '\\$remote_addr - \\$remote_user [\\$time_local] \"\\$request\" \\$status \\$body_bytes_sent \"\\$http_referer\" \"\\$http_user_agent\"';"
-   
+
    # Write probe filter if enabled
    PROBE_FILTER=""
    if [ "${SUPPRESS_PROBE_LOGS:-true}" = "true" ]; then
@@ -498,14 +498,14 @@ The startup script handles several important tasks:
        exit 1
      fi
    fi
-   
+
    # Set defaults for configurable values
    FRONTEND_PORT="${FRONTEND_PORT:-${2:-8080}}"
    CLIENT_MAX_BODY_SIZE="${CLIENT_MAX_BODY_SIZE:-10m}"
    GZIP_COMPRESSION_LEVEL="${GZIP_COMPRESSION_LEVEL:-5}"
    CLIENT_TIMEOUT="${CLIENT_TIMEOUT:-12}"
    WORKER_CONNECTIONS="${WORKER_CONNECTIONS:-1024}"
-   
+
    if [ -z "$BACKEND_URL" ]; then
      log "ERROR: BACKEND_URL must be set as an environment variable or as first parameter. (e.g. http://localhost:7860)"
      exit 1
@@ -519,7 +519,7 @@ The startup script handles several important tasks:
    ```bash
    # Export variables for envsubst
    export BACKEND_URL FRONTEND_PORT ERROR_LOG_LEVEL CLIENT_MAX_BODY_SIZE GZIP_COMPRESSION_LEVEL CLIENT_TIMEOUT WORKER_CONNECTIONS
-   
+
    # Use envsubst to substitute environment variables in the template
    log "Generating NGINX configuration from template"
    envsubst '${BACKEND_URL} ${FRONTEND_PORT} ${ERROR_LOG_LEVEL} ${CLIENT_MAX_BODY_SIZE} ${GZIP_COMPRESSION_LEVEL} ${CLIENT_TIMEOUT} ${WORKER_CONNECTIONS}' < /etc/nginx/conf.d/default.conf.template > "$CONFIG_DIR/default.conf"
@@ -548,10 +548,10 @@ The startup script handles several important tasks:
    # Validate the configuration
    log "Validating NGINX configuration"
    nginx -t -c $CONFIG_DIR/default.conf || { echo "Invalid NGINX configuration"; exit 1; }
-   
+
    # Basic signal handling for graceful shutdown
    trap "echo 'Shutting down NGINX gracefully...'; nginx -s quit; exit 0" TERM INT
-   
+
    # Start nginx with the new configuration
    log "Starting NGINX on port ${FRONTEND_PORT}, proxying to ${BACKEND_URL}"
    exec nginx -c $CONFIG_DIR/default.conf -g 'daemon off;'

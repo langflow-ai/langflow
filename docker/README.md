@@ -326,7 +326,7 @@ The backend Docker configuration implements several best practices:
 3. **Security hardening** with non-root user execution
 4. **Build reproducibility** with pinned dependency versions
 5. **Proper signal handling** with tini
-6. **Health checks** for container orchestration 
+6. **Health checks** for container orchestration
 7. **Volume management** for persistent data
 8. **Resource isolation** with proper directory structures
 9. **Configurable runtime** with environment variables

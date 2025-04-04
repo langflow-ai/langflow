@@ -57,9 +57,9 @@ The metrics server is implemented in the `TelemetryService` class in `services/t
        port = self.settings_service.settings.prometheus_port
        host = os.getenv("LANGFLOW_METRICS_HOST", "0.0.0.0")
        log_level = os.getenv("LANGFLOW_METRICS_LOG_LEVEL", "warning")
-       
+
        metrics_app = make_asgi_app()
-       
+
        def run_metrics_server():
            logger.info(f"Starting Prometheus metrics server at http://{host}:{port}/metrics")
            uvicorn.run(
@@ -70,7 +70,7 @@ The metrics server is implemented in the `TelemetryService` class in `services/t
                access_log=False,
                timeout_keep_alive=5,
            )
-       
+
        self._metrics_thread = threading.Thread(
            target=run_metrics_server,
            name="PrometheusMetricsServer",
@@ -197,13 +197,13 @@ A Grafana service is also included for visualizing the metrics.
   python_gc_objects_collected_total{generation="0"} 210266.0
   python_gc_objects_collected_total{generation="1"} 82767.0
   python_gc_objects_collected_total{generation="2"} 37889.0
-  
+
   # HELP python_gc_objects_uncollectable_total Uncollectable objects found during GC
   # TYPE python_gc_objects_uncollectable_total counter
   python_gc_objects_uncollectable_total{generation="0"} 0.0
   python_gc_objects_uncollectable_total{generation="1"} 0.0
   python_gc_objects_uncollectable_total{generation="2"} 0.0
-  
+
   # HELP python_gc_collections_total Number of times this generation was collected
   # TYPE python_gc_collections_total counter
   python_gc_collections_total{generation="0"} 5836.0
