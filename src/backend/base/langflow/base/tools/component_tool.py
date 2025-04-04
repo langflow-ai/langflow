@@ -157,7 +157,7 @@ def _format_tool_name(name: str):
     # format to '^[a-zA-Z0-9_-]+$'."
     # to do that we must remove all non-alphanumeric characters
 
-    return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", name)
 
 
 def _add_commands_to_tool_description(tool_description: str, commands: str):
