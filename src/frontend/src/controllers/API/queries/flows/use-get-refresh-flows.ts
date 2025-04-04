@@ -9,6 +9,7 @@ import {
   processFlows,
 } from "@/utils/reactflowUtils";
 import { UseMutationOptions } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -77,9 +78,11 @@ export const useGetRefreshFlows: useMutationFunctionType<
 
       return [];
     } catch (e) {
-      setErrorData({
-        title: "Could not load flows from database",
-      });
+      if (e instanceof AxiosError && e.status !== 403) {
+        setErrorData({
+          title: "Could not load flows from database",
+        });
+      }
       throw e;
     }
   };
