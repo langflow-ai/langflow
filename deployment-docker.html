@@ -22,7 +22,7 @@
 
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap"><link rel="stylesheet" href="/assets/css/styles.b2eb940a.css">
-<script src="/assets/js/runtime~main.642790b5.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.eba2362c.js" defer="defer"></script>
 <script src="/assets/js/main.474ff10e.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -112,8 +112,9 @@ This enables you to serve a flow from a container, push the image to Docker Hub,
 <ol start="3">
 <li>Create a Dockerfile:</li>
 </ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>FROM langflowai/langflow-backend:latest</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>RUN mkdir /app/flows</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>COPY ./*json /app/flows/.</span></div></div><br></code></div></div>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>FROM langflowai/langflow-backend:latest</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>RUN mkdir /app/flows</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>COPY ./*json /app/flows/.</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows</span></div></div><br></code></div></div>
 <p>The <code>COPY ./*json</code> command copies all JSON files in your current directory to the <code>/flows</code> folder.</p>
+<p>The <code>ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows</code> command sets the environment variable within the Docker container. By pointing it to <code>/app/flows</code>, you ensure that the application can find and utilize the JSON flow files that have been copied into that directory during the image build process.</p>
 <ol start="4">
 <li>Build and run the image locally.</li>
 </ol>
