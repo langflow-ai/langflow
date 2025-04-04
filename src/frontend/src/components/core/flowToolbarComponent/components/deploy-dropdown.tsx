@@ -19,9 +19,11 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
+import { useHref } from "react-router-dom";
 
 export default function PublishDropdown() {
-  const domain = window.location.origin;
+  const location = useHref("/");
+  const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
