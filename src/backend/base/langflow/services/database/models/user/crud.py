@@ -1,8 +1,6 @@
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from langflow.services.settings.utils import get_current_time_with_timezone
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
@@ -10,6 +8,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.user.model import User, UserUpdate
+from langflow.services.settings.utils import get_current_time_with_timezone
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
