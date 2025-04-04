@@ -8,13 +8,14 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize
+from langflow.services.settings.utils import get_current_time_with_timezone
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
 
 class VertexBuildBase(SQLModel):
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: get_current_time_with_timezone())
     id: str = Field(nullable=False)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     artifacts: dict | None = Field(default=None, sa_column=Column(JSON))

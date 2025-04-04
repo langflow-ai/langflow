@@ -6,6 +6,7 @@ from pydantic import field_validator
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.settings.utils import get_current_time_with_timezone
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -39,12 +40,12 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]
 class ApiKeyCreate(ApiKeyBase):
     api_key: str | None = None
     user_id: UUIDstr | None = None
-    created_at: datetime | None = Field(default_factory=utc_now)
+    created_at: datetime | None = Field(default_factory=get_current_time_with_timezone)
 
     @field_validator("created_at", mode="before")
     @classmethod
     def set_created_at(cls, v):
-        return v or utc_now()
+        return v or get_current_time_with_timezone()
 
 
 class UnmaskedApiKeyRead(ApiKeyBase):
