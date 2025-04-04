@@ -64,7 +64,7 @@ export function getCurlWebhookCode({
   return `curl -X POST \\
   "${baseUrl}" \\
   -H 'Content-Type: application/json' \\${
-    !isAuth ? `\n  -H 'x-api-key: <your api key>' \\` : ""
+    isAuth ? `\n  -H 'x-api-key: <your api key>' \\` : ""
   }${
     ENABLE_DATASTAX_LANGFLOW
       ? `\n  -H 'Authorization: Bearer <YOUR_APPLICATION_TOKEN>' \\`
