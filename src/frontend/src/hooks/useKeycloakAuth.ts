@@ -3,11 +3,11 @@
  * @description Hook for handling Keycloak/OpenID Connect SSO authentication in Langflow.
  * Provides functions to initiate login flow, handle callbacks, and expose configuration.
  */
-import { useEffect, useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
 import { BASE_URL_API } from "@/constants/constants";
-import axios from "axios";
 import { AuthContext } from "@/contexts/authContext";
+import axios from "axios";
+import { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Keycloak configuration interface that matches the backend schema.
@@ -40,7 +40,9 @@ type KeycloakConfig = {
  *  - isForceSSO: Whether to hide the username/password login form
  */
 export const useKeycloakAuth = () => {
-  const [keycloakConfig, setKeycloakConfig] = useState<KeycloakConfig | null>(null);
+  const [keycloakConfig, setKeycloakConfig] = useState<KeycloakConfig | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
@@ -79,31 +81,38 @@ export const useKeycloakAuth = () => {
    */
   const generateRandomString = () => {
     const array = new Uint32Array(4); // 4 * 32 = 128 bit entropy
-    window.crypto.getRandomValues(array) // Fill the array with random values
-    return Array.from(array, num => num.toString(16).padStart(8,"0")).join("")
-  }
+    window.crypto.getRandomValues(array); // Fill the array with random values
+    return Array.from(array, (num) => num.toString(16).padStart(8, "0")).join(
+      "",
+    );
+  };
 
   /**
    * Initiates the Keycloak login flow by redirecting to the Keycloak server.
    * Generates a state parameter for CSRF protection.
    */
   const redirectToKeycloakLogin = () => {
-    if (!(keycloakConfig?.enabled)) {
+    if (!keycloakConfig?.enabled) {
       console.error("Keycloak is not enabled or configuration is missing");
       return;
     }
 
     // Generate a random state for CSRF protection
-    const state = generateRandomString()
-    const nonce = generateRandomString()
+    const state = generateRandomString();
+    const nonce = generateRandomString();
 
-    sessionStorage.setItem("keycloak_state", state)
-    sessionStorage.setItem("keycloak_nonce", nonce)
+    sessionStorage.setItem("keycloak_state", state);
+    sessionStorage.setItem("keycloak_nonce", nonce);
 
     // Build the authorization URL with required OAuth parameters
-    const authUrl = new URL(`${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth`);
+    const authUrl = new URL(
+      `${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth`,
+    );
     authUrl.searchParams.append("client_id", keycloakConfig.clientId);
-    authUrl.searchParams.append("redirect_uri", `${keycloakConfig.redirectUri}`);
+    authUrl.searchParams.append(
+      "redirect_uri",
+      `${keycloakConfig.redirectUri}`,
+    );
     authUrl.searchParams.append("response_type", "code");
     authUrl.searchParams.append("scope", "openid email profile offline_access");
     authUrl.searchParams.append("state", state);
@@ -123,7 +132,7 @@ export const useKeycloakAuth = () => {
 
     // Verify the state parameter to prevent CSRF attacks
     const storedState = sessionStorage.getItem("keycloak_state");
-    const storedNonce = sessionStorage.getItem("keycloak_nonce")
+    const storedNonce = sessionStorage.getItem("keycloak_nonce");
     const urlParams = new URLSearchParams(window.location.search);
     const returnedState = urlParams.get("state");
 
@@ -137,7 +146,7 @@ export const useKeycloakAuth = () => {
     try {
       // Exchange the code for tokens via the backend endpoint
       const response = await axios.get(`${BASE_URL_API}keycloak/callback`, {
-        params: { code: authCode , nonce: storedNonce },
+        params: { code: authCode, nonce: storedNonce },
       });
 
       // Use the Langflow tokens for authentication

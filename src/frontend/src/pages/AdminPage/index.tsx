@@ -6,6 +6,7 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import CustomLoader from "@/customization/components/custom-loader";
+import { useKeycloakAuth } from "@/hooks/useKeycloakAuth";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -42,7 +43,6 @@ import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
-import { useKeycloakAuth } from "@/hooks/useKeycloakAuth";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -71,7 +71,7 @@ export default function AdminPage() {
   const { mutate: mutateGetUsers, isPending, isIdle } = useGetUsers({});
 
   // Get Keycloak configuration and functions from the hook
-  const { isKeycloakEnabled} = useKeycloakAuth();
+  const { isKeycloakEnabled } = useKeycloakAuth();
 
   function getUsers() {
     mutateGetUsers(
@@ -153,7 +153,9 @@ export default function AdminPage() {
     if (user.is_keycloak_user) {
       setErrorData({
         title: "Cannot edit Keycloak user",
-        list: ["User management for Keycloak users must be done through Keycloak"],
+        list: [
+          "User management for Keycloak users must be done through Keycloak",
+        ],
       });
       return;
     }
@@ -182,7 +184,9 @@ export default function AdminPage() {
     if (user.is_keycloak_user) {
       setErrorData({
         title: "Cannot disable Keycloak user",
-        list: ["User management for Keycloak users must be done through Keycloak"],
+        list: [
+          "User management for Keycloak users must be done through Keycloak",
+        ],
       });
       return;
     }
@@ -319,7 +323,9 @@ export default function AdminPage() {
                 }}
                 asChild
               >
-                <Button variant="primary" disabled={isKeycloakEnabled}>New User</Button>
+                <Button variant="primary" disabled={isKeycloakEnabled}>
+                  New User
+                </Button>
               </UserManagementModal>
             </div>
           </div>
@@ -377,76 +383,84 @@ export default function AdminPage() {
                             </ShadTooltip>
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
-                          {user.is_keycloak_user  ? (
-                              user.is_active ? "Yes" : "No"
+                            {user.is_keycloak_user ? (
+                              user.is_active ? (
+                                "Yes"
+                              ) : (
+                                "No"
+                              )
                             ) : (
-                            <ConfirmationModal
-                              size="x-small"
-                              title="Edit"
-                              titleHeader={`${user.username}`}
-                              modalContentTitle="Attention!"
-                              cancelText="Cancel"
-                              confirmationText="Confirm"
-                              icon={"UserCog2"}
-                              data={user}
-                              index={index}
-                              onConfirm={(index, user) => {
-                                handleDisableUser(
-                                  user.is_active,
-                                  user.id,
-                                  user,
-                                );
-                              }}
-                            >
-                              <ConfirmationModal.Content>
-                                <span>
-                                  Are you completely confident about the changes
-                                  you are making to this user?
-                                </span>
-                              </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger>
-                                <div className="flex w-fit">
-                                  <CheckBoxDiv checked={user.is_active} />
-                                </div>
-                              </ConfirmationModal.Trigger>
-                            </ConfirmationModal>
-                          )}
+                              <ConfirmationModal
+                                size="x-small"
+                                title="Edit"
+                                titleHeader={`${user.username}`}
+                                modalContentTitle="Attention!"
+                                cancelText="Cancel"
+                                confirmationText="Confirm"
+                                icon={"UserCog2"}
+                                data={user}
+                                index={index}
+                                onConfirm={(index, user) => {
+                                  handleDisableUser(
+                                    user.is_active,
+                                    user.id,
+                                    user,
+                                  );
+                                }}
+                              >
+                                <ConfirmationModal.Content>
+                                  <span>
+                                    Are you completely confident about the
+                                    changes you are making to this user?
+                                  </span>
+                                </ConfirmationModal.Content>
+                                <ConfirmationModal.Trigger>
+                                  <div className="flex w-fit">
+                                    <CheckBoxDiv checked={user.is_active} />
+                                  </div>
+                                </ConfirmationModal.Trigger>
+                              </ConfirmationModal>
+                            )}
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
-                          {user.is_keycloak_user  ? (
-                              user.is_superuser ? "Yes" : "No"
+                            {user.is_keycloak_user ? (
+                              user.is_superuser ? (
+                                "Yes"
+                              ) : (
+                                "No"
+                              )
                             ) : (
-                            <ConfirmationModal
-                              size="x-small"
-                              title="Edit"
-                              titleHeader={`${user.username}`}
-                              modalContentTitle="Attention!"
-                              cancelText="Cancel"
-                              confirmationText="Confirm"
-                              icon={"UserCog2"}
-                              data={user}
-                              index={index}
-                              onConfirm={(index, user) => {
-                                handleSuperUserEdit(
-                                  user.is_superuser,
-                                  user.id,
-                                  user,
-                                );
-                              }}
-                            >
-                              <ConfirmationModal.Content>
-                                <span>
-                                  Are you completely confident about the changes
-                                  you are making to this user?
-                                </span>
-                              </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger>
-                                <div className="flex w-fit">
-                                  <CheckBoxDiv checked={user.is_superuser} />
-                                </div>
-                              </ConfirmationModal.Trigger>
-                            </ConfirmationModal>
-                          )}
+                              <ConfirmationModal
+                                size="x-small"
+                                title="Edit"
+                                titleHeader={`${user.username}`}
+                                modalContentTitle="Attention!"
+                                cancelText="Cancel"
+                                confirmationText="Confirm"
+                                icon={"UserCog2"}
+                                data={user}
+                                index={index}
+                                onConfirm={(index, user) => {
+                                  handleSuperUserEdit(
+                                    user.is_superuser,
+                                    user.id,
+                                    user,
+                                  );
+                                }}
+                              >
+                                <ConfirmationModal.Content>
+                                  <span>
+                                    Are you completely confident about the
+                                    changes you are making to this user?
+                                  </span>
+                                </ConfirmationModal.Content>
+                                <ConfirmationModal.Trigger>
+                                  <div className="flex w-fit">
+                                    <CheckBoxDiv checked={user.is_superuser} />
+                                  </div>
+                                </ConfirmationModal.Trigger>
+                              </ConfirmationModal>
+                            )}
                           </TableCell>
                           <TableCell className="truncate py-2">
                             {user.is_keycloak_user ? "Yes" : "No"}
@@ -470,63 +484,65 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="truncate py-2">
                             {user.deleted_at
-                              ? new Date(user.deleted_at).toISOString().split("T")[0]
+                              ? new Date(user.deleted_at)
+                                  .toISOString()
+                                  .split("T")[0]
                               : "N/A"}
                           </TableCell>
                           <TableCell className="flex w-[100px] py-2 text-right">
-                          {!user.is_keycloak_user && (
-                            <div className="flex">
-                              <UserManagementModal
-                                title="Edit"
-                                titleHeader={`${user.id}`}
-                                cancelText="Cancel"
-                                confirmationText="Save"
-                                icon={"UserPlus2"}
-                                data={user}
-                                index={index}
-                                onConfirm={(index, editUser) => {
-                                  handleEditUser(user.id, editUser);
-                                }}
-                              >
-                                <ShadTooltip content="Edit" side="top">
-                                  <IconComponent
-                                    name="Pencil"
-                                    className="h-4 w-4 cursor-pointer"
-                                  />
-                                </ShadTooltip>
-                              </UserManagementModal>
-
-                              <ConfirmationModal
-                                size="x-small"
-                                title="Delete"
-                                titleHeader="Delete User"
-                                modalContentTitle="Attention!"
-                                cancelText="Cancel"
-                                confirmationText="Delete"
-                                icon={"UserMinus2"}
-                                data={user}
-                                index={index}
-                                onConfirm={(index, user) => {
-                                  handleDeleteUser(user);
-                                }}
-                              >
-                                <ConfirmationModal.Content>
-                                  <span>
-                                    Are you sure you want to delete this user?
-                                    This action cannot be undone.
-                                  </span>
-                                </ConfirmationModal.Content>
-                                <ConfirmationModal.Trigger>
-                                  <div className="cursor-pointer">
+                            {!user.is_keycloak_user && (
+                              <div className="flex">
+                                <UserManagementModal
+                                  title="Edit"
+                                  titleHeader={`${user.id}`}
+                                  cancelText="Cancel"
+                                  confirmationText="Save"
+                                  icon={"UserPlus2"}
+                                  data={user}
+                                  index={index}
+                                  onConfirm={(index, editUser) => {
+                                    handleEditUser(user.id, editUser);
+                                  }}
+                                >
+                                  <ShadTooltip content="Edit" side="top">
                                     <IconComponent
-                                      name="Trash2"
-                                      className="ml-2 h-4 w-4"
+                                      name="Pencil"
+                                      className="h-4 w-4 cursor-pointer"
                                     />
-                                  </div>
-                                </ConfirmationModal.Trigger>
-                              </ConfirmationModal>
-                            </div>
-                          )}
+                                  </ShadTooltip>
+                                </UserManagementModal>
+
+                                <ConfirmationModal
+                                  size="x-small"
+                                  title="Delete"
+                                  titleHeader="Delete User"
+                                  modalContentTitle="Attention!"
+                                  cancelText="Cancel"
+                                  confirmationText="Delete"
+                                  icon={"UserMinus2"}
+                                  data={user}
+                                  index={index}
+                                  onConfirm={(index, user) => {
+                                    handleDeleteUser(user);
+                                  }}
+                                >
+                                  <ConfirmationModal.Content>
+                                    <span>
+                                      Are you sure you want to delete this user?
+                                      This action cannot be undone.
+                                    </span>
+                                  </ConfirmationModal.Content>
+                                  <ConfirmationModal.Trigger>
+                                    <div className="cursor-pointer">
+                                      <IconComponent
+                                        name="Trash2"
+                                        className="ml-2 h-4 w-4"
+                                      />
+                                    </div>
+                                  </ConfirmationModal.Trigger>
+                                </ConfirmationModal>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

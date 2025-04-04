@@ -1,5 +1,5 @@
-import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
+import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";

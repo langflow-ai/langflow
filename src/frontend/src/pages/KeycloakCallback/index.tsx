@@ -4,8 +4,8 @@
  * Displayed when users are redirected back from Keycloak with an authorization code.
  * Shows a loading spinner while processing the authentication.
  */
-import { useEffect } from "react";
 import { useKeycloakAuth } from "@/hooks/useKeycloakAuth";
+import { useEffect } from "react";
 
 /**
  * Keycloak callback handler component.
@@ -30,7 +30,7 @@ export default function KeycloakCallback() {
   return (
     <div className="flex h-screen w-full items-center justify-center">
       <div className="flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <div className="h-16 w-16 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
         <p className="mt-4 text-lg">Logging you in...</p>
       </div>
     </div>

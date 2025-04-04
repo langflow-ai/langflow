@@ -13,13 +13,13 @@ export function AppInitPage() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const location = useLocation();
-  const isKeycloakCallback = location.pathname.includes('keycloak/callback');
+  const isKeycloakCallback = location.pathname.includes("keycloak/callback");
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
   // Only enable auto login if we're not in the Keycloak callback flow
   const { isFetched } = useGetAutoLogin({
-    enabled: isLoaded && !isKeycloakCallback
+    enabled: isLoaded && !isKeycloakCallback,
   });
 
   useGetVersionQuery({ enabled: isFetched });

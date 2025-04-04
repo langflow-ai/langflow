@@ -44,10 +44,10 @@ export default function LoginPage(): JSX.Element {
 
   // Get Keycloak configuration and functions from the hook
   const {
-    isKeycloakEnabled,  // Whether Keycloak is enabled
-    isForceSSO,         // Whether to hide username/password login
-    redirectToKeycloakLogin,  // Function to redirect to Keycloak
-    isLoading: isKeycloakLoading
+    isKeycloakEnabled, // Whether Keycloak is enabled
+    isForceSSO, // Whether to hide username/password login
+    redirectToKeycloakLogin, // Function to redirect to Keycloak
+    isLoading: isKeycloakLoading,
   } = useKeycloakAuth();
 
   /**
@@ -98,7 +98,7 @@ export default function LoginPage(): JSX.Element {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-muted">
         <div className="flex flex-col items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
         </div>
       </div>
     );
@@ -140,7 +140,8 @@ export default function LoginPage(): JSX.Element {
               <div className="mb-3 w-full">
                 <Form.Field name="username">
                   <Form.Label className="data-[invalid]:label-invalid">
-                    Username <span className="font-medium text-destructive">*</span>
+                    Username{" "}
+                    <span className="font-medium text-destructive">*</span>
                   </Form.Label>
 
                   <Form.Control asChild>
@@ -164,7 +165,8 @@ export default function LoginPage(): JSX.Element {
               <div className="mb-3 w-full">
                 <Form.Field name="password">
                   <Form.Label className="data-[invalid]:label-invalid">
-                    Password <span className="font-medium text-destructive">*</span>
+                    Password{" "}
+                    <span className="font-medium text-destructive">*</span>
                   </Form.Label>
 
                   <InputComponent
@@ -199,8 +201,8 @@ export default function LoginPage(): JSX.Element {
             <>
               {/* "Or" divider - only shown when both login options are available */}
               {!isForceSSO && (
-                <div className="w-full grid justify-items-center">
-                  <div className="text-xs uppercase text-muted-foreground m-8">
+                <div className="grid w-full justify-items-center">
+                  <div className="m-8 text-xs uppercase text-muted-foreground">
                     Or
                   </div>
                 </div>
@@ -222,7 +224,7 @@ export default function LoginPage(): JSX.Element {
 
           {/* Sign up link - only shown when not in force SSO mode */}
           {(!isKeycloakEnabled || !isForceSSO) && (
-            <div className="w-full mt-3">
+            <div className="mt-3 w-full">
               <CustomLink to="/signup">
                 <Button className="w-full" variant="ghost" type="button">
                   Don't have an account?&nbsp;<b>Sign Up</b>

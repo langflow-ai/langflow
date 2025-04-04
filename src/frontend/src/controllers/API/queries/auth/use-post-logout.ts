@@ -37,10 +37,10 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
   const mutation = mutate(["useLogout"], logoutUser, {
     onSuccess: () => {
       // First invalidate all queries with the existing token
-      queryClient.cancelQueries();  // Cancel any in-flight queries
+      queryClient.cancelQueries(); // Cancel any in-flight queries
 
       // Clear query cache instead of invalidating (which triggers refetching)
-      queryClient.clear();  // This removes all queries from the cache without refetching
+      queryClient.clear(); // This removes all queries from the cache without refetching
 
       logout();
 
