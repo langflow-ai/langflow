@@ -192,7 +192,10 @@ async def get_or_create_user(db: AsyncSession, decoded_token: dict, keycloak_ser
 
 
 async def create_keycloak_user(
-    db: AsyncSession, username: str, email: str | None = None, is_admin: bool = False
+    db: AsyncSession,
+    username: str,
+    email: str | None = None,
+    is_admin: bool = False,  # noqa: FBT001, FBT002
 ) -> User:
     """Create a new user in the database from Keycloak information.
 

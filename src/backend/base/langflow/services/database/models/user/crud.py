@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.services.database.models.user.model import User, UserUpdate
 
 
-async def get_user_by_username(db: AsyncSession, username: str, include_deleted: bool = False) -> User | None:
+async def get_user_by_username(db: AsyncSession, username: str, include_deleted: bool = False) -> User | None:  # noqa: FBT001, FBT002
     """Get a user by username.
 
     Args:
@@ -25,11 +25,11 @@ async def get_user_by_username(db: AsyncSession, username: str, include_deleted:
     if include_deleted:
         stmt = select(User).where(User.username == username)
     else:
-        stmt = select(User).where(User.username == username, User.is_deleted == False)
+        stmt = select(User).where(User.username == username, User.is_deleted is False)
     return (await db.exec(stmt)).first()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: UUID, include_deleted: bool = False) -> User | None:
+async def get_user_by_id(db: AsyncSession, user_id: UUID, include_deleted: bool = False) -> User | None:  # noqa: FBT001, FBT002
     """Get a user by ID.
 
     Args:
@@ -46,7 +46,7 @@ async def get_user_by_id(db: AsyncSession, user_id: UUID, include_deleted: bool 
     if include_deleted:
         stmt = select(User).where(User.id == user_id)
     else:
-        stmt = select(User).where(User.id == user_id, User.is_deleted == False)
+        stmt = select(User).where(User.id == user_id, User.is_deleted is False)
     return (await db.exec(stmt)).first()
 
 

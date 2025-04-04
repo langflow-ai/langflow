@@ -9,15 +9,11 @@ from composio import Action, App
 # Third-party imports
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
+from languru import logger
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import (
-    ConnectionInput,
-    MessageTextInput,
-    SecretStrInput,
-    SortableListInput,
-)
+from langflow.inputs import ConnectionInput, MessageTextInput, SecretStrInput, SortableListInput
 from langflow.io import Output
 
 # TODO: We get the list from the API but we need to filter it

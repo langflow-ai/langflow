@@ -419,7 +419,7 @@ async def test_get_or_create_user_new_user(
         id=2,
         username="new_user",
         email="new@example.com",
-        password="hashed_password",
+        password="hashed_password",  # noqa: S106
         is_superuser=True,
         is_active=True,
         is_keycloak_user=True,
@@ -438,7 +438,7 @@ async def test_get_or_create_user_new_user(
         )
 
         # Verify new user was created
-        mock_create_user.assert_called_once_with(fixture_mock_db_session, "new_user", "new@example.com", True)
+        mock_create_user.assert_called_once_with(fixture_mock_db_session, "new_user", "new@example.com", True)  # noqa: FBT003
 
         # Verify result
         assert result == new_user
@@ -485,7 +485,7 @@ async def test_get_or_create_user_with_generated_username(
         id=3,
         username="test.user",
         email=None,
-        password="hashed_password",
+        password="hashed_password",  # noqa: S106
         is_superuser=False,
         is_active=True,
         is_keycloak_user=True,
@@ -526,7 +526,7 @@ async def test_get_or_create_user_with_random_username(
         id=4,
         username="user_12345678",  # This would be random in reality
         email=None,
-        password="hashed_password",
+        password="hashed_password",  # noqa: S106
         is_superuser=False,
         is_active=True,
         is_keycloak_user=True,
@@ -568,7 +568,7 @@ async def test_create_keycloak_user(fixture_mock_db_session: AsyncMock):
         id=5,
         username="keycloak_user",
         email="keycloak@example.com",
-        password="hashed_password",
+        password="hashed_password",  # noqa: S106
         is_superuser=True,
         is_active=True,
         is_keycloak_user=True,
@@ -626,7 +626,7 @@ async def test_create_new_user(fixture_mock_db_session: AsyncMock):
     user = User(
         username="new_db_user",
         email="new_db@example.com",
-        password="hashed_password",
+        password="hashed_password",  # noqa: S106
         is_superuser=False,
         is_active=True,
         is_keycloak_user=True,

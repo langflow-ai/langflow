@@ -214,7 +214,7 @@ def test_langflow_version_gauge_with_up_down_counter_method(fixture_opentelemetr
 class MockSettings:
     """Mock settings used to simulate Langflow's Settings object for telemetry testing."""
 
-    def __init__(self, prometheus_port: int = 9001, prometheus_enabled: bool = True):
+    def __init__(self, prometheus_port: int = 9001, prometheus_enabled: bool = True):  # noqa: FBT001, FBT002
         self.prometheus_port = prometheus_port
         self.prometheus_enabled = prometheus_enabled
         self.telemetry_base_url = "http://localhost"
@@ -295,7 +295,7 @@ def test_metrics_server_respects_env(monkeypatch):
 
     captured_args = {}
 
-    def mock_run(app, **kwargs):
+    def mock_run(app, **kwargs):  # noqa: ARG001
         captured_args.update(kwargs)
 
     monkeypatch.setattr("uvicorn.run", mock_run)

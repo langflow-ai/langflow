@@ -484,7 +484,7 @@ async def test_decode_invalid_token(fixture_keycloak_service: KeycloakService, m
     mocker.patch("jose.jwt.decode", side_effect=jwt.JWTError("Invalid token"))
 
     # Decoding an invalid token should raise an exception
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017, PT011
         await fixture_keycloak_service.decode_token("invalid_token")
 
 

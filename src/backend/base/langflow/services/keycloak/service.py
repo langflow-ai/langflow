@@ -80,7 +80,7 @@ class KeycloakService(Service):
             logger.warning(client_id_error_msg)
             raise ValueError(client_id_error_msg)
 
-        client_secret_error_msg = "Keycloak client secret is not configured"
+        client_secret_error_msg = "Keycloak client secret is not configured"  # noqa: S105
         if not hasattr(auth_settings, "KEYCLOAK_CLIENT_SECRET") or not auth_settings.KEYCLOAK_CLIENT_SECRET:
             logger.warning(client_secret_error_msg)
             raise ValueError(client_secret_error_msg)

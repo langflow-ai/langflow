@@ -153,7 +153,7 @@ class TelemetryService(Service):
             self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
             self.log_package_version_task = asyncio.create_task(self.log_package_version())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.exception(f"Error starting TelemetryService telemetry: {e}")
             self.running = False  # Reset running state on failure
 
@@ -203,7 +203,7 @@ class TelemetryService(Service):
             logger.warning("Metrics server flag was set but thread is dead. Proceeding to restart it.")
 
         port = self.settings_service.settings.prometheus_port
-        host = os.getenv("LANGFLOW_METRICS_HOST", "0.0.0.0")
+        host = os.getenv("LANGFLOW_METRICS_HOST", "0.0.0.0")  # noqa: S104
         log_level = os.getenv("LANGFLOW_METRICS_LOG_LEVEL", "warning")
 
         metrics_app = make_asgi_app()
@@ -220,7 +220,7 @@ class TelemetryService(Service):
                     access_log=False,
                     timeout_keep_alive=5,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.exception(f"Failed to start Prometheus metrics server on {host}:{port}: {e}")
 
         self._metrics_thread = threading.Thread(

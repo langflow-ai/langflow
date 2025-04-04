@@ -232,7 +232,7 @@ async def logout_from_keycloak(request: Request, keycloak_service: KeycloakServi
         try:
             await keycloak_service.logout(refresh_token)
             logger.info("Successfully logged out from Keycloak")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Failed to log out from Keycloak: {e!s}")
 
 

@@ -9,6 +9,7 @@ import datetime
 import json
 import logging
 import os
+import tempfile
 from pathlib import Path
 from threading import Lock
 from types import SimpleNamespace
@@ -161,7 +162,7 @@ def test_configure_disables_logger(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that calling configure with disable=True disables the logger."""
     disable_called = False
 
-    def fake_disable(name: str) -> None:
+    def fake_disable(name: str) -> None:  # noqa: ARG001
         nonlocal disable_called
         disable_called = True
 
@@ -174,7 +175,7 @@ def test_configure_container_logging(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that container logging configuration sets up logger.add correctly when LANGFLOW_LOG_FORMAT is not set."""
     add_calls: list[dict[str, Any]] = []
 
-    def fake_add(sink: object, **kwargs: Any) -> None:
+    def fake_add(sink: object, **kwargs: Any) -> None:  # noqa: ARG001
         add_calls.append(kwargs)
 
     monkeypatch.setattr(loguru_logger, "add", fake_add)
@@ -196,13 +197,13 @@ def test_configure_standard_logging(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(loguru_logger, "configure", fake_configure)
     add_calls: list[dict[str, Any]] = []
 
-    def fake_add(sink: object, **kwargs: Any) -> int:
+    def fake_add(sink: object, **kwargs: Any) -> int:  # noqa: ARG001
         add_calls.append(kwargs)
         return 1
 
     monkeypatch.setattr(loguru_logger, "add", fake_add)
     monkeypatch.delenv("LANGFLOW_LOG_FORMAT", raising=False)
-    temp_log_file: Path = Path("/tmp/test_langflow.log")
+    temp_log_file: Path = Path(tempfile.gettempdir()) / "test_langflow.log"
     configure_standard_logging("INFO", temp_log_file, None, async_file=False)
     assert "handlers" in captured_config
     assert len(add_calls) >= 1
@@ -215,13 +216,13 @@ def test_configure_calls_standard(monkeypatch: pytest.MonkeyPatch) -> None:
     add_calls: list[dict[str, Any]] = []
     config_calls: list[Any] = []
     monkeypatch.setattr(loguru_logger, "remove", lambda: None)
-    monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))
+    monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))  # noqa: ARG005
     monkeypatch.setattr(loguru_logger, "configure", lambda handlers: config_calls.append(handlers))
     with (
         patch("langflow.logging.logger.setup_uvicorn_logger", lambda: None),
         patch("langflow.logging.logger.setup_gunicorn_logger", lambda: None),
     ):
-        temp_log_file: Path = Path("/tmp/test_configure.log")
+        temp_log_file: Path = Path(tempfile.gettempdir()) / "test_configure.log"
         configure(
             log_level="WARNING",
             log_file=temp_log_file,
@@ -238,7 +239,7 @@ def test_configure_with_env_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that configure uses the LANGFLOW_LOG_LEVEL environment variable when log_level is not provided."""
     monkeypatch.setenv("LANGFLOW_LOG_LEVEL", "INFO")
     add_calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))
+    monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))  # noqa: ARG005
     configure(disable=False)
     levels = [call.get("level", "") for call in add_calls if "level" in call]
     assert any(level == "INFO" for level in levels)
@@ -248,8 +249,8 @@ def test_configure_standard_logging_invalid_format(monkeypatch: pytest.MonkeyPat
     """Test that configure_standard_logging falls back to DEFAULT_LOG_FORMAT if an invalid log format is provided."""
     monkeypatch.delenv("LANGFLOW_LOG_FORMAT", raising=False)
     add_calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))
-    temp_log_file: Path = Path("/tmp/test_invalid_format.log")
+    monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))  # noqa: ARG005
+    temp_log_file: Path = Path(tempfile.gettempdir()) / "test_invalid_format.log"
     configure_standard_logging("INFO", temp_log_file, "invalid_format", async_file=False)
     for call in add_calls:
         assert call.get("format") == DEFAULT_LOG_FORMAT
@@ -277,7 +278,7 @@ def test_is_valid_log_format_invalid() -> None:
 @pytest.mark.asyncio
 async def test_async_file_sink_write() -> None:
     """Test the asynchronous writing of log messages using AsyncFileSink."""
-    temp_log_file: Path = Path("/tmp/test_async_sink.log")
+    temp_log_file: Path = Path(tempfile.gettempdir()) / "test_async_sink.log"
     sink: AsyncFileSink = AsyncFileSink(temp_log_file)
     test_message: str = "Test async log message"
     await sink.write_async(test_message)
@@ -285,7 +286,7 @@ async def test_async_file_sink_write() -> None:
     assert True
 
 
-def test_intercept_handler_emit(capfd: pytest.LogCaptureFixture) -> None:
+def test_intercept_handler_emit() -> None:
     """Test that the InterceptHandler correctly processes and logs a record."""
     handler: InterceptHandler = InterceptHandler()
     record: logging.LogRecord = logging.LogRecord(
@@ -299,7 +300,7 @@ def test_intercept_handler_emit(capfd: pytest.LogCaptureFixture) -> None:
     )
     try:
         handler.emit(record)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         pytest.fail(f"InterceptHandler.emit raised an exception: {exc}")
     assert True
 
@@ -310,7 +311,7 @@ def test_intercept_handler_emit(capfd: pytest.LogCaptureFixture) -> None:
 
 
 @pytest.mark.parametrize(
-    "message,expected",
+    ("message", "expected"),
     [
         ("GET /health", False),
         ("POST /health_check", False),
@@ -328,7 +329,7 @@ def test_log_filter_excludes_known_paths(message, expected):
 def test_serialize_log_valid() -> None:
     """Test that serialize_log returns a valid JSON string representation of a given log record."""
     # Create a mock Loguru-style record that matches your function's expectations
-    mock_time = datetime.datetime.now()
+    mock_time = datetime.datetime.now(datetime.timezone.utc)
 
     # Use SimpleNamespace objects for nested attributes that need to be accessed with dot notation
     level_obj = SimpleNamespace(name="DEBUG")
@@ -369,7 +370,7 @@ def test_serialize_log_valid() -> None:
 
 def create_mock_record(message="Test message", level="INFO", exception=None) -> dict:
     """Helper function to create a mock Loguru record."""
-    mock_time = datetime.datetime.now()
+    mock_time = datetime.datetime.now(datetime.timezone.utc)
     level_obj = SimpleNamespace(name=level)
     process_obj = SimpleNamespace(id=1234)
     thread_obj = SimpleNamespace(id=5678, name="test_thread")
@@ -391,7 +392,7 @@ def test_serialize_log_basic():
     """Test basic serialization with minimal fields."""
     mock_record = create_mock_record()
 
-    with patch("langflow.logging.logger.DEV", False):
+    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)
@@ -405,13 +406,14 @@ def test_serialize_log_basic():
 def test_serialize_log_with_exception_dev_mode():
     """Test serialization with exception info in development mode."""
     try:
-        raise ValueError("Test exception")
+        msg = "Test exception"
+        raise ValueError(msg)
     except ValueError as e:
         exception_info = SimpleNamespace(type=type(e), value=e)
 
     mock_record = create_mock_record(exception=exception_info)
 
-    with patch("langflow.logging.logger.DEV", True):
+    with patch("langflow.logging.logger.DEV", True):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)
@@ -422,13 +424,14 @@ def test_serialize_log_with_exception_dev_mode():
 def test_serialize_log_with_exception_prod_mode():
     """Test that exceptions are null in production mode even when present."""
     try:
-        raise ValueError("Test exception")
+        msg = "Test exception"
+        raise ValueError(msg)
     except ValueError as e:
         exception_info = SimpleNamespace(type=type(e), value=e)
 
     mock_record = create_mock_record(exception=exception_info)
 
-    with patch("langflow.logging.logger.DEV", False):
+    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)
@@ -440,7 +443,7 @@ def test_serialize_log_different_levels():
     for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
         mock_record = create_mock_record(level=level)
 
-        with patch("langflow.logging.logger.DEV", False):
+        with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
             result = serialize_log(mock_record)
 
         parsed = json.loads(result)
@@ -449,11 +452,11 @@ def test_serialize_log_different_levels():
 
 def test_serialize_log_timestamp_format():
     """Test that timestamp is correctly formatted."""
-    fixed_time = datetime.datetime(2023, 1, 15, 12, 30, 45, 123456)
+    fixed_time = datetime.datetime(2023, 1, 15, 12, 30, 45, 123456, tzinfo=datetime.UTC)
     mock_record = create_mock_record()
     mock_record["time"] = fixed_time
 
-    with patch("langflow.logging.logger.DEV", False):
+    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)
@@ -472,7 +475,7 @@ def test_serialize_log_with_non_standard_exception():
     exception_info = CustomException()
     mock_record = create_mock_record(exception=exception_info)
 
-    with patch("langflow.logging.logger.DEV", True):
+    with patch("langflow.logging.logger.DEV", True):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)
@@ -486,7 +489,7 @@ def test_serialize_log_with_unicode_message():
     unicode_message = "测试消息 - こんにちは - مرحبا"
     mock_record = create_mock_record(message=unicode_message)
 
-    with patch("langflow.logging.logger.DEV", False):
+    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)
@@ -498,7 +501,7 @@ def test_serialize_log_with_very_long_message():
     long_message = "A" * 10000
     mock_record = create_mock_record(message=long_message)
 
-    with patch("langflow.logging.logger.DEV", False):
+    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
         result = serialize_log(mock_record)
 
     parsed = json.loads(result)

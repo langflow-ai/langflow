@@ -303,7 +303,7 @@ def configure_container_logging(log_level: str, log_format: str | None, env_mode
         )
 
 
-def configure_standard_logging(log_level: str, log_file: Path | None, log_format: str | None, async_file: bool) -> None:
+def configure_standard_logging(log_level: str, log_file: Path | None, log_format: str | None, async_file: bool) -> None:  # noqa: FBT001
     """Configure standard logging for non-container environments."""
     if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
         log_format = os.getenv("LANGFLOW_LOG_FORMAT")
