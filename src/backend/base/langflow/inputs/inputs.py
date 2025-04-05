@@ -25,6 +25,7 @@ from .input_mixin import (
     MetadataTraceMixin,
     MultilineMixin,
     RangeMixin,
+    QueryMixin,
     SerializableFieldTypes,
     SliderMixin,
     SortableListMixin,
@@ -492,6 +493,23 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
     show: bool = False
 
 
+class QueryInput(MessageTextInput, QueryMixin, InputTraceMixin, ToolModeMixin):
+    """Represents a query input field.
+
+    This class represents an query input field and provides functionality for handling search values.
+    It inherits from the `BaseInputMixin` and `QueryMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SEARCH.
+        separator (str | None): The separator for the query input. Defaults to None.
+        value (str): The value for the query input. Defaults to an empty string.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.QUERY
+    separator: str | None = Field(default=None)
+    value: str = Field(default="")
+
+
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a list selection input field.
 
@@ -606,6 +624,7 @@ class DefaultPromptField(Input):
 InputTypes: TypeAlias = (
     Input
     | AuthInput
+    | QueryInput
     | DefaultPromptField
     | BoolInput
     | DataInput

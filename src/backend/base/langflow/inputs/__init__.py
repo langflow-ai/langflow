@@ -21,6 +21,7 @@ from .inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     SortableListInput,
@@ -31,6 +32,7 @@ from .inputs import (
 
 __all__ = [
     "AuthInput",
+    "QueryInput",
     "BoolInput",
     "CodeInput",
     "ConnectionInput",
