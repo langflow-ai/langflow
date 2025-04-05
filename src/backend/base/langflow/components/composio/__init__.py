@@ -1,5 +1,5 @@
 from .composio_api import ComposioAPIComponent
-from .github_api import GitHubAPIComponent
+from .github_composio import ComposioGitHubAPIComponent
 from .gmail_composio import ComposioGmailAPIComponent
 from .googlecalendar_api import GooglecalendarAPIComponent
 from .googlemeet_composio import ComposioGooglemeetAPIComponent
@@ -8,7 +8,7 @@ from .slack_api import SlackAPIComponent
 
 __all__ = [
     "ComposioAPIComponent",
-    "GitHubAPIComponent",
+    "ComposioGitHubAPIComponent",
     "ComposioGmailAPIComponent",
     "GooglecalendarAPIComponent",
     "ComposioGooglemeetAPIComponent",
