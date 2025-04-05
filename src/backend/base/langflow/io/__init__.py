@@ -1,3 +1,4 @@
+# noqa: A005
 from langflow.inputs import (
     BoolInput,
     CodeInput,
@@ -21,6 +22,7 @@ from langflow.inputs import (
     SecretStrInput,
     SliderInput,
     StrInput,
+    TabInput,
     TableInput,
 )
 from langflow.template import Output
@@ -51,5 +53,6 @@ __all__ = [
     "SecretStrInput",
     "SliderInput",
     "StrInput",
+    "TabInput",
     "TableInput",
 ]

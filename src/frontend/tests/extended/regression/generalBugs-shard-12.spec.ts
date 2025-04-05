@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -18,13 +19,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
-    await page.getByTestId("sidebar-legacy-switch").click();
-    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
-    await page.getByTestId("sidebar-options-trigger").click();
+    await addLegacyComponents(page);
 
     let modelElement = await page.getByTestId(
       "langchain_utilitiesRetrieverTool",

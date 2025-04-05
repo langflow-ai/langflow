@@ -37,7 +37,7 @@ export const ForwardedIconComponent = memo(
         nodeIconsLucide[
           name
             ?.split("-")
-            ?.map((x) => String(x[0]).toUpperCase() + String(x).slice(1))
+            ?.map((x) => String(x[0])?.toUpperCase() + String(x).slice(1))
             ?.join("")
         ];
       if (!TargetIcon) {

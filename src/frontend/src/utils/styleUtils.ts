@@ -1,9 +1,17 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AWSInvertedIcon } from "@/icons/AWSInverted";
+import { BWPythonIcon } from "@/icons/BW python";
+import { DropboxIcon } from "@/icons/Dropbox";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
+import { GoogleDriveIcon } from "@/icons/GoogleDrive";
+import { GridHorizontalIcon } from "@/icons/GridHorizontal";
+import { HomeAssistantIcon } from "@/icons/HomeAssistant";
+import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
+import { OneDriveIcon } from "@/icons/OneDrive";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
@@ -15,6 +23,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { GmailIcon } from "@/icons/gmail";
 import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
@@ -26,6 +35,7 @@ import {
   ArrowRightLeft,
   ArrowUpRight,
   ArrowUpToLine,
+  AudioLines,
   Bell,
   Binary,
   Blocks,
@@ -56,10 +66,12 @@ import {
   CircleDot,
   CircleOff,
   Clipboard,
+  CloudDownload,
   Code,
   Code2,
   CodeXml,
   Cog,
+  Columns2,
   Combine,
   Command,
   Compass,
@@ -76,18 +88,24 @@ import {
   DownloadCloud,
   Edit,
   Ellipsis,
+  EllipsisVertical,
   Eraser,
   ExternalLink,
   Eye,
   EyeOff,
   File,
+  FileChartColumn,
   FileClock,
+  FileCode2,
   FileDown,
+  FileJson,
+  FilePen,
   FileQuestion,
   FileSearch,
   FileSearch2,
   FileSliders,
   FileText,
+  FileType,
   FileType2,
   FileUp,
   Filter,
@@ -126,6 +144,7 @@ import {
   ListChecks,
   ListFilter,
   ListOrdered,
+  ListX,
   Loader2,
   Lock,
   LockOpen,
@@ -138,6 +157,9 @@ import {
   MessageSquare,
   MessageSquareMore,
   MessagesSquare,
+  Mic,
+  Mic2,
+  MicOff,
   Minimize2,
   Minus,
   Monitor,
@@ -160,6 +182,7 @@ import {
   Pen,
   Pencil,
   PencilLine,
+  PencilRuler,
   PieChart,
   Pin,
   Plane,
@@ -173,6 +196,7 @@ import {
   RefreshCcw,
   RefreshCcwDot,
   Repeat,
+  Replace,
   RotateCcw,
   Save,
   SaveAll,
@@ -216,6 +240,7 @@ import {
   Type,
   Undo,
   Ungroup,
+  UnlinkIcon,
   Unplug,
   Upload,
   User,
@@ -240,7 +265,7 @@ import { AWSIcon } from "../icons/AWS";
 import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
-import { ApifyIcon } from "../icons/Apify";
+import { ApifyIcon, ApifyWhiteIcon } from "../icons/Apify";
 import { ArXivIcon } from "../icons/ArXiv";
 import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
@@ -274,6 +299,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { WatsonxAiIcon } from "../icons/IBMWatsonx";
 import { IFixIcon } from "../icons/IFixIt";
 import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
@@ -496,6 +522,25 @@ export const nodeColorsName: { [char: string]: string } = {
   DataFrame: "pink",
 };
 
+export const FILE_ICONS = {
+  json: {
+    icon: "FileJson",
+    color: "text-datatype-indigo dark:text-datatype-indigo-foreground",
+  },
+  csv: {
+    icon: "FileChartColumn",
+    color: "text-datatype-emerald dark:text-datatype-emerald-foreground",
+  },
+  txt: {
+    icon: "FileType",
+    color: "text-datatype-purple dark:text-datatype-purple-foreground",
+  },
+  pdf: {
+    icon: "File",
+    color: "text-datatype-red dark:text-datatype-red-foreground",
+  },
+};
+
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
@@ -522,6 +567,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -551,6 +597,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  {
+    display_name: "Home Assistant",
+    name: "homeassistant",
+    icon: "HomeAssistant",
+  },
 ];
 
 export const categoryIcons = {
@@ -607,11 +658,13 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
   ListFlows: Group,
   ClearMessageHistory: FileClock,
   Python: PythonIcon,
+  BWPython: BWPythonIcon,
   AzureChatOpenAi: AzureIcon,
   Ollama: OllamaIcon,
   ChatOllama: OllamaIcon,
@@ -638,6 +691,7 @@ export const nodeIconsLucide: iconsType = {
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
+  AWSInverted: AWSInvertedIcon,
   Anthropic: AnthropicIcon,
   ArXiv: ArXivIcon,
   ChatAnthropic: AnthropicIcon,
@@ -647,6 +701,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  CloudDownload,
   Olivya: OlivyaIcon,
   Bing: BingIcon,
   Cohere: CohereIcon,
@@ -655,7 +710,10 @@ export const nodeIconsLucide: iconsType = {
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
   FirecrawlCrawlApi: FirecrawlIcon,
+  Unlink: UnlinkIcon,
   FirecrawlScrapeApi: FirecrawlIcon,
+  FirecrawlMapApi: FirecrawlIcon,
+  FirecrawlExtractApi: FirecrawlIcon,
   GitbookLoader: GitBookIcon,
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
@@ -676,6 +734,7 @@ export const nodeIconsLucide: iconsType = {
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   NotDiamond: NotDiamondIcon,
+  GridHorizontal: GridHorizontalIcon,
   Composio: ComposioIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
@@ -709,6 +768,7 @@ export const nodeIconsLucide: iconsType = {
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
+  WatsonxAI: WatsonxAiIcon,
   Share3: ShareIcon,
   Share4: Share2Icon,
   WikipediaAPIWrapper: SvgWikipedia,
@@ -746,6 +806,8 @@ export const nodeIconsLucide: iconsType = {
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
   Apify: ApifyIcon,
+  ApifyWhite: ApifyWhiteIcon,
+  HomeAssistant: HomeAssistantIcon,
 
   //Node Icons
   model_specs: FileSliders,
@@ -776,6 +838,10 @@ export const nodeIconsLucide: iconsType = {
   XCircle,
   Info,
   CheckCircle2,
+  FileJson,
+  FileChartColumn,
+  FileType,
+  File,
   SquarePen,
   Zap,
   MessagesSquare,
@@ -790,6 +856,9 @@ export const nodeIconsLucide: iconsType = {
   AlertTriangle,
   ChevronLeft,
   SlidersHorizontal,
+  GoogleDrive: GoogleDriveIcon,
+  OneDrive: OneDriveIcon,
+  Dropbox: DropboxIcon,
   Palette,
   RefreshCcwDot,
   FolderUp,
@@ -829,9 +898,11 @@ export const nodeIconsLucide: iconsType = {
   Snowflake,
   Store,
   Download,
+  Replace,
   Eraser,
   Lock,
   LockOpen,
+  ListX,
   Newspaper,
   Tags,
   CodeXml,
@@ -839,11 +910,11 @@ export const nodeIconsLucide: iconsType = {
   LucideSend,
   Sparkles,
   DownloadCloud,
-  File,
   FileText,
   FolderPlus,
   GitFork,
   FileDown,
+  FilePen,
   FileUp,
   Menu,
   Save,
@@ -855,6 +926,7 @@ export const nodeIconsLucide: iconsType = {
   UserMinus2,
   UserPlus2,
   Pencil,
+  PencilRuler,
   ChevronsRight,
   ChevronsLeft,
   EyeOff,
@@ -912,6 +984,7 @@ export const nodeIconsLucide: iconsType = {
   FlaskConical,
   AlertCircle,
   Bot,
+  EllipsisVertical,
   Delete,
   Command,
   ArrowBigUp,
@@ -968,10 +1041,17 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  javascript: JSIcon,
+  FileCode2,
+  Columns2,
   ScrapeGraphAI: ScrapeGraph,
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
+  Mic,
+  MicOff,
+  Mic2,
   DollarSign,
   BookOpenText,
+  AudioLines,
 };

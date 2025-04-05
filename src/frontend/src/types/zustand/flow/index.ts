@@ -7,7 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus } from "../../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
@@ -95,6 +95,7 @@ export type FlowStoreType = {
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
+  resetFlowState: () => void;
   reactFlowInstance: ReactFlowInstance<AllNodeType, EdgeType> | null;
   setReactFlowInstance: (
     newState: ReactFlowInstance<AllNodeType, EdgeType>,
@@ -139,6 +140,8 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
+  playgroundPage: boolean;
+  setPlaygroundPage: (playgroundPage: boolean) => void;
   buildFlow: ({
     startNodeId,
     stopNodeId,
@@ -147,6 +150,7 @@ export type FlowStoreType = {
     silent,
     session,
     stream,
+    eventDelivery,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -155,6 +159,7 @@ export type FlowStoreType = {
     silent?: boolean;
     session?: string;
     stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (
