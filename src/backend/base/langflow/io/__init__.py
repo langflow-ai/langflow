@@ -19,12 +19,12 @@ from langflow.inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     StrInput,
     TabInput,
     TableInput,
-    QueryInput,
 )
 from langflow.template import Output
 
@@ -51,10 +51,10 @@ __all__ = [
     "NestedDictInput",
     "Output",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "StrInput",
     "TabInput",
     "TableInput",
-    "QueryInput",
 ]

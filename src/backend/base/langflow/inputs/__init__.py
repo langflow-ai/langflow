@@ -32,7 +32,6 @@ from .inputs import (
 
 __all__ = [
     "AuthInput",
-    "QueryInput",
     "BoolInput",
     "CodeInput",
     "ConnectionInput",
@@ -56,6 +55,7 @@ __all__ = [
     "MultiselectInput",
     "NestedDictInput",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "SortableListInput",
