@@ -171,6 +171,7 @@ interface BaseModalProps {
     | "retangular"
     | "smaller"
     | "small"
+    | "small-query"
     | "medium"
     | "medium-tall"
     | "large"
