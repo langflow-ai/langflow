@@ -24,7 +24,8 @@ export const URLs = {
   STARTER_PROJECTS: `starter-projects`,
   SIDEBAR_CATEGORIES: `sidebar_categories`,
   ALL: `all`,
-  PUBLIC_FLOW: `/flows/public_flow`,
+  VOICE: `voice`,
+  PUBLIC_FLOW: `flows/public_flow`,
 } as const;
 
 export function getURL(
