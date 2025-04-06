@@ -199,6 +199,14 @@ const NodeToolbarComponent = memo(
       });
     }, [isMinimal, showNode, data.id]);
 
+    useEffect(() => {
+      if (!isMinimal && !showNode) {
+        setShowNode(true);
+        updateNodeInternals(data.id);
+        return;
+      }
+    }, [isMinimal, showNode, data.id]);
+
     const handleungroup = useCallback(() => {
       if (isGroup) {
         takeSnapshot();
@@ -460,7 +468,7 @@ const NodeToolbarComponent = memo(
           {!hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
-              label="Freeze Path"
+              label="Freeze"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
@@ -570,34 +578,6 @@ const NodeToolbarComponent = memo(
               <SelectContentWithoutPortal
                 className={"relative top-1 w-56 bg-background"}
               >
-                {hasCode && (
-                  <SelectItem value={"code"}>
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Code")?.shortcut!
-                      }
-                      value={"Code"}
-                      icon={"Code"}
-                      dataTestId="code-button-modal"
-                    />
-                  </SelectItem>
-                )}
-                {nodeLength > 0 && (
-                  <SelectItem
-                    value={nodeLength === 0 ? "disabled" : "advanced"}
-                  >
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find(
-                          (obj) => obj.name === "Advanced Settings",
-                        )?.shortcut!
-                      }
-                      value={"Controls"}
-                      icon={"SlidersHorizontal"}
-                      dataTestId="advanced-button-modal"
-                    />
-                  </SelectItem>
-                )}
                 <SelectItem value={"save"}>
                   <ToolbarSelectItem
                     shortcut={
@@ -700,17 +680,20 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                <SelectItem value="freezeAll">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
-                    }
-                    value={"Freeze"}
-                    icon={"FreezeAll"}
-                    dataTestId="freeze-path-button"
-                    style={`${frozen ? " text-ice" : ""} transition-all`}
-                  />
-                </SelectItem>
+                {hasToolMode && (
+                  <SelectItem value="freezeAll">
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Freeze")
+                          ?.shortcut!
+                      }
+                      value={"Freeze"}
+                      icon={"FreezeAll"}
+                      dataTestId="freeze-path-button"
+                      style={`${frozen ? " text-ice" : ""} transition-all`}
+                    />
+                  </SelectItem>
+                )}
                 <SelectItem value="Download">
                   <ToolbarSelectItem
                     shortcut={
