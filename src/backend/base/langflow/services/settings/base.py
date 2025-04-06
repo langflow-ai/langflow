@@ -247,11 +247,6 @@ class Settings(BaseSettings):
     This means that initialization tasks like creating starter projects will only happen when a new version is detected,
     improving startup time for subsequent runs of the same version."""
 
-    init_once_per_version: bool = False
-    """If set to True, Langflow will only initialize once per version.
-    This means that initialization tasks like creating starter projects will only happen when a new version is detected,
-    improving startup time for subsequent runs of the same version."""
-
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
