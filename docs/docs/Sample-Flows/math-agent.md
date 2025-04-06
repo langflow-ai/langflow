@@ -1,6 +1,6 @@
 ---
 title: Math agent
-slug: /tutorials-math-agent
+slug: /math-agent
 ---
 
 import Icon from "@site/src/components/icon";
@@ -30,19 +30,17 @@ The **Math Agent** flow consists of these components:
 * The **Python REPL tool** component executes Python code in a REPL (Read-Evaluate-Print Loop) interpreter.
 * The **Calculator** component performs basic arithmetic operations.
 * The **Chat Input** component accepts user input to the chat.
-* The **Prompt** component combines the user input with a user-defined prompt.
 * The **Chat Output** component prints the flow's output to the chat.
-* The **OpenAI** model component sends the user input and prompt to the OpenAI API and receives a response.
 
 ## Run the Math Agent flow
 
-1. Add your credentials to the Open AI component.
+1. Add your credentials to the **Agent** component.
 2. Click **Playground** to start a chat session.
 3. Enter a simple math problem, like `2 + 2`, and then make sure the bot responds with the correct answer.
 4. To confirm the REPL interpreter is working, prompt the `math` library directly with `math.sqrt(4)` and see if the bot responds with `4`.
 5. The agent will also reason through more complex word problems. For example, prompt the agent with the following math problem:
 
-```plain
+```text
 The equation 24x2+25x−47ax−2=−8x−3−53ax−2 is true for all values of x≠2a, where a is a constant.
 What is the value of a?
 A) -16

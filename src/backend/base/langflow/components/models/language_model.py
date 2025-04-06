@@ -17,8 +17,8 @@ class LanguageModelComponent(LCModelComponent):
     display_name = "Language Model"
     description = "Runs a language model given a specified provider. "
     icon = "brain-circuit"
-    name = "LanguageModel"
     category = "models"
+    priority = 0  # Set priority to 0 to make it appear first
 
     inputs = [
         DropdownInput(

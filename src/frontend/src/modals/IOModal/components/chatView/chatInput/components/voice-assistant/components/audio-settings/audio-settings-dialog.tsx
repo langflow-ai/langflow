@@ -75,7 +75,7 @@ const SettingsVoiceModal = ({
       name: string;
       value: string;
     }[]
-  >([]);
+  >(openaiVoices);
 
   const saveButtonClicked = useRef(false);
 
