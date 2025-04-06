@@ -236,8 +236,8 @@ class Settings(BaseSettings):
     public_flow_expiration: int = Field(default=86400, gt=600)
     """The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup.
     Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes)."""
-    event_delivery: Literal["polling", "streaming"] = "polling"
-    """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
+    event_delivery: Literal["polling", "streaming", "direct"] = "polling"
+    """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
     lazy_load_components: bool = False
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
@@ -246,6 +246,22 @@ class Settings(BaseSettings):
     """If set to True, Langflow will only initialize once per version.
     This means that initialization tasks like creating starter projects will only happen when a new version is detected,
     improving startup time for subsequent runs of the same version."""
+
+    init_once_per_version: bool = False
+    """If set to True, Langflow will only initialize once per version.
+    This means that initialization tasks like creating starter projects will only happen when a new version is detected,
+    improving startup time for subsequent runs of the same version."""
+
+    @field_validator("event_delivery", mode="before")
+    @classmethod
+    def set_event_delivery(cls, value, info):
+        # If workers > 1, we need to use direct delivery
+        # because polling and streaming are not supported
+        # in multi-worker environments
+        if info.data.get("workers", 1) > 1:
+            logger.warning("Multi-worker environment detected, using direct event delivery")
+            return "direct"
+        return value
 
     @field_validator("dev")
     @classmethod
