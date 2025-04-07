@@ -43,6 +43,13 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
+
+// Get root path from environment variable set by Vite
+const rootPath = process.env.ROOT_PATH || "";
+
+// Log the root path being used
+console.log("Using root path in routes:", rootPath || "(empty)");
+
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route path="/playground/:id/">
@@ -199,7 +206,7 @@ const router = createBrowserRouter(
       <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
-  { basename: BASENAME || undefined },
+  { basename: rootPath || BASENAME },
 );
 
 export default router;
