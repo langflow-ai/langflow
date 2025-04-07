@@ -172,8 +172,9 @@ const config = {
             ],
           },
           {
-            to: "/math-agent",
+            to: "/starter-projects-simple-agent",
             from: [
+              "/math-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent"
             ],
