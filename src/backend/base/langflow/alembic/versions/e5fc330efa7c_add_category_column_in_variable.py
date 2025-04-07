@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = 'e5fc330efa7c'
-down_revision: Union[str, None] = '93e2705fa8d6'
+down_revision: Union[str, None] = 'f3b2d1f1002d'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -28,7 +28,7 @@ def upgrade() -> None:
     column_names = [column["name"] for column in inspector.get_columns("variable")]
     with op.batch_alter_table('variable', schema=None) as batch_op:
         if "category" not in column_names:
-            batch_op.add_column(sa.Column('category', sqlmodel.sql.sqltypes.AutoString(), nullable=False))
+            batch_op.add_column(sa.Column('category', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
 
     # ### end Alembic commands ###
 
