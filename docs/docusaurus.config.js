@@ -82,10 +82,6 @@ const config = {
           changefreq: null,
           priority: null,
         },
-        gtag: {
-          trackingID: "G-L8Y98PSEMQ",
-          anonymizeIP: true,
-        },
         blog: false,
         theme: {
           customCss: [
