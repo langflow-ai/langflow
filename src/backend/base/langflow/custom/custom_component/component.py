@@ -969,7 +969,25 @@ class Component(CustomComponent):
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        return (output for output in self._outputs_map.values() if self._should_process_output(output))
+        """Get outputs that need processing by using self.outputs as the reference for order.
+
+        Returns:
+            list: Outputs to be processed in the order defined by self.outputs.
+
+        Raises:
+            ValueError: If an output name from self.outputs is not found in _outputs_map.
+        """
+        result = []
+        for output in self.outputs:
+            try:
+                output_obj = self._outputs_map[output.name]
+                if self._should_process_output(output_obj):
+                    result.append(output_obj)
+            except KeyError as e:
+                msg = f"Output with name {output.name} defined in self.outputs but not found in _outputs_map"
+                raise ValueError(msg) from e
+
+        return result
 
     async def _get_output_result(self, output):
         if output.cache and output.value != UNDEFINED:
