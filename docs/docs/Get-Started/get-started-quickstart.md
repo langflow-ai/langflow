@@ -9,6 +9,7 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 
 ## Prerequisites
 
+- [A running Langflow instance](/get-started-installation)
 * [An OpenAI API key](https://platform.openai.com/)
 * [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
 	* An Astra DB application token scoped to read and write to the database
