@@ -17,7 +17,7 @@ All agents have access to the **Search API** and **URL Content Fetcher** compone
 
 - [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
-- [A Search API key created](https://www.searchapi.io/)
+- [A Search API key](https://www.searchapi.io/)
 
 ## Open Langflow and start a new flow
 
