@@ -36,12 +36,13 @@ const config = {
       // Google tag (gtag.js)
       tagName: "script",
       attributes: {
-        async: "",
+        async: "true",
         src: "https://www.googletagmanager.com/gtag/js?id=G-L8Y98PSEMQ",
       },
     },
     {
       tagName: "script",
+      attributes: {},
       innerHTML: `
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
