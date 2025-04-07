@@ -71,27 +71,27 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
             ],
         },
     }
-    
+
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
     _bool_variables = {
         "GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
         "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
     }
-    
+
     # Cache for action fields mapping
     _action_fields_cache: dict[str, set[str]] = {}
     _readonly_actions = frozenset(
         [
-       "GOOGLESHEETS_CREATE_GOOGLE_SHEET1",
-       "GOOGLESHEETS_BATCH_GET",
-       "GOOGLESHEETS_GET_SPREADSHEET_INFO",
-       "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW",
-       "GOOGLESHEETS_BATCH_UPDATE",
-       "GOOGLESHEETS_SHEET_FROM_JSON",
-       "GOOGLESHEETS_CLEAR_VALUES",
+            "GOOGLESHEETS_CREATE_GOOGLE_SHEET1",
+            "GOOGLESHEETS_BATCH_GET",
+            "GOOGLESHEETS_GET_SPREADSHEET_INFO",
+            "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW",
+            "GOOGLESHEETS_BATCH_UPDATE",
+            "GOOGLESHEETS_SHEET_FROM_JSON",
+            "GOOGLESHEETS_CLEAR_VALUES",
         ]
     )
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._all_fields = {
@@ -99,8 +99,8 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
         }
 
         self._bool_variables = {
-        "GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
-        "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
+            "GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
+            "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
         }
         self._default_tools = {
             self.sanitize_action_name("GOOGLESHEETS_CREATE_GOOGLE_SHEET1").replace(" ", "-"),
@@ -242,7 +242,6 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
         ),
     ]
 
-
     def execute_action(self):
         """Execute action and return response as Message."""
         toolset = self._build_wrapper()
@@ -265,8 +264,8 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
 
                     if value is None or value == "":
                         continue
-                    
-                    if field in ["GOOGLESHEETS_SHEET_FROM_JSON-sheet_json","GOOGLESHEETS_BATCH_GET-ranges"] and value:
+
+                    if field in ["GOOGLESHEETS_SHEET_FROM_JSON-sheet_json", "GOOGLESHEETS_BATCH_GET-ranges"] and value:
                         value = [item.strip() for item in value.split(",")]
 
                     if field in self._bool_variables:
@@ -279,10 +278,10 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
                 action=enum_name,
                 params=params,
             )
-            if result.get("successful") != True:
+            if not result.get("successful"):
                 return {"error": result.get("error", "No response")}
-                
-            result_data = result.get("data",[])
+
+            result_data = result.get("data", [])
             if (
                 len(result_data) != 1
                 and not self._actions_data.get(action_key, {}).get("result_field")
@@ -294,8 +293,12 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
                 get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
                 if get_result_field:
                     key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result_data)))
-                    return result_data.get(key) if isinstance(result_data.get(key), dict) else {"response": result_data.get(key)} 
-                return result_data if isinstance(result_data, dict) else {"response": result_data} 
+                    return (
+                        result_data.get(key)
+                        if isinstance(result_data.get(key), dict)
+                        else {"response": result_data.get(key)}
+                    )  # noqa: E501
+                return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)

@@ -11,7 +11,7 @@ from langflow.logging import logger
 
 class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
     """Google Meet API component for interacting with Google Meet services."""
-    
+
     display_name: str = "Google Meet"
     description: str = "Google Meet API"
     name = "GooglemeetAPI"
@@ -42,11 +42,14 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
             "display_name": "Create Meet",
             "action_fields": ["GOOGLEMEET_CREATE_MEET-access_type", "GOOGLEMEET_CREATE_MEET-entry_point_access"],
         },
-        "GOOGLEMEET_GET_MEET": {"display_name": "Get Meet Details", "action_fields": ["GOOGLEMEET_GET_MEET-space_name"]},
+        "GOOGLEMEET_GET_MEET": {
+            "display_name": "Get Meet Details",
+            "action_fields": ["GOOGLEMEET_GET_MEET-space_name"],
+        },
     }
-    
+
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
-    
+
     # Cache for action fields mapping
     _action_fields_cache: dict[str, set[str]] = {}
     _readonly_actions = frozenset(
@@ -58,7 +61,7 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
             "GOOGLEMEET_GET_MEET",
         ]
     )
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._all_fields = {
@@ -170,10 +173,10 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
                 action=enum_name,
                 params=params,
             )
-            if result.get("successful") != True:
+            if not result.get("successful"):
                 return {"error": result.get("error", "No response")}
-                
-            result_data = result.get("data",[])
+
+            result_data = result.get("data", [])
             if (
                 len(result_data) != 1
                 and not self._actions_data.get(action_key, {}).get("result_field")

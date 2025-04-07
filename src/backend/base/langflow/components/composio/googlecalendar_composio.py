@@ -13,7 +13,7 @@ from langflow.logging import logger
 
 class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
     """Google Calendar API component for interacting with Google Calendar services."""
-    
+
     display_name: str = "Google Calendar"
     description: str = "Google Calendar API"
     name = "GooglecalendarAPI"
@@ -151,6 +151,16 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
         },
     }
 
+    _list_variables = {
+        "GOOGLECALENDAR_FIND_EVENT-event_types",
+        "GOOGLECALENDAR_CREATE_EVENT-recurrence",
+        "GOOGLECALENDAR_CREATE_EVENT-attendees",
+        "GOOGLECALENDAR_FIND_FREE_SLOTS-items",
+        "GOOGLECALENDAR_UPDATE_EVENT-recurrence",
+        "GOOGLECALENDAR_UPDATE_EVENT-attendees",
+    }
+
+    _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
     _bool_variables = {
         "GOOGLECALENDAR_LIST_CALENDARS-show_deleted",
         "GOOGLECALENDAR_LIST_CALENDARS-show_hidden",
@@ -168,32 +178,6 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
         "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
     }
 
-    _list_variables = {
-        "GOOGLECALENDAR_FIND_EVENT-event_types",
-        "GOOGLECALENDAR_CREATE_EVENT-recurrence",
-        "GOOGLECALENDAR_CREATE_EVENT-attendees",
-        "GOOGLECALENDAR_FIND_FREE_SLOTS-items",
-        "GOOGLECALENDAR_UPDATE_EVENT-recurrence",
-        "GOOGLECALENDAR_UPDATE_EVENT-attendees",
-    }
-    
-    _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
-    _bool_variables = {"GOOGLECALENDAR_LIST_CALENDARS-show_deleted",
-        "GOOGLECALENDAR_LIST_CALENDARS-show_hidden",
-        "GOOGLECALENDAR_FIND_EVENT-show_deleted",
-        "GOOGLECALENDAR_FIND_EVENT-single_events",
-        "GOOGLECALENDAR_CREATE_EVENT-create_meeting_room",
-        "GOOGLECALENDAR_CREATE_EVENT-guestsCanSeeOtherGuests",
-        "GOOGLECALENDAR_CREATE_EVENT-guestsCanInviteOthers",
-        "GOOGLECALENDAR_CREATE_EVENT-guests_can_modify",
-        "GOOGLECALENDAR_CREATE_EVENT-send_updates",
-        "GOOGLECALENDAR_UPDATE_EVENT-create_meeting_room",
-        "GOOGLECALENDAR_UPDATE_EVENT-guestsCanSeeOtherGuests",
-        "GOOGLECALENDAR_UPDATE_EVENT-guestsCanInviteOthers",
-        "GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
-        "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
-        }
-    
     # Cache for action fields mapping
     _action_fields_cache: dict[str, set[str]] = {}
     _readonly_actions = frozenset(
@@ -209,29 +193,30 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             "GOOGLECALENDAR_PATCH_CALENDAR",
             "GOOGLECALENDAR_GET_CALENDAR",
             "GOOGLECALENDAR_DELETE_EVENT",
-            "GOOGLECALENDAR_DUPLICATE_CALENDAR"
+            "GOOGLECALENDAR_DUPLICATE_CALENDAR",
         ]
     )
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._all_fields = {
             field for action_data in self._actions_data.values() for field in action_data["action_fields"]
         }
-        self._bool_variables = {"GOOGLECALENDAR_LIST_CALENDARS-show_deleted",
-        "GOOGLECALENDAR_LIST_CALENDARS-show_hidden",
-        "GOOGLECALENDAR_FIND_EVENT-show_deleted",
-        "GOOGLECALENDAR_FIND_EVENT-single_events",
-        "GOOGLECALENDAR_CREATE_EVENT-create_meeting_room",
-        "GOOGLECALENDAR_CREATE_EVENT-guestsCanSeeOtherGuests",
-        "GOOGLECALENDAR_CREATE_EVENT-guestsCanInviteOthers",
-        "GOOGLECALENDAR_CREATE_EVENT-guests_can_modify",
-        "GOOGLECALENDAR_CREATE_EVENT-send_updates",
-        "GOOGLECALENDAR_UPDATE_EVENT-create_meeting_room",
-        "GOOGLECALENDAR_UPDATE_EVENT-guestsCanSeeOtherGuests",
-        "GOOGLECALENDAR_UPDATE_EVENT-guestsCanInviteOthers",
-        "GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
-        "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
+        self._bool_variables = {
+            "GOOGLECALENDAR_LIST_CALENDARS-show_deleted",
+            "GOOGLECALENDAR_LIST_CALENDARS-show_hidden",
+            "GOOGLECALENDAR_FIND_EVENT-show_deleted",
+            "GOOGLECALENDAR_FIND_EVENT-single_events",
+            "GOOGLECALENDAR_CREATE_EVENT-create_meeting_room",
+            "GOOGLECALENDAR_CREATE_EVENT-guestsCanSeeOtherGuests",
+            "GOOGLECALENDAR_CREATE_EVENT-guestsCanInviteOthers",
+            "GOOGLECALENDAR_CREATE_EVENT-guests_can_modify",
+            "GOOGLECALENDAR_CREATE_EVENT-send_updates",
+            "GOOGLECALENDAR_UPDATE_EVENT-create_meeting_room",
+            "GOOGLECALENDAR_UPDATE_EVENT-guestsCanSeeOtherGuests",
+            "GOOGLECALENDAR_UPDATE_EVENT-guestsCanInviteOthers",
+            "GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
+            "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
         }
 
         self._default_tools = {
@@ -593,7 +578,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GOOGLECALENDAR_QUICK_ADD-send_updates",
             display_name="Send Updates",
-            info="Guests who should receive notifications about the creation of the new event. Accepted fields include 'all', 'none', 'externalOnly'",
+            info="Guests who should receive notifications about the creation of the new event. Accepted fields include 'all', 'none', 'externalOnly'",  # noqa: E501
             show=False,
             value="none",
         ),
@@ -789,8 +774,19 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
 
                     if value is None or value == "":
                         continue
-                    
-                    if field in ["GOOGLECALENDAR_FIND_EVENT-event_types", "GOOGLECALENDAR_CREATE_EVENT-recurrence", "GOOGLECALENDAR_CREATE_EVENT-attendees", "GOOGLECALENDAR_FIND_FREE_SLOTS-items", "GOOGLECALENDAR_UPDATE_EVENT-recurrence", "GOOGLECALENDAR_UPDATE_EVENT-attendees"] and value:
+
+                    if (
+                        field
+                        in [
+                            "GOOGLECALENDAR_FIND_EVENT-event_types",
+                            "GOOGLECALENDAR_CREATE_EVENT-recurrence",
+                            "GOOGLECALENDAR_CREATE_EVENT-attendees",
+                            "GOOGLECALENDAR_FIND_FREE_SLOTS-items",
+                            "GOOGLECALENDAR_UPDATE_EVENT-recurrence",
+                            "GOOGLECALENDAR_UPDATE_EVENT-attendees",
+                        ]
+                        and value
+                    ):  # noqa: E501
                         value = [item.strip() for item in value.split(",")]
 
                     if field in self._bool_variables:
@@ -803,10 +799,10 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
                 action=enum_name,
                 params=params,
             )
-            if result.get("successful") != True:
+            if not result.get("successful"):
                 return {"error": result.get("error", "No response")}
-                
-            result_data = result.get("data",[])
+
+            result_data = result.get("data", [])
             if (
                 len(result_data) != 1
                 and not self._actions_data.get(action_key, {}).get("result_field")
@@ -818,8 +814,12 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
                 get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
                 if get_result_field:
                     key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result_data)))
-                    return result_data.get(key) if isinstance(result_data.get(key), dict) else {"response": result_data.get(key)} 
-                return result_data if isinstance(result_data, dict) else {"response": result_data} 
+                    return (
+                        result_data.get(key)
+                        if isinstance(result_data.get(key), dict)
+                        else {"response": result_data.get(key)}
+                    )  # noqa: E501
+                return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)

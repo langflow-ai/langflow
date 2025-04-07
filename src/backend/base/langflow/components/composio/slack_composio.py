@@ -10,6 +10,7 @@ from langflow.inputs import (
 )
 from langflow.logging import logger
 
+
 class ComposioSlackAPIComponent(ComposioBaseComponent):
     display_name: str = "Slack"
     description: str = "Slack API"
@@ -135,7 +136,7 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
             ],
         },
     }
-    
+
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
     _bool_variables = {
         "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-include_locale",
@@ -154,22 +155,23 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
         "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
         "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
     }
-    
+
     # Cache for action fields mapping
     _action_fields_cache: dict[str, set[str]] = {}
     _readonly_actions = frozenset(
-        [# "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
-        "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
-        "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
-        "SLACK_UPDATES_A_SLACK_MESSAGE",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
-        "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
-        # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
-        # "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM", # Disabled temporarily
-        "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
-        "SLACK_CREATE_A_REMINDER",
-    ])
-    
+        [  # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
+            "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
+            "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
+            "SLACK_UPDATES_A_SLACK_MESSAGE",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
+            # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
+            # "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM", # Disabled temporarily
+            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
+            "SLACK_CREATE_A_REMINDER",
+        ]
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._all_fields = {
@@ -177,23 +179,23 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
         }
 
         self._bool_variables = {
-        "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-include_locale",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-as_user",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-link_names",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-mrkdwn",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-reply_broadcast",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_links",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_media",
-        "SLACK_FETCH_CONVERSATION_HISTORY-inclusive",
-        "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
-        "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-link_names",
-        "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-reply_broadcast",
-        "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_links",
-        "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_media",
-        "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
-        "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
+            "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-include_locale",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-as_user",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-link_names",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-mrkdwn",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-reply_broadcast",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_links",
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_media",
+            "SLACK_FETCH_CONVERSATION_HISTORY-inclusive",
+            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
+            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-link_names",
+            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-reply_broadcast",
+            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_links",
+            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_media",
+            "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
+            "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
         }
-        
+
         self._default_tools = {
             self.sanitize_action_name("SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL").replace(" ", "-"),
             self.sanitize_action_name("SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY").replace(" ", "-"),
@@ -459,7 +461,7 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
         BoolInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
             display_name="As User",
-            info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false",  # noqa: E501
+            info="Pass true to post the message as the authed user, instead of as a bot. Defaults to false",
             show=False,
             advanced=True,
         ),
@@ -494,7 +496,7 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-parse",
             display_name="Parse",
-            info="Change how messages are treated. Defaults to `none`",  # noqa: E501
+            info="Change how messages are treated. Defaults to `none`",
             show=False,
             advanced=True,
         ),
@@ -644,7 +646,7 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
             show=False,
         ),
     ]
-    
+
     def execute_action(self):
         """Execute action and return response as Message."""
         toolset = self._build_wrapper()
@@ -678,10 +680,10 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
                 action=enum_name,
                 params=params,
             )
-            if result.get("successful") != True:
+            if not result.get("successful"):
                 return {"error": result.get("error", "No response")}
-                
-            result_data = result.get("data",[])
+
+            result_data = result.get("data", [])
             if (
                 len(result_data) != 1
                 and not self._actions_data.get(action_key, {}).get("result_field")
@@ -693,8 +695,12 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
                 get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
                 if get_result_field:
                     key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result_data)))
-                    return result_data.get(key) if isinstance(result_data.get(key), dict) else {"response": result_data.get(key)} 
-                return result_data if isinstance(result_data, dict) else {"response": result_data} 
+                    return (
+                        result_data.get(key)
+                        if isinstance(result_data.get(key), dict)
+                        else {"response": result_data.get(key)}
+                    )  # noqa: E501
+                return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
