@@ -498,33 +498,30 @@ def migration(
                 raise typer.Abort()  # noqa: RSE102
         else:
             _handle_backup(settings_service)
+    # Handle operations using match-case
+    match operation:
+        case "test":
+            typer.echo("Running test migration...")
+            asyncio.run(_migration(test=True, fix=False))
+            return
 
-    # Handle test operation
-    if operation == "test":
-        typer.echo("Running test migration...")
-        asyncio.run(_migration(test=True, fix=False))
-        return
+        case "fix":
+            if not force and not typer.confirm(
+                "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+            ):
+                raise typer.Abort(exit_code=0)
+            typer.echo("Applying migrations (fix mode)...")
+            asyncio.run(_migration(test=False, fix=True))
+            return
 
-    # Handle fix operation
-    if operation == "fix":
-        if not force and not typer.confirm(
-            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
-        ):
-            raise typer.Abort()  # noqa: RSE102
-        typer.echo("Applying migrations (fix mode)...")
-        asyncio.run(_migration(test=False, fix=True))
-        return
+        case "backup":
+            _handle_backup(settings_service)
+            return
 
-    # Handle backup operation
-    if operation == "backup":
-        _handle_backup(settings_service)
-        return
-
-    # Handle upgrade/downgrade operations
-    if operation in ["upgrade", "downgrade"]:
-        revision = upgrade if operation == "upgrade" else downgrade
-        _handle_db_version_change(operation=operation, revision=revision, db_service=db_service, force=force)
-        return
+        case "upgrade" | "downgrade":
+            revision = upgrade if operation == "upgrade" else downgrade
+            _handle_db_version_change(operation=operation, revision=revision, db_service=db_service, force=force)
+            return
 
 
 def _handle_backup(settings_service: "SettingsService") -> None:
