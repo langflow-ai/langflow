@@ -179,10 +179,7 @@ export default function Dropdown({
 
   useEffect(() => {
     if (open) {
-      // Reset filtered options to include all valid options
       setFilteredOptions(validOptions);
-
-      // Reset the custom value input when opening
       setCustomValue("");
     }
   }, [open, validOptions]);
@@ -190,24 +187,19 @@ export default function Dropdown({
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       if (open && customValue) {
-        // Add the custom value to both validOptions and filteredOptions
         const newOptions = [...validOptions];
         if (!newOptions.includes(customValue)) {
           newOptions.push(customValue);
         }
 
-        // Update both state variables
         setFilteredOptions(newOptions);
 
-        // Call the handler with the new value
         handleOnNewValue?.({ value: customValue });
         onSelect(customValue);
         setOpen(false);
       }
     }
   };
-
-  // Render helper functions
 
   const renderLoadingButton = () => (
     <Button
