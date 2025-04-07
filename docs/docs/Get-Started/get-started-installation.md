@@ -8,20 +8,40 @@ import TabItem from '@theme/TabItem';
 
 Langflow can be installed in two ways:
 
-* As a [Python package](#install-langflow-locally)
-* As a [standalone desktop application](#install-langflow-desktop)
+* As a [Python package](#install-and-run-langflow-oss) with Langflow OSS
+* As a [standalone desktop application](#install-langflow-desktop) with Langflow Desktop
 
-Install and run Langflow with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
+## Install and run Langflow OSS
 
-## Prerequisites
+Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/).
+
+### Langflow OSS Prerequisites
 
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) installed
-- [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
-- Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/) installed
+- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
 
-## Install and run Langflow
+1. To create a virtual environment for Langflow OSS, use one of the following commands:
 
-1. To install Langflow, use one of the following commands:
+<Tabs>
+<TabItem value="uv" label="uv" default>
+
+```bash
+uv venv LANGFLOW_VENV
+source LANGFLOW_VENV/bin/activate
+```
+
+</TabItem>
+<TabItem value="venv" label="venv">
+
+```bash
+python -m venv LANGFLOW_VENV
+source LANGFLOW_VENV/bin/activate
+```
+</TabItem>
+</Tabs>
+
+2. To install Langflow, use one of the following commands:
 
 <Tabs>
 <TabItem value="uv" label="uv" default>
@@ -38,19 +58,9 @@ pip install langflow
 ```
 
 </TabItem>
-
-<TabItem value="pipx" label="pipx">
-
-```bash
-# Install Langflow with pipx using the Python 3.10 executable
-pipx install langflow --python python3.10
-```
-
-</TabItem>
 </Tabs>
 
-
-2. To run Langflow, use one of the following commands:
+3. To run Langflow, use one of the following commands:
 
 <Tabs>
     <TabItem value="uv" label="uv">
@@ -69,11 +79,14 @@ python -m langflow run
 </TabItem>
 </Tabs>
 
-3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+4. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
-## Manage Langflow versions
+5. To stop Langflow, in the terminal where it's running, enter `Ctrl+C`.
+6. To deactivate your virtual environment, enter `deactivate`.
+
+### Manage Langflow OSS versions
 
 * To upgrade Langflow to the latest version, use one of the following commands:
 
@@ -99,14 +112,14 @@ pip install langflow -U
 <TabItem value="uv" label="uv" default>
 
 ```bash
-uv pip install langflow==1.3.0
+uv pip install langflow==1.3.2
 ```
 
 </TabItem>
 <TabItem value="pip" label="pip">
 
 ```bash
-pip install langflow==1.3.0
+pip install langflow==1.3.2
 ```
 
 </TabItem>
@@ -130,9 +143,9 @@ pip install langflow --force-reinstall
 </TabItem>
 </Tabs>
 
-## Install optional dependencies
+### Install optional dependencies
 
-Langflow provides optional dependency groups that extend its functionality.
+Langflow OSS provides optional dependency groups that extend its functionality.
 
 These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
 
@@ -176,11 +189,45 @@ pip install "langflow[deploy,local,postgresql]"
 
 To add your own custom dependencies, see [Install custom dependencies](/install-custom-dependencies).
 
-## Install DataStax Langflow {#datastax-langflow}
+## Install and run Langflow Desktop
 
-**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
+:::important
+Langflow Desktop is in **Alpha**.
+Development is ongoing, and the features and functionality are subject to change.
+:::
 
-## Common installation issues
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [Version Management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
+
+:::important
+Langflow Desktop is available only for macOS.
+:::
+
+To install Langflow Desktop, follow these steps:
+
+1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
+2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+3. Open the **Finder**, and then navigate to **Downloads**.
+4. Double-click the downloaded `*.dmg` file.
+5. To install Langflow Desktop, drag and drop the application icon to the **Applications** folder.
+6. When the installation completes, open the Langflow application.
+
+The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
+
+### Manage your Langflow version in Langflow Desktop
+
+When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
+
+To manage your Langflow version in Langflow Desktop, follow these steps:
+
+1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
+Langflow Desktop's current version is displayed, with other version options listed after it.
+The **latest** version is always highlighted.
+2. To change your Langflow version, select another version.
+A confirmation pane containing the selected version's changelog appears.
+3. To change to the selected version, click **Confirm**.
+The application restarts with the new version installed.
+
+## Common OSS installation issues
 
 This is a list of possible issues that you may encounter when installing and running Langflow.
 
