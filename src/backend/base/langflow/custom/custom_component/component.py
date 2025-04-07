@@ -1016,6 +1016,32 @@ class Component(CustomComponent):
 
         return result
 
+    async def resolve_output(self, output_name: str) -> Any:
+        """Resolves and returns the value for the specified output.
+
+        If caching is enabled and the output already holds a defined value, that cached value is returned.
+        Otherwise, this method invokes the output's associated method to compute a new result.
+
+        Args:
+            output_name (str): The name of the output to resolve.
+
+        Returns:
+            Any: The output value, either retrieved from cache or computed.
+
+        Raises:
+            KeyError: If the output_name is not found in the component's output map.
+        """
+        output = self._outputs_map.get(output_name)
+        if output is None:
+            msg = (
+                f"Sorry, an output named '{output_name}' could not be found. "
+                "Please ensure that the output is correctly configured and try again."
+            )
+            raise KeyError(msg)
+        if output.cache and output.value != UNDEFINED:
+            return output.value
+        return await self._get_output_result(output)
+
     def _build_artifact(self, result):
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
