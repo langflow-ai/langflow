@@ -23,7 +23,7 @@ This prompt creates a "personality" for your LLM's chat interactions, but it doe
 
 To modify the prompt template, in the **Prompt** component, click the **Template** field. For example, the `{context}` variable gives the LLM model access to embedded vector data to return better answers.
 
-```plain
+```text
 Given the context
 {context}
 Answer the question

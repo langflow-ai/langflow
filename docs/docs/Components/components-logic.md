@@ -22,7 +22,7 @@ This is represented in Langflow by connecting the Parse Data component's **Data 
 ![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
 
 The output will look similar to this:
-```plain
+```text
 Document Summary
 Total Pages Processed
 Total Pages: 2
