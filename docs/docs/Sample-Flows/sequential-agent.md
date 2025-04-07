@@ -1,6 +1,6 @@
 ---
 title: Sequential tasks agent
-slug: /tutorials-sequential-agent
+slug: /sequential-agent
 ---
 
 Build a **Sequential Tasks Agent** flow for a multi-agent application using multiple **Agent** components.
@@ -10,6 +10,8 @@ Each agent has an LLM model and a unique set of tools at its disposal, with **Pr
 Each successive agent in the flow builds on the work of the previous agent, creating a chain of reasoning for solving complex problems.
 
 ## Prerequisites
+
+- [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 - [A Tavily AI API key](https://www.tavily.com/)
 

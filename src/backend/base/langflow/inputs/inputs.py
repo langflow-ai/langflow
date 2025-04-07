@@ -12,7 +12,9 @@ from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
 
 from .input_mixin import (
+    AuthMixin,
     BaseInputMixin,
+    ConnectionMixin,
     DatabaseLoadMixin,
     DropDownMixin,
     FieldTypes,
@@ -25,6 +27,7 @@ from .input_mixin import (
     RangeMixin,
     SerializableFieldTypes,
     SliderMixin,
+    SortableListMixin,
     TableMixin,
     TabMixin,
     ToolModeMixin,
@@ -464,6 +467,44 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
+class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a connection input field.
+
+    This class represents a connection input field and provides functionality for handling connection values.
+    It inherits from the `BaseInputMixin` and `ConnectionMixin` classes.
+
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.CONNECTION
+
+
+class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
+    """Represents an authentication input field.
+
+    This class represents an authentication input field and provides functionality for handling authentication values.
+    It inherits from the `BaseInputMixin` and `AuthMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.AUTH.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.AUTH
+    show: bool = False
+
+
+class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a list selection input field.
+
+    This class represents a list selection input field and provides functionality for handling list selection values.
+    It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SORTABLE_LIST.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
+
+
 class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a tab input field.
 
@@ -564,12 +605,15 @@ class DefaultPromptField(Input):
 
 InputTypes: TypeAlias = (
     Input
+    | AuthInput
     | DefaultPromptField
     | BoolInput
     | DataInput
     | DictInput
     | DropdownInput
     | MultiselectInput
+    | SortableListInput
+    | ConnectionInput
     | FileInput
     | FloatInput
     | HandleInput
