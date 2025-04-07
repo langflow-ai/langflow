@@ -106,14 +106,24 @@ export default function Dropdown({
 
   const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
+    setCustomValue(value);
+
+    if (!value) {
+      // If search is cleared, show all options
+      setFilteredOptions(validOptions);
+      setFilteredMetadata(optionsMetaData);
+      return;
+    }
+
+    // Search existing options
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
 
     // Update filteredOptions with the search results
-    setFilteredOptions(value ? filtered : validOptions);
+    setFilteredOptions(filtered);
 
     // Update filteredMetadata to match the filtered options
-    if (value && optionsMetaData) {
+    if (optionsMetaData) {
       const newMetadata = filtered.map((option) => {
         const originalIndex = validOptions.indexOf(option);
         return optionsMetaData[originalIndex];
@@ -122,8 +132,6 @@ export default function Dropdown({
     } else {
       setFilteredMetadata(optionsMetaData);
     }
-
-    setCustomValue(value);
   };
 
   const handleRefreshButtonPress = async () => {
@@ -171,24 +179,30 @@ export default function Dropdown({
 
   useEffect(() => {
     if (open) {
-      const filtered = cloneDeep(validOptions);
-      if (combobox && value && customValue) {
-        filtered.push(customValue);
-        setFilteredOptions(filtered);
-      }
+      // Reset filtered options to include all valid options
+      setFilteredOptions(validOptions);
+
+      // Reset the custom value input when opening
+      setCustomValue("");
     }
-  }, [open]);
+  }, [open, validOptions]);
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      if (open) {
-        const filtered = cloneDeep(validOptions);
-        if (combobox && value && customValue) {
-          filtered.push(customValue);
-          setFilteredOptions(filtered);
-          handleOnNewValue({ value: customValue });
-          setOpen(false);
+      if (open && customValue) {
+        // Add the custom value to both validOptions and filteredOptions
+        const newOptions = [...validOptions];
+        if (!newOptions.includes(customValue)) {
+          newOptions.push(customValue);
         }
+
+        // Update both state variables
+        setFilteredOptions(newOptions);
+
+        // Call the handler with the new value
+        handleOnNewValue?.({ value: customValue });
+        onSelect(customValue);
+        setOpen(false);
       }
     }
   };
