@@ -31,7 +31,7 @@ export const BundleItem = memo(
     return (
       <>
         <Disclosure key={item.name} open={isOpen} onOpenChange={onOpenChange}>
-          <SidebarMenuItem>
+          <SidebarMenuItem expanded={isOpen}>
             <DisclosureTrigger className="group/collapsible">
               <SidebarMenuButton asChild>
                 <div

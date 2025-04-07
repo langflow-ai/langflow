@@ -367,10 +367,8 @@ const SideBarFoldersButtonsComponent = ({
                   )[0];
                   return (
                     <SidebarMenuItem
-                      key={index}
-                      className="group/menu-button"
-                      onMouseEnter={() => setHoveredFolderId(item.id!)}
-                      onMouseLeave={() => setHoveredFolderId(null)}
+                      key={item.id}
+                      expanded={checkPathName(item.id!)}
                     >
                       <div className="relative flex w-full">
                         <SidebarMenuButton
