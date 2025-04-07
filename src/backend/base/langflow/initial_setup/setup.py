@@ -982,6 +982,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 
 async def sync_flows_from_fs():
     flow_mtimes = {}
+    fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
     while True:
         try:
             async with session_scope() as session:
@@ -1010,4 +1011,4 @@ async def sync_flows_from_fs():
                         logger.exception(f"Error while handling flow file {path}")
         except Exception:  # noqa: BLE001
             logger.exception("Error while syncing flows from database")
-        await asyncio.sleep(10)
+        await asyncio.sleep(fs_flows_polling_interval)
