@@ -99,7 +99,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
 
   const getBuildsFn = async (
     payload: IGetBuilds,
-  ): Promise<{ vertex_builds: FlowPoolType }> => {
+  ): Promise<{ vertex_builds: FlowPoolType } | undefined> => {
     if (requestInProgressRef.current[payload.flowId]) {
       return Promise.reject("Request already in progress");
     }
@@ -112,7 +112,10 @@ export const useGetBuildsMutation: useMutationFunctionType<
 
       if (currentFlow) {
         const flowPool = res?.data?.vertex_builds;
-        setFlowPool(flowPool);
+        if (Object.keys(flowPool).length > 0) {
+          setFlowPool(flowPool);
+        }
+        return;
       }
 
       return res.data;
@@ -180,7 +183,11 @@ export const useGetBuildsMutation: useMutationFunctionType<
     ["useGetBuildsMutation"],
     (payload: IGetBuilds) =>
       startPolling(payload) ?? Promise.reject("Failed to start polling"),
-    options,
+    {
+      ...options,
+      retry: 0,
+      retryDelay: 0,
+    },
   );
 
   return mutation;

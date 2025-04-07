@@ -11,6 +11,7 @@ export type BaseInputProps<valueType = any> = {
   handleOnNewValue: handleOnNewValueType;
   disabled: boolean;
   nodeClass?: APIClassType;
+  helperText?: string;
   handleNodeClass?: (value: any, code?: string, type?: string) => void;
   readonly?: boolean;
   placeholder?: string;
@@ -19,6 +20,7 @@ export type BaseInputProps<valueType = any> = {
   metadata?: any;
   nodeId?: string;
   nodeInformationMetadata?: NodeInfoType;
+  hasRefreshButton?: boolean;
 };
 
 // Generic type for composing input props
@@ -52,6 +54,9 @@ export type ToggleComponentType = {
 
 export type FileComponentType = {
   fileTypes: Array<string>;
+  file_path?: string | string[];
+  isList?: boolean;
+  tempFile?: boolean;
 };
 
 export type PromptAreaComponentType = {
@@ -72,6 +77,9 @@ export type StrRenderComponentType = {
   templateData: Partial<InputFieldType>;
   name: string;
   display_name: string;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
 };
 
 export type InputListComponentType = {
@@ -86,6 +94,9 @@ export type DropDownComponentType = {
   name: string;
   dialogInputs?: any;
   optionsMetaData?: any[];
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
 };
 
 export type TextAreaComponentType = {
@@ -101,6 +112,10 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+};
+
+export type TabComponentType = {
+  options: string[];
 };
 
 export type NodeInfoType = {

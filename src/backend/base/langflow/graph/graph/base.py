@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import copy
 import json
 import queue
@@ -43,7 +44,7 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Callable, Generator, Iterable
 
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
@@ -340,6 +341,7 @@ class Graph:
         self,
         inputs: list[dict] | None = None,
         max_iterations: int | None = None,
+        config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ):
         if not self._prepared:
@@ -347,6 +349,8 @@ class Graph:
             raise ValueError(msg)
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
+        if config is not None:
+            self.__apply_config(config)
         for _input in inputs or []:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
@@ -636,15 +640,6 @@ class Graph:
             raise ValueError(msg)
         return self._run_id
 
-    def set_tracing_session_id(self) -> None:
-        """Sets the ID of the current session.
-
-        Args:
-            session_id (str): The session ID.
-        """
-        if self.tracing_service:
-            self.tracing_service.set_session_id(self._session_id)
-
     def set_run_id(self, run_id: uuid.UUID | None = None) -> None:
         """Sets the ID of the current run.
 
@@ -655,28 +650,36 @@ class Graph:
             run_id = uuid.uuid4()
 
         self._run_id = str(run_id)
-        if self.tracing_service:
-            self.tracing_service.set_run_id(run_id)
-        if self._session_id and self.tracing_service is not None:
-            self.tracing_service.set_session_id(self.session_id)
-
-    def set_run_name(self) -> None:
-        # Given a flow name, flow_id
-        if not self.tracing_service:
-            return
-        name = f"{self.flow_name} - {self.flow_id}"
-
-        self.set_run_id()
-        self.tracing_service.set_run_name(name)
 
     async def initialize_run(self) -> None:
+        if not self._run_id:
+            self.set_run_id()
         if self.tracing_service:
-            await self.tracing_service.initialize_tracers()
+            run_name = f"{self.flow_name} - {self.flow_id}"
+            await self.tracing_service.start_tracers(
+                run_id=uuid.UUID(self._run_id),
+                run_name=run_name,
+                user_id=self.user_id,
+                session_id=self.session_id,
+            )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         task = asyncio.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
+
+    def end_all_traces_in_context(
+        self,
+        outputs: dict[str, Any] | None = None,
+        error: Exception | None = None,
+    ) -> Callable:
+        # BackgroundTasks run in different context, so we need to copy the context
+        context = contextvars.copy_context()
+
+        async def async_end_traces_func():
+            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+
+        return async_end_traces_func
 
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         if not self.tracing_service:
@@ -685,7 +688,7 @@ class Graph:
         if outputs is None:
             outputs = {}
         outputs |= self.metadata
-        await self.tracing_service.end(outputs, error)
+        await self.tracing_service.end_tracers(outputs, error)
 
     @property
     def sorted_vertices_layers(self) -> list[list[str]]:
@@ -853,6 +856,8 @@ class Graph:
             inputs_components.append([])
         if types is None:
             types = []
+        if session_id:
+            self.session_id = session_id
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
         for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
@@ -1053,7 +1058,6 @@ class Graph:
         self.state_manager = GraphStateManager()
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)
-        self.set_run_name()
 
     @classmethod
     def from_payload(
@@ -1527,8 +1531,6 @@ class Graph:
         to_process = deque(first_layer)
         layer_index = 0
         chat_service = get_chat_service()
-        self.set_run_id()
-        self.set_run_name()
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:

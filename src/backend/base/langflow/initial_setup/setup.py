@@ -57,7 +57,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_type = node.get("data").get("type")
 
         # Skip updating if tool_mode is True
-        if node_data.get("tool_mode", False):
+        if node_data.get("tool_mode", False) or node_data.get("key") == "Agent":
             continue
 
         # Skip nodes with outputs of the specified format
@@ -982,6 +982,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 
 async def sync_flows_from_fs():
     flow_mtimes = {}
+    fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
     while True:
         try:
             async with session_scope() as session:
@@ -1010,4 +1011,4 @@ async def sync_flows_from_fs():
                         logger.exception(f"Error while handling flow file {path}")
         except Exception:  # noqa: BLE001
             logger.exception("Error while syncing flows from database")
-        await asyncio.sleep(10)
+        await asyncio.sleep(fs_flows_polling_interval)
