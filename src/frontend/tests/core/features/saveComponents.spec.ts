@@ -55,7 +55,7 @@ test.describe("save component tests", () => {
       await zoomOut(page, 2);
 
       await page.getByTestId("title-Agent Initializer").click({
-        modifiers: ["Control"],
+        modifiers: ["Shift"],
       });
 
       await page.getByRole("button", { name: "Group" }).click();
