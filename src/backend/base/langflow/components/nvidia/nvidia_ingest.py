@@ -24,7 +24,7 @@ class NvidiaIngestComponent(Component):
             "NVIDIA Ingest dependencies missing. "
             "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
         )
-        file_types = [msg]
+        file_types = []
         supported_file_types_info = msg
 
     inputs = [
