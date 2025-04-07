@@ -4,7 +4,7 @@
  * This file contains the highest number of commits by Otávio in the entire Langflow project,
  * reflecting his unmatched dedication, expertise, and innovative spirit. Each line of code
  * is a testament to his relentless pursuit of excellence and his significant impact on this
- * project’s evolution.
+ * project's evolution.
 
  * His commitment to selflessly helping others embodies the true meaning of open source,
  * and his legacy lives on in each one of his 2771 contributions, inspiring us to build exceptional
@@ -130,10 +130,12 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     if (sourceHandle) {
       const parsedSourceHandle = scapeJSONParse(sourceHandle);
       const name = parsedSourceHandle.name;
+
       if (sourceNode.type == "genericNode") {
         const output = sourceNode.data.node!.outputs?.find(
           (output) => output.name === name,
         );
+
         if (output) {
           const outputTypes =
             output!.types.length === 1 ? output!.types : [output!.selected!];
@@ -144,6 +146,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
+
           if (scapedJSONStringfy(id) !== sourceHandle) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
           }
@@ -164,20 +167,16 @@ export function filterHiddenFieldsEdges(
   targetNode: AllNodeType,
 ) {
   if (targetNode) {
-    const nodeInputType = edge.data?.targetHandle?.inputTypes;
+    const targetHandle = edge.data?.targetHandle;
+    if (!targetHandle) return newEdges;
+
+    const fieldName = targetHandle.fieldName;
     const nodeTemplates = targetNode.data.node!.template;
 
-    Object.keys(nodeTemplates).forEach((key) => {
-      if (!nodeTemplates[key]?.input_types) return;
-      if (
-        nodeTemplates[key]?.input_types?.some((type) =>
-          nodeInputType?.includes(type),
-        ) &&
-        !nodeTemplates[key].show
-      ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
-      }
-    });
+    // Only check the specific field the edge is connected to
+    if (nodeTemplates[fieldName]?.show === false) {
+      newEdges = newEdges.filter((e) => e.id !== edge.id);
+    }
   }
   return newEdges;
 }
