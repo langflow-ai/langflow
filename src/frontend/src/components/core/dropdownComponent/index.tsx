@@ -243,7 +243,7 @@ export default function Dropdown({
           )}
         >
           <span
-            className="flex items-center gap-2 truncate"
+            className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
             {optionsMetaData?.[
@@ -255,12 +255,14 @@ export default function Dropdown({
                     filteredOptions.findIndex((option) => option === value)
                   ]?.icon
                 }
-                className="h-4 w-4"
+                className="h-4 w-4 flex-shrink-0"
               />
             )}
-            {value && filteredOptions.includes(value)
-              ? value
-              : placeholderName}{" "}
+            <span className="truncate">
+              {value && filteredOptions.includes(value)
+                ? value
+                : placeholderName}{" "}
+            </span>
           </span>
           <ForwardedIconComponent
             name="ChevronsUpDown"
@@ -398,7 +400,7 @@ export default function Dropdown({
                         </span>
                       </div>
                       {filteredMetadata && filteredMetadata?.length > 0 ? (
-                        <div className="flex w-full items-center text-muted-foreground">
+                        <div className="flex w-full items-center overflow-hidden text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
@@ -410,18 +412,19 @@ export default function Dropdown({
                               <div
                                 key={key}
                                 className={cn("flex items-center", {
-                                  truncate: i === arr.length - 1,
+                                  "flex-1 overflow-hidden":
+                                    i === arr.length - 1,
                                 })}
                               >
                                 {i > 0 && (
                                   <ForwardedIconComponent
                                     name="Circle"
-                                    className="mx-1 h-1 w-1 overflow-visible fill-muted-foreground"
+                                    className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
                                 <div
                                   className={cn("text-xs", {
-                                    truncate: i === arr.length - 1,
+                                    "w-full truncate": i === arr.length - 1,
                                   })}
                                 >{`${String(value)} ${key}`}</div>
                               </div>
@@ -488,7 +491,7 @@ export default function Dropdown({
       ) : refreshOptions || isLoading ? (
         renderLoadingButton()
       ) : (
-        renderTriggerButton()
+        <div className="w-full truncate">{renderTriggerButton()}</div>
       )}
       {renderPopoverContent()}
     </Popover>
