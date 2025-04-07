@@ -222,10 +222,6 @@ class Settings(BaseSettings):
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
     webhook_polling_interval: int = 5000
     """The polling interval for the webhook in ms."""
-    ssl_cert_file: str | None = None
-    """Path to the SSL certificate file on the local system."""
-    ssl_key_file: str | None = None
-    """Path to the SSL key file on the local system."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
     ssl_cert_file: str | None = None
