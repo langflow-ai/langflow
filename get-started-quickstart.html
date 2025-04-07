@@ -22,8 +22,8 @@
 
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap"><link rel="stylesheet" href="/assets/css/styles.b2eb940a.css">
-<script src="/assets/js/runtime~main.eba2362c.js" defer="defer"></script>
-<script src="/assets/js/main.474ff10e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.1ededb5e.js" defer="defer"></script>
+<script src="/assets/js/main.8becd7d8.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NK5M4ZT8" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -44,6 +44,7 @@
 <p>Get to know Langflow by building an OpenAI-powered chatbot application. After you&#x27;ve constructed a chatbot, add Retrieval Augmented Generation (RAG) to chat with your own data.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
+<li><a href="/get-started-installation">A running Langflow instance</a></li>
 <li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
 <li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with:<!-- -->
 <ul>
@@ -56,7 +57,7 @@
 <ol>
 <li>From the Langflow dashboard, click <strong>New Flow</strong>, and then select <strong>Blank Flow</strong>. A blank workspace opens where you can build your flow.</li>
 </ol>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>If you don&#x27;t want to create a blank flow, click <strong>New Flow</strong>, and then select <strong>Basic Prompting</strong> for a pre-built flow.
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>If you want a pre-built flow, click <strong>New Flow</strong>, and then select <strong>Basic Prompting</strong>.
 Continue to <a href="#run-basic-prompting-flow">Run the basic prompting flow</a>.</p></div></div>
 <ol start="2">
 <li>
@@ -101,7 +102,7 @@ For more on component inputs and outputs, see <a href="/concepts-components">Com
 <p>Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s <a href="/configuration-global-variables">Global Variables</a>.</p>
 <ol>
 <li>In the OpenAI component’s OpenAI API Key field, click the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-label="Globe"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <strong>Globe</strong> button, and then click <strong>Add New Variable</strong>.
-Alternatively, click your username in the top right corner, and then click <strong>Settings</strong>, <strong>Global Variables</strong>, and then <strong>Add New</strong>.</li>
+Alternatively, click your user icon in the top right corner, and then click <strong>Settings</strong>, <strong>Global Variables</strong>, and then <strong>Add New</strong>.</li>
 <li>Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.</li>
 <li>In the <strong>Apply To Fields</strong> field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.</li>
 </ol>
@@ -133,7 +134,7 @@ If you&#x27;re unsure, use <code>Answer the user as if you were a GenAI expert, 
 <p>Add document ingestion to your basic prompting flow, with the <strong>Astra DB</strong> component as the vector store.</p>
 <div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>If you don&#x27;t want to create a blank flow, click <strong>New Flow</strong>, and then select <strong>Vector RAG</strong> for a pre-built flow.</p></div></div>
 <p>Adding vector RAG to the basic prompting flow will look like this when completed:</p>
-<p><img decoding="async" loading="lazy" alt="Add document ingestion to the basic prompting flow" src="/assets/images/quickstart-add-document-ingestion-5f9756b0a4b7e232b1507e12f335b15e.png" width="2848" height="1324" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Add document ingestion to the basic prompting flow" src="/assets/images/quickstart-add-document-ingestion-6c34bac012400e3d35f6cebdd350ecf7.png" width="2868" height="1566" class="img_ev3q"></p>
 <p>To build the flow, follow these steps:</p>
 <ol>
 <li>Disconnect the <strong>Chat Input</strong> component from the <strong>OpenAI</strong> component by double-clicking on the connecting line.</li>
@@ -143,13 +144,13 @@ The <a href="/components-vector-stores#astra-db-vector-store">Astra DB vector st
 The <a href="/components-data#file">File</a> component loads files from your local machine.</li>
 <li>Click <strong>Processing</strong>, select the <strong>Split Text</strong> component, and then drag it to the canvas.
 The <a href="/components-processing#split-text">Split Text</a> component splits the loaded text into smaller chunks.</li>
-<li>Click <strong>Processing</strong>, select the <strong>Parse Data</strong> component, and then drag it to the canvas.
-The <a href="/components-processing#data-to-message">Data to Message</a> component converts the data from the <strong>Astra DB</strong> component into plain text.</li>
+<li>Click <strong>Processing</strong>, select the <strong>Parser</strong> component, and then drag it to the canvas.
+The <a href="/components-processing#parser">Parser</a> component converts the data from the <strong>Astra DB</strong> component into plain text.</li>
 <li>Click <strong>Embeddings</strong>, select the <strong>OpenAI Embeddings</strong> component, and then drag it to the canvas.
 The <a href="/components-embedding-models#openai-embeddings">OpenAI Embeddings</a> component generates embeddings for the user&#x27;s input, which are compared to the vector data in the database.</li>
 <li>Connect the new components into the existing flow, so your flow looks like this:</li>
 </ol>
-<p><img decoding="async" loading="lazy" alt="Add document ingestion to the basic prompting flow" src="/assets/images/quickstart-add-document-ingestion-5f9756b0a4b7e232b1507e12f335b15e.png" width="2848" height="1324" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Add document ingestion to the basic prompting flow" src="/assets/images/quickstart-add-document-ingestion-6c34bac012400e3d35f6cebdd350ecf7.png" width="2868" height="1566" class="img_ev3q"></p>
 <ol start="8">
 <li>
 <p>Configure the <strong>Astra DB</strong> component.</p>

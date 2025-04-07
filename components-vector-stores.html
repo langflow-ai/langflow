@@ -22,8 +22,8 @@
 
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap"><link rel="stylesheet" href="/assets/css/styles.b2eb940a.css">
-<script src="/assets/js/runtime~main.eba2362c.js" defer="defer"></script>
-<script src="/assets/js/main.474ff10e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.1ededb5e.js" defer="defer"></script>
+<script src="/assets/js/main.8becd7d8.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NK5M4ZT8" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -46,7 +46,7 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-a-vector-store-component-in-a-flow">Use a vector store component in a flow<a href="#use-a-vector-store-component-in-a-flow" class="hash-link" aria-label="Direct link to Use a vector store component in a flow" title="Direct link to Use a vector store component in a flow">​</a></h2>
 <p>This example uses the <strong>Astra DB vector store</strong> component. Your vector store component&#x27;s parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected <a href="/components-models">model</a> component, and stores them in the connected Astra DB database.</p>
 <p>This vector data can then be retrieved for workloads like Retrieval Augmented Generation.</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/vector-store-retrieval-452b8316c734a28f85fcddf9ff7a32e4.png" width="2898" height="1110" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="/assets/images/vector-store-retrieval-3d2d30b0bfef46783987efd758fc5497.png" width="2894" height="1014" class="img_ev3q"></p>
 <p>The user&#x27;s chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
 The results are output from the vector database component as a <a href="/concepts-objects">Data</a> object and parsed into text.
 This text fills the <code>{context}</code> variable in the <strong>Prompt</strong> component, which informs the <strong>Open AI model</strong> component&#x27;s responses.</p>

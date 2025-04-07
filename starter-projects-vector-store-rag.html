@@ -22,8 +22,8 @@
 
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap"><link rel="stylesheet" href="/assets/css/styles.b2eb940a.css">
-<script src="/assets/js/runtime~main.eba2362c.js" defer="defer"></script>
-<script src="/assets/js/main.474ff10e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.1ededb5e.js" defer="defer"></script>
+<script src="/assets/js/main.8becd7d8.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NK5M4ZT8" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -45,6 +45,7 @@
 <p>We&#x27;ve chosen <a href="https://astra.datastax.com/signup?utm_source=langflow-pre-release&amp;utm_medium=referral&amp;utm_campaign=langflow-announcement&amp;utm_content=create-a-free-astra-db-account" target="_blank" rel="noopener noreferrer">Astra DB</a> as the vector database for this starter flow, but you can follow along with any of Langflow&#x27;s vector database options.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
+<li><a href="/get-started-installation">A running Langflow instance</a></li>
 <li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
 <li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with the following:<!-- -->
 <ul>
@@ -61,7 +62,7 @@
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="build-the-vector-rag-flow">Build the vector RAG flow<a href="#build-the-vector-rag-flow" class="hash-link" aria-label="Direct link to Build the vector RAG flow" title="Direct link to Build the vector RAG flow">​</a></h2>
 <p>The vector store RAG flow is built of two separate flows for ingestion and query.</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-vector-rag-d83743e5e049082b9c7a37aaa7b930e9.png" width="2740" height="1550" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-vector-rag-53aa6c362abccc7e01e69c80d6194315.png" width="2694" height="1558" class="img_ev3q"></p>
 <p>The <strong>Load Data Flow</strong> (bottom of the screen) creates a searchable index to be queried for contextual similarity.
 This flow populates the vector store with data from a local file.
 It ingests data from a local file, splits it into chunks, indexes it in Astra DB, and computes embeddings for the chunks using the OpenAI embeddings model.</p>
@@ -70,7 +71,7 @@ It ingests data from a local file, splits it into chunks, indexes it in Astra DB
 <li><strong>Chat Input</strong> receives user input from the <strong>Playground</strong>.</li>
 <li><strong>OpenAI Embeddings</strong> converts the user query into vector form.</li>
 <li><strong>Astra DB</strong> performs similarity search using the query vector.</li>
-<li><strong>Parse Data</strong> processes the retrieved chunks.</li>
+<li><strong>Parser</strong> processes the retrieved chunks.</li>
 <li><strong>Prompt</strong> combines the user query with relevant context.</li>
 <li><strong>OpenAI</strong> generates the response using the prompt.</li>
 <li><strong>Chat Output</strong> returns the response to the <strong>Playground</strong>.</li>
