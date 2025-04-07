@@ -6,6 +6,11 @@ slug: /get-started-installation
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+Langflow can be installed in two ways:
+
+* As a [Python package](#install-langflow-locally)
+* As a [standalone desktop application](#install-langflow-desktop)
+
 Install and run Langflow with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
 
 ## Prerequisites

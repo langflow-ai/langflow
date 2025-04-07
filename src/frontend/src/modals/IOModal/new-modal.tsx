@@ -75,8 +75,7 @@ export default function IOModal({
     currentFlowId,
   );
   const flowName = useFlowStore((state) => state.currentFlow?.name);
-  const PlaygroundTitle =
-    playgroundPage && ENABLE_PUBLISH && flowName ? flowName : "Playground";
+  const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
   useEffect(() => {
     setIOModalOpen(open);
