@@ -28,12 +28,12 @@ python -m langflow [OPTIONS]
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
 | <Link id="install-completion"/>`--install-completion` | *Not applicable* | *Not applicable* | Install auto-completion for the current shell. |
-| <Link id="show-completion"/>`--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file (if installed). |
+| <Link id="show-completion"/>`--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file, if installed. |
 | <Link id="help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow api-key
 
-Create an API key for the default superuser if the [`LANGFLOW_AUTO_LOGIN` environment variable] is set to `true`.
+Create an API key for the default superuser if the `LANGFLOW_AUTO_LOGIN` environment variable is set to `true`.
 
 ```bash
 langflow api-key [OPTIONS]
@@ -146,7 +146,7 @@ python -m langflow superuser [OPTIONS]
 
 Langflow CLI options override the values of corresponding [environment variables](./environment-variables.md).
 
-For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, but you run the CLI with `--port 7880`, then Langflow will set the port to **`7880`** (the value passed with the CLI).
+For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, but you run the CLI with `--port 7880`, Langflow sets the port to **`7880`**, the value passed with the CLI.
 
 ## Assign values
 
