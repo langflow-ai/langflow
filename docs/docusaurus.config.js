@@ -31,24 +31,21 @@ const config = {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
       },
-    },
-    {
-      // Google tag (gtag.js)
-      tagName: "script",
-      attributes: {
-        async: "true",
-        src: "https://www.googletagmanager.com/gtag/js?id=G-L8Y98PSEMQ",
-      },
-    },
-    {
-      tagName: "script",
-      attributes: {},
-      innerHTML: `
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    }
+  ],
 
-  gtag('config', 'G-L8Y98PSEMQ');`,
+  scripts: [
+    {
+      src: "https://www.googletagmanager.com/gtag/js?id=G-L8Y98PSEMQ",
+      async: true,
+    },
+    {
+      src: `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-L8Y98PSEMQ');
+      `
     }
   ],
 
