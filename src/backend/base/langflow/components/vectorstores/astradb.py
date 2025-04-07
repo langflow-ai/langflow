@@ -805,6 +805,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["reranker"]["value"] = build_config["reranker"]["options"][0]
 
             # Set the default search field to hybrid search
+            build_config["search_method"]["show"] = True
             build_config["search_method"]["options"] = ["Hybrid Search", "Vector Search"]
             build_config["search_method"]["value"] = "Hybrid Search"
         except Exception as _:  # noqa: BLE001
@@ -812,6 +813,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["reranker"]["options_metadata"] = []
 
             # Set the default search field to vector search
+            build_config["search_method"]["show"] = False
             build_config["search_method"]["options"] = ["Vector Search"]
             build_config["search_method"]["value"] = "Vector Search"
 
@@ -857,12 +859,25 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if field_name == "database_name" and not isinstance(field_value, dict):
             return self._handle_database_selection(build_config, field_value)
 
+        # Keyspace selection change
         if field_name == "keyspace":
             return self.reset_collection_list(build_config)
 
         # Collection selection change
         if field_name == "collection_name" and not isinstance(field_value, dict):
             return self._handle_collection_selection(build_config, field_value)
+
+        # Search method selection change
+        if field_name == "search_method":
+            is_vector_search = field_value == "Vector Search"
+
+            # Configure lexical terms (same for both cases)
+            build_config["lexical_terms"]["show"] = not is_vector_search
+            build_config["lexical_terms"]["value"] = "" if is_vector_search else build_config["lexical_terms"]["value"]
+
+            # Toggle search type and score threshold based on search method
+            build_config["search_type"]["show"] = is_vector_search
+            build_config["search_score_threshold"]["show"] = is_vector_search
 
         return build_config
 
@@ -943,6 +958,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "model": field_value.get("03_embedding_generation_model"),
             }
         )
+
+        # Make sure we always show the reranker options if the collection is hybrid enabled
+        # And right now they always are
+        build_config["lexical_terms"]["show"] = True
+        build_config["lexical_terms"]["advanced"] = False
 
     def _handle_database_selection(self, build_config: dict, field_value: str) -> dict:
         """Handle database selection and update related configurations."""
