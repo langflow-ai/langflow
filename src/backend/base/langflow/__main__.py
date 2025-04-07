@@ -495,7 +495,7 @@ def migration(
     ):
         if not typer.confirm("Would you like to backup the database before proceeding?"):
             if not typer.confirm("Are you sure you want to proceed without a backup?"):
-                raise typer.Abort()  # noqa: RSE102
+                raise typer.Abort(exit_code=0)
         else:
             _handle_backup(settings_service)
     # Handle operations using match-case
