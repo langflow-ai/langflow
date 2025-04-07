@@ -52,9 +52,13 @@ export default function Dropdown({
   handleNodeClass,
   name,
   dialogInputs,
+  handleOnNewValue,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
-  const validOptions = useMemo(() => filterNullOptions(options), [options]);
+  const validOptions = useMemo(
+    () => filterNullOptions(options),
+    [options, value],
+  );
 
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
@@ -66,11 +70,12 @@ export default function Dropdown({
   const refButton = useRef<HTMLButtonElement>(null);
 
   value = useMemo(() => {
-    if (!options.includes(value)) {
+    if (!options.includes(value) && !filteredOptions.includes(value)) {
       return null;
     }
     return value;
-  }, [value, options]);
+  }, [value, options, filteredOptions]);
+
   // Initialize utilities and constants
   const placeholderName = name
     ? formatPlaceholderName(name)
@@ -167,12 +172,26 @@ export default function Dropdown({
   useEffect(() => {
     if (open) {
       const filtered = cloneDeep(validOptions);
-      if (customValue === value && value && combobox) {
+      if (combobox && value && customValue) {
         filtered.push(customValue);
+        setFilteredOptions(filtered);
       }
-      setFilteredOptions(filtered);
     }
   }, [open]);
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      if (open) {
+        const filtered = cloneDeep(validOptions);
+        if (combobox && value && customValue) {
+          filtered.push(customValue);
+          setFilteredOptions(filtered);
+          handleOnNewValue({ value: customValue });
+          setOpen(false);
+        }
+      }
+    }
+  };
 
   // Render helper functions
 
@@ -256,9 +275,11 @@ export default function Dropdown({
       />
       <input
         onChange={searchRoleByTerm}
+        onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
+        data-testid="dropdown_search_input"
       />
     </div>
   );
