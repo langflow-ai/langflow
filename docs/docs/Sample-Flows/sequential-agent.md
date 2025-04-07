@@ -11,9 +11,9 @@ Each successive agent in the flow builds on the work of the previous agent, crea
 
 ## Prerequisites
 
-- [Langflow installed and running](/get-started-installation)
-- [An OpenAI API key created](https://platform.openai.com/)
-- [A Tavily AI API key created](https://www.tavily.com/)
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
+- [A Tavily AI API key](https://www.tavily.com/)
 
 ## Open Langflow and create a new flow
 

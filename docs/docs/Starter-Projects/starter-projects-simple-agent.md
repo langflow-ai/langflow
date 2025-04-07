@@ -12,8 +12,8 @@ The agent selects the **Calculator** tool for simple math problems and the **URL
 
 ## Prerequisites
 
-- [Langflow installed and running](/get-started-installation)
-- [An OpenAI API key created](https://platform.openai.com/)
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Open Langflow and start a new flow
 

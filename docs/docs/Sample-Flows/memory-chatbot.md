@@ -9,8 +9,8 @@ This flow extends the [basic prompting flow](/starter-projects-basic-prompting) 
 
 ## Prerequisites
 
-- [Langflow installed and running](/get-started-installation)
-- [An OpenAI API key created](https://platform.openai.com/)
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the memory chatbot flow
 
