@@ -35,19 +35,20 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
   sensitiveSort: (a: any, b: any) => number;
 }) {
   const isOpen = openCategories.includes(item.name);
-  
+
   const handleOpenChange = useCallback(
     (open: boolean) => {
       setOpenCategories((prev) =>
-        open
-          ? [...prev, item.name]
-          : prev.filter((cat) => cat !== item.name),
+        open ? [...prev, item.name] : prev.filter((cat) => cat !== item.name),
       );
     },
     [item.name, setOpenCategories],
   );
 
-  if (!dataFilter[item.name] || Object.keys(dataFilter[item.name]).length === 0) {
+  if (
+    !dataFilter[item.name] ||
+    Object.keys(dataFilter[item.name]).length === 0
+  ) {
     return null;
   }
 
