@@ -37,7 +37,7 @@ History:
 ```
 
 The `{memory}` code in the prompt creates a new input port in the component called **memory**.
-The **Chat Memory** component is connected to this port to store chat messages from the **Playground**, and provide the **OpenAI** component a memory of previous chat messages.
+The **Chat Memory** component is connected to this port to store chat messages from the **Playground**, and provide the **OpenAI** component with a memory of previous chat messages.
 
 ## Run the memory chatbot flow
 
