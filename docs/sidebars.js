@@ -251,7 +251,7 @@ module.exports = {
       className: "sidebar-ad",
       value: `
         <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-computer"><rect width="14" height="8" x="5" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h2"/><path d="M12 18h6"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2" ry="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
           <div class="sidebar-ad-text-container">
             <span class="sidebar-ad-text">Langflow Desktop is here!</span>
             <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for Langflow Desktop</span>
