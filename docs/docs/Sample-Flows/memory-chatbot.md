@@ -9,8 +9,8 @@ This flow extends the [basic prompting flow](/starter-projects-basic-prompting) 
 
 ## Prerequisites
 
-- [Langflow installed and running](/get-started-installation)
-- [OpenAI API key created](https://platform.openai.com/)
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the memory chatbot flow
 
@@ -37,14 +37,12 @@ History:
 ```
 
 The `{memory}` code in the prompt creates a new input port in the component called **memory**.
-The **Chat Memory** component is connected to this port to store chat messages from the **Playground**.
-
-This gives the **OpenAI** component a memory of previous chat messages.
+The **Chat Memory** component is connected to this port to store chat messages from the **Playground**, and provide the **OpenAI** component with a memory of previous chat messages.
 
 ## Run the memory chatbot flow
 
 1. Open the **Playground**.
-2. Type multiple questions. For example, try entering this conversation:
+2. Enter multiple questions. For example, try entering this conversation:
 
 ```plain
 Hi, my name is Luca.

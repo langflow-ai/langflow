@@ -3,7 +3,7 @@ title: Simple agent
 slug: /starter-projects-simple-agent
 ---
 
-Build a **Simple Agent** flow for an agentic application using the **Tool-calling agent** component.
+Build a **Simple Agent** flow for an agentic application using the [Tool-calling agent](/agents-tool-calling-agent-component) component.
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
@@ -12,7 +12,8 @@ The agent selects the **Calculator** tool for simple math problems and the **URL
 
 ## Prerequisites
 
-To use this flow, you need an OpenAI API key.
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Open Langflow and start a new flow
 
@@ -47,7 +48,7 @@ as_dataframe: Load and retrieve data in a structured format (dataframe) from spe
 get_current_date: Returns the current date and time in a selected timezone.
 ```
 4. Ask the agent a question. For example, ask it to create a tabletop character using your favorite rules set.
-The agent will tell you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
+The agent tells you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
 The final output should be similar to this:
 
 ```text
