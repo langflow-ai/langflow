@@ -66,7 +66,7 @@ const config = {
           priority: null,
         },
         gtag: {
-          trackingID: "G-XHC7G628ZP",
+          trackingID: "G-L8Y98PSEMQ",
           anonymizeIP: true,
         },
         blog: false,
