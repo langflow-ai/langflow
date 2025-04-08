@@ -45,26 +45,29 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
     [item.name, setOpenCategories],
   );
 
-  if (
-    !dataFilter[item.name] ||
-    Object.keys(dataFilter[item.name]).length === 0
-  ) {
-    return null;
-  }
-
   return (
-    <Disclosure open={isOpen} onOpenChange={handleOpenChange}>
-      <SidebarMenuItem expanded={isOpen}>
+    <Disclosure
+      open={openCategories.includes(item.name)}
+      onOpenChange={(isOpen) => {
+        setOpenCategories((prev) =>
+          isOpen
+            ? [...prev, item.name]
+            : prev.filter((cat) => cat !== item.name),
+        );
+      }}
+    >
+      <SidebarMenuItem>
         <DisclosureTrigger className="group/collapsible">
           <SidebarMenuButton asChild>
             <div
+              data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
               tabIndex={0}
+              onKeyDown={handleKeyDownInput}
               className="flex cursor-pointer items-center gap-2"
-              data-testid={`disclosure-${item.display_name.toLowerCase()}`}
             >
               <ForwardedIconComponent
                 name={item.icon}
-                className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
+                className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
               />
               <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
                 {item.display_name}

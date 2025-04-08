@@ -16,7 +16,7 @@
 }
 
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
-  margin-top: 0.75rem !important;
+  margin-top: 1.5rem !important;
 }
 
 .docusaurus-highlight-code-line {
@@ -274,23 +274,20 @@ body {
 .theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(
     :first-child
   ) {
-  margin-top: 0.125rem !important;
+  margin-top: 0.25rem !important;
 }
 
 .sidebar-ad {
-  margin-top: auto;
+  margin-top: 2rem;
   margin-left: -0.5rem;
   margin-right: -0.5rem;
   margin-bottom: -0.5rem;
   border-radius: 0;
   border-top: 1px solid var(--ifm-color-emphasis-300);
   border-bottom: 1px solid var(--ifm-color-emphasis-300);
-  background-color: var(--ifm-background-surface-color);
-  position: fixed;
-  bottom: 0;
-  width: var(--doc-sidebar-width);
-  z-index: 100;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+  background-color: var(--ifm-background-color);
+  position: sticky;
+  bottom: -0.5rem;
 }
 
 .sidebar-ad a {
@@ -321,46 +318,5 @@ body {
     #a855f7,
     var(--ifm-color-primary)
   );
-}
-
-/* Add padding to the bottom of the menu to prevent content from being hidden behind the ad */
-[data-sidebar="content"] {
-  gap: 0.5rem !important;
-  padding-bottom: 4rem !important;
-}
-
-/* Add more compact spacing for menu items */
-[data-sidebar="menu"],
-[data-sidebar="menu-item"],
-.menu__list,
-.menu__list-item {
-  z-index: 1;
-  position: relative;
-}
-
-/* Add a solid background to the ad to ensure content doesn't show through */
-.sidebar-ad::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--ifm-background-surface-color);
-  z-index: -1;
-}
-
-[data-sidebar="group"] {
-  padding: 0.5rem !important;
-}
-
-[data-sidebar="header"],
-[data-sidebar="footer"] {
-  padding: 0.5rem !important;
-  gap: 0.5rem !important;
-}
-
-[data-sidebar="menu-button"] {
-  padding: 0.375rem 0.5rem !important;
 }
 

@@ -516,12 +516,11 @@ SidebarMenu.displayName = "SidebarMenu";
 
 const SidebarMenuItem = React.forwardRef<
   HTMLLIElement,
-  React.ComponentProps<"li"> & { expanded?: boolean }
->(({ className, expanded = false, ...props }, ref) => (
+  React.ComponentProps<"li">
+>(({ className, ...props }, ref) => (
   <li
     ref={ref}
     data-sidebar="menu-item"
-    data-expanded={expanded}
     className={cn("group/menu-item relative", className)}
     {...props}
   />
