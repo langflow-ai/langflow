@@ -47,7 +47,7 @@ export default function TabComponent({
             <TabsTrigger
               key={`${id}_tab_${index}`}
               value={tab}
-              className="flex-1"
+              className="block flex-1 truncate px-2"
               disabled={disabled}
             >
               {tab}

@@ -319,9 +319,42 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 |----------------|------------------------|--------------------------------|
 | vector_store   | FAISS                  | A FAISS vector store instance configured with the specified parameters. |
 
+## Graph RAG
+
+This component performs Graph RAG (Retrieval Augmented Generation) traversal in a vector store, enabling graph-based document retrieval.
+For more information, see the [Graph RAG documentation](https://datastax.github.io/graph-rag/).
+
+For an example flow, see the **Graph RAG** template.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | Specify the embedding model. This is not required for collections embedded with [Astra vectorize](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
+| vector_store | Vector Store Connection | Connection to the vector store. |
+| edge_definition | Edge Definition | Edge definition for the graph traversal. For more information, see the [GraphRAG documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/). |
+| strategy | Traversal Strategies | The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
+| search_query | Search Query | The query to search for in the vector store. |
+| graphrag_strategy_kwargs | Strategy Parameters | Optional dictionary of additional parameters for the retrieval strategy. For more information, see the [strategy documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| search_results | List[Data] | Results of the graph-based document retrieval as a list of [Data](/concepts-objects#data-object) objects. |
+
 ## Hyper-Converged Database (HCD) Vector Store
 
 This component implements a Vector Store using HCD.
+
+To use the HCD vector store, add your deployment's collection name, username, password, and HCD Data API endpoint.
+The endpoint must be formatted like `http[s]://**DOMAIN_NAME** or **IP_ADDRESS**[:port]`, for example, `http://192.0.2.250:8181`.
+
+Replace **DOMAIN_NAME** or **IP_ADDRESS** with the domain name or IP address of your HCD Data API connection.
+
+To use the HCD vector store for embeddings ingestion, connect it to an embeddings model and a file loader:
+
+![HCD vector store embeddings ingestion](/img/component-hcd-example-flow.png)
 
 ### Inputs
 
@@ -397,16 +430,22 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 
 ### Inputs
 
-| Name                     | Type         | Description                               |
-| ------------------------ | ------------ | ----------------------------------------- |
-| mongodb_atlas_cluster_uri | SecretString | MongoDB Atlas Cluster URI                 |
-| db_name                   | String       | Database name                             |
-| collection_name           | String       | Collection name                           |
-| index_name                | String       | Index name                                |
-| search_query              | String       | Query for similarity search               |
-| ingest_data               | Data         | Data to be ingested into the vector store |
-| embedding                 | Embeddings   | Embedding function to use                 |
-| number_of_results         | Integer      | Number of results to return in search     |
+| Name                      | Type         | Description                               |
+| ------------------------- | ------------ | ----------------------------------------- |
+| mongodb_atlas_cluster_uri | SecretString | The connection URI for your MongoDB Atlas cluster (required) |
+| enable_mtls               | Boolean      | Enable mutual TLS authentication (default: false) |
+| mongodb_atlas_client_cert | SecretString | Client certificate combined with private key for mTLS authentication (required if mTLS is enabled) |
+| db_name                   | String       | The name of the database to use (required) |
+| collection_name           | String       | The name of the collection to use (required) |
+| index_name                | String       | The name of the Atlas Search index, it should be a Vector Search (required) |
+| insert_mode               | String       | How to insert new documents into the collection (options: "append", "overwrite", default: "append") |
+| embedding                 | Embeddings   | The embedding model to use |
+| number_of_results         | Integer      | Number of results to return in similarity search (default: 4) |
+| index_field               | String       | The field to index (default: "embedding") |
+| filter_field              | String       | The field to filter the index |
+| number_dimensions         | Integer      | Embedding context length (default: 1536) |
+| similarity                | String       | The method used to measure similarity between vectors (options: "cosine", "euclidean", "dotProduct", default: "cosine") |
+| quantization              | String       | Quantization reduces memory costs by converting 32-bit floats to smaller data types (options: "scalar", "binary") |
 
 ### Outputs
 
@@ -654,33 +693,6 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
 | search_results | List[Data] | Results of similarity search |
-
-## Vectara RAG
-
-This component leverages Vectara's Retrieval Augmented Generation (RAG) capabilities to search and summarize documents based on the provided input. For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
-
-### Inputs
-
-| Name                  | Type         | Description                                                |
-|-----------------------|--------------|------------------------------------------------------------|
-| vectara_customer_id   | String       | Vectara customer ID                                        |
-| vectara_corpus_id     | String       | Vectara corpus ID                                          |
-| vectara_api_key       | SecretString | Vectara API key                                            |
-| search_query          | String       | The query to receive an answer on                          |
-| lexical_interpolation | Float        | Hybrid search factor (0.005 to 0.1)                        |
-| filter                | String       | Metadata filters to narrow the search                      |
-| reranker              | String       | Reranker type (mmr, rerank_multilingual_v1, none)          |
-| reranker_k            | Integer      | Number of results to rerank (1 to 100)                     |
-| diversity_bias        | Float        | Diversity bias for MMR reranker (0 to 1)                   |
-| max_results           | Integer      | Maximum number of search results to summarize (1 to 100)   |
-| response_lang         | String       | Language code for the response (for example, "eng", "auto")       |
-| prompt                | String       | Prompt name for summarization                              |
-
-### Outputs
-
-| Name   | Type    | Description           |
-|--------|---------|-----------------------|
-| answer | Message | Generated RAG response|
 
 ## Weaviate
 
