@@ -34,12 +34,13 @@ const config = {
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
       },
     },
-    ...(isProduction && [
+    ...(!isProduction && [
       // Ketch consent management script
+      // TODO: Put back the Langflow.org Web smart tag property for PROD
       {
         tagName: "script",
         attributes: {},
-        innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
+        innerHTML: `<script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/website_smart_tag/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();</script>`,
       },
       // Ketch jurisdiction dynamic link and GA4 consent tracking
       {
