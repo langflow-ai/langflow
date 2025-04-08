@@ -6043,9 +6043,9 @@ estree-util-to-js@^2.0.0:
     source-map "^0.7.0"
 
 estree-util-value-to-estree@^3.0.1:
-  version "3.3.2"
-  resolved "https://registry.npmjs.org/estree-util-value-to-estree/-/estree-util-value-to-estree-3.3.2.tgz"
-  integrity sha512-hYH1aSvQI63Cvq3T3loaem6LW4u72F187zW4FHpTrReJSm6W66vYTFNO1vH/chmcOulp1HlAj1pxn8Ag0oXI5Q==
+  version "3.3.3"
+  resolved "https://registry.yarnpkg.com/estree-util-value-to-estree/-/estree-util-value-to-estree-3.3.3.tgz#800b03a551b466dd77ed2c574b042a9992546cf2"
+  integrity sha512-Db+m1WSD4+mUO7UgMeKkAwdbfNWwIxLt48XF2oFU9emPfXkIu+k5/nlOj313v7wqtAPo0f9REhUvznFrPkG8CQ==
   dependencies:
     "@types/estree" "^1.0.0"
 
