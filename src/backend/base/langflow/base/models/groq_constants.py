@@ -49,7 +49,6 @@ TOOL_CALLING_UNSUPPORTED_GROQ_MODELS = [
     "llama-guard-3-8b",  # Meta
     "llama-3.2-11b-vision-preview",  # Meta
     "llama3-8b-8192",  # Meta
-    "llama3-8b-8192",  # Meta
     "llama3-70b-8192",  # Meta
     "deepseek-r1-distill-llama-70b",  # DeepSeek
 ]
