@@ -4,14 +4,7 @@ from langchain.schema import Document
 from langchain_elasticsearch import ElasticsearchStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.io import (
-    DropdownInput,
-    FloatInput,
-    HandleInput,
-    IntInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.io import DropdownInput, FloatInput, HandleInput, IntInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -44,6 +37,13 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             info="The index name where the vectors will be stored in Elasticsearch cluster.",
         ),
         *LCVectorStoreComponent.inputs,
+        NestedDictInput(
+            name="search_filter",
+            display_name="Search Filter",
+            advanced=True,
+            info="Optional dictionary of filters to apply to the search query. {'term': {'metadata.field': 'value'}}",
+            value={},
+        ),
         StrInput(
             name="username",
             display_name="Username",
@@ -122,7 +122,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             es_params["es_url"] = self.elasticsearch_url
 
         if self.api_key:
-            es_params["api_key"] = self.api_key
+            es_params["es_api_key"] = self.api_key
 
         elasticsearch = ElasticsearchStore(**es_params)
 
@@ -160,11 +160,10 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """Search for similar documents in the vector store or retrieve all documents if no query is provided."""
         vector_store = self.build_vector_store()
-        search_kwargs = {
-            "k": self.number_of_results,
-            "score_threshold": self.search_score_threshold,
-            "filter": self.search_filter,
-        }
+        search_kwargs = {"k": self.number_of_results, "score_threshold": self.search_score_threshold}
+
+        if self.search_filter:
+            search_kwargs["filter"] = [self.search_filter]
 
         if query:
             search_type = self.search_type.lower()
@@ -219,6 +218,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         If no search input is provided, retrieve all documents.
         """
         results = self.search(self.search_query)
+
         retrieved_data = [
             Data(
                 text=result["page_content"],
