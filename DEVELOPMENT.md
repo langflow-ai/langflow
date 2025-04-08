@@ -101,7 +101,7 @@ Pre-commit hooks will help keep your changes clean and well-formatted.
  Install pre-commit hooks by running the following commands:
 
 ```bash
-uv sync --dev
+uv sync
 uv run pre-commit install
 ```
 
@@ -168,8 +168,8 @@ In the *Documentation Terminal* (from the project root directory), run the follo
 
 ```bash
 cd docs
-npm install
-npm run start
+yarn install
+yarn start
 ```
 
 If the frontend service is running on port `3000` you might be prompted `Would you like to run the app on another port instead?`, in which case answer "yes". You will get output similar to:

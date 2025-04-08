@@ -3,6 +3,8 @@ title: Tools
 slug: /components-tools
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Tool components in Langflow
 
 Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
@@ -168,15 +170,16 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Search Query | The search query to be used for the DuckDuckGo search |
-| max_results | Max Results | Maximum number of results to return |
-| max_snippet_length | Max Snippet Length | Maximum length of each result snippet |
+| input_value | Search Query | The search query to execute with DuckDuckGo. |
+| max_results | Max Results | The maximum number of search results to return. Default: `5`. |
+| max_snippet_length | Max Snippet Length | The maximum length of each result snippet. Default: `100`.|
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of search results as Data objects |
+| data | [Data](/concepts-objects#data-object) | List of search results as Data objects containing snippets and full content. |
+| text | Text | Search results formatted as a single text string. |
 
 ## Exa Search
 
@@ -219,6 +222,10 @@ This component allows you to call the Glean Search API.
 
 ## Google Search API
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component allows you to call the Google Search API.
 
 ### Inputs
@@ -256,25 +263,56 @@ This component allows you to call the Serper.dev Google Search API.
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
-## MCP Tools (stdio)
 
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over `stdio` and exposes its tools as Langflow tools to be used by an Agent component.
+## MCP server
 
-To use the MCP stdio component, follow these steps:
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools.
 
-1. Add the MCP stdio component to your workflow, and connect it to an agent. The flow looks like this:
+In addition to being an MCP client that can leverage MCP servers, Langflow is also an MCP server that exposes flows as tools through the `/api/v1/mcp/sse` API endpoint. For more information, see [MCP integrations](/integrations-mcp).
 
-![MCP stdio component](/img/mcp-stdio-component.png)
+To use the MCP server component with an agent component, follow these steps:
 
-2. In the MCP stdio component, in the **mcp command** field, enter the command to start your MCP server. For a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+1. Add the MCP server component to your workflow.
+2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
 
 ```bash
 uvx mcp-server-fetch
 ```
 
-3. Open the **Playground**.
+`uvx` is included with `uv` in the Langflow package.
+To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+
+3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+4. In the **Tool** field, select the server tool you want the component to use.
+The available fields change based on the selected tool.
+For information on the parameters, see the MCP server's documentation.
+5. In the MCP server component, enable **Tool mode**.
+Connect the MCP server component's **Toolset** port to an **Agent** component's **Tools** port.
+
+The flow looks similar to this:
+![MCP server component](/img/mcp-server-component.png)
+
+6. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
-This confirms the MCP server is connected and working.
+This confirms the MCP server is connected, and its tools are being used in Langflow.
+
+For more information, see [MCP integrations](/integrations-mcp).
+
+### MCP Server-Sent Events (SSE) mode
+
+1. In the **MCP Server** component, select **SSE**.
+A default address appears in the **MCP SSE URL** field.
+2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+The default value is `http://localhost:7860/api/v1/mcp/sse`.
+3. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
+4. Click the **Tools** field.
+All of your flows are listed as tools.
+5. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
+The flow looks like this:
+![MCP server component](/img/mcp-server-component-sse.png)
+6. Open the **Playground** and chat with your tool.
+The agent chooses the correct tool based on your query.
 
 ### Inputs
 
@@ -288,28 +326,18 @@ This confirms the MCP server is connected and working.
 |-------|-----------|-------------------------------------------|
 | tools | List[Tool]| List of tools exposed by the MCP server   |
 
+## MCP Tools (stdio)
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
+
+
 ## MCP Tools (SSE)
-
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over [SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) and exposes its tools as Langflow tools to be used by an Agent component.
-
-To use the MCP SSE component, follow these steps:
-
-1. Add the MCP SSE component to your workflow, and connect it to an agent. The flow looks similar to the MCP stdio component flow.
-
-2. In the MCP SSE component, in the **url** field, enter the URL of your current Langflow server's `mcp/sse` endpoint.
-This will fetch all currently available tools from the Langflow server.
-
-### Inputs
-
-| Name | Type   | Description                                          |
-|------|--------|------------------------------------------------------|
-| url  | String | SSE URL (default: `http://localhost:7860/api/v1/mcp/sse`) |
-
-### Outputs
-
-| Name  | Type      | Description                               |
-|-------|-----------|-------------------------------------------|
-| tools | List[Tool]| List of tools exposed by the MCP server   |
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
 
 ## Python Code Structured Tool
 
@@ -335,6 +363,10 @@ The component dynamically updates its configuration based on the provided Python
 | result_tool  | Tool  │ Structured tool created from the Python code |
 
 ## Python REPL Tool
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
@@ -390,6 +422,10 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 | result_tool | Tool | SearXNG search tool for use in LangChain   |
 
 ## Search API
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
@@ -455,6 +491,10 @@ This component performs searches using the Tavily AI search engine, which is opt
 
 ## Wikidata
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component performs a search using the Wikidata API.
 
 ### Inputs
@@ -472,6 +512,10 @@ This component performs a search using the Wikidata API.
 
 
 ## Wikipedia API
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component creates a tool for searching and retrieving information from Wikipedia.
 

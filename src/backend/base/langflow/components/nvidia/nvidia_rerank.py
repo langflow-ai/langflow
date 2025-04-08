@@ -2,6 +2,7 @@ from typing import Any
 
 from langflow.base.compressors.model import LCCompressorComponent
 from langflow.field_typing import BaseDocumentCompressor
+from langflow.inputs.inputs import SecretStrInput
 from langflow.io import DropdownInput, StrInput
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Output
@@ -14,6 +15,10 @@ class NvidiaRerankComponent(LCCompressorComponent):
 
     inputs = [
         *LCCompressorComponent.inputs,
+        SecretStrInput(
+            name="api_key",
+            display_name="NVIDIA API Key",
+        ),
         StrInput(
             name="base_url",
             display_name="Base URL",

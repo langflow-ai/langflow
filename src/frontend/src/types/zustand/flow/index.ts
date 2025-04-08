@@ -7,7 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus } from "../../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
@@ -95,6 +95,7 @@ export type FlowStoreType = {
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
+  resetFlowState: () => void;
   reactFlowInstance: ReactFlowInstance<AllNodeType, EdgeType> | null;
   setReactFlowInstance: (
     newState: ReactFlowInstance<AllNodeType, EdgeType>,
@@ -139,22 +140,26 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
+  playgroundPage: boolean;
+  setPlaygroundPage: (playgroundPage: boolean) => void;
   buildFlow: ({
     startNodeId,
     stopNodeId,
     input_value,
     files,
     silent,
-    setLockChat,
     session,
+    stream,
+    eventDelivery,
   }: {
-    setLockChat?: (lock: boolean) => void;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
     files?: string[];
     silent?: boolean;
     session?: string;
+    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (
@@ -184,8 +189,6 @@ export type FlowStoreType = {
     buildId?: string,
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
-  setLockChat: (lock: boolean) => void;
-  lockChat: boolean;
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => void;
   currentFlow: FlowType | undefined;
   setCurrentFlow: (flow: FlowType | undefined) => void;

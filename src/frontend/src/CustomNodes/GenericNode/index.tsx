@@ -252,8 +252,19 @@ function GenericNode({
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
 
+  const editedNameDescription =
+    editNameDescription && hasChangedNodeDescription;
+
+  const hasDescription = useMemo(() => {
+    return data.node?.description && data.node?.description !== "";
+  }, [data.node?.description]);
+
+  const selectedNodesCount = useMemo(() => {
+    return useFlowStore.getState().nodes.filter((node) => node.selected).length;
+  }, [selected]);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return selected ? (
+    return selected && selectedNodesCount === 1 ? (
       <>
         <div
           className={cn(
@@ -294,25 +305,21 @@ function GenericNode({
               showNode
                 ? "top-2 translate-x-[10.4rem]"
                 : "top-0 translate-x-[6.4rem]",
-              editNameDescription && hasChangedNodeDescription
+              editedNameDescription
                 ? "bg-accent-emerald"
                 : "bg-zinc-foreground",
             )}
             data-testid={
-              editNameDescription && hasChangedNodeDescription
+              editedNameDescription
                 ? "save-name-description-button"
                 : "edit-name-description-button"
             }
           >
             <ForwardedIconComponent
-              name={
-                editNameDescription && hasChangedNodeDescription
-                  ? "Check"
-                  : "PencilLine"
-              }
+              name={editedNameDescription ? "Check" : "PencilLine"}
               strokeWidth={ICON_STROKE_WIDTH}
               className={cn(
-                editNameDescription && hasChangedNodeDescription
+                editedNameDescription
                   ? "text-accent-emerald-foreground"
                   : "text-muted-foreground",
                 "icon-size",
@@ -338,6 +345,7 @@ function GenericNode({
     editNameDescription,
     hasChangedNodeDescription,
     toggleEditNameDescription,
+    selectedNodesCount,
   ]);
 
   useEffect(() => {
@@ -490,8 +498,9 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid gap-3 truncate text-wrap p-4 leading-5",
-            showNode && "border-b",
+            "grid text-wrap p-4 leading-5",
+            showNode ? "border-b" : "relative",
+            hasDescription && "gap-3",
           )}
         >
           <div
@@ -507,7 +516,9 @@ function GenericNode({
               data-testid="generic-node-title-arrangement"
             >
               {renderNodeIcon()}
-              <div className="generic-node-tooltip-div">{renderNodeName()}</div>
+              <div className="generic-node-tooltip-div truncate">
+                {renderNodeName()}
+              </div>
             </div>
             <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
@@ -542,9 +553,11 @@ function GenericNode({
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
-                <div className="block">
-                  {renderOutputs(data.node!.outputs, "hidden")}
-                </div>
+                {showHiddenOutputs && (
+                  <div className="block">
+                    {renderOutputs(data.node!.outputs, "hidden")}
+                  </div>
+                )}
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip

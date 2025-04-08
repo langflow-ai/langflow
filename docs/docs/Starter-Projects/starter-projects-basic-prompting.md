@@ -14,8 +14,8 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 
 ## Prerequisites
 
-- [Langflow installed and running](/get-started-installation)
-- [OpenAI API key created](https://platform.openai.com/)
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the basic prompting flow
 
@@ -34,7 +34,7 @@ The model will respond according to the prompt constructed in the **Prompt** c
 
 4. To examine the **Template**, in the **Prompt** component, click the **Template** field.
 
-```plain
+```text
 Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.
 ```
 

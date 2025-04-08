@@ -1,10 +1,19 @@
-import { Separator } from "@/components/ui/separator";
+//import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
+import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
+import { EventDeliveryType } from "@/constants/enums";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
+import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
+import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -13,13 +22,11 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
-import { cn } from "../../utils/utils";
+import { cn, getNumberFromString } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
-import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
-
 export default function IOModal({
   children,
   open,
@@ -27,6 +34,7 @@ export default function IOModal({
   disable,
   isPlayground,
   canvasOpen,
+  playgroundPage,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
@@ -54,13 +62,20 @@ export default function IOModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const clientId = useUtilityStore((state) => state.clientId);
+  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = playgroundPage
+    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
+    : realFlowId;
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
+  const flowName = useFlowStore((state) => state.currentFlow?.name);
+  const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -113,8 +128,7 @@ export default function IOModal({
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const lockChat = useFlowStore((state) => state.lockChat);
-  const setLockChat = useFlowStore((state) => state.setLockChat);
+
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const messages = useMessagesStore((state) => state.messages);
   const [sessions, setSessions] = useState<string[]>(
@@ -127,6 +141,10 @@ export default function IOModal({
     ),
   );
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
+  const setCurrentSessionId = useUtilityStore(
+    (state) => state.setCurrentSessionId,
+  );
+
   const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
       mode: "union",
@@ -137,6 +155,11 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
+  const config = useGetConfig();
+
+  function shouldStreamEvents() {
+    return config.data?.event_delivery === EventDeliveryType.STREAMING;
+  }
 
   const sendMessage = useCallback(
     async ({
@@ -147,8 +170,6 @@ export default function IOModal({
       files?: string[];
     }): Promise<void> => {
       if (isBuilding) return;
-      setIsBuilding(true);
-      setLockChat(true);
       setChatValue("");
       for (let i = 0; i < repeat; i++) {
         await buildFlow({
@@ -157,24 +178,14 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
-          setLockChat,
+          stream: shouldStreamEvents(),
+          eventDelivery: config.data?.event_delivery,
         }).catch((err) => {
           console.error(err);
-          setLockChat(false);
         });
       }
-      // refetch();
-      setLockChat(false);
     },
-    [
-      isBuilding,
-      setIsBuilding,
-      setLockChat,
-      chatValue,
-      chatInput?.id,
-      sessionId,
-      buildFlow,
-    ],
+    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
   );
 
   useEffect(() => {
@@ -204,8 +215,10 @@ export default function IOModal({
       setSessionId(
         `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
       );
+      setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
+      setCurrentSessionId(visibleSession);
       if (selectedViewField?.type === "Session") {
         setSelectedViewField({
           id: visibleSession,
@@ -247,6 +260,25 @@ export default function IOModal({
     };
   }, []);
 
+  const showPublishOptions = playgroundPage && ENABLE_PUBLISH;
+
+  const LangflowButtonClick = () => {
+    track("LangflowButtonClick");
+    window.open(LangflowButtonRedirectTarget(), "_blank");
+  };
+
+  useEffect(() => {
+    if (playgroundPage && messages.length > 0) {
+      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
+    }
+  }, [playgroundPage, messages]);
+
+  const swatchIndex =
+    (currentFlow?.gradient && !isNaN(parseInt(currentFlow?.gradient))
+      ? parseInt(currentFlow?.gradient)
+      : getNumberFromString(currentFlow?.gradient ?? currentFlow?.id ?? "")) %
+    swatchColors.length;
+
   return (
     <BaseModal
       open={open}
@@ -270,8 +302,31 @@ export default function IOModal({
                   : "w-0",
               )}
             >
-              <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
-                <div className="flex items-center gap-2 pb-8">
+              <div
+                className={cn(
+                  "relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
+                  playgroundPage ? "pt-[15px]" : "pt-3.5",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 pb-8 align-middle">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        `flex rounded p-1`,
+                        swatchColors[swatchIndex],
+                      )}
+                    >
+                      <IconComponent
+                        name={currentFlow?.icon ?? "Workflow"}
+                        className="h-3.5 w-3.5"
+                      />
+                    </div>
+                    {sidebarOpen && (
+                      <div className="truncate font-semibold">
+                        {PlaygroundTitle}
+                      </div>
+                    )}
+                  </div>
                   <ShadTooltip
                     styleClasses="z-50"
                     side="right"
@@ -288,9 +343,6 @@ export default function IOModal({
                       />
                     </Button>
                   </ShadTooltip>
-                  {sidebarOpen && (
-                    <div className="font-semibold">Playground</div>
-                  )}
                 </div>
                 {sidebarOpen && (
                   <SidebarOpenView
@@ -300,10 +352,44 @@ export default function IOModal({
                     handleDeleteSession={handleDeleteSession}
                     visibleSession={visibleSession}
                     selectedViewField={selectedViewField}
+                    playgroundPage={!!playgroundPage}
                   />
+                )}
+                {sidebarOpen && showPublishOptions && (
+                  <div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
+                    <div className="flex items-center justify-between px-2">
+                      <div className="text-sm">Theme</div>
+                      <ThemeButtons />
+                    </div>
+                    <Button
+                      onClick={LangflowButtonClick}
+                      variant="primary"
+                      className="w-full !rounded-xl shadow-lg"
+                    >
+                      <LangflowLogoColor />
+                      <div className="text-sm">Built with Langflow</div>
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
+            {!sidebarOpen && showPublishOptions && (
+              <div className="absolute bottom-6 left-4 hidden transition-all md:block">
+                <ShadTooltip
+                  styleClasses="z-50"
+                  side="right"
+                  content="Built with Langflow"
+                >
+                  <Button
+                    variant="primary"
+                    className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
+                    onClick={LangflowButtonClick}
+                  >
+                    <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
+                  </Button>
+                </ShadTooltip>
+              </div>
+            )}
             <div className="flex h-full min-w-96 flex-grow bg-background">
               {selectedViewField && (
                 <SelectedViewField
@@ -318,6 +404,7 @@ export default function IOModal({
                 />
               )}
               <ChatViewWrapper
+                playgroundPage={playgroundPage}
                 selectedViewField={selectedViewField}
                 visibleSession={visibleSession}
                 sessions={sessions}
@@ -331,10 +418,9 @@ export default function IOModal({
                 messagesFetched={messagesFetched}
                 sessionId={sessionId}
                 sendMessage={sendMessage}
-                lockChat={lockChat}
-                setLockChat={setLockChat}
                 canvasOpen={canvasOpen}
                 setOpen={setOpen}
+                playgroundTitle={PlaygroundTitle}
               />
             </div>
           </div>

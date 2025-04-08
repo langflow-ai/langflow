@@ -30,6 +30,7 @@ import {
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
+  SelectionMode,
 } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
@@ -79,7 +80,13 @@ const edgeTypes = {
   default: DefaultEdge,
 };
 
-export default function Page({ view }: { view?: boolean }): JSX.Element {
+export default function Page({
+  view,
+  setIsLoading,
+}: {
+  view?: boolean;
+  setIsLoading: (isLoading: boolean) => void;
+}): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
@@ -89,7 +96,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
   );
-
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance,
@@ -184,6 +190,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     Object.keys(templates).length > 0 &&
     Object.keys(types).length > 0 &&
     !isFetching;
+
+  useEffect(() => {
+    setIsLoading(!showCanvas);
+  }, [showCanvas]);
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
@@ -561,14 +571,20 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
+            selectionMode={SelectionMode.Partial}
             deleteKeyCode={[]}
+            multiSelectionKeyCode={["Shift"]}
             fitView={isEmptyFlow.current ? false : true}
+            fitViewOptions={{
+              minZoom: 0.2,
+              maxZoom: 8,
+            }}
             className="theme-attribution"
-            minZoom={0.01}
-            maxZoom={8}
-            zoomOnScroll={!view}
-            zoomOnPinch={!view}
-            panOnDrag={!view}
+            minZoom={0.2}
+            maxZoom={3}
+            panOnDrag={[1, 2]}
+            panOnScroll={!view}
+            selectionOnDrag={!view}
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
@@ -612,7 +628,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
-            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
+            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
+              <UpdateAllComponents />
+            </div>
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}

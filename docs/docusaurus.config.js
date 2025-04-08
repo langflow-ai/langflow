@@ -14,7 +14,7 @@ const config = {
     "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
   favicon: "img/favicon.ico",
   url: "https://docs.langflow.org",
-  baseUrl: "/",
+  baseUrl: process.env.BASE_URL ? process.env.BASE_URL : "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   onBrokenAnchors: "warn",
@@ -22,9 +22,6 @@ const config = {
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
-  customFields: {
-    mendableAnonKey: "b7f52734-297c-41dc-8737-edbd13196394", // Mendable Anon Client-side key, safe to expose to the public
-  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
@@ -61,6 +58,16 @@ const config = {
         },
       ]
     : [],
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
+      },
+    }
+  ],
+
   presets: [
     [
       "docusaurus-preset-openapi",
@@ -143,13 +150,6 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "/tutorials-travel-planning-agent",
-            from: [
-              "/starter-projects-dynamic-agent/",
-              "/starter-projects-travel-planning-agent",
-            ],
-          },
-          {
             to: "concepts-overview",
             from: [
               "/workspace-overview",
@@ -161,7 +161,10 @@ const config = {
           },
           {
             to: "/concepts-components",
-            from: ["/components", "/components-overview"],
+            from: [
+              "/components",
+              "/components-overview"
+            ],
           },
           {
             to: "/configuration-global-variables",
@@ -180,28 +183,75 @@ const config = {
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
-            to: "/tutorials-sequential-agent",
-            from: "/starter-projects-sequential-agent",
+            to: "/blog-writer",
+            from: [
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer"
+            ],
           },
           {
-            to: "/tutorials-blog-writer",
-            from: "/starter-projects-blog-writer",
+            to: "/memory-chatbot",
+            from: [
+              "/starter-projects-memory-chatbot",
+              "/tutorials-memory-chatbot"
+            ],
           },
           {
-            to: "/tutorials-memory-chatbot",
-            from: "/starter-projects-memory-chatbot",
+            to: "/document-qa",
+            from: [
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa"
+            ],
           },
           {
-            to: "/tutorials-document-qa",
-            from: "/starter-projects-document-qa",
+            to: "/starter-projects-simple-agent",
+            from: [
+              "/math-agent",
+              "/starter-projects-math-agent",
+              "/tutorials-math-agent"
+            ],
+          },
+          {
+            to: "/sequential-agent",
+            from: [
+              "/starter-projects-sequential-agent",
+              "/tutorials-sequential-agent"
+            ],
+          },
+          {
+            to: "/travel-planning-agent",
+            from: [
+              "/starter-projects-travel-planning-agent",
+              "/tutorials-travel-planning-agent",
+              "/starter-projects-dynamic-agent/",
+            ],
           },
           {
             to: "/components-vector-stores",
             from: "/components-rag",
           },
           {
-            to: "/concepts-api",
-            from: "/workspace-api",
+            to: "/configuration-authentication",
+            from: [
+              "/configuration-security-best-practices",
+              "/Configuration/configuration-security-best-practices"
+            ],
+          },
+          {
+            to: "/environment-variables",
+            from: [
+              "/configuration-auto-saving",
+              "/Configuration/configuration-auto-saving",
+              "/configuration-backend-only",
+              "/Configuration/configuration-backend-only"
+            ],
+          },
+          {
+            to: "/concepts-publish",
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ]
           },
           {
             to: "/components-custom-components",
@@ -283,7 +333,7 @@ const config = {
       },
       docs: {
         sidebar: {
-          hideable: true,
+          hideable: false,
         },
       },
       footer: {
@@ -308,6 +358,14 @@ const config = {
             ],
           },
         ],
+      algolia: {
+        appId: 'UZK6BDPCVY',
+        // public key, safe to commit
+        apiKey: 'adbd7686dceb1cd510d5ce20d04bf74c',
+        indexName: 'langflow',
+        contextualSearch: true,
+        searchParameters: {},
+        searchPagePath: 'search',
       },
     }),
 };

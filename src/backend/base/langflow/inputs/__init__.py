@@ -1,6 +1,8 @@
 from .inputs import (
+    AuthInput,
     BoolInput,
     CodeInput,
+    ConnectionInput,
     DataFrameInput,
     DataInput,
     DefaultPromptField,
@@ -21,13 +23,17 @@ from .inputs import (
     PromptInput,
     SecretStrInput,
     SliderInput,
+    SortableListInput,
     StrInput,
+    TabInput,
     TableInput,
 )
 
 __all__ = [
+    "AuthInput",
     "BoolInput",
     "CodeInput",
+    "ConnectionInput",
     "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
@@ -41,7 +47,6 @@ __all__ = [
     "Input",
     "IntInput",
     "LinkInput",
-    "LinkInput",
     "MessageInput",
     "MessageTextInput",
     "MultilineInput",
@@ -51,6 +56,8 @@ __all__ = [
     "PromptInput",
     "SecretStrInput",
     "SliderInput",
+    "SortableListInput",
     "StrInput",
+    "TabInput",
     "TableInput",
 ]
