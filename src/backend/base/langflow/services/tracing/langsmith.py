@@ -23,8 +23,20 @@ if TYPE_CHECKING:
 
 
 class LangSmithTracer(BaseTracer):
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    @staticmethod
+    def get_required_variable_names():
+        return [
+            "LANGCHAIN_API_KEY",
+        ]
+
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, global_vars: dict | None = None
+    ):
         try:
+            for key in LangSmithTracer.get_required_variable_names():
+                if key in global_vars:
+                    os.environ[key] = global_vars.get(key)
+
             self._ready = self.setup_langsmith()
             if not self._ready:
                 return

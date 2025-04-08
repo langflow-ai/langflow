@@ -39,8 +39,24 @@ class ArizePhoenixTracer(BaseTracer):
     chat_input_value: str
     chat_output_value: str
 
+    @staticmethod
+    def get_required_variable_names():
+        return [
+            "ARIZE_API_KEY",
+            "ARIZE_SPACE_ID",
+            "ARIZE_COLLECTOR_ENDPOINT",
+            "PHOENIX_API_KEY",
+            "PHOENIX_COLLECTOR_ENDPOINT",
+        ]
+
     def __init__(
-        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, session_id: str | None = None
+        self,
+        trace_name: str,
+        trace_type: str,
+        project_name: str,
+        trace_id: UUID,
+        session_id: str | None = None,
+        global_vars: dict | None = None,
     ):
         """Initializes the ArizePhoenixTracer instance and sets up a root span."""
         self.trace_name = trace_name
@@ -52,6 +68,10 @@ class ArizePhoenixTracer(BaseTracer):
         self.chat_input_value = ""
         self.chat_output_value = ""
         self.session_id = session_id
+
+        for key in ArizePhoenixTracer.get_required_variable_names():
+            if key in global_vars:
+                os.environ[key] = global_vars.get(key)
 
         try:
             self._ready = self.setup_arize_phoenix()

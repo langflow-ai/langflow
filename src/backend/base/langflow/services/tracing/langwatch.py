@@ -24,12 +24,22 @@ if TYPE_CHECKING:
 class LangWatchTracer(BaseTracer):
     flow_id: str
 
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    @staticmethod
+    def get_required_variable_names():
+        return ["LANGWATCH_API_KEY"]
+
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, global_vars: dict | None = None
+    ) -> None:
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
         self.flow_id = trace_name.split(" - ")[-1]
+
+        for key in LangWatchTracer.get_required_variable_names():
+            if key in global_vars:
+                os.environ[key] = global_vars.get(key)
 
         try:
             self._ready: bool = self.setup_langwatch()

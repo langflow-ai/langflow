@@ -31,6 +31,14 @@ def get_distributed_trace_headers(trace_id, span_id):
 class OpikTracer(BaseTracer):
     flow_id: str
 
+    @staticmethod
+    def get_required_variable_names():
+        return [
+            "OPIK_API_KEY",
+            "OPIK_URL_OVERRIDE",
+            "OPIK_WORKSPACE",
+        ]
+
     def __init__(
         self,
         trace_name: str,
@@ -39,6 +47,7 @@ class OpikTracer(BaseTracer):
         trace_id: UUID,
         user_id: str | None = None,
         session_id: str | None = None,
+        global_vars: dict | None = None,
     ):
         self._project_name = project_name
         self.trace_name = trace_name
@@ -48,6 +57,10 @@ class OpikTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = {}
+
+        for key in OpikTracer.get_required_variable_names():
+            if key in global_vars:
+                os.environ[key] = global_vars.get(key)
 
         config = self._get_config()
         self._ready: bool = self._setup_opik(config, trace_id) if config else False
