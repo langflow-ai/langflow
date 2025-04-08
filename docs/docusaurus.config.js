@@ -34,27 +34,44 @@ const config = {
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
       },
     },
-    // ...(isProduction && [
-    // Ketch consent management script
-    // TODO: Put back the Langflow.org Web smart tag property for PROD
-    {
-      tagName: "script",
-      attributes: {},
-      innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/website_smart_tag/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
-    },
-    // Ketch jurisdiction dynamic link and GA4 consent tracking
-    {
-      tagName: "script",
-      attributes: {
-        defer: "true",
-      },
-      innerHTML: `
-          window.addEventListener('load', function() {
-            if (typeof ketch !== 'undefined') {
+    ...(isProduction
+      ? [
+          // Ketch consent management script
+          {
+            tagName: "script",
+            attributes: {},
+            innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
+          },
+          // Ketch jurisdiction dynamic link and GA4 consent tracking
+          {
+            tagName: "script",
+            attributes: {
+              defer: "true",
+            },
+            innerHTML: `
+          ;(function () {
+            const onKetchConsentGtagTrack = (consent) => {
+              if (window.gtag &&
+                  consent.purposes &&
+                  'analytics' in consent.purposes &&
+                  'targeted_advertising' in consent.purposes
+              ) {
+                const analyticsString = consent.purposes.analytics === true ? 'granted' : 'denied'
+                const targetedAdsString = consent.purposes.targeted_advertising === true ? 'granted' : 'denied'
+                const gtagObject = {
+                  analytics_storage: analyticsString,
+                  ad_personalization: targetedAdsString,
+                  ad_storage: targetedAdsString,
+                  ad_user_data: targetedAdsString,
+                }
+                window.gtag('consent', 'update', gtagObject)
+              }
+            }
+            if (window.ketch) {
               // When consent is loaded, track it to the gtag event
-              ketch('on', 'consent', onKetchConsentGtagTrack)
+              window.ketch('on', 'consent', onKetchConsentGtagTrack)
               // If the user is in the default jurisdiction, remove the preference center link
-              ketch('on', 'jurisdiction', (jurisdiction) => {
+              window.ketch('on', 'jurisdiction', (jurisdiction) => {
                 if (jurisdiction.includes('default')) {
                   const preferenceCenterContainerElement = document.getElementById('preferenceCenterContainer')
                   if (preferenceCenterContainerElement) {
@@ -63,27 +80,11 @@ const config = {
                 }
               })
             }
-          });
-          const onKetchConsentGtagTrack = (consent) => {
-            if (window.gtag &&
-                consent.purposes &&
-                'analytics' in consent.purposes &&
-                'targeted_advertising' in consent.purposes
-            ) {
-              const analyticsString = consent.purposes.analytics === true ? 'granted' : 'denied'
-              const targetedAdsString = consent.purposes.targeted_advertising === true ? 'granted' : 'denied'
-              const gtagObject = {
-                analytics_storage: analyticsString,
-                ad_personalization: targetedAdsString,
-                ad_storage: targetedAdsString,
-                ad_user_data: targetedAdsString,
-              }
-              window.gtag('consent', 'update', gtagObject)
-            }
-          }
+          })()
         `,
-    },
-    // ]),
+          },
+        ]
+      : []),
   ],
 
   presets: [
@@ -343,7 +344,6 @@ const config = {
         },
       },
       footer: {
-        style: "dark",
         logo: {
           alt: "Langflow",
           src: "img/langflow-logo-black.svg",
@@ -358,7 +358,7 @@ const config = {
               {
                 html: `<div class="footer-links">
                   <span>© ${new Date().getFullYear()} Langflow</span>
-                  <span id="preferenceCenterContainer"> · <a href="/cookies">Manage Privacy Choices</a>
+                  <span id="preferenceCenterContainer"> ·&nbsp; <a href="/cookies">Manage Privacy Choices</a></span>
                   </div>`,
               },
             ],

@@ -295,7 +295,7 @@ body {
 }
 
 .footer__copyright {
-  color: var(--ifm-navbar-link-color);
+  color: var(--ifm-toc-link-color);
 }
 
 .footer-links {
@@ -305,7 +305,7 @@ body {
 }
 
 .footer-links a {
-  color: var(--ifm-navbar-link-color);
+  color: var(--ifm-toc-link-color);
   text-decoration: none;
 }
 
