@@ -17,7 +17,7 @@ from langflow.io import (
     DropdownInput,
     HandleInput,
     IntInput,
-    MultilineInput,
+    QueryInput,
     SecretStrInput,
     StrInput,
 )
@@ -209,10 +209,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             show=False,
             advanced=True,
         ),
-        MultilineInput(
+        QueryInput(
             name="lexical_terms",
             display_name="Lexical Terms",
-            info="Lexical terms to use for the search.",
+            info="Augment search by adding terms / keywords separated by a space.",
+            placeholder="Enter terms to search...",
+            separator=" ",
             show=False,
             value="",
         ),
