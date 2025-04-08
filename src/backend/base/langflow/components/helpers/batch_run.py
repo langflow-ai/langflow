@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+from collections.abc import Hashable
 
 import toml  # type: ignore[import-untyped]
 from loguru import logger
@@ -10,8 +11,6 @@ from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable
-
     from langchain_core.runnables import Runnable
 
 
