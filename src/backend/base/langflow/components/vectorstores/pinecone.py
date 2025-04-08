@@ -99,8 +99,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
             vector_store = self.build_vector_store()
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
+                query=self.search_query, k=self.number_of_results, filter=self.search_filter
             )
         except Exception as e:
             error_msg = "Error searching documents"
