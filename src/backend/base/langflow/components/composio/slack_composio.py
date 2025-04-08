@@ -678,7 +678,7 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
                         result_data.get(key)
                         if isinstance(result_data.get(key), dict)
                         else {"response": result_data.get(key)}
-                    )  # noqa: E501
+                    )
                 return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")

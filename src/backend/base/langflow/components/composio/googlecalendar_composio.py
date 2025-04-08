@@ -180,7 +180,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         self._default_tools = {
             self.sanitize_action_name("GOOGLECALENDAR_CREATE_EVENT").replace(" ", "-"),
             self.sanitize_action_name("GOOGLECALENDAR_FIND_EVENT").replace(" ", "-"),
@@ -748,7 +748,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
                             "GOOGLECALENDAR_UPDATE_EVENT-attendees",
                         ]
                         and value
-                    ):  # noqa: E501
+                    ):
                         value = [item.strip() for item in value.split(",")]
 
                     if field in self._bool_variables:
@@ -780,7 +780,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
                         result_data.get(key)
                         if isinstance(result_data.get(key), dict)
                         else {"response": result_data.get(key)}
-                    )  # noqa: E501
+                    )
                 return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")

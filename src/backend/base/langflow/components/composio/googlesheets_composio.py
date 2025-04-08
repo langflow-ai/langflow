@@ -80,7 +80,7 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         self._default_tools = {
             self.sanitize_action_name("GOOGLESHEETS_CREATE_GOOGLE_SHEET1").replace(" ", "-"),
             self.sanitize_action_name("GOOGLESHEETS_BATCH_GET").replace(" ", "-"),
@@ -276,7 +276,7 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
                         result_data.get(key)
                         if isinstance(result_data.get(key), dict)
                         else {"response": result_data.get(key)}
-                    )  # noqa: E501
+                    )
                 return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")

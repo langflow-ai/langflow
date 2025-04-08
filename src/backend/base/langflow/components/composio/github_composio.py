@@ -134,7 +134,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         self._default_tools = {
             self.sanitize_action_name("GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER").replace(" ", "-"),
             self.sanitize_action_name("GITHUB_CREATE_A_PULL_REQUEST").replace(" ", "-"),
@@ -620,7 +620,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
                         result_data.get(key)
                         if isinstance(result_data.get(key), dict)
                         else {"response": result_data.get(key)}
-                    )  # NOQA: E501
+                    )
                 return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")
