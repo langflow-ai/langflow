@@ -167,6 +167,7 @@ function NodeOutputField({
   lastOutput,
   colorName,
   isToolMode = false,
+  showHiddenOutputs,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -178,6 +179,10 @@ function NodeOutputField({
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
+
+  const hidden = useMemo(() => {
+    return data.node?.outputs![index].hidden;
+  }, [data.node?.outputs, index]);
 
   // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {
@@ -255,10 +260,10 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && data.node?.outputs![index].hidden) {
+    if (disabledOutput && hidden) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
+  }, [disabledOutput, handleUpdateOutputHide, hidden]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -369,6 +374,7 @@ function NodeOutputField({
     ],
   );
 
+  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (
@@ -391,7 +397,7 @@ function NodeOutputField({
           <HideShowButton
             disabled={disabledOutput}
             onClick={() => handleUpdateOutputHide()}
-            hidden={!!data.node?.outputs![index].hidden}
+            hidden={!!hidden}
             isToolMode={isToolMode}
             title={title}
           />
