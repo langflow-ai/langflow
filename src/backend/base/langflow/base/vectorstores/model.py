@@ -6,7 +6,7 @@ from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import BoolInput
-from langflow.io import HandleInput, MultilineInput, Output
+from langflow.io import HandleInput, MultilineInput, NestedDictInput, Output
 from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
@@ -74,6 +74,13 @@ class LCVectorStoreComponent(Component):
             advanced=True,
             info="If True, the vector store will be cached for the current build of the component. "
             "This is useful for components that have multiple output methods and want to share the same vector store.",
+        ),
+        NestedDictInput(
+            name="search_filter",
+            display_name="Search Filter",
+            advanced=True,
+            info="Optional dictionary of filters to apply to the search query.",
+            value={},
         ),
     ]
 
@@ -170,7 +177,7 @@ class LCVectorStoreComponent(Component):
         self.log(f"Number of results: {self.number_of_results}")
 
         search_results = self.search_with_vector_store(
-            search_query, self.search_type, vector_store, k=self.number_of_results
+            search_query, self.search_type, vector_store, k=self.number_of_results, filter=self.search_filter
         )
         self.status = search_results
         return search_results
