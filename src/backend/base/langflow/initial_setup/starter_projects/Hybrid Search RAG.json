@@ -1915,7 +1915,7 @@
                 "copy_field": false,
                 "display_name": "Lexical Terms",
                 "dynamic": false,
-                "info": "Lexical terms to use for the search.",
+                "info": "Augment search by adding terms / keywords separated by a space.",
                 "input_types": [
                   "Message"
                 ],
@@ -2008,7 +2008,7 @@
                 "copy_field": false,
                 "display_name": "Search Query",
                 "dynamic": false,
-                "info": "",
+                "info": "Enter a query to run a combined similarity and lexical terms search.",
                 "input_types": [
                   "Message"
                 ],
