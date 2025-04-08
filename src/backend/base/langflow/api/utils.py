@@ -149,7 +149,7 @@ async def _get_flow_name(flow_id: uuid.UUID) -> str:
     return flow.name
 
 
-async def build_graph_from_data(session: DbSession, flow_id: uuid.UUID | str, payload: dict, **kwargs):
+async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph."""
     # Get flow name
     if "flow_name" not in kwargs:
@@ -169,7 +169,7 @@ async def build_graph_from_data(session: DbSession, flow_id: uuid.UUID | str, pa
             vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
     graph.session_id = session_id
-    await graph.initialize_run(session)
+    await graph.initialize_run(session_scope)
     return graph
 
 
@@ -180,7 +180,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
         msg = "Invalid flow ID"
         raise ValueError(msg)
     kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
-    return await build_graph_from_data(session, flow_id, flow.data, flow_name=flow.name, **kwargs)
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
 
 
 async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):

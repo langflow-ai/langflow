@@ -44,7 +44,7 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable
+    from collections.abc import Callable, Generator, Iterable, AsyncGenerator
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -653,13 +653,14 @@ class Graph:
 
         self._run_id = str(run_id)
 
-    async def initialize_run(self, session: AsyncSession) -> None:
+    async def initialize_run(self, session_scope: AsyncGenerator[AsyncSession, None] | None) -> None:
         if not self._run_id:
             self.set_run_id()
-        if self.tracing_service:
+
+        if self.tracing_service and session_scope:
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
-                session=session,
+                session_scope=session_scope,
                 run_id=uuid.UUID(self._run_id),
                 run_name=run_name,
                 user_id=self.user_id,

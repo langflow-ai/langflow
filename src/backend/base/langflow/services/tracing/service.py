@@ -15,6 +15,7 @@ from langflow.services.deps import get_variable_service
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
+    from collections.abc import AsyncGenerator
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.custom.custom_component.component import Component
@@ -200,17 +201,13 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
-    async def get_varaibles_from_db(self, session, user_id, variable_names):
+    async def get_varaibles_from_db(self, session_scope, user_id, variable_names):
         variable_service = get_variable_service()
-        result = {}
-        for var in await variable_service.get_all(UUID(user_id), session):
-            if var.name in variable_names:
-                result[var.name] = await variable_service.get_variable(UUID(user_id), var.name, "", session)
-        return result
+        return await variable_service.get_variables_by_user(session_scope, UUID(user_id), variable_names)
 
     async def start_tracers(
         self,
-        session: AsyncSession,
+        session_scope: AsyncGenerator[AsyncSession, None],
         run_id: UUID,
         run_name: str,
         user_id: str | None,
