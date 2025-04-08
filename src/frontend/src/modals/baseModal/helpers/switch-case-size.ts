@@ -20,7 +20,7 @@ export const switchCaseModalSize = (size: string) => {
       break;
     case "small-query":
       minWidth = "min-w-[35vw]";
-      height = "h-[30vh]";
+      height = "h-fit";
       break;
     case "medium-small-tall":
       minWidth = "min-w-[50vw]";
