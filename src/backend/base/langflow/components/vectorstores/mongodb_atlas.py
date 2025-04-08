@@ -165,8 +165,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_query and isinstance(self.search_query, str):
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
+                query=self.search_query, k=self.number_of_results, pre_filter=self.search_filter
             )
             for doc in docs:
                 doc.metadata = {
