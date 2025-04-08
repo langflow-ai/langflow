@@ -1022,7 +1022,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4o-mini"
               },
               "openai_api_base": {
                 "_input_type": "StrInput",
