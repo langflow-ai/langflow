@@ -306,9 +306,10 @@ class Component(CustomComponent):
             if module is None:
                 msg = "Could not find module for class"
                 raise ValueError(msg)
+
             class_code = inspect.getsource(module)
             self._code = class_code
-        except OSError as e:
+        except (OSError, TypeError) as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
             raise ValueError(msg) from e
 
