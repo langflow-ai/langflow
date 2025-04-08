@@ -52,6 +52,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="index_param", display_name="Param of the index", value="100,'L2Distance'", advanced=True),
         DictInput(name="index_query_params", display_name="index query params", advanced=True),
         *LCVectorStoreComponent.inputs,
+        StrInput(name="search_filter", display_name="Search Filter", value="", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -126,6 +127,9 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             kwargs = {}
             if self.score_threshold:
                 kwargs["score_threshold"] = self.score_threshold
+
+            if self.search_filter:
+                kwargs["where_str"] = self.search_filter
 
             docs = vector_store.similarity_search(query=self.search_query, k=self.number_of_results, **kwargs)
 
