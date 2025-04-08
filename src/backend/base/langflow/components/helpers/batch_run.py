@@ -49,7 +49,7 @@ class BatchRunComponent(Component):
             required=False,
             advanced=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="output_column_name",
             display_name="Output Column Name",
             info="Name of the column where the model's response will be stored.",
