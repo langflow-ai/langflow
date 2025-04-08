@@ -163,6 +163,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         search_kwargs = {
             "k": self.number_of_results,
             "score_threshold": self.search_score_threshold,
+            "filter": self.search_filter,
         }
 
         if query:
