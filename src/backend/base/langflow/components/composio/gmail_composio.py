@@ -84,7 +84,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         },
         "GMAIL_REPLY_TO_THREAD": {
             "display_name": "Reply To Thread",
-            "action_fields": ["thread_id", "message_body", "recipient_email", "gmail_user_id", "cc", "bcc", "it_html"],
+            "action_fields": ["thread_id", "message_body", "recipient_email", "gmail_user_id", "cc", "bcc", "is_html"],
         },
         "GMAIL_LIST_LABELS": {
             "display_name": "List Email Labels",
