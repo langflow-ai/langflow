@@ -66,11 +66,7 @@ const config = {
           priority: null,
         },
         gtag: {
-          trackingID: "G-XHC7G628ZP",
-          anonymizeIP: true,
-        },
-        googleTagManager: {
-          containerId: "GTM-NK5M4ZT8",
+          trackingID: "G-L8Y98PSEMQ",
         },
         blog: false,
         theme: {
