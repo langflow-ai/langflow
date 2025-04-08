@@ -154,7 +154,7 @@ class MCPToolsComponent(Component):
             if field_name in ("command", "sse_url", "mode"):
                 try:
                     # If SSE mode and localhost URL is not valid, try to find correct port
-                    if self.mode == "SSE" and (
+                    if build_config["mode"]["value"] == "SSE" and (
                         "localhost" in str(build_config["sse_url"]["value"])
                         or "127.0.0.1" in str(build_config["sse_url"]["value"])
                     ):
@@ -165,6 +165,17 @@ class MCPToolsComponent(Component):
                                 new_url = f"http://localhost:{port}/api/v1/mcp/sse"
                                 logger.info(f"Original URL {build_config['sse_url']['value']} not valid. {message}")
                                 build_config["sse_url"]["value"] = new_url
+                    elif build_config["mode"]["value"] == "SSE":
+                        if len(build_config["sse_url"]["value"]) > 0:
+                            is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
+                            if not is_valid:
+                                msg = (
+                                    f"Invalid SSE URL configuration: {build_config['sse_url']['value']}. "
+                                    "Please check the SSE URL and try again."
+                                )
+                                raise ValueError(msg)
+                        else:
+                            return build_config
 
                     await self.update_tools(
                         mode=build_config["mode"]["value"],
