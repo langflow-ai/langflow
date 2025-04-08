@@ -39,13 +39,13 @@ Alternatively, add the key as a [global variable](/configuration-global-variable
 4. To open the **Playground** pane, click **Playground**.
 5. Ask your AI:
 
-```plain
+```text
 What tools are available to you?
 ```
 
 The response should be similar to:
 
-```plain
+```text
 I have access to the following tools:
 
 1. **GMAIL_CREATE_EMAIL_DRAFT**: This tool allows me to create a draft email using Gmail's API. I can specify the recipient's email address, subject, body content, and whether the body content is HTML.
@@ -57,7 +57,7 @@ This confirms your **Agent** and **Composio** are communicating.
 
 6. Tell your AI to write a draft email.
 
-```plain
+```text
 Create a draft email with the subject line "Greetings from Composio"
 recipient: "your.email@address.com"
 Body content: "Hello from composio!"
@@ -66,7 +66,7 @@ Body content: "Hello from composio!"
 Inspect the response to see how the agent used the attached tool to write an email.
 This example response is abbreviated.
 
-```plain
+```text
 The draft email with the subject "Greetings from Composio" and body "Hello from composio!" has been successfully created.
 ```
 
