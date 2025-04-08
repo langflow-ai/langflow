@@ -6,7 +6,7 @@ import toml  # type: ignore[import-untyped]
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output, StrInput
+from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ class BatchRunComponent(Component):
             required=False,
             advanced=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="output_column_name",
             display_name="Output Column Name",
             info="Name of the column where the model's response will be stored.",
