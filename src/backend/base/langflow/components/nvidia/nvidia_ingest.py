@@ -174,7 +174,7 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         self.log(f"Results: {result}")
 
-        data = []
+        data: list[Data | None] = []
         document_type_text = "text"
         document_type_structured = "structured"
 
