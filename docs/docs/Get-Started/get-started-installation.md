@@ -277,18 +277,18 @@ If you wish to retain your files, back them up before clearing the folder.
 
 Installing Langflow with `pip install langflow` slowly fails with this error message:
 
-```plain
+```text
 pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
 ```
 
 To work around this issue, install Langflow with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) instead of `pip`.
 
-```plain
+```text
 uv pip install langflow
 ```
 
 To run Langflow with uv:
 
-```plain
+```text
 uv run langflow run
 ```
