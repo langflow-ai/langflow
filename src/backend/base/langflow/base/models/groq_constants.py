@@ -41,7 +41,6 @@ UNSUPPORTED_GROQ_MODELS = [
     "whisper-large-v3",  # OpenAI
     "whisper-large-v3-turbo",  # OpenAI
     "distil-whisper-large-v3-en",  # HuggingFace
-
 ]
 
 TOOL_CALLING_UNSUPPORTED_GROQ_MODELS = [
@@ -52,7 +51,6 @@ TOOL_CALLING_UNSUPPORTED_GROQ_MODELS = [
     "llama3-8b-8192",  # Meta
     "llama3-70b-8192",  # Meta
     "deepseek-r1-distill-llama-70b",  # DeepSeek
-
 ]
 # Combined list of all current models for backward compatibility
 GROQ_MODELS = GROQ_PRODUCTION_MODELS + GROQ_PREVIEW_MODELS
