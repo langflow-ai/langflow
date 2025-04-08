@@ -172,8 +172,9 @@ const config = {
             ],
           },
           {
-            to: "/math-agent",
+            to: "/starter-projects-simple-agent",
             from: [
+              "/math-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent"
             ],
@@ -196,6 +197,22 @@ const config = {
           {
             to: "/components-vector-stores",
             from: "/components-rag",
+          },
+          {
+            to: "/configuration-authentication",
+            from: [
+              "/configuration-security-best-practices",
+              "/Configuration/configuration-security-best-practices"
+            ],
+          },
+          {
+            to: "/environment-variables",
+            from: [
+              "/configuration-auto-saving",
+              "/Configuration/configuration-auto-saving",
+              "/configuration-backend-only",
+              "/Configuration/configuration-backend-only"
+            ],
           },
           {
             to: "/concepts-publish",

@@ -9,17 +9,18 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 
 ## Prerequisites
 
-* [An OpenAI API key](https://platform.openai.com/)
-* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
-	* An Astra DB application token scoped to read and write to the database
-	* A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
+- [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+	- An Astra DB application token scoped to read and write to the database
+	- A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
 
 ## Open Langflow and start a new project
 
 1. From the Langflow dashboard, click **New Flow**, and then select **Blank Flow**. A blank workspace opens where you can build your flow.
 
 :::tip
-If you don't want to create a blank flow, click **New Flow**, and then select **Basic Prompting** for a pre-built flow.
+If you want a pre-built flow, click **New Flow**, and then select **Basic Prompting**.
 Continue to [Run the basic prompting flow](#run-basic-prompting-flow).
 :::
 
@@ -68,8 +69,8 @@ Add your OpenAI API key to the OpenAI model component, and add a prompt to the P
 
 1. Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s [Global Variables](/configuration-global-variables).
 
-	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**. 
-	Alternatively, click your username in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
+	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**.
+	Alternatively, click your user icon in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
 	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
 	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
 
@@ -88,7 +89,7 @@ You created a chatbot application with Langflow, but let's try an experiment.
 1. Ask the bot: `Who won the Oscar in 2024 for best movie?`
 2. The bot's response is similar to this:
 
-```plain
+```text
 I'm sorry, but I don't have information on events or awards that occurred after
 October 2023, including the Oscars in 2024.
 You may want to check the latest news or the official Oscars website
@@ -122,8 +123,8 @@ The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) com
 The [File](/components-data#file) component loads files from your local machine.
 4. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
 The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
-5. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The [Data to Message](/components-processing#data-to-message) component converts the data from the **Astra DB** component into plain text.
+5. Click **Processing**, select the **Parser** component, and then drag it to the canvas.
+The [Parser](/components-processing#parser) component converts the data from the **Astra DB** component into plain text.
 6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
 7. Connect the new components into the existing flow, so your flow looks like this:
@@ -161,7 +162,7 @@ If you used Langflow's **Global Variables** feature, the RAG application flow co
 1. Modify the **Prompt** component to contain variables for both `{user_question}` and `{context}`.
 The `{context}` variable gives the bot additional context for answering `{user_question}` beyond what the LLM was trained on.
 
-```plain
+```text
 Given the context
 {context}
 Answer the question
@@ -174,7 +175,7 @@ This example uploads an up-to-date CSV about Oscar winners.
 4. Ask the bot: `Who won the Oscar in 2024 for best movie?`
 5. The bot's response should be similar to this:
 
-```plain
+```text
 The Oscar for Best Picture in 2024 was awarded to "Oppenheimer,"
 produced by Emma Thomas, Charles Roven, and Christopher Nolan.
 ```
