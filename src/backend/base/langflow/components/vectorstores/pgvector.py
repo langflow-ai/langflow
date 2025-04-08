@@ -62,8 +62,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
+                query=self.search_query, k=self.number_of_results, filter=self.search_filter
             )
 
             data = docs_to_data(docs)
