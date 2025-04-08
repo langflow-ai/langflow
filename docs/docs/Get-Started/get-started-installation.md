@@ -172,6 +172,72 @@ To stop Langflow, in the terminal where it's running, enter `Ctrl+C`.
 
 To deactivate your virtual environment, enter `deactivate`.
 
+### Common OSS installation issues
+
+This is a list of possible issues that you may encounter when installing and running Langflow.
+
+#### No `langflow.__main__` module
+
+When you try to run Langflow with the command `langflow run`, you encounter the following error:
+
+```bash
+> No module named 'langflow.__main__'
+```
+
+1. Run `uv run langflow run` instead of `langflow run`.
+2. If that doesn't work, reinstall the latest Langflow version with `uv pip install langflow -U`.
+3. If that doesn't work, reinstall Langflow and its dependencies with `uv pip install langflow --pre -U --force-reinstall`.
+
+#### Langflow runTraceback
+
+When you try to run Langflow using the command `langflow run`, you encounter the following error:
+
+```bash
+> langflow runTraceback (most recent call last): File ".../langflow", line 5, in <module>  from langflow.__main__ import mainModuleNotFoundError: No module named 'langflow.__main__'
+```
+
+There are two possible reasons for this error:
+
+1. You've installed Langflow using `pip install langflow` but you already had a previous version of Langflow installed in your system. In this case, you might be running the wrong executable. To solve this issue, run the correct executable by running `python -m langflow run` instead of `langflow run`. If that doesn't work, try uninstalling and reinstalling Langflow with `uv pip install langflow --pre -U`.
+2. Some version conflicts might have occurred during the installation process. Run `python -m pip install langflow --pre -U --force-reinstall` to reinstall Langflow and its dependencies.
+
+#### Something went wrong running migrations
+
+```bash
+> Something went wrong running migrations. Please, run 'langflow migration --fix'
+```
+
+Clear the cache by deleting the contents of the cache folder.
+
+This folder can be found at:
+
+- **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
+- **MacOS**: `/Users/<username>/Library/Caches/langflow/`
+
+This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but also erases your settings.
+
+If you wish to retain your files, back them up before clearing the folder.
+
+#### Langflow installation freezes at pip dependency resolution
+
+Installing Langflow with `pip install langflow` slowly fails with this error message:
+
+```text
+pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
+```
+
+To work around this issue, install Langflow with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) instead of `pip`.
+
+```text
+uv pip install langflow
+```
+
+To run Langflow with uv:
+
+```text
+uv run langflow run
+```
+
 ## Install and run Langflow Desktop
 
 :::important
@@ -209,69 +275,3 @@ The **latest** version is always highlighted.
 A confirmation pane containing the selected version's changelog appears.
 3. To change to the selected version, click **Confirm**.
 The application restarts with the new version installed.
-
-## Common OSS installation issues
-
-This is a list of possible issues that you may encounter when installing and running Langflow.
-
-* No `langflow.__main__` module
-
-When you try to run Langflow with the command `langflow run`, you encounter the following error:
-
-```bash
-> No module named 'langflow.__main__'
-```
-
-1. Run `python -m langflow run` instead of `langflow run`.
-2. If that doesn't work, reinstall the latest Langflow version with `python -m pip install langflow -U`.
-3. If that doesn't work, reinstall Langflow and its dependencies with `python -m pip install langflow --pre -U --force-reinstall`.
-
-* Langflow runTraceback
-
-When you try to run Langflow using the command `langflow run`, you encounter the following error:
-
-```bash
-> langflow runTraceback (most recent call last): File ".../langflow", line 5, in <module>  from langflow.__main__ import mainModuleNotFoundError: No module named 'langflow.__main__'
-```
-
-There are two possible reasons for this error:
-
-1. You've installed Langflow using `pip install langflow` but you already had a previous version of Langflow installed in your system. In this case, you might be running the wrong executable. To solve this issue, run the correct executable by running `python -m langflow run` instead of `langflow run`. If that doesn't work, try uninstalling and reinstalling Langflow with `python -m pip install langflow --pre -U`.
-2. Some version conflicts might have occurred during the installation process. Run `python -m pip install langflow --pre -U --force-reinstall` to reinstall Langflow and its dependencies.
-
-* Something went wrong running migrations
-
-```bash
-> Something went wrong running migrations. Please, run 'langflow migration --fix'
-```
-
-Clear the cache by deleting the contents of the cache folder.
-
-This folder can be found at:
-
-- **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
-- **MacOS**: `/Users/<username>/Library/Caches/langflow/`
-
-This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but also erases your settings.
-
-If you wish to retain your files, back them up before clearing the folder.
-
-* Langflow installation freezes at pip dependency resolution
-
-Installing Langflow with `pip install langflow` slowly fails with this error message:
-
-```text
-pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
-```
-
-To work around this issue, install Langflow with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) instead of `pip`.
-
-```text
-uv pip install langflow
-```
-
-To run Langflow with uv:
-
-```text
-uv run langflow run
-```
