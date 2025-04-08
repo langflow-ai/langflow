@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel, JSON
+from sqlmodel import JSON, Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
 
@@ -44,7 +44,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
-    user_optin: Dict = Field(default_factory=lambda: UserOptin().model_dump(), sa_column=JSON)
+    user_optin: dict = Field(default_factory=lambda: UserOptin().model_dump(), sa_column=JSON)
 
 
 class UserCreate(SQLModel):
@@ -62,7 +62,7 @@ class UserRead(SQLModel):
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
-    user_optin: Dict = Field()
+    user_optin: dict = Field()
 
 
 class UserUpdate(SQLModel):
@@ -72,4 +72,4 @@ class UserUpdate(SQLModel):
     is_active: bool | None = None
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
-    user_optin: Dict | None = None
+    user_optin: dict | None = None
