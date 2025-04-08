@@ -189,7 +189,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     )
                 return processed_results
 
-            search_kwargs = {"k": self.number_of_results}
+            search_kwargs = {"k": self.number_of_results, "pre_filter": self.search_filter}
             search_type = self.search_type.lower()
 
             if search_type == "similarity":
