@@ -15,7 +15,7 @@ from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncGenerator, Sequence
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -194,3 +194,27 @@ class DatabaseVariableService(VariableService, Service):
         await session.commit()
         await session.refresh(variable)
         return variable
+
+    async def get_variables_by_user(
+        self, session_scope: AsyncGenerator[AsyncSession, None], user_id: UUID, names: list[str]
+    ):
+        result = {}
+        async with session_scope() as session:
+            stmt = select(
+                Variable.name,
+                Variable.value,
+                Variable.type,
+            ).where(
+                Variable.user_id == user_id,
+                Variable.name.in_(names),
+            )
+            variables = list((await session.exec(stmt)).all())
+            for name, value, _type in variables:
+                try:
+                    result[name] = auth_utils.decrypt_api_key(value, settings_service=self.settings_service)
+                except Exception as e:  # noqa: BLE001
+                    result[name] = value
+                    msg = f"Decryption of {_type} failed for variable '{name}': {e}. Assuming plaintext."
+                    logger.error(msg)
+
+            return result
