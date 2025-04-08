@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 
 from langflow.base.data import BaseFileComponent
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput
+from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, SecretStrInput, Output
 from langflow.schema import Data
 
 
@@ -29,6 +29,10 @@ class NvidiaIngestComponent(BaseFileComponent):
             name="base_url",
             display_name="Base URL",
             info="The URL of the NVIDIA NeMo Retriever Extraction API.",
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="NVIDIA API Key",
         ),
         BoolInput(
             name="extract_text",
@@ -140,10 +144,88 @@ class NvidiaIngestComponent(BaseFileComponent):
             f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {parsed_url.port!r}",
         )
         try:
+            from nv_ingest_api.util.service_clients.rest.rest_client import RestClient
             from nv_ingest_client.client import Ingestor
 
+            class AuthHeaderRestClient(RestClient):
+                def __init__(self, *args, bearer_token: str = None, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._bearer_token = bearer_token
+
+                def _add_auth(self, headers: dict):
+                    if self._bearer_token:
+                        headers = headers.copy()
+                        headers.setdefault("Authorization", f"Bearer {self._bearer_token}")
+                    return headers
+
+                def submit_message(self, channel_name: str, message: str, for_nv_ingest: bool = False):
+                    url = f"{self.generate_url(self._host, self._port)}{self._submit_endpoint}"
+                    headers = self._add_auth({"Content-Type": "application/json"})
+
+                    result = requests.post(url, json={"payload": message}, headers=headers)
+                    return self._wrap_submit_response(result)
+
+                def fetch_message(self, job_id: str, timeout: float = (10, 600)):
+                    url = f"{self.generate_url(self._host, self._port)}{self._fetch_endpoint}/{job_id}"
+                    headers = self._add_auth({})
+
+                    with requests.get(url, timeout=timeout, stream=True, headers=headers) as result:
+                        return self._wrap_fetch_response(result, job_id)
+
+                def _wrap_submit_response(self, result):
+                    from nv_ingest_api.internal.schemas.message_brokers.response_schema import ResponseSchema
+                    if result.status_code == 200:
+                        return ResponseSchema(
+                            response_code=0,
+                            response_reason="OK",
+                            response=result.text,
+                            transaction_id=result.text,
+                            trace_id=result.headers.get("x-trace-id"),
+                        )
+                    else:
+                        return ResponseSchema(
+                            response_code=1,
+                            response_reason=f"Submit failed with code {result.status_code}",
+                            trace_id=result.headers.get("x-trace-id"),
+                        )
+
+                def _wrap_fetch_response(self, result, job_id):
+                    from nv_ingest_api.internal.schemas.message_brokers.response_schema import ResponseSchema
+
+                    if result.status_code == 200:
+                        response_chunks = []
+                        for chunk in result.iter_content(chunk_size=1024 * 1024):
+                            if chunk:
+                                response_chunks.append(chunk)
+                        full_response = b"".join(response_chunks).decode("utf-8")
+                        return ResponseSchema(
+                            response_code=0,
+                            response_reason="OK",
+                            response=full_response,
+                        )
+                    elif result.status_code == 202:
+                        return ResponseSchema(
+                            response_code=1,
+                            response_reason="Job is not ready yet. Retry later.",
+                        )
+                    else:
+                        return ResponseSchema(
+                            response_code=1,
+                            response_reason=f"Failed to fetch job {job_id}. HTTP {result.status_code}",
+                            response=result.text,
+                        )
+
             ingestor = (
-                Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
+                Ingestor(
+                    message_client_hostname=parsed_url.hostname,
+                    message_client_port=parsed_url.port,
+                    message_client_allocator=lambda host, port, **kwargs: AuthHeaderRestClient(
+                        host=host,
+                        port=port,
+                        bearer_token=self.api_key,
+                        **kwargs
+                    )
+                )
                 .files(file_paths)
                 .extract(
                     extract_text=self.extract_text,
@@ -157,14 +239,14 @@ class NvidiaIngestComponent(BaseFileComponent):
             self.log(f"Error creating Ingestor: {e}")
             raise
 
-        if self.split_text:
-            ingestor = ingestor.split(
-                split_by=self.split_by,
-                split_length=self.split_length,
-                split_overlap=self.split_overlap,
-                max_character_length=self.max_character_length,
-                sentence_window_size=self.sentence_window_size,
-            )
+        #if self.split_text:
+        #    ingestor = ingestor.split(
+        #        split_by=self.split_by,
+        #        split_length=self.split_length,
+        #        split_overlap=self.split_overlap,
+        #        max_character_length=self.max_character_length,
+        #        sentence_window_size=self.sentence_window_size,
+        #    )
 
         try:
             result = ingestor.ingest()
