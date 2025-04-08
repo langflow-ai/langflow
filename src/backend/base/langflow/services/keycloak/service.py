@@ -172,7 +172,7 @@ class KeycloakService(Service):
             str: The client secret or empty string if not configured
         """
         auth_settings = self.settings_service.auth_settings
-        if hasattr(auth_settings, "KEYCLOAK_CLIENT_SECRET"):
+        if hasattr(auth_settings, "KEYCLOAK_CLIENT_SECRET") and auth_settings.KEYCLOAK_CLIENT_SECRET is not None:
             return auth_settings.KEYCLOAK_CLIENT_SECRET.get_secret_value()
         return ""
 
@@ -202,7 +202,7 @@ class KeycloakService(Service):
         """
         auth_settings = self.settings_service.auth_settings
         if hasattr(auth_settings, "KEYCLOAK_REDIRECT_URI"):
-            return auth_settings.KEYCLOAK_REDIRECT_URI
+            return auth_settings.KEYCLOAK_REDIRECT_URI or ""
         return ""
 
     @property
