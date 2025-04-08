@@ -34,21 +34,6 @@ const config = {
     }
   ],
 
-  scripts: [
-    {
-      src: "https://www.googletagmanager.com/gtag/js?id=G-L8Y98PSEMQ",
-      async: true,
-    },
-    {
-      src: `
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-L8Y98PSEMQ');
-      `
-    }
-  ],
-
   presets: [
     [
       "docusaurus-preset-openapi",
@@ -79,6 +64,9 @@ const config = {
           lastmod: "datetime",
           changefreq: null,
           priority: null,
+        },
+        gtag: {
+          trackingID: "G-L8Y98PSEMQ",
         },
         blog: false,
         theme: {
