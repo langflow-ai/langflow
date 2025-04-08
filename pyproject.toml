@@ -208,12 +208,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    # nv-ingest-client 2025.2.7.dev0 does not correctly install its
-    # dependencies, so we need to install some manually.
-    "nv-ingest-client==2025.2.7.dev0",
-    "python-pptx==0.6.23",
-    "pymilvus[bulk_writer,model]==2.5.0",
-    "llama-index-embeddings-nvidia==0.1.5",
+    "nv-ingest-api @ file:///Users/jeffreycarpenter/nv-ingest/api/dist/nv_ingest_api-2025.4.8.dev20250408-py3-none-any.whl",
+    "nv-ingest-client @ file:///Users/jeffreycarpenter/nv-ingest/client/dist/nv_ingest_client-2025.4.7.dev20250407-py3-none-any.whl"
 ]
 
 postgresql = [
@@ -321,3 +317,6 @@ ignore_missing_imports = true
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
