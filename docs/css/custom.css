@@ -285,9 +285,16 @@ body {
   border-radius: 0;
   border-top: 1px solid var(--ifm-color-emphasis-300);
   border-bottom: 1px solid var(--ifm-color-emphasis-300);
-  background-color: var(--ifm-background-color);
   position: sticky;
   bottom: -0.5rem;
+}
+
+[data-theme="dark"] .sidebar-ad {
+  background-color: var(--ifm-background-color);
+}
+
+[data-theme="light"] .sidebar-ad {
+  background-color: var(--ifm-color-white);
 }
 
 .sidebar-ad a {
