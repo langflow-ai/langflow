@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
 from collections.abc import Hashable
+from typing import TYPE_CHECKING, Any
 
 import toml  # type: ignore[import-untyped]
 from loguru import logger
