@@ -20,6 +20,10 @@ The **IDE** includes the frontend for visual development of your flow. The defau
 
 The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the processes necessary to serve your flow, with PostgreSQL as the database for improved scalability. Use the Langflow **runtime** to deploy your flows, because you don't require the frontend for visual development.
 
+:::tip
+You can start Langflow in headless mode with the [LANGFLOW_BACKEND_ONLY](/environment-variables#LANGFLOW_BACKEND_ONLY) environment variable.
+:::
+
 ## Package your flow with the Langflow runtime image
 
 To package your flow as a Docker image, copy your flow's `.JSON` file with a command in the Dockerfile.
