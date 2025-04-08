@@ -25,7 +25,7 @@ export LANGFLOW_URL="http://127.0.0.1:7860"
 
 * Export the `flow-id` in your terminal.
 The `flow-id` is found in the [Publish pane](/concepts-publish) or in the flow's URL.
-```plain
+```text
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
 
@@ -131,7 +131,7 @@ curl -X POST \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```result
+```text
 {
   "session_id": "chat-123",
   "outputs": [{
@@ -185,7 +185,7 @@ curl -X POST \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```result
+```text
 {"event": "add_message", "data": {"timestamp": "2025-03-03T17:20:18", "sender": "User", "sender_name": "User", "session_id": "chat-123", "text": "Tell me about something interesting!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "0103a21b-ebf7-4c02-9d72-017fb297f812", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
 
 {"event": "add_message", "data": {"timestamp": "2025-03-03T17:20:18", "sender": "Machine", "sender_name": "AI", "session_id": "chat-123", "text": "", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-d1wOZ", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "27b66789-e673-4c65-9e81-021752925161", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
@@ -443,7 +443,7 @@ curl -X POST \
 <Tabs>
    <TabItem value="curl" label="curl" default>
 
-```curl
+```text
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events" \
   -H "accept: application/json"
@@ -467,7 +467,7 @@ curl -X GET \
 
 The events endpoint accepts an optional `stream` query parameter which defaults to `true`.
 To disable streaming and get all events at once, set `stream` to `false`.
-```curl
+```text
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events?stream=false" \
   -H "accept: application/json"
