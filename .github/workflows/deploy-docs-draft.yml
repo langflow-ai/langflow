@@ -18,6 +18,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    if: "! github.event.pull_request.head.repo.fork"
 
     steps:
       - name: Checkout Repository
