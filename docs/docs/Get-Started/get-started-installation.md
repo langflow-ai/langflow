@@ -65,7 +65,7 @@ After confirming that Langflow is running, create your first flow with the [Quic
 
 ### Manage Langflow OSS versions
 
-* To upgrade Langflow to the latest version, use one of the following commands:
+To upgrade Langflow to the latest version, use one of the following commands:
 
 <Tabs>
 <TabItem value="uv" label="uv" default>
@@ -84,7 +84,7 @@ pip install langflow -U
 </TabItem>
 </Tabs>
 
-* To install a specific version of the Langflow package, add the required version to the command.
+To install a specific version of the Langflow package, add the required version to the command.
 <Tabs>
 <TabItem value="uv" label="uv" default>
 
@@ -102,7 +102,7 @@ pip install langflow==1.3.2
 </TabItem>
 </Tabs>
 
-* To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
+To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
 <Tabs>
 <TabItem value="uv" label="uv" default>
 
@@ -169,6 +169,7 @@ To add your own custom dependencies, see [Install custom dependencies](/install-
 ### Stop Langflow OSS
 
 To stop Langflow, in the terminal where it's running, enter `Ctrl+C`.
+
 To deactivate your virtual environment, enter `deactivate`.
 
 ## Install and run Langflow Desktop
