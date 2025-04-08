@@ -26,8 +26,16 @@ const config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-  headTags: isProduction
-    ? [
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
+      },
+    },
+    ...(isProduction
+      ? [
         // Ketch consent management script
         {
           tagName: "script",
@@ -57,15 +65,7 @@ const config = {
           `,
         },
       ]
-    : [],
-  headTags: [
-    {
-      tagName: "link",
-      attributes: {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
-      },
-    }
+      : []),
   ],
 
   presets: [
@@ -358,6 +358,7 @@ const config = {
             ],
           },
         ],
+      },
       algolia: {
         appId: 'UZK6BDPCVY',
         // public key, safe to commit
