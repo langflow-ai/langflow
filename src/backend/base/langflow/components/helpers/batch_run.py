@@ -6,7 +6,7 @@ import toml
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output, StrInput
+from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
