@@ -50,23 +50,8 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
 
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
 
-    # Cache for action fields mapping
-    _action_fields_cache: dict[str, set[str]] = {}
-    _readonly_actions = frozenset(
-        [
-            "GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID",
-            "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET",
-            "GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID",
-            "GOOGLEMEET_CREATE_MEET",
-            "GOOGLEMEET_GET_MEET",
-        ]
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._all_fields = {
-            field for action_data in self._actions_data.values() for field in action_data["action_fields"]
-        }
 
         self._default_tools = {
             self.sanitize_action_name("GOOGLEMEET_CREATE_MEET").replace(" ", "-"),

@@ -178,47 +178,9 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
         "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
     }
 
-    # Cache for action fields mapping
-    _action_fields_cache: dict[str, set[str]] = {}
-    _readonly_actions = frozenset(
-        [
-            "GOOGLECALENDAR_UPDATE_EVENT",
-            "GOOGLECALENDAR_REMOVE_ATTENDEE",
-            "GOOGLECALENDAR_GET_CURRENT_DATE_TIME",
-            "GOOGLECALENDAR_QUICK_ADD",
-            "GOOGLECALENDAR_LIST_CALENDARS",
-            "GOOGLECALENDAR_FIND_EVENT",
-            "GOOGLECALENDAR_CREATE_EVENT",
-            "GOOGLECALENDAR_FIND_FREE_SLOTS",
-            "GOOGLECALENDAR_PATCH_CALENDAR",
-            "GOOGLECALENDAR_GET_CALENDAR",
-            "GOOGLECALENDAR_DELETE_EVENT",
-            "GOOGLECALENDAR_DUPLICATE_CALENDAR",
-        ]
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._all_fields = {
-            field for action_data in self._actions_data.values() for field in action_data["action_fields"]
-        }
-        self._bool_variables = {
-            "GOOGLECALENDAR_LIST_CALENDARS-show_deleted",
-            "GOOGLECALENDAR_LIST_CALENDARS-show_hidden",
-            "GOOGLECALENDAR_FIND_EVENT-show_deleted",
-            "GOOGLECALENDAR_FIND_EVENT-single_events",
-            "GOOGLECALENDAR_CREATE_EVENT-create_meeting_room",
-            "GOOGLECALENDAR_CREATE_EVENT-guestsCanSeeOtherGuests",
-            "GOOGLECALENDAR_CREATE_EVENT-guestsCanInviteOthers",
-            "GOOGLECALENDAR_CREATE_EVENT-guests_can_modify",
-            "GOOGLECALENDAR_CREATE_EVENT-send_updates",
-            "GOOGLECALENDAR_UPDATE_EVENT-create_meeting_room",
-            "GOOGLECALENDAR_UPDATE_EVENT-guestsCanSeeOtherGuests",
-            "GOOGLECALENDAR_UPDATE_EVENT-guestsCanInviteOthers",
-            "GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
-            "GOOGLECALENDAR_UPDATE_EVENT-send_updates",
-        }
-
+        
         self._default_tools = {
             self.sanitize_action_name("GOOGLECALENDAR_CREATE_EVENT").replace(" ", "-"),
             self.sanitize_action_name("GOOGLECALENDAR_FIND_EVENT").replace(" ", "-"),

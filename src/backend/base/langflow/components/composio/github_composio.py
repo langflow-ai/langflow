@@ -132,32 +132,9 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         "GITHUB_LIST_BRANCHES-protected",
     }
 
-    # Cache for action fields mapping
-    _action_fields_cache: dict[str, set[str]] = {}
-    _readonly_actions = frozenset(
-        [
-            "GITHUB_CREATE_A_PULL_REQUEST",
-            "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER",
-            "GITHUB_LIST_COMMITS",
-            "GITHUB_GET_A_PULL_REQUEST",
-            "GITHUB_CREATE_AN_ISSUE",
-            "GITHUB_LIST_REPOSITORY_ISSUES",
-            "GITHUB_LIST_BRANCHES",
-            "GITHUB_LIST_BRANCHES",
-        ]
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._all_fields = {
-            field for action_data in self._actions_data.values() for field in action_data["action_fields"]
-        }
-
-        self._bool_variables = {
-            "GITHUB_CREATE_A_PULL_REQUEST-maintainer_can_modify",
-            "GITHUB_CREATE_A_PULL_REQUEST-draft",
-            "GITHUB_LIST_BRANCHES-protected",
-        }
+        
         self._default_tools = {
             self.sanitize_action_name("GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER").replace(" ", "-"),
             self.sanitize_action_name("GITHUB_CREATE_A_PULL_REQUEST").replace(" ", "-"),

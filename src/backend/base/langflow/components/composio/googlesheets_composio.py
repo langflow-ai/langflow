@@ -78,30 +78,9 @@ class ComposioGooglesheetsAPIComponent(ComposioBaseComponent):
         "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
     }
 
-    # Cache for action fields mapping
-    _action_fields_cache: dict[str, set[str]] = {}
-    _readonly_actions = frozenset(
-        [
-            "GOOGLESHEETS_CREATE_GOOGLE_SHEET1",
-            "GOOGLESHEETS_BATCH_GET",
-            "GOOGLESHEETS_GET_SPREADSHEET_INFO",
-            "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW",
-            "GOOGLESHEETS_BATCH_UPDATE",
-            "GOOGLESHEETS_SHEET_FROM_JSON",
-            "GOOGLESHEETS_CLEAR_VALUES",
-        ]
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._all_fields = {
-            field for action_data in self._actions_data.values() for field in action_data["action_fields"]
-        }
-
-        self._bool_variables = {
-            "GOOGLESHEETS_BATCH_UPDATE-includeValuesInResponse",
-            "GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW-case_sensitive",
-        }
+        
         self._default_tools = {
             self.sanitize_action_name("GOOGLESHEETS_CREATE_GOOGLE_SHEET1").replace(" ", "-"),
             self.sanitize_action_name("GOOGLESHEETS_BATCH_GET").replace(" ", "-"),

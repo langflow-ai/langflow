@@ -156,45 +156,24 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
         "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
     }
 
-    # Cache for action fields mapping
-    _action_fields_cache: dict[str, set[str]] = {}
-    _readonly_actions = frozenset(
-        [  # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
-            "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
-            "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
-            "SLACK_UPDATES_A_SLACK_MESSAGE",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
-            "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
-            # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
-            # "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM", # Disabled temporarily
-            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
-            "SLACK_CREATE_A_REMINDER",
-        ]
-    )
+    # # Cache for action fields mapping TODO:REMOVE THESE
+    # _action_fields_cache: dict[str, set[str]] = {}
+    # _readonly_actions = frozenset(
+    #     [  # "Add reaction to message": "SLACK_ADD_REACTION_TO_AN_ITEM", # Disabled temporarily
+    #         "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
+    #         "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
+    #         "SLACK_UPDATES_A_SLACK_MESSAGE",
+    #         "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+    #         "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
+    #         # "Retrieve conversation history": "SLACK_FETCH_CONVERSATION_HISTORY", # Disabled temporarily
+    #         # "Remove reactions from message": "SLACK_REMOVE_REACTION_FROM_ITEM", # Disabled temporarily
+    #         "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME",
+    #         "SLACK_CREATE_A_REMINDER",
+    #     ]
+    # )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._all_fields = {
-            field for action_data in self._actions_data.values() for field in action_data["action_fields"]
-        }
-
-        self._bool_variables = {
-            "SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION-include_locale",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-as_user",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-link_names",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-mrkdwn",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-reply_broadcast",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_links",
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL-unfurl_media",
-            "SLACK_FETCH_CONVERSATION_HISTORY-inclusive",
-            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-as_user",
-            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-link_names",
-            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-reply_broadcast",
-            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_links",
-            "SLACK_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME-unfurl_media",
-            "SLACK_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS-exclude_archived",
-            "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY-highlight",
-        }
 
         self._default_tools = {
             self.sanitize_action_name("SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL").replace(" ", "-"),
