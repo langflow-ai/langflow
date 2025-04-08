@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import toml
+import toml  # type: ignore[import-untyped]
 from loguru import logger
 
 from langflow.custom import Component
@@ -10,6 +10,8 @@ from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from langchain_core.runnables import Runnable
 
 
@@ -76,14 +78,14 @@ class BatchRunComponent(Component):
         ),
     ]
 
-    def _format_row_as_toml(self, row: dict[str, Any]) -> str:
+    def _format_row_as_toml(self, row: dict[Hashable, Any]) -> str:
         """Convert a dictionary (row) into a TOML-formatted string."""
-        formatted_dict = {col: {"value": str(val)} for col, val in row.items()}
+        formatted_dict = {str(col): {"value": str(val)} for col, val in row.items()}
         return toml.dumps(formatted_dict)
 
     def _create_base_row(
-        self, original_row: dict[str, Any], model_response: str = "", batch_index: int = -1
-    ) -> dict[str, Any]:
+        self, original_row: dict[Hashable, Any], model_response: str = "", batch_index: int = -1
+    ) -> dict[Hashable, Any]:
         """Create a base row with original columns and additional metadata."""
         row = original_row.copy()
         row[self.output_column_name] = model_response
@@ -91,7 +93,7 @@ class BatchRunComponent(Component):
         return row
 
     def _add_metadata(
-        self, row: dict[str, Any], *, success: bool = True, system_msg: str = "", error: str | None = None
+        self, row: dict[Hashable, Any], *, success: bool = True, system_msg: str = "", error: str | None = None
     ) -> None:
         """Add metadata to a row if enabled."""
         if not self.enable_metadata:
@@ -177,7 +179,7 @@ class BatchRunComponent(Component):
             responses_with_idx.sort(key=lambda x: x[0])
 
             # Build the final data with enhanced metadata
-            rows: list[dict[str, Any]] = []
+            rows: list[dict[Hashable, Any]] = []
             for idx, (original_row, response) in enumerate(
                 zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
             ):
