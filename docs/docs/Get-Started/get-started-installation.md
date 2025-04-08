@@ -11,37 +11,17 @@ Langflow can be installed in two ways:
 * As a [Python package](#install-and-run-langflow-oss) with Langflow OSS
 * As a [standalone desktop application](#install-langflow-desktop) with Langflow Desktop
 
+## Langflow OSS Prerequisites
+
+- [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/)
+- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
+
 ## Install and run Langflow OSS
 
 Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/).
 
-### Langflow OSS Prerequisites
-
-- [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) installed
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/) installed
-- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
-
-1. To create a virtual environment for Langflow OSS, use one of the following commands:
-
-<Tabs>
-<TabItem value="uv" label="uv" default>
-
-```bash
-uv venv LANGFLOW_VENV
-source LANGFLOW_VENV/bin/activate
-```
-
-</TabItem>
-<TabItem value="venv" label="venv">
-
-```bash
-python -m venv LANGFLOW_VENV
-source LANGFLOW_VENV/bin/activate
-```
-</TabItem>
-</Tabs>
-
-2. To install Langflow, use one of the following commands:
+1. To install Langflow, use one of the following commands:
 
 <Tabs>
 <TabItem value="uv" label="uv" default>
@@ -60,7 +40,7 @@ pip install langflow
 </TabItem>
 </Tabs>
 
-3. To run Langflow, use one of the following commands:
+2. To run Langflow, use one of the following commands:
 
 <Tabs>
     <TabItem value="uv" label="uv">
@@ -79,12 +59,9 @@ python -m langflow run
 </TabItem>
 </Tabs>
 
-4. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
-
-5. To stop Langflow, in the terminal where it's running, enter `Ctrl+C`.
-6. To deactivate your virtual environment, enter `deactivate`.
 
 ### Manage Langflow OSS versions
 
@@ -188,6 +165,11 @@ pip install "langflow[deploy,local,postgresql]"
 </Tabs>
 
 To add your own custom dependencies, see [Install custom dependencies](/install-custom-dependencies).
+
+### Stop Langflow OSS
+
+To stop Langflow, in the terminal where it's running, enter `Ctrl+C`.
+To deactivate your virtual environment, enter `deactivate`.
 
 ## Install and run Langflow Desktop
 
