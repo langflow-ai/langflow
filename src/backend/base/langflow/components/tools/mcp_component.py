@@ -150,7 +150,7 @@ class MCPToolsComponent(Component):
                     _, port, _ = await self.find_langflow_instance()
                     if port:
                         build_config["sse_url"]["value"] = f"http://localhost:{port}/api/v1/mcp/sse"
-                    # return build_config
+                    return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
                     # If SSE mode and localhost URL is not valid, try to find correct port
@@ -173,7 +173,6 @@ class MCPToolsComponent(Component):
                     )
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
-
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
