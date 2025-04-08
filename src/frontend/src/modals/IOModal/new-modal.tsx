@@ -155,10 +155,10 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
-  const config = useGetConfig();
+  const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
 
   function shouldStreamEvents() {
-    return config.data?.event_delivery === EventDeliveryType.STREAMING;
+    return eventDeliveryConfig === EventDeliveryType.STREAMING;
   }
 
   const sendMessage = useCallback(
@@ -179,7 +179,7 @@ export default function IOModal({
           silent: true,
           session: sessionId,
           stream: shouldStreamEvents(),
-          eventDelivery: config.data?.event_delivery,
+          eventDelivery: eventDeliveryConfig,
         }).catch((err) => {
           console.error(err);
         });

@@ -305,6 +305,7 @@ export async function buildFlowVertices({
         method: "POST",
         url: buildUrl,
         body: postData,
+        eventDeliveryConfig: eventDelivery,
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
@@ -386,6 +387,7 @@ export async function buildFlowVertices({
       return performStreamingRequest({
         method: "GET",
         url: eventsUrl,
+        eventDeliveryConfig: eventDelivery,
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];

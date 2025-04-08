@@ -144,6 +144,7 @@ async def retrieve_vertices_order(
 async def build_flow(
     *,
     flow_id: uuid.UUID,
+    request: Request,
     background_tasks: LimitVertexBuildBackgroundTasks,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
@@ -197,7 +198,8 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    if settings_service.settings.event_delivery != "direct":
+    header_event_delivery = request.headers.get("X-Event-Delivery")
+    if settings_service.settings.event_delivery != "direct" and header_event_delivery != "direct":
         return {"job_id": job_id}
     return await get_flow_events_response(
         job_id=job_id,

@@ -87,7 +87,7 @@ export default function NodeStatus({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
   const version = useDarkStore((state) => state.version);
-  const config = useGetConfig();
+  const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const postTemplateValue = usePostTemplateValue({
@@ -97,7 +97,7 @@ export default function NodeStatus({
   });
 
   const shouldStreamEvents = () => {
-    return config.data?.event_delivery === EventDeliveryType.STREAMING;
+    return eventDeliveryConfig === EventDeliveryType.STREAMING;
   };
 
   // Start polling when connection is initiated
@@ -170,7 +170,7 @@ export default function NodeStatus({
     buildFlow({
       stopNodeId: nodeId,
       stream: shouldStreamEvents(),
-      eventDelivery: config.data?.event_delivery,
+      eventDelivery: eventDeliveryConfig,
     });
   }
 
@@ -266,7 +266,7 @@ export default function NodeStatus({
     buildFlow({
       stopNodeId: nodeId,
       stream: shouldStreamEvents(),
-      eventDelivery: config.data?.event_delivery,
+      eventDelivery: eventDeliveryConfig,
     });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
