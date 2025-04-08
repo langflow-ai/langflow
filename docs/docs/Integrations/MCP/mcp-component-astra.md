@@ -16,7 +16,7 @@ The flow should look like this:
 7. In the **MCP server** component, in the **MCP command** field, add the following code.
 Replace the values for `ASTRA_TOKEN` and `ASTRA_ENDPOINT` with the values from your Astra database.
 
-```plain
+```text
 env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcpnpx -y @datastax/astra-db-mcp
 ```
 
