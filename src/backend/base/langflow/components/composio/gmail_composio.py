@@ -26,56 +26,86 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
     _actions_data: dict = {
         "GMAIL_SEND_EMAIL": {
             "display_name": "Send Email",
-            "action_fields": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "action_fields": [
+                "recipient_email",
+                "subject",
+                "body",
+                "cc",
+                "bcc",
+                "is_html",
+                "gmail_user_id",
+                "attachment",
+            ],
         },
         "GMAIL_FETCH_EMAILS": {
             "display_name": "Fetch Emails",
-            "action_fields": ["max_results", "query"],
+            "action_fields": [
+                "gmail_user_id",
+                "max_results",
+                "query",
+                "page_token",
+                "query",
+                "label_ids",
+                "include_spam_trash",
+            ],
             "get_result_field": True,
             "result_field": "messages",
         },
         "GMAIL_GET_PROFILE": {
             "display_name": "Get User Profile",
-            "action_fields": [],
+            "action_fields": ["gmail_user_id"],
         },
         "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
             "display_name": "Get Email By ID",
-            "action_fields": ["message_id"],
+            "action_fields": ["message_id", "gmail_user_id", "format"],
             "get_result_field": False,
         },
         "GMAIL_CREATE_EMAIL_DRAFT": {
             "display_name": "Create Draft Email",
-            "action_fields": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "action_fields": [
+                "recipient_email",
+                "subject",
+                "body",
+                "cc",
+                "bcc",
+                "is_html",
+                "attachment",
+                "gmail_user_id",
+            ],
         },
         "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
             "display_name": "Get Message By Thread ID",
-            "action_fields": ["thread_id"],
+            "action_fields": ["thread_id", "page_token", "gmail_user_id"],
             "get_result_field": False,
         },
         "GMAIL_LIST_THREADS": {
             "display_name": "List Email Threads",
-            "action_fields": ["max_results", "query"],
+            "action_fields": ["max_results", "query", "gmail_user_id", "page_token"],
         },
         "GMAIL_REPLY_TO_THREAD": {
             "display_name": "Reply To Thread",
-            "action_fields": ["thread_id", "message_body", "recipient_email"],
+            "action_fields": ["thread_id", "message_body", "recipient_email", "gmail_user_id", "cc", "bcc", "it_html"],
         },
         "GMAIL_LIST_LABELS": {
             "display_name": "List Email Labels",
-            "action_fields": [],
+            "action_fields": ["gmail_user_id"],
         },
         "GMAIL_CREATE_LABEL": {
             "display_name": "Create Email Label",
-            "action_fields": ["label_name"],
+            "action_fields": ["label_name", "label_list_visibility", "message_list_visibility", "gmail_user_id"],
         },
         "GMAIL_GET_PEOPLE": {
             "display_name": "Get Contacts",
-            "action_fields": [],
+            "action_fields": ["resource_name", "person_fields"],
         },
         "GMAIL_REMOVE_LABEL": {
             "display_name": "Delete Email Label",
-            "action_fields": ["label_id"],
+            "action_fields": ["label_id", "gmail_user_id"],
             "get_result_field": False,
+        },
+        "GMAIL_GET_ATTACHMENT": {
+            "display_name": "Get Attachment",
+            "action_fields": ["message_id", "attachment_id", "file_name", "gmail_user_id"],
         },
     }
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
@@ -146,6 +176,13 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             advanced=True,
         ),
         # Email retrieval and management fields
+        MessageTextInput(
+            name="gmail_user_id",
+            display_name="User ID",
+            info="The user's email address or 'me' for the authenticated user",
+            show=False,
+            advanced=True,
+        ),
         IntInput(
             name="max_results",
             display_name="Max Results",
@@ -332,23 +369,34 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
                     params[field] = value
 
+            if params.get("gmail_user_id"):
+                params["user_id"] = params.pop("gmail_user_id")
+
             result = toolset.execute_action(
                 action=enum_name,
                 params=params,
-            ).get("data", [])
+            )
+            if not result.get("successful"):
+                return {"error": result.get("error", "No response")}
+
+            result_data = result.get("data", [])
             if (
-                len(result) != 1
+                len(result_data) != 1
                 and not self._actions_data.get(action_key, {}).get("result_field")
                 and self._actions_data.get(action_key, {}).get("get_result_field")
             ):
-                msg = f"Expected a dict with a single key, got {len(result)} keys: {result.keys()}"
+                msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
-            if result:
+            if result_data:
                 get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
                 if get_result_field:
-                    key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
-                    return result.get(key)
-                return result
+                    key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result_data)))
+                    return (
+                        result_data.get(key)
+                        if isinstance(result_data.get(key), dict)
+                        else {"response": result_data.get(key)}
+                    )
+                return result_data if isinstance(result_data, dict) else {"response": result_data}
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
