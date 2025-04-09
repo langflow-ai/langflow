@@ -184,6 +184,14 @@ The runtime chart is tailored for deploying applications in a production environ
 
 The `langflow-runtime` Helm chart is available in the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-runtime).
 
+:::important
+By default, the [Langflow runtime Helm chart](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml#L46) enables `readOnlyRootFilesystem: true` as a security best practice. This setting prevents modifications to the container's root filesystem at runtime, which is a recommended security measure in production environments.
+
+Disabling `readOnlyRootFilesystem` reduces the security of your deployment. Only disable this setting if you understand the security implications and have implemented other security measures.
+
+For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+:::
+
 ### Prerequisites
 
 - A [Kubernetes](https://kubernetes.io/docs/setup/) server
