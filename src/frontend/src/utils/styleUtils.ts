@@ -289,12 +289,8 @@ import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
 import { GitLoaderIcon } from "../icons/GitLoader";
-import { GithubIcon } from "../icons/Github";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
-import { GooglecalendarIcon } from "../icons/Googlecalendar";
-import { GooglemeetIcon } from "../icons/Googlemeet";
-import { GooglesheetsIcon } from "../icons/Googlesheets";
 import {
   GradientInfinity,
   GradientSave,
@@ -571,15 +567,6 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "Slack", name: "slack", icon: "Slack" },
-  { display_name: "Github", name: "github", icon: "Github" },
-  { display_name: "Googlemeet", name: "googlemeet", icon: "Googlemeet" },
-  { display_name: "Googlesheets", name: "googlesheets", icon: "Googlesheets" },
-  {
-    display_name: "Googlecalendar",
-    name: "googlecalendar",
-    icon: "Googlecalendar",
-  },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
@@ -671,11 +658,6 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
-  Slack: SvgSlackIcon,
-  Github: GithubIcon,
-  Googlemeet: GooglemeetIcon,
-  Googlesheets: GooglesheetsIcon,
-  Googlecalendar: GooglecalendarIcon,
   Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
