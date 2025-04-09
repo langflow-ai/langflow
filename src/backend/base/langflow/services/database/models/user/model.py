@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import JSON, Column
 from pydantic import BaseModel
+from sqlalchemy import JSON, Column
+from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
 
@@ -46,7 +46,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
-    optins: Dict[str, Any] | None = Field(
+    optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)
     )
 
@@ -54,12 +54,8 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
 class UserCreate(SQLModel):
     username: str = Field()
     password: str = Field()
-    optins: Dict[str, Any] | None = Field(
-        default={
-            "github_starred": False,
-            "dialog_dismissed": False,
-            "discord_clicked": False
-        }
+    optins: dict[str, Any] | None = Field(
+        default={"github_starred": False, "dialog_dismissed": False, "discord_clicked": False}
     )
 
 
@@ -73,7 +69,7 @@ class UserRead(SQLModel):
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
-    optins: Dict[str, Any] | None = Field(default=None)
+    optins: dict[str, Any] | None = Field(default=None)
 
 
 class UserUpdate(SQLModel):
@@ -83,4 +79,4 @@ class UserUpdate(SQLModel):
     is_active: bool | None = None
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
-    optins: Dict[str, Any] | None = None
+    optins: dict[str, Any] | None = None
