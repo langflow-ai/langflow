@@ -27,7 +27,7 @@ The response contains the following columns:
 
 * `text_input`: The original text from the input DataFrame.
 * `model_response`: The model's response for each input.
-* `batch_index`: The processing order (with a `0`-based index).
+* `batch_index`: The processing order, with a `0`-based index.
 * `metadata` (optional): Additional information about the processing.
 
 These columns, when connected to a **Parser** component, can be used as variables within curly braces.
