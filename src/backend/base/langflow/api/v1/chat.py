@@ -199,7 +199,7 @@ async def build_flow(
     )
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
-    if event_delivery == EventDeliveryType.DIRECT:
+    if event_delivery != EventDeliveryType.DIRECT:
         return {"job_id": job_id}
     return await get_flow_events_response(
         job_id=job_id,
