@@ -213,6 +213,12 @@ function NodeOutputField({
     [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
   );
 
+  const emptyOutput = useMemo(() => {
+    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
+    );
+  }, [flowPoolNode?.data?.outputs]);
+
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
     [edges, id],
@@ -369,6 +375,9 @@ function NodeOutputField({
     ],
   );
 
+  const disabledInspectButton =
+    !displayOutputPreview || unknownOutput || emptyOutput;
+
   if (!showNode) return <>{Handle}</>;
 
   return (
@@ -424,7 +433,7 @@ function NodeOutputField({
           <ShadTooltip
             content={
               displayOutputPreview
-                ? unknownOutput
+                ? unknownOutput || emptyOutput
                   ? "Output can't be displayed"
                   : "Inspect output"
                 : "Please build the component first"
@@ -435,12 +444,12 @@ function NodeOutputField({
               <OutputModal
                 open={openOutputModal}
                 setOpen={setOpenOutputModal}
-                disabled={!displayOutputPreview || unknownOutput}
+                disabled={disabledInspectButton}
                 nodeId={flowPoolId}
                 outputName={internalOutputName}
               >
                 <InspectButton
-                  disabled={!displayOutputPreview || unknownOutput}
+                  disabled={disabledInspectButton}
                   displayOutputPreview={displayOutputPreview}
                   unknownOutput={unknownOutput ?? false}
                   errorOutput={errorOutput ?? false}
