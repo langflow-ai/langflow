@@ -40,7 +40,6 @@ type BuildVerticesParams = {
   logBuilds?: boolean;
   session?: string;
   playgroundPage?: boolean;
-  stream: boolean;
   eventDelivery: EventDeliveryType;
 };
 

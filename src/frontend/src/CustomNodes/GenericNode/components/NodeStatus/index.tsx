@@ -96,10 +96,6 @@ export default function NodeStatus({
     node: data.node,
   });
 
-  const shouldStreamEvents = () => {
-    return eventDeliveryConfig === EventDeliveryType.STREAMING;
-  };
-
   // Start polling when connection is initiated
   const startPolling = () => {
     window.open(connectionLink, "_blank");
@@ -169,7 +165,6 @@ export default function NodeStatus({
     setValidationStatus(null);
     buildFlow({
       stopNodeId: nodeId,
-      stream: shouldStreamEvents(),
       eventDelivery: eventDeliveryConfig,
     });
   }
@@ -265,7 +260,6 @@ export default function NodeStatus({
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
     buildFlow({
       stopNodeId: nodeId,
-      stream: shouldStreamEvents(),
       eventDelivery: eventDeliveryConfig,
     });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
