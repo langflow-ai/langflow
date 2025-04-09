@@ -330,7 +330,7 @@ class APIRequestComponent(Component):
                 elif field_name in {"body", "headers"}:
                     field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
                 else:
-                    field_config["advanced"] = True if use_curl else field_config.get("advanced")
+                    field_config["advanced"] = use_curl or field_config.get("advanced")
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
 
@@ -368,6 +368,8 @@ class APIRequestComponent(Component):
                     field_config["advanced"] = method not in {"POST", "PUT", "PATCH"}
                 elif field_name in always_advanced_fields:
                     field_config["advanced"] = True
+                else:
+                    field_config["advanced"] = self.use_curl or field_config.get("advanced")
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
 
