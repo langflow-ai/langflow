@@ -1,12 +1,10 @@
 ---
-title: Deploy Langflow Prod Environment on Kubernetes
+title: Deploy the Langflow Production Environment on Kubernetes
 slug: /deployment-kubernetes-prod
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
-## Deploy the Langflow runtime
 
 The [Langflow Runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime) chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation and security to ensure that applications run reliably and efficiently.
 

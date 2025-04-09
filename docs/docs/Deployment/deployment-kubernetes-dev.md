@@ -1,14 +1,12 @@
 ---
-title: Deploy Langflow Dev Environment on Kubernetes
+title: Deploy the Langflow Development Environment on Kubernetes
 slug: /deployment-kubernetes-dev
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## Deploy the Langflow IDE
-
-The `langflow-ide` Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
+The [Langflow IDE](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
 ### Prerequisites
 

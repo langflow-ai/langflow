@@ -14,11 +14,14 @@ More specific instructions are available in the [Docker](/deployment-docker) and
 
 ## Langflow deployment architecture
 
-Langflow can be deployed as an [IDE](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) or as a [runtime](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-runtime).
+Langflow can be deployed in two distinct environments:
 
-The **IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE image. To deploy the Langflow IDE, see [Docker](/deployment-docker).
+* [Langflow IDE](/deployment-kubernetes-dev) - A development environment for creating and testing flows.
+* [Langflow runtime](/deployment-kubernetes-prod) - A production environment for hosting and serving flows.
 
-The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the processes necessary to serve your flow, with PostgreSQL as the database for improved scalability. Use the Langflow **runtime** to deploy your flows, because you don't require the frontend for visual development.
+The **Langflow IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE image. The Langflow IDE can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-dev).
+
+The **Langflow runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the processes necessary to serve your flow, with PostgreSQL as the database for improved scalability. Use the Langflow **runtime** to deploy your flows, because you don't require the frontend for visual development. The Langflow runtime can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-prod).
 
 ## Package your flow with the Langflow runtime image
 
