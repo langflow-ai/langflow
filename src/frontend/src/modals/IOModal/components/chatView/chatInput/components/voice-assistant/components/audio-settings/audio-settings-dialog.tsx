@@ -21,21 +21,6 @@ import LanguageSelect from "./components/language-select";
 import MicrophoneSelect from "./components/microphone-select";
 import VoiceSelect from "./components/voice-select";
 
-const ALL_LANGUAGES = [
-  { value: "en-US", name: "English (US)" },
-  { value: "en-GB", name: "English (UK)" },
-  { value: "it-IT", name: "Italian" },
-  { value: "fr-FR", name: "French" },
-  { value: "es-ES", name: "Spanish" },
-  { value: "de-DE", name: "German" },
-  { value: "ja-JP", name: "Japanese" },
-  { value: "pt-BR", name: "Portuguese (Brazil)" },
-  { value: "zh-CN", name: "Chinese (Simplified)" },
-  { value: "ru-RU", name: "Russian" },
-  { value: "ar-SA", name: "Arabic" },
-  { value: "hi-IN", name: "Hindi" },
-];
-
 interface SettingsVoiceModalProps {
   children?: React.ReactNode;
   userOpenaiApiKey?: string;
@@ -52,6 +37,7 @@ interface SettingsVoiceModalProps {
   handleClickSaveOpenAIApiKey: (openaiApiKey: string) => void;
   isEditingOpenAIKey: boolean;
   setIsEditingOpenAIKey: (isEditingOpenAIKey: boolean) => void;
+  isPlayingRef: React.MutableRefObject<boolean>;
 }
 
 const SettingsVoiceModal = ({
@@ -65,6 +51,7 @@ const SettingsVoiceModal = ({
   handleClickSaveOpenAIApiKey,
   isEditingOpenAIKey,
   setIsEditingOpenAIKey,
+  isPlayingRef,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
@@ -88,7 +75,7 @@ const SettingsVoiceModal = ({
       name: string;
       value: string;
     }[]
-  >([]);
+  >(openaiVoices);
 
   const saveButtonClicked = useRef(false);
 
@@ -162,6 +149,7 @@ const SettingsVoiceModal = ({
   };
 
   const onOpenChangeDropdownMenu = (open: boolean) => {
+    isPlayingRef.current = false;
     setOpen(open);
     setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey);
   };
@@ -415,7 +403,6 @@ const SettingsVoiceModal = ({
                     <LanguageSelect
                       language={currentLanguage}
                       handleSetLanguage={handleSetLanguage}
-                      allLanguages={ALL_LANGUAGES}
                     />
                   </>
                 )}

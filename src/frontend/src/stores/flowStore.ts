@@ -23,7 +23,7 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
@@ -599,6 +599,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent,
     session,
     stream = true,
+    eventDelivery = EventDeliveryType.STREAMING,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -607,6 +608,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent?: boolean;
     session?: string;
     stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => {
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
@@ -833,7 +835,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
       playgroundPage,
-      stream,
+      eventDelivery,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
@@ -969,6 +971,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   currentBuildingNodeId: undefined,
   setCurrentBuildingNodeId: (nodeIds) => {
     set({ currentBuildingNodeId: nodeIds });
+  },
+  resetFlowState: () => {
+    set({
+      nodes: [],
+      edges: [],
+      flowState: undefined,
+      hasIO: false,
+      inputs: [],
+      outputs: [],
+      flowPool: {},
+      currentFlow: undefined,
+      reactFlowInstance: null,
+      lastCopiedSelection: null,
+      verticesBuild: null,
+      flowBuildStatus: {},
+      isBuilding: false,
+      isPending: true,
+      positionDictionary: {},
+      componentsToUpdate: [],
+    });
   },
 }));
 

@@ -49,19 +49,23 @@ export type InputComponentType = {
   popoverWidth?: string;
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
+  hasRefreshButton?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
   isLoading?: boolean;
   value: string;
   combobox?: boolean;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
   optionsMetaData?: any[];
   onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
-  name?: string;
+  name: string;
   dialogInputs?: any;
 };
 export type ParameterComponentType = {
@@ -791,6 +795,7 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
+  sidebarOpen: boolean;
   sendMessage: ({
     repeat,
     files,
