@@ -1,8 +1,11 @@
+import re
 import asyncio
 import os
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any
+from datetime import date
+from enum import Enum
+from typing import Union, Any
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -89,23 +92,58 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         msg = "JSON schema must be of type 'object' at the root level."
         raise ValueError(msg)
 
+    # Parse enum definitions
+    enum_defs: dict[str, Any] = {}
+    defs = schema.get("$defs", {})
+    for name, enum_def in defs.items():
+        enum_members = {re.sub(r"\W|^(?=\d)", "_", v): v for v in enum_def["enum"]}
+        enum_defs[name] = Enum(name, enum_members)
+
+    def _resolve_type(definition: dict) -> Any:
+        if "$ref" in definition:
+            ref_name = definition["$ref"].split("/")[-1]
+            return enum_defs[ref_name]
+
+        if "type" in definition:
+            field_type_str = definition.get("type", "str")
+
+            if field_type_str in ("string", "str"):
+                if definition.get("format") == "date":
+                    return date
+                return str
+            elif field_type_str in ("integer", "int"):
+                return int
+            elif field_type_str in ("number", "float"):
+                return float
+            elif field_type_str in ("boolean", "bool"): 
+                return bool
+            elif field_type_str == "object":
+                return dict
+            elif field_type_str == "array":
+                item_type = _resolve_type(definition["items"])
+                return list[item_type]
+            elif field_type_str == "null":
+                return type(None)
+
+        if "anyOf" in definition:
+            subtypes = [_resolve_type(sub) for sub in definition["anyOf"]]
+            subtypes = list(set(subtypes))  # remove duplicates
+            if type(None) in subtypes:
+                subtypes.remove(type(None))
+                if len(subtypes) == 1:
+                    return subtypes[0] | None
+                else:
+                    return Union[tuple(subtypes)] | None
+            return Union[tuple(subtypes)]
+
+        return Any  # fallback for anything unrecognized
+
     fields = {}
     properties = schema.get("properties", {})
     required_fields = set(schema.get("required", []))
 
     for field_name, field_def in properties.items():
-        # Determine the base type from the JSON schema type string.
-        field_type_str = field_def.get("type", "str")  # Defaults to string if not specified.
-        base_type = {
-            "string": str,
-            "str": str,
-            "integer": int,
-            "int": int,
-            "number": float,
-            "boolean": bool,
-            "array": list,
-            "object": dict,
-        }.get(field_type_str, Any)
+        base_type = _resolve_type(field_def)
 
         field_metadata = {"description": field_def.get("description", "")}
 
