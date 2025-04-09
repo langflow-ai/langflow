@@ -6,83 +6,68 @@ slug: /deployment-kubernetes-prod
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## Setting up Langflow Production environment 
-
-Helm chart is available for [Langflow Runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime) and should be used for setting up the **Langflow Production** environment.
+## Deploy the Langflow runtime
 
 The [Langflow Runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime) chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation and security to ensure that applications run reliably and efficiently.
 
-### Sample Deployment 
+:::important
+By default, the [Langflow runtime Helm chart](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml#L46) enables `readOnlyRootFilesystem: true` as a security best practice. This setting prevents modifications to the container's root filesystem at runtime, which is a recommended security measure in production environments.
 
-#### Prerequisites
+Disabling `readOnlyRootFilesystem` reduces the security of your deployment. Only disable this setting if you understand the security implications and have implemented other security measures.
+
+For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+:::
+
+### Prerequisites
 
 - A [Kubernetes](https://kubernetes.io/docs/setup/) server
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [Helm](https://helm.sh/docs/intro/install/)
 
-#### Prepare a Kubernetes cluster
+### Install the Langflow runtime Helm chart
 
-This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you can use any Kubernetes cluster.
+1. Add the repository to Helm.
 
-1. Create a Kubernetes cluster on Minikube.
+```shell
+helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
+helm repo update
+```
 
-	```shell
-	minikube start
-	```
+2. Install the Langflow app with the default options in the `langflow` namespace.
 
-2. Set `kubectl` to use Minikube.
+If you have a created a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `--set` flag.
 
-	```shell
-	kubectl config use-context minikube
-	```
+* Use a custom image with bundled flows:
+```shell
+helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-hello-world --set image.tag=1.0.0
+```
 
-#### Install the Langflow runtime Helm chart 
+* Alternatively, install the chart and download the flows from a URL with the `--set` flag:
+```shell
+helm install my-langflow-app-with-flow langflow/langflow-runtime \
+  -n langflow \
+  --create-namespace \
+  --set 'downloadFlows.flows[0].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
+```
 
-1. Add the repository to Helm and update it.
-
-	```shell
-	helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
-	helm repo update
-	```
-
-2. Install the Langflow app with the default options in the `langflow` namespace.  
-   1. If you have a created a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `--set` flag.
-      1. Use a custom image with bundled flows:
-
-    ```shell
-    helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-hello-world --set image.tag=1.0.0
-    ```
-
-      2. Alternatively, install the chart and download the flows from a URL with the `--set` flag:
-
-
-    ```shell
-    helm install my-langflow-app-with-flow langflow/langflow-runtime \
-    -n langflow \
-    --create-namespace \
-    --set'downloadFlows.flows[0].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
-    ```
-    :::important
-    You may need to escape the square brackets in this command if you are using a shell that requires it:
-
-    ```shell
-    helm install my-langflow-app-with-flow langflow/langflow-runtime \
-    -n langflow \
-    --create-namespace \
-    --set 'downloadFlows.flows\[0\].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
-    ```
-    :::
+:::important
+You may need to escape the square brackets in this command if you are using a shell that requires it:
+```shell
+helm install my-langflow-app-with-flow langflow/langflow-runtime \
+  -n langflow \
+  --create-namespace \
+  --set 'downloadFlows.flows\[0\].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
+```
+:::
 
 3. Check the status of the pods.
-
 ```shell
 kubectl get pods -n langflow
 ```
 
-#### Access the Langflow app API 
+### Access the Langflow runtime
 
 1. Get your service name.
-
 ```shell
 kubectl get svc -n langflow
 ```
@@ -96,10 +81,10 @@ kubectl port-forward -n langflow svc/my-langflow-app-with-flow-langflow-runtime 
 ```
 
 3. Confirm you can access the API at `http://localhost:7860/api/v1/flows/` and view a list of flows.
-
 ```shell
 curl -v http://localhost:7860/api/v1/flows/
 ```
+
 4. Execute the packaged flow.
 
 The following command gets the first flow ID from the flows list and runs the flow.
@@ -119,52 +104,38 @@ curl -X POST \
     }'
 ```
 
-### Deploy a specific Langflow version in Production environment
+### Configure secrets
 
-Langflow is deployed with the `latest` version by default.
+To inject secrets and Langflow global variables, use the `secrets` and `env` sections in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
-To change the Langflow version or use a custom docker image, you can modify the `image` parameter in the the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
+For example, the [example flow JSON](https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json) uses a global variable that is a secret. When you export the flow as JSON, it's recommended to not include the secret.
 
-```yaml
-image:
-  repository: "langflowai/langflow-backend"
-  tag: 1.x.y
-```
+Instead, when importing the flow in the Langflow runtime, you can set the global variable in one of the following ways:
 
-### Secrets Management in Production 
-
-The recommended way to set sensitive information is to use **Kubernetes secrets.** 
-
-The `env` section in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file allows you to set environment variables for the Langflow deployment. 
-
-#### Using values.yaml
-
-You can reference a secret in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file by using the valueFrom key.
+<Tabs>
+<TabItem value="values" label="Using values.yaml">
 
 ```yaml
 env:
-  - name: OPENAI_API_KEY
+  - name: openai_key_var
     valueFrom:
       secretKeyRef:
-        name: langflow-secrets
+        name: openai-key
         key: openai-key
-  - name: ASTRA_DB_APPLICATION_TOKEN
-    valueFrom:
-      secretKeyRef:
-        name: langflow-secrets
-        key: astra-token
 ```
 
-where:
+Or directly in the values file (not recommended for secret values):
 
-* `name`: refer to the environment variable name used by your flow.  
-* `valueFrom.secretKeyRef.name`: refers to the kubernetes secret name.  
-* `valueFrom.secretKeyRef.key`: refers to the key in the secret. 
+```yaml
+env:
+  - name: openai_key_var
+    value: "sk-...."
+```
 
-#### Using Helm Commands
+</TabItem>
+<TabItem value="helm" label="Using Helm Commands">
 
-1. To create a matching secret with the above example you can use the following command:
-
+1. Create the secret:
 ```shell
 kubectl create secret generic openai-credentials \
   --namespace langflow \
@@ -172,13 +143,11 @@ kubectl create secret generic openai-credentials \
 ```
 
 2. Verify the secret exists. The result is encrypted.
-
 ```shell
 kubectl get secrets -n langflow openai-credentials
 ```
 
 3. Upgrade the Helm release to use the secret.
-
 ```shell
 helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
   --reuse-values \
@@ -187,7 +156,10 @@ helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
   --set "extraEnv[0].valueFrom.secretKeyRef.key=OPENAI_API_KEY"
 ```
 
-### Configure Logging 
+</TabItem>
+</Tabs>
+
+### Configure the log level
 
 Set the log level and other Langflow configurations in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
@@ -197,38 +169,24 @@ env:
     value: "INFO"
 ```
 
-### Scaling Production Environment 
+### Configure scaling
 
-You have the option to scale the Langflow production environment either Horizontally or Vertically to add more resources to the flows container.
-
-* Horizontal scaling adds more replicas of the deployment  
-* Vertical scaling adds more CPU/memory resources to the deployment
-
-#### Scale horizontally
-
-To scale horizontally you only need to modify the `replicaCount` parameter in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
+To scale the number of replicas for the Langflow appplication, change the `replicaCount` value in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
 ```yaml
-replicaCount: 5
+replicaCount: 3
 ```
-
-Please note that if your flow relies on shared state (e.g. builtin chat memory), you will need to set up a shared database.
-
-#### Scale vertically 
 
 To scale the application vertically by increasing the resources for the pods, change the `resources` values in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
-By default the deployment doesn't have any limits and it could consume all the node `resources`. In order to limit the available resources, you can modify the resources value:
-
 ```yaml
 resources:
-  limits:
-    cpu: 100m
-    memory: 128Mi
   requests:
-    cpu: 100m
-    memory: 128Mi
+    memory: "2Gi"
+    cpu: "1000m"
 ```
+
+For more information about deploying Langflow on AWS EKS, Google GKE, or Azure AKS, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
 
 
 
