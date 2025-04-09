@@ -247,11 +247,11 @@ module.exports = {
       type: "html",
       className: "sidebar-ad",
       value: `
-        <a href="https://astra.datastax.com/signup?type=langflow" target="_blank" class="menu__link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2" ry="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
           <div class="sidebar-ad-text-container">
-            <span class="sidebar-ad-text">Use Langflow in the cloud</span>
-            <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for DataStax Langflow</span>
+            <span class="sidebar-ad-text">Langflow Desktop is here!</span>
+            <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for Langflow Desktop</span>
           </div>
         </a>
       `,
