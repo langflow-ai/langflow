@@ -44,7 +44,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
-    user_optin: Dict = Field(default_factory=lambda: UserOptin().model_dump(), sa_column=JSON)
+    optins: Dict = Field(default_factory=lambda: UserOptin().model_dump(), sa_column=JSON)
 
 
 class UserCreate(SQLModel):
