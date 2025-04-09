@@ -17,30 +17,6 @@ Deploying on Kubernetes offers the following advantages:
 
 Langflow can be deployed on cloud deployments like **AWS EKS, Google GKE, or Azure AKS**. For more information about deploying Langflow on AWS EKS, Google GKE, or Azure AKS, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
 
-## Langflow deployment
-
-A typical Langflow deployment includes:
-
-* **Langflow API & UI** – The Langflow service is the core component of the Langflow platform. It provides a RESTful API for executing flows.
-* **Kubernetes Cluster** – The Kubernetes cluster provides a platform for deploying and managing the Langflow service and its supporting components.
-* **Persistent Storage** – Persistent storage is used to store the Langflow service's data, such as models and training data.
-* **Ingress Controller** – The ingress controller provides a single entry point for traffic to the Langflow service.
-* **Load Balancer** – Balances traffic across multiple Langflow replicas.
-* **Vector Database** – If using Langflow for RAG, Vector DB (e.g., Astra DB) can be integrated.
-
-![Langflow Reference Architecture on Kubernetes](/img/langflow-reference-architecture.png)
-
-## Environment isolation
-
-It is recommended to deploy and run two separate environments for Langflow.
-
-One environment to be reserved for Development use and another for Production use.
-
-![Langflow Environments](/img/langflow-env.png)
-
-* **The Langflow Development environment** must include the Integrated Development Environment (IDE) for full experience of Langflow, optimized for prototyping and testing new flows.
-* **The Langflow Production environment** executes the flow logic in production and productionizes Langflow flows as standalone services.
-
 ## Why is it important to have separate deployments?
 
 This separation is designed to enhance security, optimize resource allocation, and streamline management. Understanding the rationale behind these deployment options help you make informed decisions about how to best deploy and manage your applications.

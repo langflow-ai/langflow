@@ -127,7 +127,7 @@ module.exports = {
             {
               type: "doc",
               id: "Deployment/deployment-prod-best-practices",
-              label: "Langflow in Production Best Practices"
+              label: "Kubernetes - Best Practices"
             }
           ]
         },
