@@ -66,7 +66,7 @@ const config = {
           priority: null,
         },
         gtag: {
-          trackingID: "G-L8Y98PSEMQ",
+          trackingID: "G-SLQFLQ3KPT",
         },
         blog: false,
         theme: {
