@@ -270,33 +270,10 @@ class Vertex:
                     self.base_type = base_type
                     break
 
-    def get_value_from_output_names(self, key: str) -> Any:
-        """Get value from output names.
-
-        Args:
-            key (str): Name of output.
-
-        Returns:
-            Any: Value of output.
-        """
-        # Find edges where this vertex is the target and the target handle's field name matches the key
-        edges = [edge for edge in self.edges if edge.target_id == self.id and edge.target_handle.field_name == key]
-
-        if not edges:
-            return None
-
-        # Get the source vertex and its output value
-        edge = edges[0]  # Take the first matching edge
-        source_vertex = self.graph.get_vertex(edge.source_id)
-        if not source_vertex:
-            return None
-
-        # Get the output value from the source vertex's results
-        source_handle = edge.source_handle
-        if not source_handle or not source_handle.name:
-            return None
-
-        return source_vertex.results.get(source_handle.name)
+    def get_value_from_output_names(self, key: str):
+        if key in self.output_names:
+            return self.graph.get_vertex(key)
+        return None
 
     def get_value_from_template_dict(self, key: str):
         template_dict = self.data.get("node", {}).get("template", {})
@@ -330,9 +307,6 @@ class Vertex:
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
         elif param_key in self.output_names:
-            # If this is a loop output being used as an input
-            params[param_key] = self.get_value_from_output_names(param_key)
-        else:
             params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 
