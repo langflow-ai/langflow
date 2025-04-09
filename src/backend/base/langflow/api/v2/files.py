@@ -222,10 +222,10 @@ async def delete_file(
         file = await fetch_file_object(file_id, current_user, session)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
-            
+
         # Get the basename of the file path
         file_name = file.path.split("/")[-1]
-        
+
         # Delete the file from the storage service
         await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
 
@@ -258,7 +258,6 @@ async def delete_all_files(
         for file in files:
             # Get the basename of the file path
             file_name = file.path.split("/")[-1]
-            
             await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
             await session.delete(file)
 
