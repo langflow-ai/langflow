@@ -1,11 +1,11 @@
-import re
 import asyncio
 import os
+import re
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from datetime import date
 from enum import Enum
-from typing import Union, Any
+from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -111,18 +111,18 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 if definition.get("format") == "date":
                     return date
                 return str
-            elif field_type_str in ("integer", "int"):
+            if field_type_str in ("integer", "int"):
                 return int
-            elif field_type_str in ("number", "float"):
+            if field_type_str in ("number", "float"):
                 return float
-            elif field_type_str in ("boolean", "bool"): 
+            if field_type_str in ("boolean", "bool"):
                 return bool
-            elif field_type_str == "object":
+            if field_type_str == "object":
                 return dict
-            elif field_type_str == "array":
+            if field_type_str == "array":
                 item_type = _resolve_type(definition["items"])
                 return list[item_type]
-            elif field_type_str == "null":
+            if field_type_str == "null":
                 return type(None)
 
         if "anyOf" in definition:
@@ -132,8 +132,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 subtypes.remove(type(None))
                 if len(subtypes) == 1:
                     return subtypes[0] | None
-                else:
-                    return Union[tuple(subtypes)] | None
+                return Union[tuple(subtypes)] | None
             return Union[tuple(subtypes)]
 
         return Any  # fallback for anything unrecognized
