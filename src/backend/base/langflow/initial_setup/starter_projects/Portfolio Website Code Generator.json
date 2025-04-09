@@ -1563,7 +1563,7 @@
                 "advanced": true,
                 "display_name": "Generate Multiple",
                 "dynamic": false,
-                "info": "[Deplrecated] Always set to True",
+                "info": "[Deprecated] Always set to True",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "multiple",
