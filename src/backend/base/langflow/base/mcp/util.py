@@ -102,7 +102,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     def _resolve_type(definition: dict) -> Any:
         if "$ref" in definition:
             ref_name = definition["$ref"].split("/")[-1]
-            return enum_defs[ref_name] if ref_name in enum_defs else str  # defaults to str
+            return enum_defs.get(ref_name, str)  # defaults to str
 
         if "type" in definition:
             field_type_str = definition.get("type", "str")
