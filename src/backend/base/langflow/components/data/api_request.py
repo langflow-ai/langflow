@@ -281,6 +281,10 @@ class APIRequestComponent(Component):
         if field_name == "use_curl":
             build_config = self._update_curl_mode(build_config, use_curl=field_value)
 
+            # If curl is not used, we don't need to reset the fields
+            if not self.use_curl:
+                return {}
+
             # Fields that should not be reset
             preserve_fields = {"timeout", "follow_redirects", "save_to_file", "include_httpx_metadata", "use_curl"}
 
