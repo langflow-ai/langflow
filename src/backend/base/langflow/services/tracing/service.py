@@ -201,9 +201,24 @@ class TracingService(Service):
             global_vars=variables,
         )
 
-    async def get_varaibles_from_db(self, session_scope, user_id, variable_names):
+    async def get_varaibles_from_db(self, session_scope, user_id, variable_names) -> dict[str, Any]:
         variable_service = get_variable_service()
-        return await variable_service.get_variables_by_user(session_scope, UUID(user_id), variable_names)
+        result = {}
+        async with session_scope() as session:
+            for name in variable_names:
+                try:
+                    value = await variable_service.get_variable(
+                        user_id=UUID(user_id),
+                        name=name,
+                        field="",
+                        session=session,
+                    )
+                except Exception as exp:  # noqa: BLE001
+                    msg = f"Error getting global variable '{name}' from db: {exp}"
+                    logger.error(msg)
+                    value = None
+                result[name] = value
+        return result
 
     async def start_tracers(
         self,
