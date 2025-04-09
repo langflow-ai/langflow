@@ -236,7 +236,7 @@ function GenericNode({
         />
       ));
     },
-    [data, types, selected, showNode, isToolMode],
+    [data, types, selected, showNode, isToolMode, showHiddenOutputs],
   );
 
   const { shownOutputs, hiddenOutputs } = useMemo(
