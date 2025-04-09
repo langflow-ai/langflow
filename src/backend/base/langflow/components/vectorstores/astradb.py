@@ -822,6 +822,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Set reranker and lexical terms options based on search method
         build_config["reranker"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
+        if build_config["reranker"]["show"]:
+            build_config["search_type"]["value"] = "Similarity"
 
         return build_config
 
