@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 from typing import Any
 from uuid import UUID

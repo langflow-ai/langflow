@@ -274,16 +274,12 @@ async function performStreamingRequest({
   onError,
   onNetworkError,
   buildController,
-  eventDeliveryConfig,
 }: StreamingRequestParams) {
   let headers = {
     "Content-Type": "application/json",
     // this flag is fundamental to ensure server stops tasks when client disconnects
     Connection: "close",
   };
-  if (eventDeliveryConfig === EventDeliveryType.DIRECT) {
-    headers["X-Event-Delivery"] = "direct";
-  }
 
   const params = {
     method: method,

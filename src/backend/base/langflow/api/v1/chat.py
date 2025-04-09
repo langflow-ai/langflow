@@ -27,6 +27,7 @@ from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTask
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
+    EventDeliveryType,
     build_and_cache_graph_from_data,
     build_graph_from_db,
     format_elapsed_time,
@@ -144,7 +145,6 @@ async def retrieve_vertices_order(
 async def build_flow(
     *,
     flow_id: uuid.UUID,
-    request: Request,
     background_tasks: LimitVertexBuildBackgroundTasks,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
@@ -156,6 +156,7 @@ async def build_flow(
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Build and process a flow, returning a job ID for event polling.
 
@@ -175,7 +176,7 @@ async def build_flow(
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
         settings_service: Settings service
-        request: FastAPI request object
+        event_delivery: Optional event delivery type - default is streaming
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -201,13 +202,12 @@ async def build_flow(
     )
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
-    header_event_delivery = request.headers.get("X-Event-Delivery")
-    if settings_service.settings.event_delivery != "direct" and header_event_delivery != "direct":
+    if settings_service.settings.event_delivery != EventDeliveryType.DIRECT and event_delivery != EventDeliveryType.DIRECT:
         return {"job_id": job_id}
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
-        stream=True,
+        event_delivery=event_delivery,
     )
 
 
@@ -216,13 +216,13 @@ async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     *,
-    stream: bool = True,
+    event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Get events for a specific build job."""
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
-        stream=stream,
+        event_delivery=event_delivery,
     )
 
 
