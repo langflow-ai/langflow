@@ -13,6 +13,7 @@ from sqlmodel import select
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
 from langflow.api.utils import (
     CurrentActiveUser,
+    EventDeliveryType,
     build_graph_from_data,
     build_graph_from_db,
     format_elapsed_time,
@@ -34,7 +35,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
-from langflow.services.job_queue.service import JobQueueService
+from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 
@@ -84,13 +85,14 @@ async def get_flow_events_response(
     *,
     job_id: str,
     queue_service: JobQueueService,
-    stream: bool = True,
+    event_delivery: EventDeliveryType,
 ):
     """Get events for a specific build job, either as a stream or single event."""
     try:
-        main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
-        if stream:
+        main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
+        if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
             if event_task is None:
+                logger.error(f"No event task found for job {job_id}")
                 raise HTTPException(status_code=404, detail="No event task found for job")
             return await create_flow_response(
                 queue=main_queue,
@@ -99,17 +101,30 @@ async def get_flow_events_response(
             )
 
         # Polling mode - get exactly one event
-        _, value, _ = await main_queue.get()
-        if value is None:
-            # End of stream, trigger end event
-            if event_task is not None:
-                event_task.cancel()
-            event_manager.on_end(data={})
+        try:
+            _, value, _ = await main_queue.get()
+            if value is None:
+                # End of stream, trigger end event
+                if event_task is not None:
+                    event_task.cancel()
+                event_manager.on_end(data={})
 
-        return JSONResponse({"event": value.decode("utf-8") if value else None})
+            return JSONResponse({"event": value.decode("utf-8") if value else None})
+        except asyncio.CancelledError as exc:
+            logger.info(f"Event polling was cancelled for job {job_id}")
+            raise HTTPException(status_code=499, detail="Event polling was cancelled") from exc
+        except asyncio.TimeoutError as exc:
+            logger.warning(f"Timeout while waiting for events for job {job_id}")
+            raise HTTPException(status_code=408, detail="Timeout while waiting for events") from exc
 
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except JobQueueNotFoundError as exc:
+        logger.error(f"Job not found: {job_id}. Error: {exc!s}")
+        raise HTTPException(status_code=404, detail=f"Job not found: {exc!s}") from exc
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        logger.exception(f"Unexpected error processing flow events for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc!s}") from exc
 
 
 async def create_flow_response(
@@ -463,7 +478,7 @@ async def cancel_flow_build(
         asyncio.CancelledError: If the task cancellation failed
     """
     # Get the event task and event manager for the job
-    _, _, event_task = queue_service.get_queue_data(job_id)
+    _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
         logger.warning(f"No event task found for job_id {job_id}")

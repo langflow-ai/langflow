@@ -655,11 +655,14 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "link",
   "slider",
   "tab",
+  "sortableList",
+  "connect",
+  "auth",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
 
-export const priorityFields = new Set(["code", "template"]);
+export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
@@ -964,6 +967,7 @@ export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
 export const DRAG_EVENTS_CUSTOM_TYPESS = {
   genericnode: "genericNode",
   notenode: "noteNode",
+  "text/plain": "text/plain",
 };
 
 export const NOTE_NODE_MIN_WIDTH = 324;
@@ -1037,3 +1041,29 @@ export const ALL_LANGUAGES = [
   { value: "ar-SA", name: "Arabic" },
   { value: "hi-IN", name: "Hindi" },
 ];
+
+export const DEBOUNCE_FIELD_LIST = [
+  "SecretStrInput",
+  "MessageTextInput",
+  "TextInput",
+  "MultilineInput",
+  "SecretStrInput",
+  "IntInput",
+  "FloatInput",
+  "SliderInput",
+];
+
+export const OPENAI_VOICES = [
+  { name: "alloy", value: "alloy" },
+  { name: "ash", value: "ash" },
+  { name: "ballad", value: "ballad" },
+  { name: "coral", value: "coral" },
+  { name: "echo", value: "echo" },
+  { name: "sage", value: "sage" },
+  { name: "shimmer", value: "shimmer" },
+  { name: "verse", value: "verse" },
+];
+
+export const DEFAULT_POLLING_INTERVAL = 5000;
+export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
