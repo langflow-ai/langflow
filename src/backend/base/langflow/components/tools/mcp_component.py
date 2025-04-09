@@ -175,6 +175,7 @@ class MCPToolsComponent(Component):
                                 )
                                 raise ValueError(msg)
                         else:
+                            build_config["tool"]["options"] = []
                             return build_config
 
                     await self.update_tools(
