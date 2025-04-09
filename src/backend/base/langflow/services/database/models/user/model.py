@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import JSON, Field, Relationship, SQLModel
@@ -44,7 +44,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
-    optins: Dict = Field(default_factory=lambda: UserOptin().model_dump(), sa_column=JSON)
+    optins: dict = Field(default_factory=lambda: UserOptin().model_dump(), sa_column=JSON)
 
 
 class UserCreate(SQLModel):
