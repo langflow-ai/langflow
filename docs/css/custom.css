@@ -290,6 +290,14 @@ body {
   bottom: -0.5rem;
 }
 
+[data-theme="dark"] .sidebar-ad {
+  background-color: var(--ifm-background-color);
+}
+
+[data-theme="light"] .sidebar-ad {
+  background-color: var(--ifm-color-white);
+}
+
 .sidebar-ad a {
   display: flex;
   justify-content: center;
