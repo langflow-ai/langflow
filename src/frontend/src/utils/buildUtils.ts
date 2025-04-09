@@ -40,8 +40,7 @@ type BuildVerticesParams = {
   logBuilds?: boolean;
   session?: string;
   playgroundPage?: boolean;
-  stream?: boolean;
-  eventDelivery?: EventDeliveryType;
+  eventDelivery: EventDeliveryType;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -148,7 +147,10 @@ export async function buildFlowVerticesWithFallback(
       e.message === POLLING_MESSAGES.STREAMING_NOT_SUPPORTED
     ) {
       // Fallback to polling
-      return await buildFlowVertices({ ...params, stream: false });
+      return await buildFlowVertices({
+        ...params,
+        eventDelivery: EventDeliveryType.POLLING,
+      });
     }
     throw e;
   }
@@ -176,13 +178,16 @@ async function pollBuildEvents(
 ): Promise<void> {
   let isDone = false;
   while (!isDone) {
-    const response = await fetch(`${url}?stream=false`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${url}?event_delivery=${EventDeliveryType.POLLING}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: abortController.signal, // Add abort signal to fetch
       },
-      signal: abortController.signal, // Add abort signal to fetch
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -241,7 +246,6 @@ export async function buildFlowVertices({
   logBuilds,
   session,
   playgroundPage,
-  stream = true,
   eventDelivery,
 }: BuildVerticesParams) {
   const inputs = {};
@@ -260,10 +264,10 @@ export async function buildFlowVertices({
     queryParams.append("log_builds", logBuilds.toString());
   }
 
-  // Add stream parameter when using direct event delivery
-  if (eventDelivery === EventDeliveryType.DIRECT) {
-    queryParams.append("stream", "true");
-  }
+  queryParams.append(
+    "event_delivery",
+    eventDelivery ?? EventDeliveryType.POLLING,
+  );
 
   if (queryParams.toString()) {
     buildUrl = `${buildUrl}?${queryParams.toString()}`;
@@ -376,13 +380,12 @@ export async function buildFlowVertices({
       }
     });
     useFlowStore.getState().setBuildController(buildController);
-
     // Then stream the events
     const eventsUrl = `${BASE_URL_API}build/${job_id}/events`;
     const buildResults: Array<boolean> = [];
     const verticesStartTimeMs: Map<string, number> = new Map();
 
-    if (stream) {
+    if (eventDelivery === EventDeliveryType.STREAMING) {
       return performStreamingRequest({
         method: "GET",
         url: eventsUrl,

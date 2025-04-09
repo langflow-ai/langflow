@@ -39,7 +39,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setWebhookPollingInterval = useUtilityStore(
     (state) => state.setWebhookPollingInterval,
   );
-
+  const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
@@ -59,6 +59,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setWebhookPollingInterval(
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
+      setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
     }
     return data;
   };
