@@ -119,7 +119,7 @@ module.exports = {
           items: [
             {
               type: "doc",
-              id: "Deployment/deployment-kubernetes-dev",
+              id: "Deployment/deployment-kubernetes",
               label: "Kubernetes - Development"
             },
             {
@@ -153,11 +153,6 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-render",
           label: "Render"
-        },
-	{
-          type: "doc",
-          id: "Deployment/deployment-prod-best-practices",
-          label: "Production Best Practices"
         },
       ],
     },
