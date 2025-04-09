@@ -56,12 +56,10 @@ from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
     get_session,
-    get_settings_service,
     get_telemetry_service,
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-from langflow.services.settings.service import SettingsService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -155,7 +153,6 @@ async def build_flow(
     current_user: CurrentActiveUser,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
-    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build and process a flow, returning a job ID for event polling.
