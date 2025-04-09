@@ -66,8 +66,6 @@ class ComposioBaseComponent(Component):
     _bool_variables: set[str] = set()
     _actions_data: dict[str, dict[str, Any]] = {}
     _default_tools: set[str] = set()
-    _readonly_actions: frozenset[str] = frozenset()
-    _action_fields_cache: dict[str, set[str]] = {}
     _display_to_key_map: dict[str, str] = {}
     _key_to_display_map: dict[str, str] = {}
     _sanitized_names: dict[str, str] = {}
