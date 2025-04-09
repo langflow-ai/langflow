@@ -14,10 +14,10 @@ from langflow.services.base import Service
 from langflow.services.deps import get_variable_service
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import Callable
+    from contextlib import AbstractAsyncContextManager
 
     from langchain.callbacks.base import BaseCallbackHandler
-    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.custom.custom_component.component import Component
     from langflow.graph.vertex.base import Vertex
@@ -222,7 +222,7 @@ class TracingService(Service):
 
     async def start_tracers(
         self,
-        session_scope: AsyncGenerator[AsyncSession, None],
+        session_scope: Callable[[], AbstractAsyncContextManager[Any]],
         run_id: UUID,
         run_name: str,
         user_id: str | None,

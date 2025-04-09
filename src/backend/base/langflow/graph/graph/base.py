@@ -44,9 +44,8 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, AsyncGenerator
-
-    from sqlmodel.ext.asyncio.session import AsyncSession
+    from collections.abc import Callable, Generator, Iterable
+    from contextlib import AbstractAsyncContextManager
 
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
@@ -653,7 +652,7 @@ class Graph:
 
         self._run_id = str(run_id)
 
-    async def initialize_run(self, session_scope: AsyncGenerator[AsyncSession, None] | None) -> None:
+    async def initialize_run(self, session_scope: Callable[[], AbstractAsyncContextManager[Any]] | None = None) -> None:
         if not self._run_id:
             self.set_run_id()
 
