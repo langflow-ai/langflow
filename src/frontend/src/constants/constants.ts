@@ -655,6 +655,9 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "link",
   "slider",
   "tab",
+  "sortableList",
+  "connect",
+  "auth",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -1049,3 +1052,18 @@ export const DEBOUNCE_FIELD_LIST = [
   "FloatInput",
   "SliderInput",
 ];
+
+export const OPENAI_VOICES = [
+  { name: "alloy", value: "alloy" },
+  { name: "ash", value: "ash" },
+  { name: "ballad", value: "ballad" },
+  { name: "coral", value: "coral" },
+  { name: "echo", value: "echo" },
+  { name: "sage", value: "sage" },
+  { name: "shimmer", value: "shimmer" },
+  { name: "verse", value: "verse" },
+];
+
+export const DEFAULT_POLLING_INTERVAL = 5000;
+export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;

@@ -99,7 +99,7 @@ async def test_build_flow_invalid_job_id(client, logged_in_headers):
     invalid_job_id = str(uuid.uuid4())
     response = await get_build_events(client, invalid_job_id, logged_in_headers)
     assert response.status_code == codes.NOT_FOUND
-    assert "No queue found for job_id" in response.json()["detail"]
+    assert "Job not found" in response.json()["detail"]
 
 
 @pytest.mark.benchmark
@@ -277,7 +277,7 @@ async def test_cancel_nonexistent_build(client, logged_in_headers):
     # Try to cancel a non-existent build
     response = await client.post(f"api/v1/build/{invalid_job_id}/cancel", headers=logged_in_headers)
     assert response.status_code == codes.NOT_FOUND
-    assert "No queue found for job_id" in response.json()["detail"]
+    assert "Job not found" in response.json()["detail"]
 
 
 @pytest.mark.benchmark
