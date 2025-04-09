@@ -44,7 +44,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   currentSessionId: "",
   setCurrentSessionId: (sessionId: string) =>
     set({ currentSessionId: sessionId }),
-  eventDelivery: EventDeliveryType.STREAMING,
+  eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
 }));

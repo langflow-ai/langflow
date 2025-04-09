@@ -59,7 +59,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setWebhookPollingInterval(
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
-      setEventDelivery(data.event_delivery ?? EventDeliveryType.STREAMING);
+      setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
     }
     return data;
   };
