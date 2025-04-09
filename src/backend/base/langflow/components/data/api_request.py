@@ -368,8 +368,6 @@ class APIRequestComponent(Component):
                     field_config["advanced"] = method not in {"POST", "PUT", "PATCH"}
                 elif field_name in always_advanced_fields:
                     field_config["advanced"] = True
-                else:
-                    field_config["advanced"] = True
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
 
