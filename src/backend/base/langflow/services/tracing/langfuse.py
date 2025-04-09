@@ -9,6 +9,7 @@ from loguru import logger
 from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -51,8 +52,7 @@ class LangFuseTracer(BaseTracer):
         self.spans: dict = OrderedDict()  # spans that are not ended
 
         for key in LangFuseTracer.get_required_variable_names():
-            if key in global_vars:
-                os.environ[key] = global_vars.get(key)
+            set_env_from_globals(key, global_vars)
 
         config = self._get_config()
         self._ready: bool = self.setup_langfuse(config) if config else False

@@ -11,6 +11,7 @@ from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,8 +35,7 @@ class LangSmithTracer(BaseTracer):
     ):
         try:
             for key in LangSmithTracer.get_required_variable_names():
-                if key in global_vars:
-                    os.environ[key] = global_vars.get(key)
+                set_env_from_globals(key, global_vars)
 
             self._ready = self.setup_langsmith()
             if not self._ready:

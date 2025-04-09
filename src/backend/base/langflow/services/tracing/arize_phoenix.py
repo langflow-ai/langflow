@@ -20,6 +20,7 @@ from typing_extensions import override
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -70,8 +71,7 @@ class ArizePhoenixTracer(BaseTracer):
         self.session_id = session_id
 
         for key in ArizePhoenixTracer.get_required_variable_names():
-            if key in global_vars:
-                os.environ[key] = global_vars.get(key)
+            set_env_from_globals(key, global_vars)
 
         try:
             self._ready = self.setup_arize_phoenix()
