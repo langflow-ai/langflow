@@ -873,6 +873,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Search method selection change
         if field_name == "search_method":
             is_vector_search = field_value == "Vector Search"
+            is_autodetect = build_config["autodetect_collection"]["value"]
 
             # Configure lexical terms (same for both cases)
             build_config["lexical_terms"]["show"] = not is_vector_search
@@ -881,6 +882,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Toggle search type and score threshold based on search method
             build_config["search_type"]["show"] = is_vector_search
             build_config["search_score_threshold"]["show"] = is_vector_search
+
+            # Make sure the search_type is set to "Similarity"
+            if not is_vector_search or is_autodetect:
+                build_config["search_type"]["value"] = "Similarity"
 
         return build_config
 
