@@ -156,7 +156,7 @@ async def build_flow(
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
-    event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
+    event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build and process a flow, returning a job ID for event polling.
 
