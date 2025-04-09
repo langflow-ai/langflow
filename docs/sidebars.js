@@ -119,7 +119,7 @@ module.exports = {
           items: [
             {
               type: "doc",
-              id: "Deployment/deployment-kubernetes",
+              id: "Deployment/deployment-kubernetes-dev",
               label: "Kubernetes - Development"
             },
             {
@@ -130,7 +130,7 @@ module.exports = {
             {
               type: "doc",
               id: "Deployment/deployment-prod-best-practices",
-              label: "Kubernetes - Best Practices"
+              label: "Langflow in Production Best Practices"
             }
           ]
         },

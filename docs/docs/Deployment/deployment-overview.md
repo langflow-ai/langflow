@@ -10,7 +10,7 @@ You have a flow, and want to share it with the world in a production environment
 
 This page outlines the journey from locally-run flow to a cloud-hosted production server.
 
-More specific instructions are available in the [Docker](/deployment-docker) and [Kubernetes](/deployment-kubernetes) pages.
+More specific instructions are available in the [Docker](/deployment-docker) and [Kubernetes](/deployment-kubernetes-dev) pages.
 
 ## Langflow deployment architecture
 
@@ -35,7 +35,10 @@ For more on building the Langflow docker image and pushing it to Docker Hub, see
 
 After your flow is packaged as a Docker image and available on Docker Hub, deploy your application by overriding the values in the [langflow-runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/Chart.yaml) Helm chart.
 
-For more information, see [Deploy Langflow on Kubernetes](/deployment-kubernetes).
+For more information, see [Deploy Langflow on Kubernetes](/deployment-kubernetes-dev).
+
+
+
 
 
 
