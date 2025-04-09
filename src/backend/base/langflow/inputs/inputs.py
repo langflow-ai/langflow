@@ -493,7 +493,7 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
     show: bool = False
 
 
-class QueryInput(MessageTextInput, QueryMixin, InputTraceMixin, ToolModeMixin):
+class QueryInput(MessageTextInput, QueryMixin):
     """Represents a query input field.
 
     This class represents an query input field and provides functionality for handling search values.
@@ -507,7 +507,6 @@ class QueryInput(MessageTextInput, QueryMixin, InputTraceMixin, ToolModeMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.QUERY
     separator: str | None = Field(default=None)
-    value: str = Field(default="")
 
 
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
