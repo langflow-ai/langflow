@@ -1212,6 +1212,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Search input: {self.search_query}")
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
+        self.log(f"store.hybrid_search: {vector_store.hybrid_search}")
         self.log(f"Lexical terms: {self.lexical_terms}")
 
         try:
