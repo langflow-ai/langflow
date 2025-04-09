@@ -231,7 +231,7 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "w-full justify-between font-normal",
+            "no-focus-visible w-full justify-between font-normal",
           )}
         >
           <span
