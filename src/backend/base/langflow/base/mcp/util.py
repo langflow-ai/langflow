@@ -132,8 +132,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 subtypes.remove(type(None))
                 if len(subtypes) == 1:
                     return subtypes[0] | None
-                return Union[tuple(subtypes)] | None
-            return Union[tuple(subtypes)]
+                return Union[tuple(subtypes)] | None  # noqa: UP007
+            return Union[tuple(subtypes)]  # noqa: UP007
 
         return Any  # fallback for anything unrecognized
 
