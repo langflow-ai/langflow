@@ -16,7 +16,7 @@
 }
 
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
-  margin-top: 1.5rem !important;
+  margin-top: 0.5rem !important;
 }
 
 .docusaurus-highlight-code-line {
@@ -274,7 +274,7 @@ body {
 .theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(
     :first-child
   ) {
-  margin-top: 0.25rem !important;
+  margin-top: 0.15rem !important;
 }
 
 .sidebar-ad {
