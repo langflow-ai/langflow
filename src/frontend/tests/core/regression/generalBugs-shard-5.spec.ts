@@ -170,7 +170,7 @@ test(
     await page
       .getByTestId("title-Combine Text")
       .first()
-      .click({ modifiers: ["ControlOrMeta"] });
+      .click({ modifiers: ["Shift"] });
 
     await page.waitForSelector('[data-testid="group-node"]', {
       timeout: 3000,
