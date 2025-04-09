@@ -7,31 +7,41 @@ from langflow.io import MessageTextInput, Output
 from langflow.schema import Message
 
 
-class RiseComponent(Component):
-    display_name = "Nvidia G-Assist"
-    description = "Executes commands using NVIDIA G-Assist."
+class NvidiaSystemAssistComponent(Component):
+    display_name = "NVIDIA System-Assist"
+    description = (
+        "Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. "
+        "The user may query GPU specifications, state, and ask the NV-API to perform "
+        "several GPU-editing acations. The prompt must be human-readable language."
+    )
     documentation = "https://docs.langflow.org/components-custom-components"
-    icon = "code"
-    name = "RiseComponent"
-    rise_client = None
+    icon = "NVIDIA"
+    name = "NvidiaSystemAssist"
+    rise_initialized = False
 
     inputs = [
         MessageTextInput(
-            name="command",
-            display_name="Rise Command",
-            info="Enter a command to send to the rise library.",
-            value="default_command",
+            name="prompt",
+            display_name="System-Assist Prompt",
+            info="Enter a prompt for NVIDIA System-Assist to process.",
+            value="",
             tool_mode=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Response", name="response", method="build_output"),
+        Output(display_name="Response", name="response", method="sys_assist_prompt"),
     ]
 
-    async def build_output(self) -> Message:
-        if self.rise_client is None:
-            self.rise_client = register_rise_client()
+    def __init__(self, **args):
+        super().__init__(**args)
+        if not NvidiaSystemAssistComponent.rise_initialized:
+            register_rise_client()
+            NvidiaSystemAssistComponent.rise_initialized = True
+
+    async def sys_assist_prompt(self) -> Message:
         # Wrap the blocking send_rise_command call in a thread to avoid blocking the event loop.
-        response = await asyncio.to_thread(send_rise_command, self.command)
-        return Message(text=response)
+        response = await asyncio.to_thread(send_rise_command, self.prompt)
+        if response is not None:
+            return Message(text=response["completed_response"])
+        return Message(text=None)
