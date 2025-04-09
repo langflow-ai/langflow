@@ -17,10 +17,19 @@ This example flow stores and retrieves chat history from an [AstraDBChatMemory](
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
-## Batch Run Component
+## Batch Run
 
-The Batch Run component runs a language model over each row of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and the model's response.
+The **Batch Run** component runs a language model over **each row** of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and the model's response.
 
+When paired with a **Parser** component, the batch run component can extract LLM summaries, reasoning, or insights and output them into formatted strings.
+
+To use the Batch Run component:
+
+1. Connect a **Model** component to the batch run component's **Language model** port.
+2. Connect 
+
+
+5. Attach a **Prompt**, **Chat Input**, **Chat Output**, and 
 ### Inputs
 
 | Name | Display Name | Type | Info | Required |
