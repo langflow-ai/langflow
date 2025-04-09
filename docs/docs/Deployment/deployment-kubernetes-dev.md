@@ -1,33 +1,20 @@
 ---
-title: Deploy Langflow Dev Environment on Kubernetes
+title: Deploy the Langflow Development Environment on Kubernetes
 slug: /deployment-kubernetes-dev
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## Setting up Langflow Development environment  
+The [Langflow IDE(Integrated Development Environment)](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
-Helm chart is available to deploy [Langflow Integrated Development Environment (IDE)](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-ide) and should be used for setting up the **Langflow Development environment**.
-
-The `langflow-ide` Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
-
-```shell
-helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
-helm repo update
-helm install langflow-ide langflow/langflow-ide -n langflow --create-namespace
-```
-
-You can install the Langflow IDE Helm chart for Langflow as an IDE with persistent storage or an external database (for example PostgreSQL).
-
-### Sample Deployment 
-#### Prerequisites
+### Prerequisites
 
 - A [Kubernetes](https://kubernetes.io/docs/setup/) cluster
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [Helm](https://helm.sh/docs/intro/install/)
 
-#### Prepare a Kubernetes cluster
+### Prepare a Kubernetes cluster
 
 This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you can use any Kubernetes cluster.
 
@@ -43,7 +30,7 @@ This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you 
 	kubectl config use-context minikube
 	```
 
-#### Install the Langflow IDE Helm chart
+### Install the Langflow IDE Helm chart
 
 1. Add the repository to Helm and update it.
 
@@ -64,14 +51,7 @@ This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you 
 	kubectl get pods -n langflow
 	```
 
-
-	```shell
-	NAME                                 READY   STATUS    RESTARTS       AGE
-	langflow-0                           1/1     Running   0              33s
-	langflow-frontend-5d9c558dbb-g7tc9   1/1     Running   0              38s
-	```
-
-#### Configure port forwarding to access Langflow
+### Access the Langflow IDE
 
 Enable local port forwarding to access Langflow from your local machine.
 
@@ -89,13 +69,11 @@ Now you can access:
 - The Langflow API at `http://localhost:7860`
 - The Langflow UI at `http://localhost:8080`
 
-
-### Deploy a specific Langflow version in Development environment
+### Configure the Langflow version
 
 Langflow is deployed with the `latest` version by default.
 
 To specify a different Langflow version, set the `langflow.backend.image.tag` and `langflow.frontend.image.tag` values in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-ide/values.yaml) file.
-
 
 ```yaml
 langflow:
@@ -105,15 +83,13 @@ langflow:
   frontend:
     image:
       tag: "1.0.0a59"
-
 ```
 
-### Configure External storage for Development environment 
+### Configure external storage
 
-By default, the chart deploys a [SQLite](https://www.sqlite.org/docs.html) database stored in a local persistent disk. If you want to use an external [PostgreSQL](https://www.pgadmin.org/download/) database, you can configure it in two ways:
+By default, the chart deploys a SQLite database stored in a local persistent disk. If you want to use an external PostgreSQL database, you can configure it in two ways:
 
 * Use the built-in PostgreSQL chart:
-
 ```yaml
 postgresql:
   enabled: true
@@ -123,9 +99,7 @@ postgresql:
     database: "langflow-db"
 ```
 
-
 * Use an external database:
-
 ```yaml
 postgresql:
   enabled: false
@@ -151,9 +125,9 @@ langflow:
       enabled: false
 ```
 
-### Scaling Development Environment 
+### Configure scaling
 
-You have the option to scale the number of `replicas` and `resources` for both **frontend** and **backend** services.
+Scale the number of replicas and resources for both frontend and backend services:
 
 ```yaml
 langflow:
@@ -177,38 +151,10 @@ langflow:
       # limits:
       #   cpu: 0.3
       #   memory: 512Mi
-
-```
-You can scale the Langflow development environment either Horizontally or Vertically to add more resources to the flows container by modifying [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-ide/values.yaml) file.
-
-* Horizontal scaling adds more replicas of the deployment  
-* Vertical scaling adds more CPU/memory resources to the deployment
-
-#### Scale horizontally
-
-To scale horizontally you only need to modify the `replicaCount` parameter in the chart.
-
-```yaml
-replicaCount: 1
 ```
 
-Please note that if your flow relies on shared state (e.g. builtin chat memory), you will need to set up a shared database.
+:::note
+If your flow relies on shared state (e.g. builtin chat memory), you need to set up a shared database when scaling horizontally.
+:::
 
-#### Scale vertically 
-
-To scale the Langflow Dev application vertically by increasing the resources for the pods, change the `resources` values in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-ide/values.yaml) file.
-
-By default the deployment doesn't have any limits and it could consume all the node `resources`. In order to limit the available resources, you can modify the resources value:
-
-```yaml
-resources:
-  limits:
-    cpu: 100m
-    memory: 128Mi
-  requests:
-    cpu: 100m
-    memory: 128Mi
-```
-
-
-More Examples of `langflow-ide` deployment are available [here](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/langflow-ide) in the examples directory.
+For more examples of `langflow-ide` deployment, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/langflow-ide).
