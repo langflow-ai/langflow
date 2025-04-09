@@ -175,6 +175,7 @@ async def build_flow(
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
         settings_service: Settings service
+        request: FastAPI request object
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -198,7 +199,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    
+
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     header_event_delivery = request.headers.get("X-Event-Delivery")
     if settings_service.settings.event_delivery != "direct" and header_event_delivery != "direct":
