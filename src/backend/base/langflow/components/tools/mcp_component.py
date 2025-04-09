@@ -399,4 +399,4 @@ class MCPToolsComponent(Component):
         """Get cached tools or update if necessary."""
         if not self.tools:
             return await self.update_tools()
-        return self.tools
+        return list(self._tool_cache.values())
