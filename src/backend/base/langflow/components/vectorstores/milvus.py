@@ -51,6 +51,12 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(name="drop_old", display_name="Drop Old Collection", value=False, advanced=True),
         FloatInput(name="timeout", display_name="Timeout", advanced=True),
         *LCVectorStoreComponent.inputs,
+        StrInput(
+            name="search_filter",
+            display_name="Search Filter",
+            advanced=True,
+            info="Optional dictionary of filters to apply to the search query. E.g. field == value",
+        ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -105,7 +111,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_query, k=self.number_of_results, filter=self.search_filter
+                query=self.search_query, k=self.number_of_results, expr=self.search_filter
             )
 
             data = docs_to_data(docs)

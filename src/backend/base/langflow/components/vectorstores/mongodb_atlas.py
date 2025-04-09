@@ -65,7 +65,10 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             value="embedding",
         ),
         StrInput(
-            name="filter_field", display_name="Filter Field", advanced=True, info="The field to filter the index."
+            name="filter_field",
+            display_name="Filter Field",
+            advanced=True,
+            info="The field to filter the index. Needed to use Search Filter.",
         ),
         IntInput(
             name="number_dimensions",
