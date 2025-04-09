@@ -330,7 +330,7 @@ class APIRequestComponent(Component):
                 elif field_name in {"body", "headers"}:
                     field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
                 else:
-                    field_config["advanced"] = use_curl
+                    field_config["advanced"] = True if use_curl else field_config.get("advanced")
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
 
