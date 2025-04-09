@@ -1,0 +1,44 @@
+John Smith
+Software Engineer
+
+San Francisco, California, USA
+Email: john.smith@example.com
+Phone: (555) 123-4567
+LinkedIn: www.linkedin.com/in/johnsmith
+GitHub: github.com/johnsmith
+Portfolio: www.johnsmith.dev
+Visa Status: US Citizen
+
+Summary
+Experienced software engineer with 5+ years specializing in distributed systems and machine learning applications. Currently pursuing PhD in Computer Science while seeking flexible opportunities to apply industry expertise.
+
+Experience
+Stanford University
+Doctoral Researcher, Distributed Systems
+September 2023 - Present
+
+TechCorp Inc.
+Senior Software Engineer
+June 2020 - August 2023
+
+DataSystems LLC
+Software Engineer
+March 2018 - May 2020
+
+Education
+Stanford University
+Ph.D. in Computer Science (Distributed Systems)
+2023 - Present
+
+University of California, Berkeley
+M.S. in Computer Science
+2016 - 2018
+
+Skills
+Python, Rust, Go, JavaScript, TensorFlow, PyTorch, AWS, GCP, Docker, Kubernetes, PostgreSQL, MongoDB
+
+Projects
+- Distributed Training Framework: Scalable system for training large language models
+- Cloud Resource Optimizer: Reduced infrastructure costs by 30% through intelligent resource allocation
+- Real-time Analytics Dashboard: Built visualization platform processing 1M+ events daily
+

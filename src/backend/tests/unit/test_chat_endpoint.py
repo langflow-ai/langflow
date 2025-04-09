@@ -99,7 +99,7 @@ async def test_build_flow_invalid_job_id(client, logged_in_headers):
     invalid_job_id = str(uuid.uuid4())
     response = await get_build_events(client, invalid_job_id, logged_in_headers)
     assert response.status_code == codes.NOT_FOUND
-    assert "No queue found for job_id" in response.json()["detail"]
+    assert "Job not found" in response.json()["detail"]
 
 
 @pytest.mark.benchmark
@@ -149,6 +149,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
 
     # Start the build and get job_id
     build_response = await build_flow(client, flow_id, logged_in_headers)
+    assert "job_id" in build_response, f"Expected job_id in build_response, got {build_response}"
     job_id = build_response["job_id"]
     assert job_id is not None
 
@@ -166,7 +167,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                 max_sleeps = 100
                 while True:
                     response = await self.client.get(
-                        f"api/v1/build/{self.job_id}/events?stream=false", headers=self.headers
+                        f"api/v1/build/{self.job_id}/events?event_delivery=polling", headers=self.headers
                     )
                     assert response.status_code == codes.OK
                     data = response.json()
@@ -277,7 +278,7 @@ async def test_cancel_nonexistent_build(client, logged_in_headers):
     # Try to cancel a non-existent build
     response = await client.post(f"api/v1/build/{invalid_job_id}/cancel", headers=logged_in_headers)
     assert response.status_code == codes.NOT_FOUND
-    assert "No queue found for job_id" in response.json()["detail"]
+    assert "Job not found" in response.json()["detail"]
 
 
 @pytest.mark.benchmark

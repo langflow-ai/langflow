@@ -47,6 +47,9 @@ export default function Dropdown({
   editNode = false,
   id = "",
   children,
+  nodeId,
+  nodeClass,
+  handleNodeClass,
   name,
   dialogInputs,
   ...baseInputProps
@@ -62,6 +65,12 @@ export default function Dropdown({
   const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
 
+  value = useMemo(() => {
+    if (!options.includes(value)) {
+      return null;
+    }
+    return value;
+  }, [value, options]);
   // Initialize utilities and constants
   const placeholderName = name
     ? formatPlaceholderName(name)
@@ -70,14 +79,13 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { nodeClass, nodeId, handleNodeClass, tooltip, helperText } =
-    baseInputProps;
+  const { helperText } = baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
-    parameterId: name || "",
-    nodeId: nodeId || "",
-    node: nodeClass!,
+    parameterId: name,
+    nodeId: nodeId,
+    node: nodeClass,
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
