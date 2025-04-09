@@ -83,6 +83,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             info="Enter text to search for similar content in the selected collection.",
             show=False,
         ),
+        LCVectorStoreComponent.inputs[3],
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

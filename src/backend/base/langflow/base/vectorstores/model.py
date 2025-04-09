@@ -176,8 +176,9 @@ class LCVectorStoreComponent(Component):
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
 
+        search_filter = None if self.search_filter == {} else self.search_filter
         search_results = self.search_with_vector_store(
-            search_query, self.search_type, vector_store, k=self.number_of_results, filter=self.search_filter
+            search_query, self.search_type, vector_store, k=self.number_of_results, filter=search_filter
         )
         self.status = search_results
         return search_results
