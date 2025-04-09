@@ -4603,7 +4603,6 @@ dependencies = [
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "qdrant-client" },
     { name = "qianfan" },
-    { name = "ragstack-ai-knowledge-store" },
     { name = "redis" },
     { name = "ruff" },
     { name = "scipy" },
@@ -4799,7 +4798,6 @@ requires-dist = [
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
     { name = "qdrant-client", specifier = "==1.9.2" },
     { name = "qianfan", specifier = "==0.3.5" },
-    { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
     { name = "ruff", specifier = ">=0.9.7" },
     { name = "scipy", specifier = ">=1.14.1" },
@@ -8564,18 +8562,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6d/74/66d5af14618b8b53a642d178fb2e598db6e9000decc038aa064bba690ee6/qianfan-0.3.5.tar.gz", hash = "sha256:b71847888bd99d61cee5f84f614f431204f3d656d71dd7ae1d0f9bc9ae51b42b", size = 211966 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/dc/e5d1262d3c3be20b71749743db28643ae2e3ebf7bb46929cde12f7a187e8/qianfan-0.3.5-py3-none-any.whl", hash = "sha256:0d5712c93ec6877c4176aae21ff58b41ccfef7ba661c6e19c07209c353353a16", size = 304772 },
-]
-
-[[package]]
-name = "ragstack-ai-knowledge-store"
-version = "0.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cassio" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/e1/da324f5b590aef5ae07b8e7e38ee249101b2bfae6882ba1152c06f8228b2/ragstack_ai_knowledge_store-0.2.1.tar.gz", hash = "sha256:20424d42978be228feb887a71d76228638765446d1a37a1f6faef109e448fe06", size = 16964 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/ab/0afba28f5e9ff962130c8c08bea1ea609be98ec0be3175748911732bd2ca/ragstack_ai_knowledge_store-0.2.1-py3-none-any.whl", hash = "sha256:2749c6ab43768e14892dbc1190f2348e9006ad5eb77188e875d704ff811ccc6b", size = 18726 },
 ]
 
 [[package]]
