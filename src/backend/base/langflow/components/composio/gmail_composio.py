@@ -114,7 +114,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self._default_tools = {
             self.sanitize_action_name("GMAIL_SEND_EMAIL").replace(" ", "-"),
             self.sanitize_action_name("GMAIL_FETCH_EMAILS").replace(" ", "-"),
