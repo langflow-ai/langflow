@@ -673,6 +673,17 @@ export type textModalPropsType = {
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
 };
+export type queryModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  title: string;
+  description: string;
+  placeholder?: string;
+  disabled?: boolean;
+  children?: ReactNode;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+};
 
 export type newFlowModalPropsType = {
   open: boolean;
