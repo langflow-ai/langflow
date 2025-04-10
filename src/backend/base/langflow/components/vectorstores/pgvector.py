@@ -16,7 +16,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
     inputs = [
         SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
         StrInput(name="collection_name", display_name="Table", required=True),
-        *LCVectorStoreComponent.inputs,
+        *LCVectorStoreComponent.inputs[:3],
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
@@ -61,9 +61,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
-            docs = vector_store.similarity_search(
-                query=self.search_query, k=self.number_of_results, filter=self.search_filter
-            )
+            docs = vector_store.similarity_search(query=self.search_query, k=self.number_of_results)
 
             data = docs_to_data(docs)
             self.status = data
