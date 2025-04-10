@@ -1597,7 +1597,7 @@ class Graph:
 
     async def _execute_tasks(self, tasks: list[asyncio.Task], lock: asyncio.Lock) -> list[str]:
         """Executes tasks in parallel, handling exceptions for each task.
-        
+
         Args:
             tasks: List of tasks to execute
             lock: Async lock for synchronization
@@ -1605,7 +1605,6 @@ class Graph:
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
-
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
