@@ -35,6 +35,7 @@ class FieldTypes(str, Enum):
     LINK = "link"
     SLIDER = "slider"
     TAB = "tab"
+    QUERY = "query"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -140,6 +141,11 @@ class DatabaseLoadMixin(BaseModel):
 
 class AuthMixin(BaseModel):
     auth_tooltip: str | None = Field(default="")
+
+
+class QueryMixin(BaseModel):
+    separator: str | None = Field(default=None)
+    """Separator for the query input. Defaults to None."""
 
 
 # Specific mixin for fields needing file interaction

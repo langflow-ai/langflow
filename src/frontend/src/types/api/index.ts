@@ -91,6 +91,7 @@ export type InputFieldType = {
   icon?: string;
   text?: string;
   temp_file?: boolean;
+  separator?: string;
 };
 
 export type OutputFieldProxyType = {

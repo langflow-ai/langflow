@@ -104,6 +104,12 @@ export type TextAreaComponentType = {
   updateVisibility?: () => void;
 };
 
+export type QueryComponentType = {
+  display_name: string;
+  info: string;
+  separator?: string;
+};
+
 export type InputGlobalComponentType = {
   load_from_db: boolean | undefined;
   password: boolean | undefined;
