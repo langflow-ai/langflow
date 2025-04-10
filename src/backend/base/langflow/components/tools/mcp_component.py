@@ -219,7 +219,7 @@ class MCPToolsComponent(Component):
         return inputs
 
     def remove_input_schema_from_build_config(
-            self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes], Any]
+        self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes], Any]
     ):
         """Remove the input schema for the tool from the build config."""
         # Keep only schemas that don't belong to the current tool
