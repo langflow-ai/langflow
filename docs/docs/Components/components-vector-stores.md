@@ -91,7 +91,7 @@ The component fields related to hybrid search are **Search Query**, **Lexical Te
 * **Reranker** is the re-ranker model used in the hybrid search.
 The default model is `nvidia/llama-3.2-nv.reranker`.
 
-**Hybrid search** passes a vector similarity search **and** a lexical search to the [find and rerank Data API endpoint](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-and-rerank.html), where a reranker assigns similarity scores for each query and document pair, and higher scores indicate a stronger match.
+**Hybrid search** passes a vector similarity search and a lexical search to the [find and rerank Data API endpoint](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-and-rerank.html), where a reranker combines and sorts the results based on the vector search's similarity to the lexical terms.
 
 To use **Hybrid search** in the **Astra DB** component, do the following:
 
