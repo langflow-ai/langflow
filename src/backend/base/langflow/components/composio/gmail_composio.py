@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from composio import Action
@@ -377,7 +378,17 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                 params=params,
             )
             if not result.get("successful"):
-                return {"error": result.get("error", "No response")}
+                message_str = result.get("data", {}).get("message", "{}")
+                try:
+                    error_data = json.loads(message_str).get("error", {})
+                except json.JSONDecodeError:
+                    error_data = {"error": "Failed to get exact error details"}
+                return {
+                    "code": error_data.get("code"),
+                    "message": error_data.get("message"),
+                    "errors": error_data.get("errors", []),
+                    "status": error_data.get("status"),
+                }
 
             result_data = result.get("data", [])
             if (
@@ -391,12 +402,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                 get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
                 if get_result_field:
                     key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result_data)))
-                    return (
-                        result_data.get(key)
-                        if isinstance(result_data.get(key), dict)
-                        else {"response": result_data.get(key)}
-                    )
-                return result_data if isinstance(result_data, dict) else {"response": result_data}
+                    result_data.get(key)
+                return result_data
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
