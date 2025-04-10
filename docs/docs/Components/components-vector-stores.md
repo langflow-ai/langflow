@@ -78,6 +78,20 @@ For an example of using the **Astra DB Vector Store** component with an embeddin
 
 For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
+### Hybrid search
+
+The **Astra DB** component includes **Hybrid search**. It is enabled by default.
+
+* Vector search finds results by vector similarity.
+* Lexical search finds matches by term.
+* Hybrid search combines vector and lexical search with a re-ranker.
+
+** Hybrid search** passes a lexical query **and** a vector search together to return the most semantically relevant result. This uses the "find and rerank" Data API command.
+A score is assigned for each query and document pair, and higher scores indicate a stronger match.
+The strongest matches are passed on to the model component.
+
+To use **Hybrid search**, do the following:
+
 ## AstraDB Graph vector store
 
 This component implements a Vector Store using AstraDB with graph capabilities.
