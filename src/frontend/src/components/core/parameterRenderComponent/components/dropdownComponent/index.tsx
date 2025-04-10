@@ -36,7 +36,7 @@ export default function DropdownComponent({
       id={`dropdown_${id}`}
       name={name}
       dialogInputs={dialogInputs}
-      handleOnNewValue={handleOnNewValue} // TODO: Remove this
+      handleOnNewValue={handleOnNewValue}
       {...baseInputProps}
     />
   );

@@ -52,9 +52,13 @@ export default function Dropdown({
   handleNodeClass,
   name,
   dialogInputs,
+  handleOnNewValue,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
-  const validOptions = useMemo(() => filterNullOptions(options), [options]);
+  const validOptions = useMemo(
+    () => filterNullOptions(options),
+    [options, value],
+  );
 
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
@@ -66,11 +70,12 @@ export default function Dropdown({
   const refButton = useRef<HTMLButtonElement>(null);
 
   value = useMemo(() => {
-    if (!options.includes(value)) {
+    if (!options.includes(value) && !filteredOptions.includes(value)) {
       return null;
     }
     return value;
-  }, [value, options]);
+  }, [value, options, filteredOptions]);
+
   // Initialize utilities and constants
   const placeholderName = name
     ? formatPlaceholderName(name)
@@ -101,14 +106,24 @@ export default function Dropdown({
 
   const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
+    setCustomValue(value);
+
+    if (!value) {
+      // If search is cleared, show all options
+      setFilteredOptions(validOptions);
+      setFilteredMetadata(optionsMetaData);
+      return;
+    }
+
+    // Search existing options
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
 
     // Update filteredOptions with the search results
-    setFilteredOptions(value ? filtered : validOptions);
+    setFilteredOptions(filtered);
 
     // Update filteredMetadata to match the filtered options
-    if (value && optionsMetaData) {
+    if (optionsMetaData) {
       const newMetadata = filtered.map((option) => {
         const originalIndex = validOptions.indexOf(option);
         return optionsMetaData[originalIndex];
@@ -117,8 +132,6 @@ export default function Dropdown({
     } else {
       setFilteredMetadata(optionsMetaData);
     }
-
-    setCustomValue(value);
   };
 
   const handleRefreshButtonPress = async () => {
@@ -166,15 +179,27 @@ export default function Dropdown({
 
   useEffect(() => {
     if (open) {
-      const filtered = cloneDeep(validOptions);
-      if (customValue === value && value && combobox) {
-        filtered.push(customValue);
-      }
-      setFilteredOptions(filtered);
+      setFilteredOptions(validOptions);
+      setCustomValue("");
     }
-  }, [open]);
+  }, [open, validOptions]);
 
-  // Render helper functions
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      if (open && customValue) {
+        const newOptions = [...validOptions];
+        if (!newOptions.includes(customValue)) {
+          newOptions.push(customValue);
+        }
+
+        setFilteredOptions(newOptions);
+
+        handleOnNewValue?.({ value: customValue });
+        onSelect(customValue);
+        setOpen(false);
+      }
+    }
+  };
 
   const renderLoadingButton = () => (
     <Button
@@ -206,11 +231,11 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "w-full justify-between font-normal",
+            "no-focus-visible w-full justify-between font-normal",
           )}
         >
           <span
-            className="flex items-center gap-2 truncate"
+            className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
             {optionsMetaData?.[
@@ -222,12 +247,14 @@ export default function Dropdown({
                     filteredOptions.findIndex((option) => option === value)
                   ]?.icon
                 }
-                className="h-4 w-4"
+                className="h-4 w-4 flex-shrink-0"
               />
             )}
-            {value && filteredOptions.includes(value)
-              ? value
-              : placeholderName}{" "}
+            <span className="truncate">
+              {value && filteredOptions.includes(value)
+                ? value
+                : placeholderName}{" "}
+            </span>
           </span>
           <ForwardedIconComponent
             name="ChevronsUpDown"
@@ -256,9 +283,11 @@ export default function Dropdown({
       />
       <input
         onChange={searchRoleByTerm}
+        onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
+        data-testid="dropdown_search_input"
       />
     </div>
   );
@@ -363,7 +392,7 @@ export default function Dropdown({
                         </span>
                       </div>
                       {filteredMetadata && filteredMetadata?.length > 0 ? (
-                        <div className="flex w-full items-center text-muted-foreground">
+                        <div className="flex w-full items-center overflow-hidden text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
@@ -375,18 +404,19 @@ export default function Dropdown({
                               <div
                                 key={key}
                                 className={cn("flex items-center", {
-                                  truncate: i === arr.length - 1,
+                                  "flex-1 overflow-hidden":
+                                    i === arr.length - 1,
                                 })}
                               >
                                 {i > 0 && (
                                   <ForwardedIconComponent
                                     name="Circle"
-                                    className="mx-1 h-1 w-1 overflow-visible fill-muted-foreground"
+                                    className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
                                 <div
                                   className={cn("text-xs", {
-                                    truncate: i === arr.length - 1,
+                                    "w-full truncate": i === arr.length - 1,
                                   })}
                                 >{`${String(value)} ${key}`}</div>
                               </div>
@@ -453,7 +483,7 @@ export default function Dropdown({
       ) : refreshOptions || isLoading ? (
         renderLoadingButton()
       ) : (
-        renderTriggerButton()
+        <div className="w-full truncate">{renderTriggerButton()}</div>
       )}
       {renderPopoverContent()}
     </Popover>
