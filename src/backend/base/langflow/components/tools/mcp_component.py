@@ -219,7 +219,7 @@ class MCPToolsComponent(Component):
         return inputs
 
     def remove_input_schema_from_build_config(
-        self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes], Any]
+            self, build_config: dict, tool_name: str, input_schema: dict[list[InputTypes], Any]
     ):
         """Remove the input schema for the tool from the build config."""
         # Keep only schemas that don't belong to the current tool
@@ -320,11 +320,6 @@ class MCPToolsComponent(Component):
                     self.tools = await self.stdio_client.connect_to_server(self.command)
             elif self.mode == "SSE" and not self.sse_client.session:
                 try:
-                    is_valid, _ = await self.sse_client.validate_url(self.sse_url)
-                    if not is_valid:
-                        msg = f"Invalid SSE URL configuration: {self.sse_url}. Please check the SSE URL and try again."
-                        logger.error(msg)
-                        return []
                     self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
                 except ValueError as e:
                     # URL validation error
