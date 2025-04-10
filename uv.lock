@@ -4605,6 +4605,7 @@ dependencies = [
     { name = "qianfan" },
     { name = "ragstack-ai-knowledge-store" },
     { name = "redis" },
+    { name = "rise" },
     { name = "ruff" },
     { name = "scipy" },
     { name = "scrapegraph-py" },
@@ -4801,6 +4802,7 @@ requires-dist = [
     { name = "qianfan", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
+    { name = "rise", git = "https://github.com/phact/G-Assist.git?subdirectory=api%2Fbindings%2Fpython" },
     { name = "ruff", specifier = ">=0.9.7" },
     { name = "scipy", specifier = ">=1.14.1" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
@@ -8853,6 +8855,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ab/3a/0316b28d0761c6734d6bc14e770d85506c986c85ffb239e688eeaab2c2bc/rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098", size = 223149 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/19/71/39c7c0d87f8d4e6c020a393182060eaefeeae6c01dab6a84ec346f2567df/rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90", size = 242424 },
+]
+
+[[package]]
+name = "rise"
+version = "0.0.1"
+source = { git = "https://github.com/phact/G-Assist.git?subdirectory=api%2Fbindings%2Fpython#78bd766100c0a60f69c23844d5c27d910cd8571d" }
+dependencies = [
+    { name = "colorama" },
+    { name = "flask" },
+    { name = "flask-cors" },
+    { name = "tqdm" },
 ]
 
 [[package]]
