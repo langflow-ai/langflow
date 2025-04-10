@@ -397,6 +397,6 @@ class MCPToolsComponent(Component):
 
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
-        if not self.tools:
+        if not self._tool_cache:
             return await self.update_tools()
-        return self.tools
+        return list(self._tool_cache.values())
