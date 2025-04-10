@@ -82,6 +82,10 @@ test(
 
     expect(sseURLCount).toBeGreaterThan(0);
 
+    await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
+      timeout: 30000,
+    });
+
     await page.getByTestId("tab_0_stdio").click();
 
     await page.getByTestId("refresh-button-command").click();
@@ -131,5 +135,9 @@ test(
       .count();
 
     expect(sseURLCount).toBeGreaterThan(0);
+
+    await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
+      timeout: 30000,
+    });
   },
 );

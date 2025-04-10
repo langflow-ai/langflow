@@ -12,7 +12,6 @@ import { v4 as uuid } from "uuid";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
-  
   useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
