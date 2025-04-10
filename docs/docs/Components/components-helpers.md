@@ -252,4 +252,3 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 |------|--------------|------|
 | structured_output | Structured Output | The structured output is a Data object based on the defined schema. |
 | structured_output_dataframe | DataFrame | The structured output converted to a [DataFrame](/concepts-objects#dataframe-object) format. |
-
