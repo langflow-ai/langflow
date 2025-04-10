@@ -1549,7 +1549,7 @@ class Graph:
                         set_cache=chat_service.set_cache,
                         event_manager=event_manager,
                     ),
-                    name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
+                    name=f"{vertex.id} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
                 tasks.append(task)
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
@@ -1596,15 +1596,32 @@ class Graph:
         return next_runnable_vertices
 
     async def _execute_tasks(self, tasks: list[asyncio.Task], lock: asyncio.Lock) -> list[str]:
-        """Executes tasks in parallel, handling exceptions for each task."""
+        """Executes tasks in parallel, handling exceptions for each task.
+        
+        Args:
+            tasks: List of tasks to execute
+            lock: Async lock for synchronization
+        """
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
 
+
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
+            vertex_id = tasks[i].get_name().split(" ")[0]
+
             if isinstance(result, Exception):
                 logger.error(f"Task {task_name} failed with exception: {result}")
+                await log_vertex_build(
+                    flow_id=self.flow_id or "",
+                    vertex_id=vertex_id or "errors",
+                    valid=False,
+                    params={"error": str(result)},
+                    data={"error": str(result)},
+                    artifacts={},
+                )
+
                 # Cancel all remaining tasks
                 for t in tasks[i + 1 :]:
                     t.cancel()

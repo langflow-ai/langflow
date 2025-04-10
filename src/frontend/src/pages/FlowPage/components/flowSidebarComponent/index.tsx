@@ -43,8 +43,8 @@ const BUNDLES = SIDEBAR_BUNDLES;
 
 interface FlowSidebarComponentProps {
   isLoading?: boolean;
-  showLegacy: boolean;
-  setShowLegacy: (value: boolean) => void;
+  showLegacy?: boolean;
+  setShowLegacy?: (value: boolean) => void;
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
