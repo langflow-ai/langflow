@@ -174,8 +174,10 @@ async def handle_function_call(
                         "content": [
                             {
                                 "type": "input_text",
-                                "text": f"Remember to tell the user you are now waiting "
-                                f"for a response for {function_call_args}",
+                                "text": (
+                                    f"Remember to tell the user you are now waiting "
+                                    f"for a response for {function_call_args}",
+                                ),
                             }
                         ],
                     },
