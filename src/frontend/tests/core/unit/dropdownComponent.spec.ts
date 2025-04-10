@@ -56,8 +56,9 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
+
+    await page.waitForTimeout(1000);
 
     await page.waitForTimeout(1000);
 

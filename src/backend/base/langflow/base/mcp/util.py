@@ -3,17 +3,21 @@ import os
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
+from httpx import codes as httpx_codes
+from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
 from pydantic import Field, create_model
 from sqlmodel import select
 
 from langflow.helpers.base_model import BaseModel
-from langflow.logging import logger
 from langflow.services.database.models import Flow
+
+HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., Awaitable]:
@@ -118,10 +122,6 @@ class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-        self._cleanup_lock = asyncio.Lock()
-        self._is_cleaning = False
-        self.stdio = None
-        self.write = None
 
     async def connect_to_server(self, command_str: str):
         command = command_str.split(" ")
@@ -130,47 +130,12 @@ class MCPStdioClient:
             args=command[1:],
             env={"DEBUG": "true", "PATH": os.environ["PATH"]},
         )
-        try:
-            # First close any existing connections
-            await self.cleanup()
-
-            stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-            self.stdio, self.write = stdio_transport
-            self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-            await self.session.initialize()
-            if self.session is None:
-                msg = "Session not initialized"
-                raise ValueError(msg)
-            response = await self.session.list_tools()
-        except (asyncio.CancelledError, GeneratorExit):
-            await self.cleanup()
-            raise
-        except Exception as e:
-            await self.cleanup()
-            msg = f"Error connecting to server: {e}"
-            raise ValueError(msg) from e
-        else:
-            return response.tools
-
-    async def cleanup(self):
-        async with self._cleanup_lock:
-            if not self._is_cleaning:
-                self._is_cleaning = True
-                try:
-                    if self.session:
-                        try:
-                            await self.session.shutdown()
-                        except Exception as e:  # noqa: BLE001
-                            logger.error(f"Error during session shutdown: {e}")
-                    await self.exit_stack.aclose()
-                except Exception as e:
-                    logger.error(f"Error during exit stack cleanup: {e}")
-                    raise
-                finally:
-                    self._is_cleaning = False
-                    self.session = None
-                    self.stdio = None
-                    self.write = None
+        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+        self.stdio, self.write = stdio_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+        await self.session.initialize()
+        response = await self.session.list_tools()
+        return response.tools
 
 
 class MCPSseClient:
@@ -179,70 +144,110 @@ class MCPSseClient:
         self.sse = None
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-        self._cleanup_lock = asyncio.Lock()
-        self._is_cleaning = False
+        self.max_retries = 3
+        self.retry_delay = 1.0  # seconds
 
-    async def pre_check_redirect(self, url: str):
-        async with httpx.AsyncClient(follow_redirects=False) as client:
-            response = await client.request("HEAD", url)
-            if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
-                return response.headers.get("Location")
+    async def validate_url(self, url: str | None) -> tuple[bool, str]:
+        """Validate the SSE URL before attempting connection."""
+        try:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return False, "Invalid URL format. Must include scheme (http/https) and host."
+
+            async with httpx.AsyncClient() as client:
+                try:
+                    # First try a HEAD request to check if server is reachable
+                    response = await client.head(url, timeout=5.0)
+                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
+                        return False, f"Server returned error status: {response.status_code}"
+
+                except httpx.TimeoutException:
+                    return False, "Connection timed out. Server may be down or unreachable."
+                except httpx.NetworkError:
+                    return False, "Network error. Could not reach the server."
+                else:
+                    return True, ""
+
+        except (httpx.HTTPError, ValueError, OSError) as e:
+            return False, f"URL validation error: {e!s}"
+
+    async def pre_check_redirect(self, url: str | None) -> str | None:
+        """Check for redirects and return the final URL."""
+        if url is None:
+            return url
+        try:
+            async with httpx.AsyncClient(follow_redirects=False) as client:
+                response = await client.request("HEAD", url)
+                if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
+                    return response.headers.get("Location", url)
+        except (httpx.RequestError, httpx.HTTPError) as e:
+            logger.warning(f"Error checking redirects: {e}")
         return url
 
     async def _connect_with_timeout(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
+        self, url: str | None, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
     ):
-        sse_transport = await self.exit_stack.enter_async_context(
-            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-        )
-        self.sse, self.write = sse_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
-        await self.session.initialize()
+        """Attempt to connect with timeout."""
+        try:
+            if url is None:
+                return
+            sse_transport = await self.exit_stack.enter_async_context(
+                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+            )
+            self.sse, self.write = sse_transport
+            self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
+            await self.session.initialize()
+        except Exception as e:
+            msg = f"Failed to establish SSE connection: {e!s}"
+            raise ConnectionError(msg) from e
 
     async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
+        self,
+        url: str | None,
+        headers: dict[str, str] | None,
+        timeout_seconds: int = 30,
+        sse_read_timeout_seconds: int = 30,
     ):
+        """Connect to server with retries and improved error handling."""
         if headers is None:
             headers = {}
+
+        # First validate the URL
+        is_valid, error_msg = await self.validate_url(url)
+        if not is_valid:
+            msg = f"Invalid SSE URL ({url}): {error_msg}"
+            raise ValueError(msg)
+
         url = await self.pre_check_redirect(url)
-        try:
-            # First close any existing connections
-            await self.cleanup()
+        last_error = None
 
-            await asyncio.wait_for(
-                self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
-                timeout=timeout_seconds,
-            )
-            if self.session is None:
-                msg = "Session not initialized"
-                raise ValueError(msg)
-            response = await self.session.list_tools()
-        except (asyncio.CancelledError, GeneratorExit):
-            await self.cleanup()
-            raise
-        except Exception as e:
-            await self.cleanup()
-            msg = f"Error connecting to server: {e}"
-            raise ValueError(msg) from e
-        else:
-            return response.tools
+        for attempt in range(self.max_retries):
+            try:
+                await asyncio.wait_for(
+                    self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
+                    timeout=timeout_seconds,
+                )
 
-    async def cleanup(self):
-        async with self._cleanup_lock:
-            if not self._is_cleaning:
-                self._is_cleaning = True
-                try:
-                    if self.session:
-                        try:
-                            await self.session.shutdown()
-                        except Exception as e:  # noqa: BLE001
-                            logger.error(f"Error during session shutdown: {e}")
-                    await self.exit_stack.aclose()
-                except Exception as e:
-                    logger.error(f"Error during exit stack cleanup: {e}")
-                    raise
-                finally:
-                    self._is_cleaning = False
-                    self.session = None
-                    self.sse = None
-                    self.write = None
+                if self.session is None:
+                    msg = "Session not initialized"
+                    raise ValueError(msg)
+
+                response = await self.session.list_tools()
+
+            except asyncio.TimeoutError:
+                last_error = f"Connection to {url} timed out after {timeout_seconds} seconds"
+                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
+            except ConnectionError as err:
+                last_error = str(err)
+                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
+            except (ValueError, httpx.HTTPError, OSError) as err:
+                last_error = f"Connection error: {err!s}"
+                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
+            else:
+                return response.tools
+
+            if attempt < self.max_retries - 1:
+                await asyncio.sleep(self.retry_delay * (attempt + 1))
+
+        msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
+        raise ConnectionError(msg)
