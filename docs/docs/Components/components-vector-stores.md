@@ -123,7 +123,7 @@ This string of comma-separated words is passed to the **Lexical Terms** port of 
 Note that the **Search Query** port of the Astra DB port is connected to the **Chat Input** component from step 6.
 This **Search Query** is vectorized, and both the **Search Query** and **Lexical Terms** content are sent to the reranker at the `find_and_rerank` endpoint.
 
-11. The reranker compares the vector search results against the list of terms to rank by.
+9. The reranker compares the vector search results against the list of terms from the lexical search.
 The highest-ranked results of your hybrid search are returned to the **Playground**.
 
 For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-and-rerank.html).
