@@ -201,8 +201,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "Lexical finds term matches, and Hybrid Search (suggested) combines both approaches "
                 "with a reranker."
             ),
-            options=["Hybrid Search", "Lexical Search", "Vector Search"],
-            options_metadata=[{"icon": "SearchHybrid"}, {"icon": "SearchLexical"}, {"icon": "SearchVector"}],
+            options=["Hybrid Search", "Vector Search"],  # TODO: Restore Lexical Search?
+            options_metadata=[{"icon": "SearchHybrid"}, {"icon": "SearchVector"}],
             value="Vector Search",
             advanced=True,
             real_time_refresh=True,
@@ -815,7 +815,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Set the default search field to hybrid search
             build_config["search_method"]["show"] = True
-            build_config["search_method"]["options"] = ["Hybrid Search", "Lexical Search", "Vector Search"]
+            build_config["search_method"]["options"] = ["Hybrid Search", "Vector Search"]
             build_config["search_method"]["value"] = "Hybrid Search"
         except Exception as _:  # noqa: BLE001
             build_config["reranker"]["options"] = []
@@ -1193,12 +1193,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None
         lexical_terms = self.lexical_terms or None
 
-        # However, if it is a lexical search, use the lexical terms as the query
-        if self.search_method == "Lexical Search":
-            query = self.lexical_terms if isinstance(self.lexical_terms, str) and self.lexical_terms.strip() else None
-            lexical_terms = None
-
-        if query or lexical_terms:
+        # Check if we have a search query, and if so set the args
+        if query:
             args = {
                 "query": query,
                 "search_type": self._map_search_type(),
