@@ -163,6 +163,26 @@ async def handle_function_call(
 ):
     """Handle function calls from the OpenAI API."""
     try:
+        # trigger response that tool was called
+        await openai_ws.send(
+            json.dumps(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "message",
+                        "role": "system",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": f"Remember to tell the user you are now waiting "
+                                f"for a response for {function_call_args}",
+                            }
+                        ],
+                    },
+                }
+            )
+        )
+        await openai_ws.send(json.dumps({"type": "response.create"}))
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
