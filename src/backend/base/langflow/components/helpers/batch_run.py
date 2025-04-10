@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 from loguru import logger
@@ -143,7 +143,9 @@ class BatchRunComponent(Component):
             if col_name:
                 user_texts = df[col_name].astype(str).tolist()
             else:
-                user_texts = [self._format_row_as_toml(row) for row in df.to_dict(orient="records")]
+                user_texts = [
+                    self._format_row_as_toml(cast(dict[str, Any], row)) for row in df.to_dict(orient="records")
+                ]
 
             total_rows = len(user_texts)
             logger.info(f"Processing {total_rows} rows with batch run")
@@ -182,7 +184,9 @@ class BatchRunComponent(Component):
                 zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
             ):
                 response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
-                row = self._create_base_row(original_row, model_response=response_text, batch_index=idx)
+                row = self._create_base_row(
+                    cast(dict[str, Any], original_row), model_response=response_text, batch_index=idx
+                )
                 self._add_metadata(row, success=True, system_msg=system_msg)
                 rows.append(row)
 
