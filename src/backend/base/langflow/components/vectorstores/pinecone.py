@@ -42,6 +42,9 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
+        IntInput(
+            name="dimension", display_name="Dimension", info="Dimension of the vector store.", value=1536, advanced=True
+        ),
     ]
 
     @check_cached_vector_store
@@ -103,7 +106,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             if self.index_name not in existing_indexes:
                 pc.create_index(
                     name=self.index_name,
-                    dimension=self.embedding.cont,
+                    dimension=self.dimension,
                     spec=ServerlessSpec(cloud=cloud, region=region),
                     deletion_protection=deletion_protection,
                 )
