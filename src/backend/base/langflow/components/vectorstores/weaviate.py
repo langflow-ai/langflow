@@ -79,7 +79,8 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_query, k=self.number_of_results, where_filter=self.search_filter
+                query=self.search_query,
+                k=self.number_of_results,
             )
 
             data = docs_to_data(docs)
