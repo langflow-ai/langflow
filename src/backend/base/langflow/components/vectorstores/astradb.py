@@ -207,6 +207,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Reranker",
             info="Reranker to use for the search.",
             show=False,
+            toggle=True,
             advanced=True,
         ),
         QueryInput(
