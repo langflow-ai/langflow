@@ -4,7 +4,7 @@ from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 
 
-class LoopComponent(Component):
+class BasicLoopComponent(Component):
     display_name = "Loop"
     description = (
         "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
@@ -90,6 +90,7 @@ class LoopComponent(Component):
             self.start("done")
 
             aggregated = self.ctx.get(f"{self._id}_aggregated", [])
+
             return DataFrame(aggregated)
         self.stop("done")
         return DataFrame([])
@@ -108,9 +109,8 @@ class LoopComponent(Component):
         # Get data list and aggregated list
         data_list = self.ctx.get(f"{self._id}_data", [])
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
-
-        # Check if loop input is provided and append to aggregated list
-        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):
-            aggregated.append(self.item)
+        loop_input = self.item
+        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):
+            aggregated.append(loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
