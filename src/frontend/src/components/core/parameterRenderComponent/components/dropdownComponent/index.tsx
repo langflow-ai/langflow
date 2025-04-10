@@ -27,7 +27,7 @@ export default function DropdownComponent({
   return (
     <div className="flex w-full items-center gap-4">
       <Dropdown
-        disabled={disabled}
+        disabled={disabled || toggleValue === false}
         editNode={editNode}
         options={options}
         nodeId={nodeId}
@@ -36,7 +36,7 @@ export default function DropdownComponent({
         optionsMetaData={optionsMetaData}
         onSelect={onChange}
         combobox={combobox}
-        value={value || ""}
+        value={value || (toggleValue === false && toggle ? options[0] : "")}
         id={`dropdown_${id}`}
         name={name}
         dialogInputs={dialogInputs}
@@ -47,7 +47,10 @@ export default function DropdownComponent({
         <ToggleShadComponent
           value={toggleValue ?? true}
           handleOnNewValue={(data) => {
-            handleOnNewValue({ toggle_value: data.value });
+            handleOnNewValue({
+              value: data.value === true ? options[0] : null,
+              toggle_value: data.value,
+            });
           }}
           editNode={editNode}
           id={`toggle_dropdown_${id}`}
