@@ -1227,6 +1227,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {self.number_of_results}")
         self.log(f"store.hybrid_search: {vector_store.hybrid_search}")
         self.log(f"Lexical terms: {self.lexical_terms}")
+        self.log(f"Reranker: {self.reranker}")
 
         try:
             search_args = self._build_search_args()
