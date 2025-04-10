@@ -34,9 +34,8 @@ def upgrade() -> None:
         for fk in message_fks:
             if fk.get("referred_table") == "flow" and "flow_id" in fk.get("constrained_columns", []):
                 constraint_name = fk.get("name")
-                if constraint_name:
-                    batch_op.drop_constraint(constraint_name, type_="foreignkey")
-                    break
+                batch_op.drop_constraint(constraint_name, type_="foreignkey")
+                break
 
     # Handle transaction table
     transaction_fks = inspector.get_foreign_keys("transaction")
@@ -44,9 +43,8 @@ def upgrade() -> None:
         for fk in transaction_fks:
             if fk.get("referred_table") == "flow" and "flow_id" in fk.get("constrained_columns", []):
                 constraint_name = fk.get("name")
-                if constraint_name:
-                    batch_op.drop_constraint(constraint_name, type_="foreignkey")
-                    break
+                batch_op.drop_constraint(constraint_name, type_="foreignkey")
+                break
 
     # Handle vertex_build table
     vertex_build_fks = inspector.get_foreign_keys("vertex_build")
@@ -54,9 +52,8 @@ def upgrade() -> None:
         for fk in vertex_build_fks:
             if fk.get("referred_table") == "flow" and "flow_id" in fk.get("constrained_columns", []):
                 constraint_name = fk.get("name")
-                if constraint_name:
-                    batch_op.drop_constraint(constraint_name, type_="foreignkey")
-                    break
+                batch_op.drop_constraint(constraint_name, type_="foreignkey")
+                break
 
     # ### end Alembic commands ###
 
