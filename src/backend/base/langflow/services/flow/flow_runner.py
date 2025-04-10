@@ -82,7 +82,7 @@ class LangFlowRunner:
             try:
                 result = await session.exec(text("SELECT version_num FROM public.alembic_version"))
                 return result.first() is not None
-            except Exception as e: # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 logger.debug(f"Database check failed: {e}")
                 return False
 
