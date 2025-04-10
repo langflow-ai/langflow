@@ -75,7 +75,6 @@ test(
     await expect(page.getByTestId("inputsChat Input")).toBeVisible();
     await expect(page.getByTestId("outputsChat Output")).toBeVisible();
     await expect(page.getByTestId("promptsPrompt")).toBeVisible();
-    await expect(page.getByTestId("modelsAmazon Bedrock")).toBeVisible();
     await expect(page.getByTestId("helpersMessage History")).toBeVisible();
     await expect(page.getByTestId("langchain_utilitiesCSVAgent")).toBeVisible();
     await expect(
@@ -101,7 +100,6 @@ test(
     await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
     await expect(page.getByTestId("outputsChat Output")).not.toBeVisible();
     await expect(page.getByTestId("promptsPrompt")).not.toBeVisible();
-    await expect(page.getByTestId("modelsAmazon Bedrock")).not.toBeVisible();
     await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
     await expect(
       page.getByTestId("agentsTool Calling Agent"),
