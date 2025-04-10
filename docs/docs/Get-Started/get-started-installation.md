@@ -120,7 +120,7 @@ pip install langflow --force-reinstall
 </TabItem>
 </Tabs>
 
-### Install optional dependencies
+### Install optional dependencies for Langflow OSS
 
 Langflow OSS provides optional dependency groups that extend its functionality.
 
@@ -245,7 +245,7 @@ Langflow Desktop is in **Alpha**.
 Development is ongoing, and the features and functionality are subject to change.
 :::
 
-**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [Version Management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
 
 :::important
 Langflow Desktop is available only for macOS.
