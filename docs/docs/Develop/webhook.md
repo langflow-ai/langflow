@@ -3,7 +3,7 @@ title: Trigger flows with webhooks
 slug: /webhook
 ---
 
-Webhooks allow external systems to trigger your flows by sending HTTP POST requests.
+import Icon from "@site/src/components/icon";
 
 To enable your flow to be triggered by an external request, add a **Webhook** component to your flow.
 
@@ -17,7 +17,7 @@ Create variables for values in the `template` the same way you would in a [Promp
 For example, to parse `id`, `name`, and `email` strings:
 ```text
 ID: {id} - Name: {name} - Email: {email}
-```text
+```
 
 :::important
 The component may fail to build, because it needs data from the **Webhook** first.
