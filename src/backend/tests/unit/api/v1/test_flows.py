@@ -8,7 +8,7 @@ from langflow.services.database.models import Flow
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
-    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()!s}.json"
+    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()}.json"
     try:
         basic_case = {
             "name": "string",

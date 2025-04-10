@@ -13,7 +13,7 @@ Your flow must have a [Chat input](/components-io#chat-input) component to inter
 
 ## Prerequisite
 
-- [OpenAI API key created](https://platform.openai.com/)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Use voice mode in the Langflow Playground
 

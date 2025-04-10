@@ -5,6 +5,7 @@ slug: /integrations-mcp
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). This allows you to use your Langflow flows as tools in client applications that support the MCP, or extend Langflow with the [MCP server component](/components-tools#mcp-tools-stdio) to access MCP servers.
 
@@ -12,7 +13,7 @@ You can use Langflow as an MCP server with any [MCP client](https://modelcontext
 
 For configuring interactions between Langflow flows and MCP tools, see [Name and describe your flows for agentic use](#name-and-describe-your-flows-for-agentic-use).
 
-To connect [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) to Langflow for testing and debugging flows, see [Install MCP Inspector to test and debug flows](#install-mcp-inspector-to-test-and-debug-flows)
+To connect [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) to Langflow for testing and debugging flows, see [Install MCP Inspector to test and debug flows](#install-mcp-inspector-to-test-and-debug-flows).
 
 ## Access all of your flows as tools
 
@@ -53,7 +54,7 @@ This example assumes the default Langflow server address of `http://127.0.0.1:78
 4. Save the `mcp.json` file, and then click the **Reload** icon.
 5. Your Langflow server is now available to Cursor as an MCP server, and all of its flows are registered as tools.
 You can now use your flows as tools in Cursor.
-Cursor determines when to use tools based on your queries, and will request permissions when necessary.
+Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
 </TabItem>
 
@@ -67,12 +68,12 @@ For example, on the MacOS menu bar, click **Claude**, and then select **Settings
 2. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
 This creates a `claude_desktop_config.json` file if you don't already have one.
 3. Add the following code to `claude_desktop_config.json`.
-Your args may differ for your `uvx` and `Python` installations. To find the correct paths:
 
-   * For `uvx`: Run `which uvx` in your terminal
-   * For Python: Run `which python` in your terminal
+Your `args` may differ for your `uvx` and `Python` installations. To find your system paths, do the following:
 
-Replace `PATH/TO/PYTHON` with the Python path from your system.
+4. To find the `uvx` path, run `which uvx` in your terminal. Replace `PATH/TO/UVX` with the `uvx` path from your system.
+5. To find the `python` path, run `which python` in your terminal. Replace `PATH/TO/PYTHON` with the Python path from your system.
+
 This command assumes the default Langflow server address of `http://127.0.0.1:7860`.
 
 ```json
@@ -80,7 +81,7 @@ This command assumes the default Langflow server address of `http://127.0.0.1:78
  "mcpServers": {
      "langflow": {
          "command": "/bin/sh",
-         "args": ["-c", "uvx --python PATH/TO/PYTHON mcp-sse-shim@latest"],
+         "args": ["-c", "PATH/TO/UVX --python PATH/TO/PYTHON mcp-sse-shim@latest"],
          "env": {
              "MCP_HOST": "http://127.0.0.1:7860",
              "DEBUG": "true"
@@ -92,13 +93,17 @@ This command assumes the default Langflow server address of `http://127.0.0.1:78
 
 This code adds a new MCP server called `langflow` and starts the [mcp-sse-shim](https://github.com/phact/mcp-sse-shim) package using the specified Python interpreter and uvx.
 
-4. Restart Claude for Desktop.
-Your new tools are available in your chat window. Click the tools icon to see a list of your flows.
+6. Restart Claude for Desktop.
+Your new tools are available in your chat window, and Langflow is available as an MCP server.
+
+  * To view your tools, click the <Icon name="Hammer" aria-label="Tools" /> icon.
+  * To view a list of connected MCP servers, which includes **langflow-mcp-server**, click the <Icon name="Unplug" aria-label="Connector" /> icon.
 
 You can now use your flows as tools in Claude for Desktop.
 
 Claude determines when to use tools based on your queries, and will request permissions when necessary.
 
+For more information, see [Debugging in Claude for Desktop](https://modelcontextprotocol.io/docs/tools/debugging#debugging-in-claude-desktop).
 
 </TabItem>
 </Tabs>
