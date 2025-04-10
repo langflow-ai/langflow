@@ -168,6 +168,7 @@ function NodeOutputField({
   colorName,
   isToolMode = false,
   showHiddenOutputs,
+  hidden,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -179,10 +180,6 @@ function NodeOutputField({
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
-
-  const hidden = useMemo(() => {
-    return data.node?.outputs![index].hidden;
-  }, [data.node?.outputs, index]);
 
   // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {

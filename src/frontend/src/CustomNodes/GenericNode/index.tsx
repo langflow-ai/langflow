@@ -233,6 +233,7 @@ function GenericNode({
           showNode={showNode}
           isToolMode={isToolMode}
           showHiddenOutputs={showHiddenOutputs}
+          hidden={key === "hidden"}
         />
       ));
     },
@@ -248,6 +249,8 @@ function GenericNode({
     }),
     [data.node?.outputs],
   );
+
+  console.log(shownOutputs, hiddenOutputs);
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);

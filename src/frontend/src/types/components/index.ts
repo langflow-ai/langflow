@@ -107,6 +107,7 @@ export type NodeOutputFieldComponentType = {
   colorName?: string[];
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
+  hidden?: boolean;
 };
 
 export type NodeInputFieldComponentType = {

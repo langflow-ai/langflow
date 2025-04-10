@@ -14,6 +14,7 @@ export const OutputParameter = ({
   showNode,
   showHiddenOutputs,
   isToolMode,
+  hidden,
 }) => {
   const id = useMemo(
     () => ({
@@ -37,6 +38,7 @@ export const OutputParameter = ({
 
   return (
     <NodeOutputField
+      hidden={hidden}
       index={idx}
       lastOutput={lastOutput}
       selected={selected}
