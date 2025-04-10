@@ -175,7 +175,7 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
-rise = { path = "./src/rise/dist/rise-0.1.0-py3-none-any.whl" }
+rise = { git = "https://github.com/NVIDIA/G-Assist.git", subdirectory = "api/bindings/python" }
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
