@@ -4751,7 +4751,7 @@ requires-dist = [
     { name = "qianfan", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
-    { name = "rise", git = "https://github.com/NVIDIA/G-Assist.git?subdirectory=api%2Fbindings%2Fpython" },
+    { name = "rise", git = "https://github.com/phact/G-Assist.git?subdirectory=api%2Fbindings%2Fpython" },
     { name = "ruff", specifier = ">=0.9.7" },
     { name = "scipy", specifier = ">=1.14.1" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
@@ -8786,7 +8786,7 @@ wheels = [
 [[package]]
 name = "rise"
 version = "0.0.1"
-source = { git = "https://github.com/NVIDIA/G-Assist.git?subdirectory=api%2Fbindings%2Fpython#d8549851f85636731f63cc08543e9ae28dd93636" }
+source = { git = "https://github.com/phact/G-Assist.git?subdirectory=api%2Fbindings%2Fpython#78bd766100c0a60f69c23844d5c27d910cd8571d" }
 dependencies = [
     { name = "colorama" },
     { name = "flask" },
