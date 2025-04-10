@@ -1,3 +1,4 @@
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -10,9 +11,7 @@ import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
-import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 export default function PlaygroundPage() {
-
   useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
