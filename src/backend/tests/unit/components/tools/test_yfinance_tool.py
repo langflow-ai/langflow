@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.tools import ToolException
+
 from langflow.components.tools import YfinanceComponent
 from langflow.components.tools.yahoo import YahooFinanceMethod
 from langflow.custom.utils import build_custom_component_template

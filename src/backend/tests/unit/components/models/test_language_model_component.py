@@ -1,10 +1,10 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.components.models import LanguageModelComponent
-
 from tests.base import ComponentTestBaseWithClient
 
 

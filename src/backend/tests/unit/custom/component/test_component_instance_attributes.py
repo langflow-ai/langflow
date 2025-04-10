@@ -1,4 +1,5 @@
 import pytest
+
 from langflow.components.inputs.chat import ChatInput
 from langflow.schema.message import Message
 
