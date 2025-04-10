@@ -48,10 +48,4 @@ You have successfully parsed data out of an external JSON payload.
 
 By passing the event trigger data payload directly into a flow, you can also parse the event data with a chain of components, and use its data to trigger other events.
 
-## Parse JSON payload data from Composio
-
-:::important
-This section requires your Langflow server to be publicly exposed with a service like [ngrok](https://ngrok.com/docs).
-:::
-
 
