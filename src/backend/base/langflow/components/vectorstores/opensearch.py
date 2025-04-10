@@ -40,7 +40,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             value="langflow",
             info="The index name where the vectors will be stored in OpenSearch cluster.",
         ),
-        *LCVectorStoreComponent.inputs,
+        *LCVectorStoreComponent.inputs[:3],
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         DropdownInput(
             name="search_type",
@@ -144,6 +144,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 self.log(error_message)
                 raise TypeError(error_message)
 
+        vector_store.create_index(dimension=self.embedding.embedding_ctx_length, index_name=self.index_name)
+
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
@@ -189,7 +191,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     )
                 return processed_results
 
-            search_kwargs = {"k": self.number_of_results, "pre_filter": self.search_filter}
+            search_kwargs = {"k": self.number_of_results}
             search_type = self.search_type.lower()
 
             if search_type == "similarity":
