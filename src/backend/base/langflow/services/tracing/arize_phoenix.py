@@ -7,11 +7,13 @@ import traceback
 import types
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from loguru import logger
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
+from opentelemetry.propagators.textmap import CarrierT
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
@@ -64,21 +66,26 @@ class ArizePhoenixTracer(BaseTracer):
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
-        self.flow_name = trace_name.split(" - ")[0]
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_name, self.flow_id = trace_name.split(" - ")[0], trace_name.split(" - ")[-1]
         self.chat_input_value = ""
         self.chat_output_value = ""
         self.session_id = session_id
 
-        for key in ArizePhoenixTracer.get_required_variable_names():
-            set_env_from_globals(key, global_vars)
+        required_vars = ArizePhoenixTracer.get_required_variable_names()
+        if global_vars:
+            for key in required_vars:
+                set_env_from_globals(key, global_vars)
+        else:
+            for key in required_vars:
+                set_env_from_globals(key, None)
 
         try:
             self._ready = self.setup_arize_phoenix()
             if not self._ready:
                 return
 
-            self.tracer = self.tracer_provider.get_tracer(__name__)
+            tracer_provider = self.tracer_provider
+            self.tracer = tracer_provider.get_tracer(__name__)
             self.propagator = TraceContextTextMapPropagator()
             self.carrier: dict[Any, CarrierT] = {}
 
@@ -86,13 +93,20 @@ class ArizePhoenixTracer(BaseTracer):
                 name=self.flow_id,
                 start_time=self._get_current_timestamp(),
             )
-            self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.session_id or self.flow_id)
-            self.root_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, self.trace_type)
-            self.root_span.set_attribute("langflow.project.name", self.project_name)
-            self.root_span.set_attribute("langflow.flow.name", self.flow_name)
-            self.root_span.set_attribute("langflow.flow.id", self.flow_id)
+            root_span = self.root_span  # create local reference for better performance
 
-            with use_span(self.root_span, end_on_exit=False):
+            attributes = {
+                SpanAttributes.SESSION_ID: self.session_id or self.flow_id,
+                SpanAttributes.OPENINFERENCE_SPAN_KIND: self.trace_type,
+                "langflow.project.name": self.project_name,
+                "langflow.flow.name": self.flow_name,
+                "langflow.flow.id": self.flow_id,
+            }
+
+            for key, value in attributes.items():
+                root_span.set_attribute(key, value)
+
+            with use_span(root_span, end_on_exit=False):
                 self.propagator.inject(carrier=self.carrier)
 
             self.child_spans: dict[str, Span] = {}
