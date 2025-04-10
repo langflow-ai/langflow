@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import types
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -59,8 +60,11 @@ class OpikTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = {}
 
-        for key in OpikTracer.get_required_variable_names():
-            set_env_from_globals(key, global_vars)
+        required_variables = OpikTracer.get_required_variable_names()  # Call once
+
+        if global_vars:  # Add a check to avoid unnecessary iteration
+            for key in required_variables:
+                set_env_from_globals(key, global_vars)
 
         config = self._get_config()
         self._ready: bool = self._setup_opik(config, trace_id) if config else False
