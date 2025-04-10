@@ -3,7 +3,7 @@ import contextlib
 import importlib
 import warnings
 from types import FunctionType
-from typing import Optional, Union, Hashable
+from typing import Optional, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from loguru import logger
