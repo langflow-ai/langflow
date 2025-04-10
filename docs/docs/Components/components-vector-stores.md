@@ -3,6 +3,8 @@ title: Vector stores
 slug: /components-vector-stores
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Vector store components in Langflow
 
 Vector databases store vector data, which backs AI workloads like chatbots and Retrieval Augmented Generation.
@@ -80,17 +82,51 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 
 ### Hybrid search
 
-The **Astra DB** component includes **Hybrid search**. It is enabled by default.
+The **Astra DB** component includes **hybrid search** enabled by default.
 
-* Vector search finds results by vector similarity.
-* Lexical search finds matches by term.
-* Hybrid search combines vector and lexical search with a re-ranker.
+The component fields related to hybrid search are **Search Query**, **Lexical Terms**, and **Reranker**.
 
-** Hybrid search** passes a lexical query **and** a vector search together to return the most semantically relevant result. This uses the "find and rerank" Data API command.
-A score is assigned for each query and document pair, and higher scores indicate a stronger match.
-The strongest matches are passed on to the model component.
+* **Search Query** finds results by vector similarity.
+* **Lexical Terms** is a comma-separated list of keywords.
+* **Reranker** is the re-ranker model used in the hybrid search.
+The default model is `nvidia/llama-3.2-nv.reranker`.
 
-To use **Hybrid search**, do the following:
+**Hybrid search** passes a vector similarity search **and** a lexical search to the [find and rerank Data API endpoint](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-and-rerank.html), where a reranker assigns similarity scores for each query and document pair, and higher scores indicate a stronger match.
+
+To use **Hybrid search** in the **Astra DB** component, do the following:
+
+1. To create a **Hybrid Search** template flow, click **New Flow** > **RAG** > **Hybrid Search**.
+2. In the **OpenAI** model component, add your **OpenAI API key**.
+3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
+4. In the **Database** field, select your database.
+5. In the **Collection** field, select the collection you want to search.
+6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
+Your query is sent to two components: an **OpenAI** model component, and the **Astra DB** vector database component.
+The **OpenAI** component contains a prompt for creating the lexical query from your input:
+```text
+You are a database query planner that takes a user requests, and converts to a search against the subject matter in question.
+You should convert the query into:
+1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+2. A question to use as the basis for a QA embedding engine.
+Avoid common keywords associated with the user's subject matter.
+```
+7. To view the keywords and questions the **OpenAI** component generates from your collection, in the **OpenAI** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+```
+1. Keywords: features, data, attributes, characteristics
+2. Question: What characteristics can be identified in my data?
+```
+8. To view the [DataFrame](/concepts-objects#data-frame) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The DataFrame is passed to a **Parser** component, which parses the the contents of the **Keywords** column into a string.
+
+This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
+
+Note that the **Search Query** port of the Astra DB port is connected to the **Chat Input** component from step 6.
+This **Search Query** is vectorized, and both the **Search Query** and **Lexical Terms** content are sent to the reranker at the `find_and_rerank` endpoint.
+
+11. The reranker compares the vector search results against the list of terms to rank by.
+The highest-ranked results of your hybrid search are returned to the **Playground**.
+
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-and-rerank.html).
 
 ## AstraDB Graph vector store
 
