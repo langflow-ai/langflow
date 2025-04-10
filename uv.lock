@@ -4325,6 +4325,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"] },
     { name = "sseclient-py" },
     { name = "supabase" },
+    { name = "twelvelabs" },
     { name = "types-cachetools" },
     { name = "upstash-vector" },
     { name = "uv" },
@@ -4503,6 +4504,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"], specifier = ">=2.0.38,<3.0.0" },
     { name = "sseclient-py", specifier = "==1.8.0" },
     { name = "supabase", specifier = "==2.6.0" },
+    { name = "twelvelabs", specifier = ">=0.4.4" },
     { name = "types-cachetools", specifier = "==5.5.0.20240820" },
     { name = "upstash-vector", specifier = "==0.6.0" },
     { name = "uv", specifier = ">=0.5.7" },
@@ -8238,6 +8240,7 @@ wheels = [
 name = "rpds-py"
 version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/0e/4c797078d00dbf1f63af96e4b3beffb67f71230f58442272b4b1962a61c8/rpds_py-0.23.0.tar.gz", hash = "sha256:ffac3b13182dc1bf648cde2982148dc9caf60f3eedec7ae639e05636389ebf5d", size = 26808 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9c/39/c2b2337f0dd0494a7e66eb3f114dde2a08c613b9374f52fdec8c38890def/rpds_py-0.23.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:1b36e993b95f0744a94a5add7624cfaf77b91805819c1a960026bc452f95841e", size = 372147 },
     { url = "https://files.pythonhosted.org/packages/1c/19/cd8c3bc46b5151db48b9f411cc7cd957766220f93d0edcb8cb81cdc8b192/rpds_py-0.23.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:72a0dd4d599fadaf519d4e4b8092e5d7940057c61e70f9f06c1d004a47895204", size = 356821 },
@@ -9350,6 +9353,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/45/27/14cc3101409b9b4b9241d2ba7deaa93535a217a211c86c4cc7151fb12181/triton-3.0.0-1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e1efef76935b2febc365bfadf74bcb65a6f959a9872e5bddf44cc9e0adce1e1a", size = 209376304 },
     { url = "https://files.pythonhosted.org/packages/33/3e/a2f59384587eff6aeb7d37b6780de7fedd2214935e27520430ca9f5b7975/triton-3.0.0-1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5ce8520437c602fb633f1324cc3871c47bee3b67acf9756c1a66309b60e3216c", size = 209438883 },
     { url = "https://files.pythonhosted.org/packages/fe/7b/7757205dee3628f75e7991021d15cd1bd0c9b044ca9affe99b50879fc0e1/triton-3.0.0-1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:34e509deb77f1c067d8640725ef00c5cbfcb2052a1a3cb6a6d343841f92624eb", size = 209464695 },
+]
+
+[[package]]
+name = "twelvelabs"
+version = "0.4.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ea/ef/c63f8550918c6576537f5bb1beafa829859d05b9668e79f719d736e3b8ab/twelvelabs-0.4.4.tar.gz", hash = "sha256:22bc627b086f105f53f23f5fbcae3d5a8836777ddb6306e47d470c6bd4f06b26", size = 28752 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/1b/dbad74761632634cc6419f9b33f893905fa90539dc5ffc906601ea352a4f/twelvelabs-0.4.4-py3-none-any.whl", hash = "sha256:9eb12cdf38e5725ba71c391562ea7c7bc887c2b3e34040ab0f0640ba1de8cb98", size = 32240 },
 ]
 
 [[package]]
