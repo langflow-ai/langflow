@@ -44,18 +44,18 @@ def upgrade() -> None:
         op.create_table(
             temp_table_name,
             sa.Column("timestamp", sa.DateTime(), nullable=False),
-            sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("artifacts", sa.JSON(), nullable=True),
-            sa.Column("params", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("params", sa.Text(), nullable=True),
             sa.Column("build_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("valid", sa.BOOLEAN(), nullable=False),
             sa.PrimaryKeyConstraint("build_id", name="pk_vertex_build"),
         )
 
-        # Copy data
-        op.execute(f"INSERT INTO {temp_table_name} SELECT * FROM vertex_build")
+        # Copy data - use quoted identifiers to avoid keyword issues
+        op.execute('INSERT INTO "temp_vertex_build" SELECT * FROM "vertex_build"')
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -81,8 +81,8 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_transaction"),
         )
 
-        # Copy data
-        op.execute(f"INSERT INTO {temp_table_name} SELECT * FROM transaction")
+        # Copy data - use quoted identifiers to avoid keyword issues
+        op.execute('INSERT INTO "temp_transaction" SELECT * FROM "transaction"')
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -100,15 +100,20 @@ def upgrade() -> None:
             sa.Column("sender", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("sender_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column("text", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("text", sa.Text(), nullable=True),
             sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True),
             sa.Column("files", sa.JSON(), nullable=True),
+            sa.Column("error", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column("edit", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column("properties", sa.JSON(), nullable=True),
+            sa.Column("category", sa.Text(), nullable=True),
+            sa.Column("content_blocks", sa.JSON(), nullable=True),
             sa.PrimaryKeyConstraint("id", name="pk_message"),
         )
 
-        # Copy data
-        op.execute(f"INSERT INTO {temp_table_name} SELECT * FROM message")
+        # Copy data - use quoted identifiers to avoid keyword issues
+        op.execute('INSERT INTO "temp_message" SELECT * FROM "message"')
 
         # Drop original table and rename temp table
         op.drop_table("message")
@@ -132,7 +137,7 @@ def downgrade() -> None:
             sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("artifacts", sa.JSON(), nullable=True),
-            sa.Column("params", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("params", sa.Text(), nullable=True),
             sa.Column("build_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("valid", sa.BOOLEAN(), nullable=False),
@@ -144,8 +149,8 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("build_id", name="pk_vertex_build"),
         )
 
-        # Copy data
-        op.execute(f"INSERT INTO {temp_table_name} SELECT * FROM vertex_build")
+        # Copy data - use quoted identifiers to avoid keyword issues
+        op.execute('INSERT INTO "temp_vertex_build" SELECT * FROM "vertex_build"')
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -176,8 +181,8 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_transaction"),
         )
 
-        # Copy data
-        op.execute(f"INSERT INTO {temp_table_name} SELECT * FROM transaction")
+        # Copy data - use quoted identifiers to avoid keyword issues
+        op.execute('INSERT INTO "temp_transaction" SELECT * FROM "transaction"')
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -195,10 +200,15 @@ def downgrade() -> None:
             sa.Column("sender", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("sender_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column("text", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("text", sa.Text(), nullable=True),
             sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True),
             sa.Column("files", sa.JSON(), nullable=True),
+            sa.Column("error", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column("edit", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column("properties", sa.JSON(), nullable=True),
+            sa.Column("category", sa.Text(), nullable=True),
+            sa.Column("content_blocks", sa.JSON(), nullable=True),
             sa.ForeignKeyConstraint(
                 ["flow_id"],
                 ["flow.id"],
@@ -207,8 +217,8 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_message"),
         )
 
-        # Copy data
-        op.execute(f"INSERT INTO {temp_table_name} SELECT * FROM message")
+        # Copy data - use quoted identifiers to avoid keyword issues
+        op.execute('INSERT INTO "temp_message" SELECT * FROM "message"')
 
         # Drop original table and rename temp table
         op.drop_table("message")
