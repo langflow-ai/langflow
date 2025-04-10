@@ -115,7 +115,7 @@ Avoid common keywords associated with the user's subject matter.
 1. Keywords: features, data, attributes, characteristics
 2. Question: What characteristics can be identified in my data?
 ```
-8. To view the [DataFrame](/concepts-objects#data-frame) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+8. To view the [DataFrame](/concepts-objects#dataframe-object) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 The DataFrame is passed to a **Parser** component, which parses the the contents of the **Keywords** column into a string.
 
 This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
