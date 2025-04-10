@@ -196,9 +196,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="search_method",
             display_name="Search Method",
-            info="Determine how your content is matched: Vector finds semantic similarity, Lexical finds term matches, and Hybrid Search (suggested) combines both approaches with a reranker.",
-            options=["Hybrid Search", "Vector Search", "Lexical Search"],
-            options_metadata=[{"icon": "SearchHybrid"}, {"icon": "SearchVector"}, {"icon": "SearchLexical"}],
+            info=(
+                "Determine how your content is matched: Vector finds semantic similarity, "
+                "Lexical finds term matches, and Hybrid Search (suggested) combines both approaches "
+                "with a reranker."
+            ),
+            options=["Hybrid Search", "Lexical Search", "Vector Search"],
+            options_metadata=[{"icon": "SearchHybrid"}, {"icon": "SearchLexical"}, {"icon": "SearchVector"}],
             value="Vector Search",
             advanced=True,
             real_time_refresh=True,
@@ -209,7 +213,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Post-retrieval model that re-scores results for optimal relevance ranking.",
             show=False,
             toggle=True,
-            advanced=True,
         ),
         QueryInput(
             name="lexical_terms",
@@ -219,6 +222,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             separator=" ",
             show=False,
             value="",
+            advanced=True,
         ),
         IntInput(
             name="number_of_results",
@@ -811,7 +815,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Set the default search field to hybrid search
             build_config["search_method"]["show"] = True
-            build_config["search_method"]["options"] = ["Hybrid Search", "Vector Search"]
+            build_config["search_method"]["options"] = ["Hybrid Search", "Lexical Search", "Vector Search"]
             build_config["search_method"]["value"] = "Hybrid Search"
         except Exception as _:  # noqa: BLE001
             build_config["reranker"]["options"] = []
@@ -1185,7 +1189,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return search_type_mapping.get(self.search_type, "similarity")
 
     def _build_search_args(self):
+        # Clean up the search query
         query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None
+        lexical_terms = self.lexical_terms or None
+
+        # However, if it is a lexical search, use the lexical terms as the query
+        if self.search_method == "Lexical Search":
+            query = self.lexical_terms if isinstance(self.lexical_terms, str) and self.lexical_terms.strip() else None
+            lexical_terms = None
 
         if query:
             args = {
@@ -1193,7 +1204,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "search_type": self._map_search_type(),
                 "k": self.number_of_results,
                 "score_threshold": self.search_score_threshold,
-                "lexical_query": self.lexical_terms or None,
+                "lexical_query": lexical_terms,
             }
         elif self.advanced_search_filter:
             args = {
