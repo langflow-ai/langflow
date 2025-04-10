@@ -45,7 +45,7 @@ export default function DropdownComponent({
       />
       {toggle && (
         <ToggleShadComponent
-          value={toggleValue ?? false}
+          value={toggleValue ?? true}
           handleOnNewValue={(data) => {
             handleOnNewValue({ toggle_value: data.value });
           }}
