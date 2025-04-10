@@ -196,7 +196,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="search_method",
             display_name="Search Method",
-            info="Method to use for searching the vector store.",
+            info="Determine how your content is matched: Vector finds semantic similarity, Lexical finds term matches, and Hybrid Search (suggested) combines both approaches with a reranker.",
             options=["Hybrid Search", "Vector Search", "Lexical Search"],
             options_metadata=[{"icon": "SearchHybrid"}, {"icon": "SearchVector"}, {"icon": "SearchLexical"}],
             value="Vector Search",
@@ -206,7 +206,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="reranker",
             display_name="Reranker",
-            info="Reranker to use for the search.",
+            info="Post-retrieval model that re-scores results for optimal relevance ranking.",
             show=False,
             toggle=True,
             advanced=True,
@@ -214,7 +214,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         QueryInput(
             name="lexical_terms",
             display_name="Lexical Terms",
-            info="Augment search by adding terms / keywords separated by a space.",
+            info="Add additional terms/keywords to augment search precision.",
             placeholder="Enter terms to search...",
             separator=" ",
             show=False,
