@@ -22,7 +22,7 @@ const FLOW_CREATION_ERROR = "Flow creation error";
 const FOLDER_NOT_FOUND_ERROR = "Folder not found. Redirecting to flows...";
 const FLOW_CREATION_ERROR_MESSAGE =
   "An unexpected error occurred, please try again";
-
+const REDIRECT_DELAY = 3000;
 const useAddFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
@@ -103,7 +103,7 @@ const useAddFlow = () => {
             });
             setTimeout(() => {
               window.location.href = `/flows`;
-            }, 3000);
+            }, REDIRECT_DELAY);
 
             return;
           }
