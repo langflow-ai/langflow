@@ -60,8 +60,6 @@ test(
 
     await page.waitForTimeout(1000);
 
-    await page.waitForTimeout(1000);
-
     value = await page
       .getByTestId("value-dropdown-dropdown_str_edit_model_id")
       .innerText();
