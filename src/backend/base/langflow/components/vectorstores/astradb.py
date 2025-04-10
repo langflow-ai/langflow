@@ -1198,7 +1198,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             query = self.lexical_terms if isinstance(self.lexical_terms, str) and self.lexical_terms.strip() else None
             lexical_terms = None
 
-        if query:
+        if query or lexical_terms:
             args = {
                 "query": query,
                 "search_type": self._map_search_type(),
