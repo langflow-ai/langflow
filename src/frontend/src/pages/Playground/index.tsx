@@ -13,7 +13,7 @@ import { getInputsAndOutputs } from "../../utils/storeUtils";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 export default function PlaygroundPage() {
 
-  const { isFetched: isConfigFetched } = useGetConfig();
+  useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setClientId = useUtilityStore((state) => state.setClientId);
