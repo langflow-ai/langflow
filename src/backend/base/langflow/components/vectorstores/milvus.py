@@ -55,7 +55,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
             name="search_filter",
             display_name="Search Filter",
             advanced=True,
-            info="Optional dictionary of filters to apply to the search query. E.g. field == value",
+            info="Optional dictionary of filters to apply to the search query. E.g., field == value",
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
