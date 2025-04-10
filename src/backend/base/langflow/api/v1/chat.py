@@ -568,7 +568,7 @@ async def build_public_tmp(
     flow_name: str | None = None,
     request: Request,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
-    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build a public flow without requiring authentication.
 
@@ -596,7 +596,7 @@ async def build_public_tmp(
         flow_name: Optional name for the flow
         request: FastAPI request object (needed for cookie access)
         queue_service: Queue service for job management
-        settings_service: Settings service
+        event_delivery: Optional event delivery type - default is streaming
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -625,10 +625,10 @@ async def build_public_tmp(
         if isinstance(exc, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    if settings_service.settings.event_delivery != "direct":
+    if event_delivery != EventDeliveryType.DIRECT:
         return {"job_id": job_id}
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
-        stream=True,
+        event_delivery=event_delivery,
     )
