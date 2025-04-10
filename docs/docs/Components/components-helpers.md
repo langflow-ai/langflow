@@ -54,18 +54,19 @@ record_number: {batch_index}, name: {text_input}, summary: {model_response}
 
 ### Inputs
 
-| Name | Display Name | Type | Info | Required |
-|------|--------------|------|------|----------|
-| model | Language Model | HandleInput | Connect the 'Language Model' output from your LLM component here. | Yes |
-| system_message | System Message | MultilineInput | Multi-line system instruction for all rows in the DataFrame. | No |
-| df | DataFrame | DataFrameInput | The DataFrame whose column (specified by 'column_name') will be treated as text messages. | Yes |
-| column_name | Column Name | StrInput | The name of the DataFrame column to treat as text messages. Default='text'. | Yes |
+| Name | Display Name | Type | Info |
+|------|--------------|------|------|
+| model | Language Model | HandleInput | Connect the 'Language Model' output from your LLM component here. Required. |
+| system_message | System Message | MultilineInput | Multi-line system instruction for all rows in the DataFrame. |
+| df | DataFrame | DataFrameInput | The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
+| column_name | Column Name | MessageTextInput | The name of the DataFrame column to treat as text messages. Default='text'. Required. |
+| enable_metadata | Enable Metadata | BoolInput | If True, add metadata to the output DataFrame. |
 
 ### Outputs
 
 | Name | Display Name | Method | Info |
 |------|--------------|--------|------|
-| batch_results | Batch Results | run_batch | A DataFrame with two columns: 'text_input' and 'model_response'. |
+| batch_results | Batch Results | run_batch | A DataFrame with columns: 'text_input', 'model_response', 'batch_index', and optional 'metadata' containing processing information. |
 
 ## Create List
 
