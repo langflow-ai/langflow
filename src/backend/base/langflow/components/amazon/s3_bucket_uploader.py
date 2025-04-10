@@ -51,7 +51,7 @@ class S3BucketUploaderComponent(Component):
 
     display_name = "S3 Bucket Uploader"
     description = "Uploads files to S3 bucket."
-    icon = "Globe"
+    icon = "Amazon"
     name = "s3bucketuploader"
 
     inputs = [

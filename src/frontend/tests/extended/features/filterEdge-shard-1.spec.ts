@@ -71,7 +71,6 @@ test(
       "outputsChat Output",
       "dataAPI Request",
       "vectorstoresAstra DB",
-      "embeddingsAmazon Bedrock Embeddings",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "memoriesAstra DB Chat Memory",

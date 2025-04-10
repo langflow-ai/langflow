@@ -17,12 +17,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon");
 
-    await page.waitForSelector('[data-testid="modelsAmazon Bedrock"]', {
+    await page.waitForSelector('[data-testid="amazonAmazon Bedrock"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsAmazon Bedrock")
+      .getByTestId("amazonAmazon Bedrock")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
