@@ -81,7 +81,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             "command": {"show": False, "value": "uvx mcp-server-fetch"},
             "sse_url": {"show": True, "value": "http://localhost:7860/api/v1/mcp/sse"},
             "tool": {"options": [], "show": True},
-            "mode": {"value": "Stdio"}
+            "mode": {"value": "Stdio"},
         }
 
         # Test switching to Stdio mode
