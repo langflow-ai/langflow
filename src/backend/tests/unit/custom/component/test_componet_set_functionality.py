@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.custom import Component
 from langflow.inputs.inputs import MessageTextInput, StrInput
 

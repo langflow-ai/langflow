@@ -1,5 +1,3 @@
-from pydantic import BaseModel
-
 from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.custom import Component
 
@@ -23,6 +21,7 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema import Data
+from pydantic import BaseModel
 
 
 class AllInputsComponent(Component):

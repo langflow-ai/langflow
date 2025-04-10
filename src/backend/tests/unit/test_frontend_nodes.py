@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template

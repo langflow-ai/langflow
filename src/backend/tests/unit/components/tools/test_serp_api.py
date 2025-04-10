@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.tools import ToolException
-
 from langflow.components.tools import SerpComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
