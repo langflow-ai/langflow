@@ -1,44 +1,34 @@
-from pathlib import Path
 from urllib.parse import urlparse
 
-from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, Output
+from langflow.base.data import BaseFileComponent
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput
 from langflow.schema import Data
 
 
-class NvidiaIngestComponent(Component):
-    display_name = "NVIDIA Ingest"
-    description = "Process, transform, and store data."
-    documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
+class NvidiaIngestComponent(BaseFileComponent):
+    display_name = "NVIDIA Retriever Extraction"
+    description = "Multi-modal data extraction from documents using NVIDIA's NeMo API."
+    documentation: str = "https://docs.nvidia.com/nemo/retriever/extraction/overview/"
     icon = "NVIDIA"
-    name = "NVIDIAIngest"
     beta = True
 
     try:
         from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
-        file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
-        supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
+        VALID_EXTENSIONS = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
     except ImportError:
         msg = (
-            "NVIDIA Ingest dependencies missing. "
+            "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
             "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
         )
-        file_types = []
-        supported_file_types_info = msg
+        VALID_EXTENSIONS = [msg]
 
     inputs = [
+        *BaseFileComponent._base_inputs,
         MessageTextInput(
             name="base_url",
-            display_name="NVIDIA Ingestion URL",
-            info="The URL of the NVIDIA Ingestion API.",
-        ),
-        FileInput(
-            name="path",
-            display_name="Path",
-            file_types=file_types,
-            info=supported_file_types_info,
-            required=True,
+            display_name="Base URL",
+            info="The URL of the NVIDIA NeMo Retriever Extraction API.",
         ),
         BoolInput(
             name="extract_text",
@@ -114,53 +104,47 @@ class NvidiaIngestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="load_file"),
+        *BaseFileComponent._base_outputs,
     ]
 
-    def load_file(self) -> list[Data]:
+    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         try:
             from nv_ingest_client.client import Ingestor
         except ImportError as e:
             msg = (
-                "NVIDIA Ingest dependencies missing. "
+                "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
                 "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
             )
             raise ImportError(msg) from e
 
         self.base_url: str | None = self.base_url.strip() if self.base_url else None
 
-        if not self.path:
-            err_msg = "Upload a file to use this component."
-            self.log(err_msg, name="NVIDIAIngestComponent")
+        if not file_list:
+            err_msg = "No files to process."
+            self.log(err_msg)
             raise ValueError(err_msg)
 
-        resolved_path = self.resolve_path(self.path)
-        extension = Path(resolved_path).suffix[1:].lower()
-        if extension not in self.file_types:
-            err_msg = f"Unsupported file type: {extension}"
-            self.log(err_msg, name="NVIDIAIngestComponent")
-            raise ValueError(err_msg)
+        file_paths = [str(file.path) for file in file_list]
 
         try:
             parsed_url = urlparse(self.base_url)
             if not parsed_url.hostname or not parsed_url.port:
                 err_msg = "Invalid URL: Missing hostname or port."
-                self.log(err_msg, name="NVIDIAIngestComponent")
+                self.log(err_msg)
                 raise ValueError(err_msg)
         except Exception as e:
-            self.log(f"Error parsing URL: {e}", name="NVIDIAIngestComponent")
+            self.log(f"Error parsing URL: {e}")
             raise
 
         self.log(
             f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {parsed_url.port!r}",
-            name="NVIDIAIngestComponent",
         )
         try:
             from nv_ingest_client.client import Ingestor
 
             ingestor = (
                 Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
-                .files(resolved_path)
+                .files(file_paths)
                 .extract(
                     extract_text=self.extract_text,
                     extract_tables=self.extract_tables,
@@ -170,7 +154,7 @@ class NvidiaIngestComponent(Component):
                 )
             )
         except Exception as e:
-            self.log(f"Error creating Ingestor: {e}", name="NVIDIAIngestComponent")
+            self.log(f"Error creating Ingestor: {e}")
             raise
 
         if self.split_text:
@@ -185,12 +169,12 @@ class NvidiaIngestComponent(Component):
         try:
             result = ingestor.ingest()
         except Exception as e:
-            self.log(f"Error during ingestion: {e}", name="NVIDIAIngestComponent")
+            self.log(f"Error during ingestion: {e}")
             raise
 
-        self.log(f"Results: {result}", name="NVIDIAIngestComponent")
+        self.log(f"Results: {result}")
 
-        data = []
+        data: list[Data | None] = []
         document_type_text = "text"
         document_type_structured = "structured"
 
@@ -226,7 +210,9 @@ class NvidiaIngestComponent(Component):
                     )
                 else:
                     # image is not yet supported; skip if encountered
-                    self.log(f"Unsupported document type: {document_type}", name="NVIDIAIngestComponent")
+                    self.log(f"Unsupported document type: {document_type}")
 
         self.status = data or "No data"
-        return data
+
+        # merge processed data with BaseFile objects
+        return self.rollup_data(file_list, data)
