@@ -28,7 +28,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             name="schema",
             display_name="Schema",
         ),
-        *LCVectorStoreComponent.inputs,
+        *LCVectorStoreComponent.inputs[:3],
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -43,6 +43,9 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Redis:
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
+        Redis(
+            embedding=self.embedding, redis_url=self.redis_server_url, index_name=self.redis_index_name
+        )._create_index_if_not_exist()
 
         documents = []
         for _input in self.ingest_data or []:
@@ -50,7 +53,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        Path("docuemnts.txt").write_text(str(documents), encoding="utf-8")
+        Path("documents.txt").write_text(str(documents), encoding="utf-8")
 
         if not documents:
             if self.schema is None:
@@ -78,9 +81,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
-            docs = vector_store.similarity_search(
-                query=self.search_query, k=self.number_of_results, filter=self.search_filter
-            )
+            docs = vector_store.similarity_search(query=self.search_query, k=self.number_of_results)
 
             data = docs_to_data(docs)
             self.status = data
