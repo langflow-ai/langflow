@@ -38,7 +38,7 @@ The Sequential Tasks Agent flow consists of these components:
 2. Add your Tavily API key to the **Tavily** component.
 3. Click **Playground** to start a chat session with the template's default question.
 
-```plain
+```text
 Should I invest in Tesla (TSLA) stock right now?
 Please analyze the company's current position, market trends,
 financial health, and provide a clear investment recommendation.

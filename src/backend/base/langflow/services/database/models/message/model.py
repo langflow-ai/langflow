@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
 from sqlalchemy import Text
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
@@ -13,7 +13,6 @@ from langflow.schema.validators import str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
-    from langflow.services.database.models.flow.model import Flow
 
 
 class MessageBase(SQLModel):
@@ -113,8 +112,7 @@ class MessageBase(SQLModel):
 class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
-    flow: "Flow" = Relationship(back_populates="messages")
+    flow_id: UUID | None = Field(default=None)
     files: list[str] = Field(sa_column=Column(JSON))
     properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))

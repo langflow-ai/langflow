@@ -658,6 +658,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "sortableList",
   "connect",
   "auth",
+  "query",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -1066,3 +1067,4 @@ export const OPENAI_VOICES = [
 
 export const DEFAULT_POLLING_INTERVAL = 5000;
 export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
