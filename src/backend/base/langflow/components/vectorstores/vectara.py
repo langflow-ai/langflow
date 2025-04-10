@@ -29,6 +29,11 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
         ),
         *LCVectorStoreComponent.inputs,
+        StrInput(
+            name="search_filter",
+            display_name="Search Filter",
+            info="Optional dictionary of filters to apply to the search query. E.g., doc.id = '123'",
+        ),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
