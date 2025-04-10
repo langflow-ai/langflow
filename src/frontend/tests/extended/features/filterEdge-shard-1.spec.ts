@@ -70,7 +70,6 @@ test(
     const elementTestIds = [
       "outputsChat Output",
       "dataAPI Request",
-      "modelsAmazon Bedrock",
       "vectorstoresAstra DB",
       "embeddingsAmazon Bedrock Embeddings",
       "langchain_utilitiesTool Calling Agent",
@@ -97,7 +96,6 @@ test(
 
     const visibleModelSpecsTestIds = [
       "modelsAIML",
-      "modelsAmazon Bedrock",
       "modelsAnthropic",
       "modelsAzure OpenAI",
       "modelsCohere",
