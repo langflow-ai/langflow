@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field
 from datetime import date
 from enum import Enum
 
 from langflow.base.mcp.util import create_input_schema_from_json_schema
+from pydantic import BaseModel, Field
 
 
 def test_create_input_schema_from_json_schema():
@@ -12,7 +12,7 @@ def test_create_input_schema_from_json_schema():
         valA2 = "valA2"
         valA3 = "valA3"
 
-    class EnumB(Enum):  
+    class EnumB(Enum):
         valB1 = "valB1"
         valB2 = "valB2"
         valB3 = "valB3"
