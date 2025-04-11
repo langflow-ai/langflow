@@ -5,7 +5,7 @@ slug: /webhook
 
 import Icon from "@site/src/components/icon";
 
-To enable your flow to be triggered by an external request, add a **Webhook** component to your flow.
+Add a **Webhook** component to your flow to trigger it with external requests. 
 
 To connect the **Webhook** to a **Parser** component to view and parse your data payload, do the following:
 
