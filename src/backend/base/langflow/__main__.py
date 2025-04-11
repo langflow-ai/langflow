@@ -19,7 +19,6 @@ from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
 from rich import box
-from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -410,13 +409,12 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         "We collect anonymous usage data to improve Langflow.\n"
         "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
     )
-    access_link = (
-        f"[bold]🟢 Open Langflow →[/bold] [link=http://{host}:{port}]http://{host}:{port}[/link]"
-    )
+    access_link = f"[bold]🟢 Open Langflow →[/bold] [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
     console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
+
 
 def run_langflow(host, port, log_level, options, app) -> None:
     """Run Langflow server on localhost."""
