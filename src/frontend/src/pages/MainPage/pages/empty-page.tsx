@@ -1,5 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import { BackgroundGradient } from "@/components/ui/background-gradient";
 import { Button } from "@/components/ui/button";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FaDiscord, FaGithub } from "react-icons/fa";
@@ -8,8 +9,8 @@ import useFileDrop from "../hooks/use-on-file-drop";
 
 const ARROW_ICON_CLASS =
   "relative right-5 top-4 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100";
-const A_TAG_CLASS =
-  "group h-[100px] content-center items-center justify-between rounded-3xl border border-border bg-background py-4 px-6 transition-colors hover:bg-muted";
+const BACKGROUND_GRADIENT_CLASS =
+  "group h-[100px] cursor-pointer content-center items-center justify-between rounded-3xl border border-border bg-background px-6 py-4 transition-colors hover:bg-muted";
 
 export const EmptyPageCommunity = ({
   setOpenModal,
@@ -37,53 +38,46 @@ export const EmptyPageCommunity = ({
             </p>
           </div>
 
-          <div className="flex w-full max-w-[352px] flex-col gap-4">
-            <a
-              href="https://github.com/logspace-ai/langflow"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={A_TAG_CLASS}
-            >
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaGithub className="h-6 w-6" />
-                  <div>
-                    <span className="font-medium">GitHub</span>
-                    <span className="ml-2 text-muted-foreground">55k</span>
+          <div className="flex w-full max-w-[352px] flex-col gap-7">
+            <div>
+              <BackgroundGradient className={BACKGROUND_GRADIENT_CLASS}>
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FaGithub className="h-6 w-6" />
+                    <div>
+                      <span className="font-medium">GitHub</span>
+                      <span className="ml-2 text-muted-foreground">55k</span>
+                    </div>
                   </div>
+                  <HiArrowRight className={ARROW_ICON_CLASS} />
                 </div>
-                <HiArrowRight className={ARROW_ICON_CLASS} />
-              </div>
-              <div className="mt-2">
-                <span className="text-[13px] text-muted-foreground">
-                  Star the project and follow our journey
-                </span>
-              </div>
-            </a>
-
-            <a
-              href="https://discord.gg/langflow"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={A_TAG_CLASS}
-            >
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaDiscord className="h-6 w-6 text-[#5765F2]" />
-                  <div>
-                    <span className="font-medium">Discord</span>
-                    <span className="ml-2 text-muted-foreground">12k</span>
+                <div className="mt-2">
+                  <span className="text-[13px] text-muted-foreground">
+                    Star the project and follow our journey
+                  </span>
+                </div>
+              </BackgroundGradient>
+            </div>
+            <div>
+              <BackgroundGradient className={BACKGROUND_GRADIENT_CLASS}>
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FaDiscord className="h-6 w-6 text-[#5765F2]" />
+                    <div>
+                      <span className="font-medium">Discord</span>
+                      <span className="ml-2 text-muted-foreground">12k</span>
+                    </div>
                   </div>
-                </div>
 
-                <HiArrowRight className={ARROW_ICON_CLASS} />
-              </div>
-              <div className="mt-2">
-                <span className="text-[13px] text-muted-foreground">
-                  Chat, share, and build together
-                </span>
-              </div>
-            </a>
+                  <HiArrowRight className={ARROW_ICON_CLASS} />
+                </div>
+                <div className="mt-2">
+                  <span className="text-[13px] text-muted-foreground">
+                    Chat, share, and build together
+                  </span>
+                </div>
+              </BackgroundGradient>
+            </div>
 
             <Button
               variant="default"
