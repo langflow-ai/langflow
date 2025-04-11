@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import types
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -60,7 +61,7 @@ class OpikTracer(BaseTracer):
         self.global_vars = global_vars or {}
 
         config = self._get_config(self.global_vars)
-        self._ready: bool = self._setup_opik(config, trace_id) if config else False
+        self._ready: bool = bool(config and self._setup_opik(config, trace_id))
         self._distributed_headers = None
 
     @property
@@ -235,14 +236,14 @@ class OpikTracer(BaseTracer):
 
     @staticmethod
     def _get_config(global_vars) -> dict:
-        if global_vars:
-            host = global_vars.get("OPIK_URL_OVERRIDE", None)
-            api_key = global_vars.get("OPIK_API_KEY", None)
-            workspace = global_vars.get("OPIK_WORKSPACE", None)
+        if global_vars is not None:
+            host = global_vars.get("OPIK_URL_OVERRIDE")
+            api_key = global_vars.get("OPIK_API_KEY")
+            workspace = global_vars.get("OPIK_WORKSPACE")
         else:
-            host = os.getenv("OPIK_URL_OVERRIDE", None)
-            api_key = os.getenv("OPIK_API_KEY", None)
-            workspace = os.getenv("OPIK_WORKSPACE", None)
+            host = os.getenv("OPIK_URL_OVERRIDE")
+            api_key = os.getenv("OPIK_API_KEY")
+            workspace = os.getenv("OPIK_WORKSPACE")
 
         # API Key is mandatory for Opik Cloud and URL is mandatory for Open-Source Opik Server
         if host or api_key:
