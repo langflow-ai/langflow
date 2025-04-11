@@ -1,6 +1,7 @@
 import logging
 import re
 
+import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 
@@ -75,6 +76,14 @@ class URLComponent(Component):
             value="Text",
             advanced=True,
         ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout for the request in seconds.",
+            value=600,
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -124,12 +133,24 @@ class URLComponent(Component):
                     prevent_outside=self.prevent_outside,
                     use_async=self.use_async,
                     extractor=extractor,
+                    timeout=600,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+                    },
                 )
 
-                docs = loader.load()
-                msg = f"Found {len(docs)} documents from {processed_url}"
-                logger.info(msg)
-                all_docs.extend(docs)
+                try:
+                    docs = loader.load()
+                    if not docs:
+                        msg = f"No documents found for {processed_url}"
+                        logger.warning(msg)
+                    else:
+                        msg = f"Found {len(docs)} documents from {processed_url}"
+                        logger.info(msg)
+                        all_docs.extend(docs)
+                except requests.exceptions.RequestException as e:
+                    msg = f"Error loading documents from {processed_url}: {e}"
+                    logger.exception(msg)
 
             data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
             self.status = data
