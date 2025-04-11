@@ -36,15 +36,17 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
 
   const mutation = mutate(["useLogout"], logoutUser, {
     onSuccess: () => {
+      // First invalidate all queries with the existing token
+      queryClient.cancelQueries(); // Cancel any in-flight queries
+
+      // Clear query cache instead of invalidating (which triggers refetching)
+      queryClient.clear(); // This removes all queries from the cache without refetching
+
       logout();
 
       useFlowStore.getState().resetFlowState();
       useFlowsManagerStore.getState().resetStore();
       useFolderStore.getState().resetStore();
-
-      queryClient.invalidateQueries({ queryKey: ["useGetRefreshFlowsQuery"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolders"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolder"] });
     },
     onError: (error) => {
       console.error(error);
