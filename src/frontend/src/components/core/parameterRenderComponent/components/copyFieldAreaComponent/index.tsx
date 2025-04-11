@@ -67,7 +67,7 @@ export default function CopyFieldAreaComponent({
 
   const valueToRender = useMemo(() => {
     if (isValueToReplace) {
-      const urlWebhook = `${URL_WEBHOOK}${endpointName}`;
+      const urlWebhook = `${URL_WEBHOOK}${endpointName ? endpointName : currentFlow?.id}`;
       return isValueToReplace ? urlWebhook : value;
     }
     return value;
