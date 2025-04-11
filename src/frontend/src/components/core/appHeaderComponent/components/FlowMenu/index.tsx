@@ -21,6 +21,7 @@ import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import ExportModal from "@/modals/exportModal";
 import FlowLogsModal from "@/modals/flowLogsModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
@@ -32,8 +33,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { useShallow } from 'zustand/react/shallow';
+import { useShallow } from "zustand/react/shallow";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
@@ -51,19 +51,25 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const saveFlow = useSaveFlow();
   const queryClient = useQueryClient();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
-  const { currentFlowName, currentFlowId, currentFlowFolderId, currentFlowIcon, currentFlowGradient } = useFlowStore(
+  const {
+    currentFlowName,
+    currentFlowId,
+    currentFlowFolderId,
+    currentFlowIcon,
+    currentFlowGradient,
+  } = useFlowStore(
     useShallow((state) => ({
       currentFlowName: state.currentFlow?.name,
       currentFlowId: state.currentFlow?.id,
       currentFlowFolderId: state.currentFlow?.folder_id,
       currentFlowIcon: state.currentFlow?.icon,
       currentFlowGradient: state.currentFlow?.gradient,
-    }))
+    })),
   );
   const { updated_at: updatedAt } = useFlowsManagerStore(
     useShallow((state) => ({
-      updated_at: state.currentFlow?.updated_at
-    }))
+      updated_at: state.currentFlow?.updated_at,
+    })),
   );
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -184,10 +190,14 @@ export const MenuBar = ({}: {}): JSX.Element => {
   );
 
   const handleNameSubmit = useCallback(() => {
-    if (flowName.trim() !== "" && flowName !== currentFlowName && !isInvalidName) {
+    if (
+      flowName.trim() !== "" &&
+      flowName !== currentFlowName &&
+      !isInvalidName
+    ) {
       // Get a one-time snapshot of currentFlow using get()
       const currentFlowSnapshot = useFlowStore.getState().currentFlow;
-      
+
       const newFlow = {
         ...currentFlowSnapshot!,
         name: flowName,

@@ -21,7 +21,9 @@ export default function FlowSettingsModal({
   if (!open) return <></>;
 
   const saveFlow = useSaveFlow();
-  const currentFlow = useFlowStore((state) => flowData ? undefined : state.currentFlow);
+  const currentFlow = useFlowStore((state) =>
+    flowData ? undefined : state.currentFlow,
+  );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
