@@ -65,7 +65,10 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             value="embedding",
         ),
         StrInput(
-            name="filter_field", display_name="Filter Field", advanced=True, info="The field to filter the index."
+            name="filter_field",
+            display_name="Filter Field",
+            advanced=True,
+            info="The field to filter the index. Needed to use Search Filter.",
         ),
         IntInput(
             name="number_dimensions",
@@ -165,8 +168,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_query and isinstance(self.search_query, str):
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
+                query=self.search_query, k=self.number_of_results, pre_filter=self.search_filter
             )
             for doc in docs:
                 doc.metadata = {

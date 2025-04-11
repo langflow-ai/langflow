@@ -29,6 +29,11 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
         ),
         *LCVectorStoreComponent.inputs,
+        StrInput(
+            name="search_filter",
+            display_name="Search Filter",
+            info="Optional dictionary of filters to apply to the search query. E.g., doc.id = '123'",
+        ),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -86,8 +91,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
+                query=self.search_query, k=self.number_of_results, filter=self.search_filter
             )
 
             data = docs_to_data(docs)

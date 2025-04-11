@@ -216,12 +216,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             value=0,
             advanced=True,
         ),
-        NestedDictInput(
-            name="advanced_search_filter",
-            display_name="Search Metadata Filter",
-            info="Optional dictionary of filters to apply to the search query.",
-            advanced=True,
-        ),
         BoolInput(
             name="autodetect_collection",
             display_name="Autodetect Collection",
@@ -1045,14 +1039,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "k": self.number_of_results,
                 "score_threshold": self.search_score_threshold,
             }
-        elif self.advanced_search_filter:
+        elif self.search_filter:
             args = {
                 "n": self.number_of_results,
             }
         else:
             return {}
 
-        filter_arg = self.advanced_search_filter or {}
+        filter_arg = self.search_filter or {}
         if filter_arg:
             args["filter"] = filter_arg
 

@@ -51,7 +51,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(name="index_param", display_name="Param of the index", value="100,'L2Distance'", advanced=True),
         DictInput(name="index_query_params", display_name="index query params", advanced=True),
-        *LCVectorStoreComponent.inputs,
+        *LCVectorStoreComponent.inputs[:3],
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",

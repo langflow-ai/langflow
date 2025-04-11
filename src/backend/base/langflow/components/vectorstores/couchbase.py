@@ -24,7 +24,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="scope_name", display_name="Scope Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
-        *LCVectorStoreComponent.inputs,
+        *LCVectorStoreComponent.inputs[:3],
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",

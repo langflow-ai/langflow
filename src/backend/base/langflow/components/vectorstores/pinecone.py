@@ -1,5 +1,8 @@
+from typing import Literal
+
 import numpy as np
-from langchain_core.vectorstores import VectorStore
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone, PineconeApiException, ServerlessSpec
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
@@ -39,16 +42,15 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
+        IntInput(
+            name="dimension", display_name="Dimension", info="Dimension of the vector store.", value=1536, advanced=True
+        ),
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> VectorStore:
+    def build_vector_store(self) -> PineconeVectorStore:
         """Build and return a Pinecone vector store instance."""
-        try:
-            from langchain_pinecone import PineconeVectorStore
-        except ImportError as e:
-            msg = "langchain-pinecone is not installed. Please install it with `pip install langchain-pinecone`."
-            raise ValueError(msg) from e
+        self.create_index()
 
         try:
             from langchain_pinecone._utilities import DistanceStrategy
@@ -91,16 +93,43 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
             return pinecone
 
+    def create_index(
+        self,
+        cloud: str = "aws",
+        region: str = "us-east-1",
+        deletion_protection: Literal["enabled", "disabled"] = "disabled",
+    ):
+        pc = Pinecone(api_key=self.pinecone_api_key)
+        existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
+
+        try:
+            if self.index_name not in existing_indexes:
+                pc.create_index(
+                    name=self.index_name,
+                    dimension=self.dimension,
+                    spec=ServerlessSpec(cloud=cloud, region=region),
+                    deletion_protection=deletion_protection,
+                )
+                while not pc.describe_index(self.index_name).status["ready"]:
+                    import time
+
+                    time.sleep(1)
+        except PineconeApiException as e:
+            raise PineconeApiException(e) from e
+        except Exception as e:
+            error_msg = "Error creating Pinecone index."
+            raise ValueError(error_msg) from e
+
     def search_documents(self) -> list[Data]:
         """Search documents in the vector store."""
+        vector_store = self.build_vector_store()
         try:
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
                 return []
 
-            vector_store = self.build_vector_store()
+            search_filter = None if self.search_filter == {} else self.search_filter
             docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
+                query=self.search_query, k=self.number_of_results, filter=search_filter
             )
         except Exception as e:
             error_msg = "Error searching documents"
