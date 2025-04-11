@@ -51,8 +51,8 @@ class IcosaProComponent(Component):
         ),
         SliderInput(
             name="num_samples",
-            display_name="Compute Cost",
-            value=50,
+            display_name="Compute Cost (Sample Size)",
+            value=19,
             range_spec=RangeSpec(min=10, max=200, step=1),
         ),
         StrInput(
