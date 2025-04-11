@@ -1,6 +1,6 @@
 from langchain_unstructured import UnstructuredLoader
 
-from langflow.base.files import BaseFileComponent
+from langflow.base.data.base_file import BaseFileComponent
 from langflow.inputs import DropdownInput, MessageTextInput, NestedDictInput, SecretStrInput
 from langflow.schema import Data
 
