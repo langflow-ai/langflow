@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -8,6 +9,11 @@ test(
   { tag: ["@release", "@api", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+
 
     await page.getByTestId("blank-flow").click();
 
