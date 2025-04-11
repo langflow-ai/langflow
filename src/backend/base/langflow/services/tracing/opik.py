@@ -31,6 +31,14 @@ def get_distributed_trace_headers(trace_id, span_id):
 class OpikTracer(BaseTracer):
     flow_id: str
 
+    @staticmethod
+    def get_required_variable_names():
+        return [
+            "OPIK_API_KEY",
+            "OPIK_URL_OVERRIDE",
+            "OPIK_WORKSPACE",
+        ]
+
     def __init__(
         self,
         trace_name: str,
@@ -39,6 +47,7 @@ class OpikTracer(BaseTracer):
         trace_id: UUID,
         user_id: str | None = None,
         session_id: str | None = None,
+        global_vars: dict | None = None,
     ):
         self._project_name = project_name
         self.trace_name = trace_name
@@ -48,8 +57,9 @@ class OpikTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = {}
+        self.global_vars = global_vars or {}
 
-        config = self._get_config()
+        config = self._get_config(self.global_vars)
         self._ready: bool = self._setup_opik(config, trace_id) if config else False
         self._distributed_headers = None
 
@@ -224,10 +234,15 @@ class OpikTracer(BaseTracer):
         return value
 
     @staticmethod
-    def _get_config() -> dict:
-        host = os.getenv("OPIK_URL_OVERRIDE", None)
-        api_key = os.getenv("OPIK_API_KEY", None)
-        workspace = os.getenv("OPIK_WORKSPACE", None)
+    def _get_config(global_vars) -> dict:
+        if global_vars:
+            host = global_vars.get("OPIK_URL_OVERRIDE", None)
+            api_key = global_vars.get("OPIK_API_KEY", None)
+            workspace = global_vars.get("OPIK_WORKSPACE", None)
+        else:
+            host = os.getenv("OPIK_URL_OVERRIDE", None)
+            api_key = os.getenv("OPIK_API_KEY", None)
+            workspace = os.getenv("OPIK_WORKSPACE", None)
 
         # API Key is mandatory for Opik Cloud and URL is mandatory for Open-Source Opik Server
         if host or api_key:

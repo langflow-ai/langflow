@@ -24,12 +24,19 @@ if TYPE_CHECKING:
 class LangWatchTracer(BaseTracer):
     flow_id: str
 
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    @staticmethod
+    def get_required_variable_names():
+        return ["LANGWATCH_API_KEY"]
+
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, global_vars: dict | None = None
+    ) -> None:
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
         self.flow_id = trace_name.split(" - ")[-1]
+        self.global_vars = global_vars or {}
 
         try:
             self._ready: bool = self.setup_langwatch()
@@ -59,12 +66,15 @@ class LangWatchTracer(BaseTracer):
         return self._ready
 
     def setup_langwatch(self) -> bool:
-        if "LANGWATCH_API_KEY" not in os.environ:
+        if "LANGWATCH_API_KEY" not in os.environ and "LANGWATCH_API_KEY" not in self.global_vars:
             return False
         try:
             import langwatch
 
             self._client = langwatch
+            if self.global_vars.get("LANGWATCH_API_KEY", None):
+                self._client.api_key = self.global_vars["LANGWATCH_API_KEY"]
+
         except ImportError:
             logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False

@@ -305,7 +305,7 @@ async def build_vertex(
             )
         else:
             graph = cache.get("result")
-            await graph.initialize_run()
+            await graph.initialize_run(session_scope)
         vertex = graph.get_vertex(vertex_id)
 
         try:
