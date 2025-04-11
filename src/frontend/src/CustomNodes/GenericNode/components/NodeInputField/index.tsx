@@ -152,6 +152,7 @@ export default function NodeInputField({
                       title,
                       nodeId: data.id,
                       isFlexView,
+                      required,
                     })}
                   </span>
                 }
@@ -165,13 +166,13 @@ export default function NodeInputField({
                         title,
                         nodeId: data.id,
                         isFlexView,
+                        required,
                       })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={"text-status-red"}>{required ? "*" : ""}</span>
             <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
