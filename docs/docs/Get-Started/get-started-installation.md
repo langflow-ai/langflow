@@ -6,18 +6,19 @@ slug: /get-started-installation
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow can be installed in two ways:
+Langflow can be installed in three ways:
 
 * As a [Python package](#install-and-run-langflow-oss) with Langflow OSS
 * As a [standalone desktop application](#install-langflow-desktop) with Langflow Desktop
+* As a [cloud-hosted service](#datastax-langflow) with DataStax Langflow
 
-## Langflow OSS Prerequisites
+## Install and run Langflow OSS
+
+Before you install and run Langflow OSS, be sure you have the following items.
 
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/)
 - A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
-
-## Install and run Langflow OSS
 
 Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/).
 
@@ -275,3 +276,7 @@ The **latest** version is always highlighted.
 A confirmation pane containing the selected version's changelog appears.
 3. To change to the selected version, click **Confirm**.
 The application restarts with the new version installed.
+
+## DataStax Langflow {#datastax-langflow}
+
+**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
