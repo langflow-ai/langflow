@@ -334,7 +334,7 @@ For an additional example of using the **Parser** component to format a DataFram
 | Name | Display Name | Info |
 |------|--------------|------|
 | mode | Mode | Tab selection between "Parser" and "Stringify" modes. "Stringify" converts input to a string instead of using a template. |
-| pattern | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names (such as `Name: {Name})`. For Data objects, use `{text}`. |
+| pattern | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names, such as `Name: {Name}`. For Data objects, use `{text}`. |
 | input_data | Data or DataFrame | The input to parse - accepts either a DataFrame or Data object. |
 | sep | Separator | String used to separate rows/items. Default: newline. |
 | clean_data | Clean Data | When stringify is enabled, cleans data by removing empty rows and lines. |
