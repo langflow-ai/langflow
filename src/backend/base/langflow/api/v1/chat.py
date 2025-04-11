@@ -172,7 +172,6 @@ async def build_flow(
         current_user: The authenticated user
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
-        settings_service: Settings service
         event_delivery: Optional event delivery type - default is streaming
 
     Returns:

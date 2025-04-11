@@ -177,7 +177,7 @@ test(
       .fill("https://en.wikipedia.org/wiki/Artificial_intelligence");
     await page
       .getByTestId("inputlist_str_urls_1")
-      .fill("https://en.wikipedia.org/wiki/Artificial_intelligence");
+      .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
     await page.getByTestId("div-generic-node").nth(2).click();
     await page.getByTestId("int_int_number_of_fields").fill("1");
