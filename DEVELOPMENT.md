@@ -69,15 +69,15 @@ Once the application is running, the command output should look similar to:
 
 ```
 ╭───────────────────────────────────────────────────────────────────╮
-│ Welcome to ⛓ Langflow                                             │
+│ Welcome to Langflow                                               │
 │                                                                   │
 │                                                                   │
-│ Collaborate, and contribute at our GitHub Repo 🌟                 │
+│ Collaborate and contribute: 🌟 GitHub Repo • 💬 Join Discord       │
 │                                                                   │
 │ We collect anonymous usage data to improve Langflow.              │
-│ You can opt-out by setting DO_NOT_TRACK=true in your environment. │
+│ To opt out, set: DO_NOT_TRACK=true in your environment.           │
 │                                                                   │
-│ Access http://127.0.0.1:7860                                      │
+│ 🟢 Open Langflow → http://127.0.0.1:7860                           │
 ╰───────────────────────────────────────────────────────────────────╯
 ```
 
