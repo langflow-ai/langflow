@@ -1,3 +1,4 @@
+import githubBg from "@/assets/github-bg.png";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { BackgroundGradient } from "@/components/ui/background-gradient";
@@ -9,7 +10,7 @@ import { HiArrowRight } from "react-icons/hi";
 import useFileDrop from "../hooks/use-on-file-drop";
 
 const ARROW_GITHUB_ICON_CLASS =
-  "relative left-10 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
+  "relative right-16 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 const ARROW_DISCORD_ICON_CLASS =
   "relative left-20 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 const BACKGROUND_GRADIENT_CLASS =
@@ -47,37 +48,32 @@ export const EmptyPageCommunity = ({
                 href="https://github.com/logspace-ai/langflow"
                 target="_blank"
                 rel="noreferrer"
-                className="block"
+                className="group z-50 block"
               >
-                <BackgroundGradient
+                <div
                   className={BACKGROUND_GRADIENT_CLASS}
-                  containerClassName="bg-gradient-to-r from-pink-500/30 via-transparent to-purple-500/30 z-50"
+                  style={{ backgroundImage: `url(${githubBg})` }}
                 >
-                  <DotBackgroundDemo
-                    className="rounded-3xl"
-                    containerClassName="rounded-3xl"
-                  >
-                    <div className="relative right-4 top-6 z-50 flex h-full flex-col">
-                      <div className="z-50 flex w-full items-center justify-between">
-                        <div className="z-50 flex items-center gap-3">
-                          <FaGithub className="z-50 h-6 w-6" />
-                          <div>
-                            <span className="z-50 font-medium">GitHub</span>
-                            <span className="z-50 ml-2 text-muted-foreground">
-                              55k
-                            </span>
-                          </div>
+                  <div className="relative left-8 top-6 z-50 flex h-full flex-col">
+                    <div className="z-50 flex w-full items-center justify-between">
+                      <div className="z-50 flex items-center gap-3">
+                        <FaGithub className="h-6 w-6" />
+                        <div>
+                          <span className="font-medium">GitHub</span>
+                          <span className="ml-2 text-muted-foreground">
+                            55k
+                          </span>
                         </div>
-                        <HiArrowRight className={ARROW_GITHUB_ICON_CLASS} />
                       </div>
-                      <div className="z-50 mt-2">
-                        <span className="z-50 text-[13px] text-muted-foreground">
-                          Star the project and follow our journey
-                        </span>
-                      </div>
+                      <HiArrowRight className={ARROW_GITHUB_ICON_CLASS} />
                     </div>
-                  </DotBackgroundDemo>
-                </BackgroundGradient>
+                    <div className="z-50 mt-2">
+                      <span className="z-50 text-[13px] text-muted-foreground">
+                        Star the project and follow our journey
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </a>
               <a
                 href="https://discord.gg/EqNEEadtZ2"
