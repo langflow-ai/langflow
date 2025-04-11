@@ -978,7 +978,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Make sure we always show the reranker options if the collection is hybrid enabled
         # And right now they always are
         build_config["lexical_terms"]["show"] = True
-        build_config["lexical_terms"]["advanced"] = False
 
     def _handle_database_selection(self, build_config: dict, field_value: str) -> dict:
         """Handle database selection and update related configurations."""
