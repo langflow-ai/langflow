@@ -11,7 +11,6 @@ from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,8 +33,7 @@ class LangSmithTracer(BaseTracer):
         self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, global_vars: dict | None = None
     ):
         try:
-            for key in LangSmithTracer.get_required_variable_names():
-                set_env_from_globals(key, global_vars)
+            self.global_vars = global_vars or {}
 
             self._ready = self.setup_langsmith()
             if not self._ready:
@@ -63,12 +61,15 @@ class LangSmithTracer(BaseTracer):
         return self._ready
 
     def setup_langsmith(self) -> bool:
-        if os.getenv("LANGCHAIN_API_KEY") is None:
+        if os.getenv("LANGCHAIN_API_KEY") is None and "LANGCHAIN_API_KEY" not in self.global_vars:
             return False
         try:
             from langsmith import Client
 
-            self._client = Client()
+            if "LANGCHAIN_API_KEY" in self.global_vars:
+                self._client = Client(api_key=self.global_vars["LANGCHAIN_API_KEY"])
+            else:
+                self._client = Client()
         except ImportError:
             logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False

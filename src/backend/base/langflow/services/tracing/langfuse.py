@@ -9,7 +9,6 @@ from loguru import logger
 from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -50,11 +49,9 @@ class LangFuseTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = OrderedDict()  # spans that are not ended
+        self.global_vars = global_vars or {}
 
-        for key in LangFuseTracer.get_required_variable_names():
-            set_env_from_globals(key, global_vars)
-
-        config = self._get_config()
+        config = self._get_config(self.global_vars)
         self._ready: bool = self.setup_langfuse(config) if config else False
 
     @property
@@ -174,10 +171,16 @@ class LangFuseTracer(BaseTracer):
         return stateful_client.get_langchain_handler()
 
     @staticmethod
-    def _get_config() -> dict:
-        secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
-        public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
-        host = os.getenv("LANGFUSE_HOST", None)
+    def _get_config(global_vars) -> dict:
+        if global_vars:
+            secret_key = global_vars.get("LANGFUSE_SECRET_KEY", None)
+            public_key = global_vars.get("LANGFUSE_PUBLIC_KEY", None)
+            host = global_vars.get("LANGFUSE_HOST", None)
+        else:
+            secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
+            public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
+            host = os.getenv("LANGFUSE_HOST", None)
+
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}

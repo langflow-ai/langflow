@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 from langflow.schema.data import Data
@@ -28,10 +27,3 @@ def convert_to_langchain_types(io_dict: dict[str, Any]):
     for key, value in io_dict.items():
         converted[key] = convert_to_langchain_type(value)
     return converted
-
-
-def set_env_from_globals(key: str, global_vars: dict[str, Any] | None) -> None:
-    if global_vars is not None and key in global_vars:
-        value = global_vars.get(key)
-        if isinstance(value, str):
-            os.environ[key] = value

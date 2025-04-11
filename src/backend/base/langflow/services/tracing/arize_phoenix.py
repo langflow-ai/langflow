@@ -20,7 +20,6 @@ from typing_extensions import override
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -69,9 +68,7 @@ class ArizePhoenixTracer(BaseTracer):
         self.chat_input_value = ""
         self.chat_output_value = ""
         self.session_id = session_id
-
-        for key in ArizePhoenixTracer.get_required_variable_names():
-            set_env_from_globals(key, global_vars)
+        self.global_vars = global_vars or {}
 
         try:
             self._ready = self.setup_arize_phoenix()
@@ -117,9 +114,15 @@ class ArizePhoenixTracer(BaseTracer):
         }
 
         # Arize Config
-        arize_api_key = os.getenv("ARIZE_API_KEY", None)
-        arize_space_id = os.getenv("ARIZE_SPACE_ID", None)
-        arize_collector_endpoint = os.getenv("ARIZE_COLLECTOR_ENDPOINT", "https://otlp.arize.com")
+        if self.global_vars:
+            arize_api_key = self.global_vars["ARIZE_API_KEY"]
+            arize_space_id = self.global_vars["ARIZE_SPACE_ID"]
+            arize_collector_endpoint = self.global_vars.get("ARIZE_COLLECTOR_ENDPOINT", "https://otlp.arize.com")
+        else:
+            arize_api_key = os.getenv("ARIZE_API_KEY", None)
+            arize_space_id = os.getenv("ARIZE_SPACE_ID", None)
+            arize_collector_endpoint = os.getenv("ARIZE_COLLECTOR_ENDPOINT", "https://otlp.arize.com")
+
         enable_arize_tracing = bool(arize_api_key and arize_space_id)
         arize_endpoint = f"{arize_collector_endpoint}/v1"
         arize_headers = {
@@ -129,8 +132,14 @@ class ArizePhoenixTracer(BaseTracer):
         }
 
         # Phoenix Config
-        phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
-        phoenix_collector_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "https://app.phoenix.arize.com")
+        default_endpoint = "https://app.phoenix.arize.com"
+        if self.global_vars:
+            phoenix_api_key = self.global_vars["PHOENIX_API_KEY"]
+            phoenix_collector_endpoint = self.global_vars.get("PHOENIX_COLLECTOR_ENDPOINT", default_endpoint)
+        else:
+            phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
+            phoenix_collector_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", default_endpoint)
+
         enable_phoenix_tracing = bool(phoenix_api_key)
         phoenix_endpoint = f"{phoenix_collector_endpoint}/v1/traces"
         phoenix_headers = {

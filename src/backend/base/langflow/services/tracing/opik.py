@@ -12,7 +12,6 @@ from typing_extensions import override
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -58,11 +57,9 @@ class OpikTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = {}
+        self.global_vars = global_vars or {}
 
-        for key in OpikTracer.get_required_variable_names():
-            set_env_from_globals(key, global_vars)
-
-        config = self._get_config()
+        config = self._get_config(self.global_vars)
         self._ready: bool = self._setup_opik(config, trace_id) if config else False
         self._distributed_headers = None
 
@@ -237,10 +234,15 @@ class OpikTracer(BaseTracer):
         return value
 
     @staticmethod
-    def _get_config() -> dict:
-        host = os.getenv("OPIK_URL_OVERRIDE", None)
-        api_key = os.getenv("OPIK_API_KEY", None)
-        workspace = os.getenv("OPIK_WORKSPACE", None)
+    def _get_config(global_vars) -> dict:
+        if global_vars:
+            host = global_vars.get("OPIK_URL_OVERRIDE", None)
+            api_key = global_vars.get("OPIK_API_KEY", None)
+            workspace = global_vars.get("OPIK_WORKSPACE", None)
+        else:
+            host = os.getenv("OPIK_URL_OVERRIDE", None)
+            api_key = os.getenv("OPIK_API_KEY", None)
+            workspace = os.getenv("OPIK_WORKSPACE", None)
 
         # API Key is mandatory for Opik Cloud and URL is mandatory for Open-Source Opik Server
         if host or api_key:

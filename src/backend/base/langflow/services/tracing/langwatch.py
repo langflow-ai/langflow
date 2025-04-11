@@ -9,7 +9,6 @@ from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.utils import set_env_from_globals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -37,9 +36,7 @@ class LangWatchTracer(BaseTracer):
         self.project_name = project_name
         self.trace_id = trace_id
         self.flow_id = trace_name.split(" - ")[-1]
-
-        for key in LangWatchTracer.get_required_variable_names():
-            set_env_from_globals(key, global_vars)
+        self.global_vars = global_vars or {}
 
         try:
             self._ready: bool = self.setup_langwatch()
@@ -69,12 +66,15 @@ class LangWatchTracer(BaseTracer):
         return self._ready
 
     def setup_langwatch(self) -> bool:
-        if "LANGWATCH_API_KEY" not in os.environ:
+        if "LANGWATCH_API_KEY" not in os.environ and "LANGWATCH_API_KEY" not in self.global_vars:
             return False
         try:
             import langwatch
 
             self._client = langwatch
+            if self.global_vars.get("LANGWATCH_API_KEY", None):
+                self._client.api_key = self.global_vars["LANGWATCH_API_KEY"]
+
         except ImportError:
             logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False
