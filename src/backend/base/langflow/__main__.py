@@ -394,7 +394,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     if notices:
         notices.append(f"Run '{pip_command}' to update.")
 
-    styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
+    [f"[bold]{notice}[/bold]" for notice in notices if notice]
     styled_package_name = stylize_text(
         package_name, package_name, is_prerelease=any("pre-release" in notice for notice in notices)
     )
@@ -409,7 +409,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         "We collect anonymous usage data to improve Langflow.\n"
         "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
     )
-    access_link = f"[bold]🟢 Open Langflow →[/bold] [link=http://{host}:{port}]http://{host}:{port}[/link]"
+    access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{host}:{port}]{protocol}://{host}:{port}[/link]"
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
