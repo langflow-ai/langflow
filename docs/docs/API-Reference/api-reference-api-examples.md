@@ -561,7 +561,7 @@ You can upload a file to Langflow one time, and use it with multiple flows.
 ### Upload file (v1)
 
 Upload a file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
-
+Replace **FILE_NAME** with the uploaded file name.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
@@ -570,7 +570,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@your_file.txt"
+  -F "file=@FILE_NAME.txt"
 ```
 
   </TabItem>
@@ -594,11 +594,11 @@ The default file limit is 100 MB. To configure this value, change the `LANGFLOW_
 For more information, see [Supported environment variables](/environment-variables#supported-variables).
 
 1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
-
+Replace **FILE_NAME** with the uploaded file name.
 ```bash
 curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@image-file.png"
+  -F "file=@FILE_NAME.png"
 ```
 
 The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<TIMESTAMP>_<FILE-NAME>"}`.
@@ -715,7 +715,7 @@ curl -X DELETE \
 Upload a file to your user account. The file can be used across multiple flows.
 
 The file is uploaded in the format`USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
-
+Replace **FILE_NAME** with the uploaded file name.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
@@ -724,7 +724,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v2/files" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@your_file.txt"
+  -F "file=@FILE_NAME.txt"
 ```
 
   </TabItem>
@@ -733,7 +733,7 @@ curl -X POST \
 ```json
 {
   "id": "c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
-  "name": "your_file",
+  "name": "FILE_NAME",
   "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt",
   "size": 1234,
   "provider": null
@@ -750,12 +750,12 @@ Send image files to the Langflow `/v2/files` endpoint for AI analysis.
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
 For more information, see [Supported environment variables](/environment-variables#supported-variables).
 
-1. To send an image to your flow with the API, POST the image file to the `/api/v2/files` endpoint:
-
+1. To send an image to your flow with the API, POST the image file to the `/api/v2/files` endpoint.
+Replace **FILE_NAME** with the uploaded file name.
 ```bash
 curl -X POST "$LANGFLOW_URL/api/v2/files" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@image-file.png"
+  -F "file=@FILE_NAME.png"
 ```
 
 The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
@@ -763,7 +763,7 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 ```json
 {
   "id": "5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e",
-  "name": "your_image",
+  "name": "FILE_NAME",
   "path": "232f54ba-dd54-4760-977e-ed637f83e785/5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png",
   "size": 84408,
   "provider": null
