@@ -286,7 +286,7 @@ class JobQueueService(Service):
                 )
 
                 # Check if task should be marked for cleanup
-                if task and (task.cancelled() or (task.done() and task.exception() is not None)):
+                if task and (task.cancelled() or task.done()):
                     if cleanup_time is None:
                         # Mark for cleanup by setting the timestamp
                         self._queues[job_id] = (
