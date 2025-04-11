@@ -42,6 +42,7 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
+@router.post("/", status_code=HTTPStatus.CREATED)
 async def upload_user_file(
     file: Annotated[UploadFile, File(...)],
     session: DbSession,
@@ -142,6 +143,7 @@ async def upload_user_file(
 
 
 @router.get("")
+@router.get("/", status_code=HTTPStatus.OK)
 async def list_files(
     current_user: CurrentActiveUser,
     session: DbSession,
@@ -239,6 +241,7 @@ async def delete_file(
 
 
 @router.delete("")
+@router.delete("/", status_code=HTTPStatus.OK)
 async def delete_all_files(
     current_user: CurrentActiveUser,
     session: DbSession,
