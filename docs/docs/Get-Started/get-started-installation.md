@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 Langflow can be installed in three ways:
 
 * As a [Python package](#install-and-run-langflow-oss) with Langflow OSS
-* As a [standalone desktop application](#install-langflow-desktop) with Langflow Desktop
+* As a [standalone desktop application](#install-and-run-langflow-desktop) with Langflow Desktop
 * As a [cloud-hosted service](#datastax-langflow) with DataStax Langflow
 
 ## Install and run Langflow OSS
