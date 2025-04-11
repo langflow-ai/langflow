@@ -9,7 +9,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 const ERROR_DISPLAY_INTERVAL = 10000;
-const ERROR_DISPLAY_COUNT = 3;
+const ERROR_DISPLAY_COUNT = 1;
 
 interface PollingItem {
   interval: NodeJS.Timeout;
@@ -124,23 +124,22 @@ export const useGetBuildsMutation: useMutationFunctionType<
           setFlowPool(flowPool);
         }
 
-        Object.keys(flowPool).forEach((key) => {
-          const shouldDisplayError =
-            flowPool[key].length > 0 &&
-            flowPool[key][0]?.valid === false &&
-            errorDisplayCountRef.current < ERROR_DISPLAY_COUNT;
-
-          if (shouldDisplayError) {
-            const timeoutId = window.setTimeout(() => {
-              setErrorData({
-                title: "Builds failed",
-                list: [flowPool?.errors?.[0]?.data?.error],
-              });
-              errorDisplayCountRef.current += 1;
-            }, ERROR_DISPLAY_INTERVAL);
-            timeoutIdsRef.current.push(timeoutId);
-          }
-        });
+        // Check for errors only if we haven't displayed them yet
+        if (errorDisplayCountRef.current === 0) {
+          Object.keys(flowPool).forEach((key) => {
+            const nodeBuild = flowPool[key];
+            if (nodeBuild.length > 0 && nodeBuild[0]?.valid === false) {
+              const errorMessage = nodeBuild?.[0]?.params || "Unknown error";
+              if (errorMessage) {
+                setErrorData({
+                  title: "Last build failed",
+                  list: [errorMessage],
+                });
+                errorDisplayCountRef.current = 1;
+              }
+            }
+          });
+        }
 
         return;
       }
@@ -208,6 +207,8 @@ export const useGetBuildsMutation: useMutationFunctionType<
         clearTimeout(timeoutId);
       });
       timeoutIdsRef.current = [];
+      // Reset error display count when component unmounts
+      errorDisplayCountRef.current = 0;
     };
   }, []);
 
