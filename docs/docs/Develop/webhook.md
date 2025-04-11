@@ -20,7 +20,7 @@ ID: {id} - Name: {name} - Email: {email}
 ```
 
 :::important
-The component may fail to build, because it needs data from the **Webhook** first.
+The component may fail to build because it needs data from the **Webhook** first.
 If you experience issues, change the **Mode** on the **Parser** component to **Stringify**, so the component outputs a single string.
 :::
 
