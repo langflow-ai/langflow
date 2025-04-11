@@ -280,7 +280,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = ["Message"]
+    input_types: list[str] = []
     load_from_db: CoalesceBool = True
 
     @field_validator("value")

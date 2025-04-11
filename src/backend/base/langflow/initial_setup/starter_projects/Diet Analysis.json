@@ -601,9 +601,7 @@
                 "display_name": "Novita API Key",
                 "dynamic": false,
                 "info": "The Novita API Key to use for Novita AI models.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
