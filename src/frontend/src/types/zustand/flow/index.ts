@@ -149,7 +149,6 @@ export type FlowStoreType = {
     files,
     silent,
     session,
-    stream,
     eventDelivery,
   }: {
     startNodeId?: string;
@@ -158,7 +157,6 @@ export type FlowStoreType = {
     files?: string[];
     silent?: boolean;
     session?: string;
-    stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };

@@ -226,8 +226,10 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_LOAD_FLOWS_PATH"/><span class="env-prefix">LANGFLOW_</span>LOAD_FLOWS_PATH | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if <span class="env-prefix">LANGFLOW_</span>AUTO_LOGIN is enabled. |
 | <Link id="LANGFLOW_WORKER_TIMEOUT"/><span class="env-prefix">LANGFLOW_</span>WORKER_TIMEOUT | Integer | `300` | Worker timeout in seconds.<br/>See [`--worker-timeout` option](./configuration-cli.md#run-worker-timeout). |
 | <Link id="LANGFLOW_WORKERS"/><span class="env-prefix">LANGFLOW_</span>WORKERS | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.md#run-workers). |
-
+| <Link id="LANGFLOW_SSL_CERT_FILE"/><span class="env-prefix">LANGFLOW_</span>SSL_CERT_FILE | String | Not set | Path to the SSL certificate file on the local system. |
+| <Link id="LANGFLOW_SSL_KEY_FILE"/><span class="env-prefix">LANGFLOW_</span>SSL_KEY_FILE | String | Not set | Path to the SSL key file on the local system. |
 </div>
+
 
 ## Configure .env, override.conf, and tasks.json files
 
