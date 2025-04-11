@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 def test_create_input_schema_from_json_schema():
     # Define extremely obfuscated BaseModel class aka arrange
     class EnumA(Enum):
-        valA1 = "valA1"
-        valA2 = "valA2"
-        valA3 = "valA3"
+        vala1 = "valA1"
+        vala2 = "valA2"
+        vala3 = "valA3"
 
     class EnumB(Enum):
-        valB1 = "valB1"
-        valB2 = "valB2"
-        valB3 = "valB3"
+        valb1 = "valB1"
+        valb2 = "valB2"
+        valb3 = "valB3"
 
     class StrangeSubThing(BaseModel):
         list_field: list[EnumB] = Field(
@@ -30,12 +30,12 @@ def test_create_input_schema_from_json_schema():
         date_field: date | None = Field(
             description="Cool description of the date field",
             required=False,
-            default=date.today(),
+            default=date.today(),  # noqa: DTZ011
         )
         enuma_field: EnumA | None = Field(
             description="Cool description of the enum field",
             required=False,
-            default=EnumA.valA1,
+            default=EnumA.vala1,
         )
 
     class StrangeSubThingTheSecond(BaseModel):
@@ -62,7 +62,7 @@ def test_create_input_schema_from_json_schema():
         the_enum: EnumB | None = Field(
             description="Kinda okay description of the enum field",
             required=False,
-            default=EnumB.valB3,
+            default=EnumB.valb3,
         )
 
     # act
