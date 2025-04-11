@@ -14,6 +14,9 @@ import { MilvusIcon } from "@/icons/Milvus";
 import { OneDriveIcon } from "@/icons/OneDrive";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
+import { SearchHybridIcon } from "@/icons/SearchHybrid";
+import { SearchLexicalIcon } from "@/icons/SearchLexical";
+import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
@@ -754,6 +757,9 @@ export const nodeIconsLucide: iconsType = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   DeepSeek: DeepSeekIcon,
+  SearchLexical: SearchLexicalIcon,
+  SearchHybrid: SearchHybridIcon,
+  SearchVector: SearchVectorIcon,
   xAI: XAIIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,

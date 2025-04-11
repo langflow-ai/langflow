@@ -67,6 +67,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  toggle?: boolean;
 };
 export type ParameterComponentType = {
   selected?: boolean;
