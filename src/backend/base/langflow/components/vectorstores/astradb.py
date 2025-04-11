@@ -198,7 +198,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Search Method",
             info=(
                 "Determine how your content is matched: Vector finds semantic similarity, "
-                "Lexical finds term matches, and Hybrid Search (suggested) combines both approaches "
+                "and Hybrid Search (suggested) combines both approaches "
                 "with a reranker."
             ),
             options=["Hybrid Search", "Vector Search"],  # TODO: Restore Lexical Search?
@@ -978,7 +978,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Make sure we always show the reranker options if the collection is hybrid enabled
         # And right now they always are
         build_config["lexical_terms"]["show"] = True
-        build_config["lexical_terms"]["advanced"] = False
 
     def _handle_database_selection(self, build_config: dict, field_value: str) -> dict:
         """Handle database selection and update related configurations."""
