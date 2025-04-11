@@ -152,6 +152,8 @@ curl --request POST \
 
 If the flow streams the result back to you, your flow is being served, and can be consumed from a front-end application by submitting POST requests to this endpoint.
 
+To trigger your application from an external event, see [Webhook](/webhook).
+
 :::note
 The test application returns a large amount of text, so the example command used `?stream=true`. If you prefer, set `?stream=false` to use batching. For more information, see the [API examples](/api-reference-api-examples#run-flow).
 :::
