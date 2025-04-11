@@ -1,3 +1,4 @@
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useMutationFunctionType } from "@/types/api";
@@ -6,6 +7,9 @@ import { useEffect, useRef } from "react";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+
+const ERROR_DISPLAY_INTERVAL = 10000;
+const ERROR_DISPLAY_COUNT = 1;
 
 interface PollingItem {
   interval: NodeJS.Timeout;
@@ -96,6 +100,10 @@ export const useGetBuildsMutation: useMutationFunctionType<
 
   const flowIdRef = useRef<string | null>(null);
   const requestInProgressRef = useRef<Record<string, boolean>>({});
+  const errorDisplayCountRef = useRef<number>(0);
+  const timeoutIdsRef = useRef<number[]>([]);
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const getBuildsFn = async (
     payload: IGetBuilds,
@@ -115,6 +123,24 @@ export const useGetBuildsMutation: useMutationFunctionType<
         if (Object.keys(flowPool).length > 0) {
           setFlowPool(flowPool);
         }
+
+        // Check for errors only if we haven't displayed them yet
+        if (errorDisplayCountRef.current === 0) {
+          Object.keys(flowPool).forEach((key) => {
+            const nodeBuild = flowPool[key];
+            if (nodeBuild.length > 0 && nodeBuild[0]?.valid === false) {
+              const errorMessage = nodeBuild?.[0]?.params || "Unknown error";
+              if (errorMessage) {
+                setErrorData({
+                  title: "Last build failed",
+                  list: [errorMessage],
+                });
+                errorDisplayCountRef.current = 1;
+              }
+            }
+          });
+        }
+
         return;
       }
 
@@ -145,9 +171,9 @@ export const useGetBuildsMutation: useMutationFunctionType<
     const timestamp = Date.now();
     const pollCallback = async () => {
       const data = await getBuildsFn(payload);
-      payload.onSuccess?.(data);
+      payload.onSuccess?.(data!);
 
-      if (payload.stopPollingOn?.(data)) {
+      if (payload.stopPollingOn?.(data!)) {
         PollingManager.stopPoll(payload.flowId);
       }
     };
@@ -164,8 +190,8 @@ export const useGetBuildsMutation: useMutationFunctionType<
     PollingManager.enqueuePolling(payload.flowId, pollingItem);
 
     return getBuildsFn(payload).then((data) => {
-      payload.onSuccess?.(data);
-      if (payload.stopPollingOn?.(data)) {
+      payload.onSuccess?.(data!);
+      if (payload.stopPollingOn?.(data!)) {
         PollingManager.stopPoll(payload.flowId);
       }
     });
@@ -176,6 +202,13 @@ export const useGetBuildsMutation: useMutationFunctionType<
       if (flowIdRef.current) {
         PollingManager.stopPoll(flowIdRef.current);
       }
+      // Clear all timeouts
+      timeoutIdsRef.current.forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
+      timeoutIdsRef.current = [];
+      // Reset error display count when component unmounts
+      errorDisplayCountRef.current = 0;
     };
   }, []);
 

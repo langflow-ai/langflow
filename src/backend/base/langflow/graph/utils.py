@@ -149,7 +149,7 @@ async def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: ResultDataResponse,
+    data: ResultDataResponse | dict,
     artifacts: dict | None = None,
 ) -> None:
     try:
