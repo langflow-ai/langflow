@@ -78,7 +78,7 @@ test(
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesAstra DB Chat Memory",
+      "memoriesMem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacterTextSplitter",
