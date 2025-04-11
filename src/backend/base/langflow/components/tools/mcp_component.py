@@ -57,7 +57,6 @@ class MCPToolsComponent(Component):
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
             show=False,
-            value="MCP_SSE",
             refresh_button=True,
         ),
         DropdownInput(
@@ -148,9 +147,7 @@ class MCPToolsComponent(Component):
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["sse_url"]["show"] = True
-                    _, port, _ = await self.find_langflow_instance()
-                    if port:
-                        build_config["sse_url"]["value"] = f"http://localhost:{port}/api/v1/mcp/sse"
+                    build_config["sse_url"]["value"] = "MCP_SSE"
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
