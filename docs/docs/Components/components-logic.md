@@ -38,6 +38,50 @@ It includes code examples of REST and gRPC implementations to demonstrate integr
 
 This component routes messages by comparing two strings. It evaluates a condition by comparing two text inputs using the specified operator and routes the message to `true_result` or `false_result`.
 
+The operator can looks for single strings based on your defined [Operator behavior](#operator-behavior), but it can also search for multiple words by regex matching.
+
+To use the **Conditional router** component to check incoming messages with regex matching, do the following:
+
+1. Connect the **If-Else** component's **Text Input** port to a **Chat Input** component.
+2. In the If-Else component, enter the following values.
+* In the **Match Text** field, enter `.*(urgent|warning|caution).*`. The component looks for these values. The regex match is case sensitive, so to look for all permutations of `warning`, enter `warning|Warning|WARNING`.
+* In the **Operator** field, enter `regex`. The component looks for the strings `urgent`, `warning`, and `caution`. For more operators, see [Operator behavior](#operator-behavior).
+* In the **Message** field, enter `New Message Detected`. This field is optional. The message is sent to both the **True** and **False** ports.
+The component is now set up to send a `New Message Detected` message out of its **True** port if it matches any of the strings.
+If no strings are detected, it sends a message out the **False** port.
+3. Create two identical flows to process the messages. Connect an **Open AI** component, a **Prompt**, and a **Chat Output** component together.
+4. Connect one chain to the **If-Else** component's **True** port, and one chain to the **False** port.
+
+The flow looks like this:
+
+![A conditional router connected to two OpenAI components](/img/component-conditional-router.png)
+
+5. Add your **OpenAI API key** to both **OpenAI** components.
+6. In both **Prompt** components, enter the behavior you want each route to take.
+When a match is found:
+```text
+Send a message that a new message has been received and added to the Urgent queue.
+```
+When a match is not found:
+```text
+Send a message that a new message has been received and added to the backlog.
+```
+7. Open the **Playground**.
+Send the flow some messages. Your messages route differently based on the if-else component's evaluation.
+```
+User
+I want to go fishing
+
+AI
+A new message has been received and added to the backlog.
+
+User
+Caution, an important warning has arrived
+
+AI
+A new message has been received and added to the Urgent queue. Please review it at your earliest convenience.
+```
+
 ### Inputs
 
 | Name           | Type     | Description                                                       |
@@ -69,76 +113,6 @@ All options respect the `case_sensitive` setting except **regex**.
 - **starts with**: Checks if input_text begins with match_text
 - **ends with**: Checks if input_text ends with match_text
 - **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
-
-## Data Conditional Router
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
-
-This component routes `Data` objects based on a condition applied to a specified key, including boolean validation. It can process either a single Data object or a list of Data objects.
-
-This component is particularly useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
-
-### Inputs
-
-| Name          | Type     | Description                                                                       |
-|---------------|----------|-----------------------------------------------------------------------------------|
-| data_input    | Data     | The Data object or list of Data objects to process. Can handle both single items and lists. |
-| key_name      | String   | The name of the key in the Data object to check.                                  |
-| operator      | Dropdown | The operator to apply. Options: "equals", "not equals", "contains", "starts with", "ends with", "boolean validator". Default: "equals". |
-| compare_value | String   | The value to compare against. Not shown/used when operator is "boolean validator". |
-
-### Outputs
-
-| Name         | Type        | Description                                          |
-|--------------|-------------|------------------------------------------------------|
-| true_output  | Data/List   | Output when the condition is met.                    |
-| false_output | Data/List   | Output when the condition is not met.                |
-
-### Operator Behavior
-
-- **equals**: Exact match comparison between the key's value and compare_value
-- **not equals**: Inverse of exact match
-- **contains**: Checks if compare_value is found within the key's value
-- **starts with**: Checks if the key's value begins with compare_value
-- **ends with**: Checks if the key's value ends with compare_value
-- **boolean validator**: Treats the key's value as a boolean. The following values are considered true:
-  - Boolean `true`
-  - Strings: "true", "1", "yes", "y", "on" (case-insensitive)
-  - Any other value is converted using Python's `bool()` function
-
-### List Processing
-
-The following actions occur when processing a list of Data objects:
-- Each object in the list is evaluated individually
-- Objects meeting the condition go to true_output
-- Objects not meeting the condition go to false_output
-- If all objects go to one output, the other output is empty
-
-## Flow as tool {#flow-as-tool}
-
-:::important
-This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Run flow component](/components-logic#run-flow)
-:::
-
-This component constructs a tool from a function that runs a loaded flow.
-
-### Inputs
-
-| Name             | Type     | Description                                                |
-|------------------|----------|------------------------------------------------------------|
-| flow_name        | Dropdown | The name of the flow to run.                               |
-| tool_name        | String   | The name of the tool.                                      |
-| tool_description | String   | The description of the tool.                               |
-| return_direct    | Boolean  | If true, returns the result directly from the tool.        |
-
-### Outputs
-
-| Name           | Type | Description                            |
-|----------------|------|----------------------------------------|
-| api_build_tool | Tool | The constructed tool from the flow.    |
 
 ## Listen
 
@@ -241,6 +215,80 @@ Your flow should now look like this:
 |--------------|-------------|---------------------------------------------------------------|
 | run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs are generated from running the flow.                   |
 
+## Legacy components
+
+## Data Conditional Router
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
+This component routes `Data` objects based on a condition applied to a specified key, including boolean validation. It can process either a single Data object or a list of Data objects.
+
+This component is particularly useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
+
+### Inputs
+
+| Name          | Type     | Description                                                                       |
+|---------------|----------|-----------------------------------------------------------------------------------|
+| data_input    | Data     | The Data object or list of Data objects to process. Can handle both single items and lists. |
+| key_name      | String   | The name of the key in the Data object to check.                                  |
+| operator      | Dropdown | The operator to apply. Options: "equals", "not equals", "contains", "starts with", "ends with", "boolean validator". Default: "equals". |
+| compare_value | String   | The value to compare against. Not shown/used when operator is "boolean validator". |
+
+### Outputs
+
+| Name         | Type        | Description                                          |
+|--------------|-------------|------------------------------------------------------|
+| true_output  | Data/List   | Output when the condition is met.                    |
+| false_output | Data/List   | Output when the condition is not met.                |
+
+### Operator Behavior
+
+- **equals**: Exact match comparison between the key's value and compare_value
+- **not equals**: Inverse of exact match
+- **contains**: Checks if compare_value is found within the key's value
+- **starts with**: Checks if the key's value begins with compare_value
+- **ends with**: Checks if the key's value ends with compare_value
+- **boolean validator**: Treats the key's value as a boolean. The following values are considered true:
+  - Boolean `true`
+  - Strings: "true", "1", "yes", "y", "on" (case-insensitive)
+  - Any other value is converted using Python's `bool()` function
+
+### List Processing
+
+The following actions occur when processing a list of Data objects:
+- Each object in the list is evaluated individually
+- Objects meeting the condition go to true_output
+- Objects not meeting the condition go to false_output
+- If all objects go to one output, the other output is empty
+
+## Deprecated components
+
+## Flow as tool {#flow-as-tool}
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
+
+This component constructs a tool from a function that runs a loaded flow.
+
+### Inputs
+
+| Name             | Type     | Description                                                |
+|------------------|----------|------------------------------------------------------------|
+| flow_name        | Dropdown | The name of the flow to run.                               |
+| tool_name        | String   | The name of the tool.                                      |
+| tool_description | String   | The description of the tool.                               |
+| return_direct    | Boolean  | If true, returns the result directly from the tool.        |
+
+### Outputs
+
+| Name           | Type | Description                            |
+|----------------|------|----------------------------------------|
+| api_build_tool | Tool | The constructed tool from the flow.    |
+
 ## Sub flow
 
 :::important
@@ -263,8 +311,3 @@ This component can integrate entire flows as components within a larger workflow
 | Name         | Type        | Description                           |
 |--------------|-------------|---------------------------------------|
 | flow_outputs | List[Data]  | The outputs generated from the flow.  |
-
-
-
-
-
