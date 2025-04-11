@@ -43,5 +43,6 @@ jobs:
                 --codspeed \
                 -m "not api_key_required" \
                 -n auto
+                --timeout 600
       - name: Minimize uv cache
         run: uv cache prune --ci

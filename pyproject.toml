@@ -233,7 +233,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 [tool.pytest.ini_options]
 timeout = 120
-tiemout_method = "thread"
+timeout_method = "thread"
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
