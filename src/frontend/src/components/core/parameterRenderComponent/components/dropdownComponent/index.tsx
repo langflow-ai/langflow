@@ -29,6 +29,7 @@ export default function DropdownComponent({
       <Dropdown
         disabled={disabled || toggleValue === false}
         editNode={editNode}
+        toggle={toggle}
         options={options}
         nodeId={nodeId}
         nodeClass={nodeClass}
