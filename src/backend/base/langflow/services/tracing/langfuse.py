@@ -4,6 +4,7 @@ import os
 from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from loguru import logger
 from typing_extensions import override
@@ -47,12 +48,12 @@ class LangFuseTracer(BaseTracer):
         self.trace_id = trace_id
         self.user_id = user_id
         self.session_id = session_id
-        self.flow_id = trace_name.split(" - ")[-1]
-        self.spans: dict = OrderedDict()  # spans that are not ended
+        self.flow_id = trace_name.rsplit(" - ", 1)[-1]  # optimized split operation
+        self.spans = OrderedDict()  # spans that are not ended
         self.global_vars = global_vars or {}
 
         config = self._get_config(self.global_vars)
-        self._ready: bool = self.setup_langfuse(config) if config else False
+        self._ready = bool(config and self.setup_langfuse(config))
 
     @property
     def ready(self):
