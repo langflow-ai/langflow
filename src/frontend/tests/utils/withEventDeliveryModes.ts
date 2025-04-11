@@ -17,7 +17,7 @@ export function withEventDeliveryModes(
   testFn: TestFunction,
   { timeout = 10000 }: { timeout?: number } = {},
 ) {
-  const eventDeliveryModes = ["streaming", "polling"] as const;
+  const eventDeliveryModes = ["streaming", "polling", "direct"] as const;
 
   for (const [index, eventDelivery] of eventDeliveryModes.entries()) {
     test(`${title} - ${eventDelivery}`, config, async ({ page }) => {
