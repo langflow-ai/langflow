@@ -54,8 +54,19 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("build_id", name="pk_vertex_build"),
         )
 
-        # Copy data - use quoted identifiers to avoid keyword issues
-        op.execute('INSERT INTO "temp_vertex_build" SELECT * FROM "vertex_build"')
+        # Copy data - use a window function to ensure build_id uniqueness across SQLite, PostgreSQL and MySQL
+        # Filter out rows where the original 'id' (vertex id) is NULL, as the new table requires it.
+        op.execute(f'''
+            INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
+            SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
+            FROM (
+                SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid,
+                       ROW_NUMBER() OVER (PARTITION BY build_id ORDER BY timestamp) as rn
+                FROM "vertex_build"
+                WHERE id IS NOT NULL -- Ensure vertex id is not NULL
+            ) sub
+            WHERE rn = 1
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -81,8 +92,13 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_transaction"),
         )
 
-        # Copy data - use quoted identifiers to avoid keyword issues
-        op.execute('INSERT INTO "temp_transaction" SELECT * FROM "transaction"')
+        # Copy data - explicitly list columns and filter out rows where id is NULL
+        op.execute(f'''
+            INSERT INTO "{temp_table_name}" (timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error)
+            SELECT timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
+            FROM "transaction"
+            WHERE id IS NOT NULL
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -112,8 +128,13 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_message"),
         )
 
-        # Copy data - use quoted identifiers to avoid keyword issues
-        op.execute('INSERT INTO "temp_message" SELECT * FROM "message"')
+        # Copy data - explicitly list columns and filter out rows where id is NULL
+        op.execute(f'''
+            INSERT INTO "{temp_table_name}" (timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks)
+            SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks
+            FROM "message"
+            WHERE id IS NOT NULL
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("message")
@@ -131,6 +152,8 @@ def downgrade() -> None:
         temp_table_name = "temp_vertex_build"
 
         # Create temp table with same schema including FK constraint
+        # Note: Original 'id' column was nullable=True here, which might be inconsistent with the model.
+        # Keeping it as nullable=True to match the previous state of this downgrade function.
         op.create_table(
             temp_table_name,
             sa.Column("timestamp", sa.DateTime(), nullable=False),
@@ -149,8 +172,20 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("build_id", name="pk_vertex_build"),
         )
 
-        # Copy data - use quoted identifiers to avoid keyword issues
-        op.execute('INSERT INTO "temp_vertex_build" SELECT * FROM "vertex_build"')
+        # Copy data - use a window function to ensure build_id uniqueness.
+        # Filter out rows where build_id is NULL (PK constraint)
+        # No need to filter by 'id' here as the target column allows NULLs.
+        op.execute(f'''
+            INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
+            SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
+            FROM (
+                SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid,
+                       ROW_NUMBER() OVER (PARTITION BY build_id ORDER BY timestamp) as rn
+                FROM "vertex_build"
+                WHERE build_id IS NOT NULL -- Ensure primary key is not NULL
+            ) sub
+            WHERE rn = 1
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -181,8 +216,13 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_transaction"),
         )
 
-        # Copy data - use quoted identifiers to avoid keyword issues
-        op.execute('INSERT INTO "temp_transaction" SELECT * FROM "transaction"')
+        # Copy data - explicitly list columns and filter out rows where id is NULL
+        op.execute(f'''
+            INSERT INTO "{temp_table_name}" (timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error)
+            SELECT timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
+            FROM "transaction"
+            WHERE id IS NOT NULL
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -217,8 +257,13 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_message"),
         )
 
-        # Copy data - use quoted identifiers to avoid keyword issues
-        op.execute('INSERT INTO "temp_message" SELECT * FROM "message"')
+        # Copy data - explicitly list columns and filter out rows where id is NULL
+        op.execute(f'''
+            INSERT INTO "{temp_table_name}" (timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks)
+            SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks
+            FROM "message"
+            WHERE id IS NOT NULL
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("message")
