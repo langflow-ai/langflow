@@ -497,7 +497,7 @@ The `/build/{flow_id}/flow` endpoint accepts the following parameters in its req
 
 ### Configure the build endpoint
 
-The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run will start and stop.
+The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run starts and stops.
 Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
 For example, to stop flow execution at the Open AI model component, run the following command:
 
@@ -556,7 +556,7 @@ You can upload a file to Langflow one time, and use it with multiple flows.
 * In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 * Responses from the `/v2` endpoint contain more descriptive metadata.
 
-## V1 Endpoints
+## Files/V1 Endpoints
 
 ### Upload file (v1)
 
@@ -708,7 +708,7 @@ curl -X DELETE \
   </TabItem>
 </Tabs>
 
-## V2 Endpoints
+## Files/V2 Endpoints
 
 ### Upload file (v2)
 
@@ -762,15 +762,15 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 
 ```json
 {
-  "id":"685c825a-556f-40f0-b5ed-fa82eb1ade99",
-  "name":"langflow-image",
-  "path":"6f17a73e-97d7-4519-a8d9-8e4c0be411bb/685c825a-556f-40f0-b5ed-fa82eb1ade99.png",
-  "size":2728251,
-  "provider":null
+  "id": "5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e",
+  "name": "your_image",
+  "path": "232f54ba-dd54-4760-977e-ed637f83e785/5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png",
+  "size": 84408,
+  "provider": null
 }
 ```
 
-2. Use the returned `file_id.file_extension` in the **Chat Input** component of a **Basic prompting** flow.
+2. Use the returned `file_id.file_extension` path in the **Chat Input** component of a **Basic prompting** flow.
 Pass the value as an input in the **Tweaks** section of the curl call to Langflow:
 
 ```bash
@@ -782,7 +782,7 @@ curl -X POST \
     "input_type": "chat",
     "tweaks": {
       "ChatInput-2MT6c": {
-        "files": "af371b64-6b15-47ac-a57b-b8c2791ea80a.png",
+        "files": "5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png",
         "input_value": "what do you see?"
       }
     }
