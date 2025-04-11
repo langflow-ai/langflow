@@ -163,3 +163,27 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         with pytest.raises(ValueError, match="Unsupported input type"):
             component.save_to_file()
+
+    def test_check_file_format(self, component_class):
+        """Test the _check_file_format method."""
+        component = component_class()
+
+        # Test with excel format
+        path = Path("./test_output")
+        result = component._check_file_format(path, "excel")
+        assert str(result) == str(Path("./test_output.xlsx").expanduser())
+
+        # Test with existing excel extension
+        path = Path("./test_output.xlsx")
+        result = component._check_file_format(path, "excel")
+        assert str(result) == str(path.expanduser())
+
+        # Test with other formats
+        path = Path("./test_output")
+        result = component._check_file_format(path, "csv")
+        assert str(result) == str(Path("./test_output.csv").expanduser())
+
+        # Test with existing extension
+        path = Path("./test_output.csv")
+        result = component._check_file_format(path, "csv")
+        assert str(result) == str(path.expanduser())
