@@ -132,16 +132,18 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         try:
             parsed_url = urlparse(self.base_url)
-            if not parsed_url.hostname or not parsed_url.port:
-                err_msg = "Invalid URL: Missing hostname or port."
+            if not parsed_url.hostname:
+                err_msg = "Invalid URL: Missing hostname."
                 self.log(err_msg)
                 raise ValueError(err_msg)
+            port = parsed_url.port or (443 if parsed_url.scheme == "https" else 80)
+
         except Exception as e:
             self.log(f"Error parsing URL: {e}")
             raise
 
         self.log(
-            f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {parsed_url.port!r}",
+            f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {port!r}",
         )
         try:
             from nv_ingest_api.util.service_clients.rest.rest_client import RestClient
@@ -151,6 +153,10 @@ class NvidiaIngestComponent(BaseFileComponent):
                 def __init__(self, *args, bearer_token: str = None, **kwargs):
                     super().__init__(*args, **kwargs)
                     self._bearer_token = bearer_token
+
+                @staticmethod
+                def generate_url(user_provided_url: str, user_provided_port: int) -> str:
+                    return user_provided_url
 
                 def _add_auth(self, headers: dict):
                     if self._bearer_token:
@@ -218,9 +224,9 @@ class NvidiaIngestComponent(BaseFileComponent):
             ingestor = (
                 Ingestor(
                     message_client_hostname=parsed_url.hostname,
-                    message_client_port=parsed_url.port,
+                    message_client_port=port,
                     message_client_allocator=lambda host, port, **kwargs: AuthHeaderRestClient(
-                        host=host,
+                        host=self.base_url,
                         port=port,
                         bearer_token=self.api_key,
                         **kwargs
@@ -239,14 +245,12 @@ class NvidiaIngestComponent(BaseFileComponent):
             self.log(f"Error creating Ingestor: {e}")
             raise
 
-        #if self.split_text:
-        #    ingestor = ingestor.split(
-        #        split_by=self.split_by,
-        #        split_length=self.split_length,
-        #        split_overlap=self.split_overlap,
-        #        max_character_length=self.max_character_length,
-        #        sentence_window_size=self.sentence_window_size,
-        #    )
+        if self.split_text:
+            ingestor = ingestor.split(
+                tokenizer="meta-llama/Llama-3.2-1B",
+                chunk_size=1024,
+                chunk_overlap=150,
+            )
 
         try:
             result = ingestor.ingest()
