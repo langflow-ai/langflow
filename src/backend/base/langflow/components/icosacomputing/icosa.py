@@ -7,10 +7,10 @@ from langflow.schema.message import Message
 
 
 class IcosaLiteComponent(Component):
-    display_name = "Icosa Lite"
-    description = "Uses inference-time compute to construct an optimized prompt. Sign up at icosacomputing.com."
+    display_name = "Thought Optimizer"
+    description = "Optimize the thinking traces of your models at test-time to increase accuracies. Sign up at for a free account at icosacomputing.com."
     icon = "Icosa"
-    name = "Icosa Lite"
+    name = "Icosa"
 
     inputs = [
         MessageTextInput(name="prompt", display_name="Prompt", required=True),
@@ -26,7 +26,7 @@ class IcosaLiteComponent(Component):
 
     outputs = [
         Output(
-            display_name="Optimized Prompt",
+            display_name="Optimized Response",
             name="optimized_prompt",
             method="build_prompt",
         ),

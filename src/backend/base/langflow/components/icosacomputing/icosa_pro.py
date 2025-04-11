@@ -7,14 +7,13 @@ from langflow.inputs import DropdownInput, SecretStrInput, SliderInput, StrInput
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 
-ICOSA_OPTIONS = ["Consensus", "CR", "CR w/ consensus"]
+ICOSA_OPTIONS = ["Poll", "Reason (Beta)"]
 
 
 class IcosaProComponent(Component):
-    display_name = "Icosa Pro"
+    display_name = "T.O. Pro"
     description = (
-        "Uses inference-time compute to construct an optimized prompt."
-        "Makes multiple calls to LLM chosen. Sign up at icosacomputing.com"
+        "Uses optimal test-time compute to increase accuracies & reduce costs. Makes multiple calls to LLM chosen. Sign up at icosacomputing.com."
     )
     icon = "Icosa"
     name = "Icosa Pro"
@@ -25,7 +24,7 @@ class IcosaProComponent(Component):
             name="openai_api_key",
             display_name="OpenAI API Key",
             info="The API Key to use for the OpenAI model.",
-            advanced=False,
+            advanced=True,
             value="OPENAI_API_KEY",
             required=False,
         ),
@@ -40,7 +39,7 @@ class IcosaProComponent(Component):
         StrInput(
             name="model_name",
             display_name="Model Name",
-            advanced=False,
+            advanced=True,
             value=OPENAI_MODEL_NAMES[0],
         ),
         DropdownInput(
@@ -67,7 +66,7 @@ class IcosaProComponent(Component):
 
     outputs = [
         Output(
-            display_name="Optimized Prompt",
+            display_name="Optimized Response",
             name="optimized_prompt",
             method="build_prompt",
         ),
