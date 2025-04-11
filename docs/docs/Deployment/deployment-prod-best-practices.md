@@ -1,5 +1,5 @@
 ---
-title: Langflow in Production Best Practices
+title: Langflow Architecture and Best Practices
 slug: /deployment-prod-best-practices
 ---
 

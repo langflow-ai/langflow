@@ -116,6 +116,11 @@ module.exports = {
           items: [
             {
               type: "doc",
+              id: "Deployment/deployment-prod-best-practices",
+              label: "Langflow Architecture and Best Practices"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-kubernetes-dev",
               label: "Kubernetes - Development"
             },
@@ -123,11 +128,6 @@ module.exports = {
               type: "doc",
               id: "Deployment/deployment-kubernetes-prod",
               label: "Kubernetes - Production"
-            },
-            {
-              type: "doc",
-              id: "Deployment/deployment-prod-best-practices",
-              label: "Kubernetes - Best Practices"
             }
           ]
         },
