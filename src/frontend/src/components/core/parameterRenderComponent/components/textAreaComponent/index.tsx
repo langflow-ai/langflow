@@ -92,7 +92,7 @@ export default function TextAreaComponent({
       });
       handleOnNewValue({ value: curlWebhookCode });
     } else if (value === MCP_SSE_VALUE) {
-      const mcpSSEUrl = `${URL_MCP_SSE}`; 
+      const mcpSSEUrl = `${URL_MCP_SSE}`;
       handleOnNewValue({ value: mcpSSEUrl });
     }
   }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
