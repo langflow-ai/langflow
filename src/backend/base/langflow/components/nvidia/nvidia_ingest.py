@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from langflow.base.data import BaseFileComponent
+from langflow.base.files import BaseFileComponent
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput
 from langflow.schema import Data
 
