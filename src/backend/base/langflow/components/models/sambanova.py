@@ -1,7 +1,6 @@
 from langchain_sambanova import ChatSambaNovaCloud
 from pydantic.v1 import SecretStr
 
-from langflow.components.models.testme import TestMe 
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from langflow.field_typing import LanguageModel
