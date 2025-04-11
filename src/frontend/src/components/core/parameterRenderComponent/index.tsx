@@ -17,6 +17,7 @@ import KeypairListComponent from "./components/keypairListComponent";
 import LinkComponent from "./components/linkComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
+import QueryComponent from "./components/queryComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
@@ -68,11 +69,11 @@ export function ParameterRenderComponent({
       disabled,
       nodeClass,
       handleNodeClass,
+      nodeId,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
-      nodeId,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
     };
@@ -107,6 +108,9 @@ export function ParameterRenderComponent({
       return (
         <StrRenderComponent
           {...baseInputProps}
+          nodeId={nodeId}
+          nodeClass={nodeClass}
+          handleNodeClass={handleNodeClass}
           templateData={templateData}
           name={name}
           display_name={templateData.display_name ?? ""}
@@ -252,6 +256,16 @@ export function ParameterRenderComponent({
             {...baseInputProps}
             options={templateData?.options || []}
             id={`tab_${id}`}
+          />
+        );
+      case "query":
+        return (
+          <QueryComponent
+            {...baseInputProps}
+            display_name={templateData.display_name ?? ""}
+            info={templateData.info ?? ""}
+            separator={templateData.separator}
+            id={`query_${id}`}
           />
         );
       default:

@@ -7,7 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus } from "../../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
@@ -149,7 +149,7 @@ export type FlowStoreType = {
     files,
     silent,
     session,
-    stream,
+    eventDelivery,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -157,7 +157,7 @@ export type FlowStoreType = {
     files?: string[];
     silent?: boolean;
     session?: string;
-    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (

@@ -56,13 +56,16 @@ export type DropDownComponent = {
   isLoading?: boolean;
   value: string;
   combobox?: boolean;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
   optionsMetaData?: any[];
   onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
-  name?: string;
+  name: string;
   dialogInputs?: any;
 };
 export type ParameterComponentType = {
@@ -103,6 +106,8 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  showHiddenOutputs?: boolean;
+  hidden?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -670,6 +675,17 @@ export type textModalPropsType = {
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
 };
+export type queryModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  title: string;
+  description: string;
+  placeholder?: string;
+  disabled?: boolean;
+  children?: ReactNode;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+};
 
 export type newFlowModalPropsType = {
   open: boolean;
@@ -792,6 +808,7 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
+  sidebarOpen: boolean;
   sendMessage: ({
     repeat,
     files,

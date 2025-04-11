@@ -12,6 +12,7 @@ from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
 
 from .input_mixin import (
+    AuthMixin,
     BaseInputMixin,
     ConnectionMixin,
     DatabaseLoadMixin,
@@ -23,6 +24,7 @@ from .input_mixin import (
     ListableInputMixin,
     MetadataTraceMixin,
     MultilineMixin,
+    QueryMixin,
     RangeMixin,
     SerializableFieldTypes,
     SliderMixin,
@@ -477,6 +479,36 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
 
 
+class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
+    """Represents an authentication input field.
+
+    This class represents an authentication input field and provides functionality for handling authentication values.
+    It inherits from the `BaseInputMixin` and `AuthMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.AUTH.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.AUTH
+    show: bool = False
+
+
+class QueryInput(MessageTextInput, QueryMixin):
+    """Represents a query input field.
+
+    This class represents an query input field and provides functionality for handling search values.
+    It inherits from the `BaseInputMixin` and `QueryMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SEARCH.
+        separator (str | None): The separator for the query input. Defaults to None.
+        value (str): The value for the query input. Defaults to an empty string.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.QUERY
+    separator: str | None = Field(default=None)
+
+
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a list selection input field.
 
@@ -484,7 +516,7 @@ class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, T
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
     Attributes:
-        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BUTTON.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SORTABLE_LIST.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
@@ -590,6 +622,8 @@ class DefaultPromptField(Input):
 
 InputTypes: TypeAlias = (
     Input
+    | AuthInput
+    | QueryInput
     | DefaultPromptField
     | BoolInput
     | DataInput
