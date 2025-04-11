@@ -15,7 +15,7 @@ from langflow.base.mcp.util import (
 from langflow.custom import Component
 from langflow.inputs import DropdownInput
 from langflow.inputs.inputs import InputTypes
-from langflow.io import MessageTextInput, Output, TabInput, MultilineInput
+from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema import Message
