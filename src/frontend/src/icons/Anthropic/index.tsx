@@ -10,3 +10,4 @@ export const AnthropicIcon = forwardRef<
 
   return <SvgAnthropicBox ref={ref} {...props} isDark={isDark} />;
 });
+ 
