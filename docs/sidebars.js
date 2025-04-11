@@ -151,11 +151,6 @@ module.exports = {
           id: "Deployment/deployment-render",
           label: "Render"
         },
-	{
-          type: "doc",
-          id: "Deployment/deployment-prod-best-practices",
-          label: "Production Best Practices"
-        },
       ],
     },
     {
