@@ -3,16 +3,14 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import pandas as pd
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 
 from langflow.custom import Component
-from langflow.io import (
-    DataFrameInput,
-    DataInput,
-    DropdownInput,
-    MessageInput,
-    Output,
-    StrInput,
-)
+from langflow.io import DataFrameInput, DataInput, DropdownInput, MessageInput, Output, StrInput
 from langflow.schema import Data, DataFrame, Message
 
 
@@ -23,8 +21,8 @@ class SaveToFileComponent(Component):
     name = "SaveToFile"
 
     # File format options for different types
-    DATA_FORMAT_CHOICES = ["csv", "excel", "json", "markdown"]
-    MESSAGE_FORMAT_CHOICES = ["txt", "json", "markdown"]
+    DATA_FORMAT_CHOICES = ["csv", "excel", "json", "markdown", "pdf"]
+    MESSAGE_FORMAT_CHOICES = ["txt", "json", "markdown", "pdf"]
 
     inputs = [
         DropdownInput(
@@ -127,32 +125,47 @@ class SaveToFileComponent(Component):
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
-        if fmt == "csv":
-            dataframe.to_csv(path, index=False)
-        elif fmt == "excel":
-            dataframe.to_excel(path, index=False, engine="openpyxl")
-        elif fmt == "json":
-            dataframe.to_json(path, orient="records", indent=2)
-        elif fmt == "markdown":
-            path.write_text(dataframe.to_markdown(index=False), encoding="utf-8")
-        else:
+        # Mapping of format to save function
+        save_functions = {
+            "csv": lambda: dataframe.to_csv(path, index=False),
+            "excel": lambda: dataframe.to_excel(path, index=False, engine="openpyxl"),
+            "json": lambda: dataframe.to_json(path, orient="records", indent=2),
+            "markdown": lambda: path.write_text(dataframe.to_markdown(index=False), encoding="utf-8"),
+            "pdf": lambda: self._save_dataframe_to_pdf(dataframe, path),
+        }
+
+        if fmt not in save_functions:
             error_msg = f"Unsupported DataFrame format: {fmt}"
             raise ValueError(error_msg)
+
+        # Execute the save function
+        save_functions[fmt]()
 
         return f"DataFrame saved successfully as '{path}'"
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
-        if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(path, index=False)
-        elif fmt == "excel":
-            pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
-        elif fmt == "json":
-            path.write_text(json.dumps(data.data, indent=2), encoding="utf-8")
-        elif fmt == "markdown":
-            path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
-        else:
+        if isinstance(data, list):
+            error_msg = "Data is a list, not a Data object"
+            raise TypeError(error_msg)
+
+        # Handle single dictionary case
+        dataframe = pd.DataFrame([data.data]) if isinstance(data.data, dict) else pd.DataFrame(data.data)
+
+        # Mapping of format to save function
+        save_functions = {
+            "csv": lambda: dataframe.to_csv(path, index=False),
+            "excel": lambda: dataframe.to_excel(path, index=False, engine="openpyxl"),
+            "json": lambda: path.write_text(json.dumps(data.data, indent=2), encoding="utf-8"),
+            "markdown": lambda: path.write_text(dataframe.to_markdown(index=False), encoding="utf-8"),
+            "pdf": lambda: self._save_dataframe_to_pdf(data, path),
+        }
+
+        if fmt not in save_functions:
             error_msg = f"Unsupported Data format: {fmt}"
             raise ValueError(error_msg)
+
+        # Execute the save function
+        save_functions[fmt]()
 
         return f"Data saved successfully as '{path}'"
 
@@ -169,14 +182,87 @@ class SaveToFileComponent(Component):
         else:
             content = str(message.text)
 
-        if fmt == "txt":
-            path.write_text(content, encoding="utf-8")
-        elif fmt == "json":
-            path.write_text(json.dumps({"message": content}, indent=2), encoding="utf-8")
-        elif fmt == "markdown":
-            path.write_text(f"**Message:**\n\n{content}", encoding="utf-8")
-        else:
+        # Mapping of format to save function
+        save_functions = {
+            "txt": lambda: path.write_text(content, encoding="utf-8"),
+            "json": lambda: path.write_text(json.dumps({"message": content}, indent=2), encoding="utf-8"),
+            "markdown": lambda: path.write_text(f"**Message:**\n\n{content}", encoding="utf-8"),
+            "pdf": lambda: self._save_message_to_pdf(content, path),
+        }
+
+        if fmt not in save_functions:
             error_msg = f"Unsupported Message format: {fmt}"
             raise ValueError(error_msg)
 
+        save_functions[fmt]()
+
         return f"Message saved successfully as '{path}'"
+
+    def _save_dataframe_to_pdf(self, dataframe: DataFrame | pd.DataFrame | Data, path: Path) -> None:
+        """Save DataFrame to PDF format."""
+        doc = SimpleDocTemplate(str(path), pagesize=letter)
+        elements = []
+
+        if not isinstance(dataframe, pd.DataFrame):
+            # Handle single row data by wrapping it in a list
+            if isinstance(dataframe.data, dict):
+                dataframe = pd.DataFrame([dataframe.data])
+            else:
+                dataframe = pd.DataFrame(dataframe.data)
+
+        # Convert DataFrame to a list of lists for the table
+        data = [dataframe.columns.tolist()] + dataframe.values.tolist()
+
+        # Create the table
+        table = Table(data)
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 14),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
+                    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 1), (-1, -1), 12),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ]
+            )
+        )
+
+        elements.append(table)
+        doc.build(elements)
+
+    def _save_message_to_pdf(self, content: str, path: Path) -> None:
+        """Save Message content to PDF format."""
+        doc = SimpleDocTemplate(
+            str(path),
+            pagesize=letter,
+            leftMargin=1 * inch,
+            rightMargin=1 * inch,
+            topMargin=1 * inch,
+            bottomMargin=1 * inch,
+        )
+        elements = []
+
+        styles = getSampleStyleSheet()
+        message_style = ParagraphStyle(
+            "MessageStyle",
+            parent=styles["Normal"],
+            fontSize=12,
+            leading=14,  # Line spacing
+            spaceBefore=20,
+            spaceAfter=20,
+            textColor=colors.black,
+            fontName="Helvetica",
+        )
+
+        # Process content with XML-like markups
+        # Add message content with proper wrapping and markup support
+        message = Paragraph(content, message_style)
+        elements.append(message)
+
+        doc.build(elements)
