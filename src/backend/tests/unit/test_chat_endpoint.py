@@ -149,6 +149,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
 
     # Start the build and get job_id
     build_response = await build_flow(client, flow_id, logged_in_headers)
+    assert "job_id" in build_response, f"Expected job_id in build_response, got {build_response}"
     job_id = build_response["job_id"]
     assert job_id is not None
 
@@ -166,7 +167,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                 max_sleeps = 100
                 while True:
                     response = await self.client.get(
-                        f"api/v1/build/{self.job_id}/events?stream=false", headers=self.headers
+                        f"api/v1/build/{self.job_id}/events?event_delivery=polling", headers=self.headers
                     )
                     assert response.status_code == codes.OK
                     data = response.json()
