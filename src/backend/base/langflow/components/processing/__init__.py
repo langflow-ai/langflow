@@ -8,6 +8,7 @@ from .lambda_filter import LambdaFilterComponent
 from .llm_router import LLMRouterComponent
 from .merge_data import MergeDataComponent
 from .message_to_data import MessageToDataComponent
+from .nl_function import NLFunctionComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
 from .parser import ParserComponent
@@ -27,6 +28,7 @@ __all__ = [
     "LambdaFilterComponent",
     "MergeDataComponent",
     "MessageToDataComponent",
+    "NLFunctionComponent",
     "ParseDataComponent",
     "ParseDataFrameComponent",
     "ParseJSONDataComponent",
