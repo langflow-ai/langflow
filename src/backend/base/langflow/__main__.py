@@ -401,8 +401,8 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
     title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
     info_text = (
-    ":star2: GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
-    ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
+        ":star2: GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
+        ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
         "We collect anonymous usage data to improve Langflow.\n"
