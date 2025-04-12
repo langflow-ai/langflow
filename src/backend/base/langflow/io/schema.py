@@ -18,6 +18,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.CODE: str,
     FieldTypes.OTHER: str,
     FieldTypes.TAB: str,
+    FieldTypes.QUERY: str,
 }
 
 
