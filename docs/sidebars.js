@@ -94,6 +94,7 @@ module.exports = {
         "Develop/memory",
         "Develop/session-id",
         "Develop/logging",
+        "Develop/webhook",
       ],
     },
     {
