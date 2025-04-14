@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 
 import pytest
 from langchain_ollama import ChatOllama
-from langflow.components.models import ChatOllamaComponent
+from langflow.components.models.ollama import ChatOllamaComponent
 
 
 @pytest.fixture

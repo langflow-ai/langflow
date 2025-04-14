@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any, cast
 import toml  # type: ignore[import-untyped]
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable

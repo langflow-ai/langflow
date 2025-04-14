@@ -7,10 +7,10 @@ from sqlmodel import Field, Relationship, SQLModel
 from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.api_key import ApiKey
-    from langflow.services.database.models.flow import Flow
-    from langflow.services.database.models.folder import Folder
-    from langflow.services.database.models.variable import Variable
+    from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.variable.model import Variable
 
 
 class User(SQLModel, table=True):  # type: ignore[call-arg]

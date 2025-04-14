@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from loguru import logger
 
 from langflow.custom.attributes import ATTR_FUNC_MAPPING
-from langflow.custom.code_parser import CodeParser
+from langflow.custom.code_parser.code_parser import CodeParser
 from langflow.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 

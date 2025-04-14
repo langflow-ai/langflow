@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 

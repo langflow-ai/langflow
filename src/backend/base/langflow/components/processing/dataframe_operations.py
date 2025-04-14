@@ -1,6 +1,6 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
 
 
 class DataFrameOperationsComponent(Component):

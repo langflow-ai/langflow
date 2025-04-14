@@ -7,7 +7,8 @@ from typing_extensions import override
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):

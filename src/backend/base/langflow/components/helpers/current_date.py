@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo, available_timezones
 
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, Output
 from langflow.schema.message import Message
 

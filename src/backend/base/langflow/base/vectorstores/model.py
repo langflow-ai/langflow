@@ -2,12 +2,13 @@ from abc import abstractmethod
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import BoolInput
 from langflow.io import HandleInput, Output, QueryInput
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.documents import Document

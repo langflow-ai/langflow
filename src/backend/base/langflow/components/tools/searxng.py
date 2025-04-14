@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic.v1 import Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
+from langflow.inputs.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.io import Output
 from langflow.schema.dotdict import dotdict
 

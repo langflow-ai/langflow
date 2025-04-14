@@ -2,8 +2,10 @@ from collections.abc import Generator
 from typing import Any
 
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import BoolInput
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    HandleInput,
+)
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame

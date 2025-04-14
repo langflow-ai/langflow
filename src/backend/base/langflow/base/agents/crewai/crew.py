@@ -8,7 +8,7 @@ from crewai.tools.base_tool import Tool
 from langchain_core.agents import AgentAction, AgentFinish
 from pydantic import SecretStr
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data

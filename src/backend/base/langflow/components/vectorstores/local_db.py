@@ -9,7 +9,8 @@ from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cache
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
 
 

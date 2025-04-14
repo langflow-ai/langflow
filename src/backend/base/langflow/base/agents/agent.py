@@ -9,17 +9,16 @@ from langchain_core.runnables import Runnable
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
-from langflow.custom import Component
-from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import InputTypes, MultilineInput
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.logging import logger
 from langflow.memory import delete_message
-from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
+from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:

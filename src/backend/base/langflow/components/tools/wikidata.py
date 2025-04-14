@@ -2,10 +2,10 @@ import httpx
 from httpx import HTTPError
 from langchain_core.tools import ToolException
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 

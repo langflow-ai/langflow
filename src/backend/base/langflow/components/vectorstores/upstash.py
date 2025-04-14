@@ -9,7 +9,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class UpstashVectorStoreComponent(LCVectorStoreComponent):

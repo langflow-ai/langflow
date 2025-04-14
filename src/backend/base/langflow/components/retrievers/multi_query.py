@@ -1,6 +1,6 @@
 from langchain.retrievers import MultiQueryRetriever
 
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import BaseRetriever, LanguageModel, PromptTemplate, Text
 
 

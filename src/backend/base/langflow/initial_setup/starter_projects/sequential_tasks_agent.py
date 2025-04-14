@@ -1,11 +1,11 @@
 from langflow.components.crewai.sequential_crew import SequentialCrewComponent
 from langflow.components.crewai.sequential_task_agent import SequentialTaskAgentComponent
-from langflow.components.inputs import TextInputComponent
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
-from langflow.components.prompts import PromptComponent
-from langflow.components.tools import SearchAPIComponent
-from langflow.graph import Graph
+from langflow.components.inputs.text import TextInputComponent
+from langflow.components.models.openai_chat_model import OpenAIModelComponent
+from langflow.components.outputs.chat import ChatOutput
+from langflow.components.prompts.prompt import PromptComponent
+from langflow.components.tools.search_api import SearchAPIComponent
+from langflow.graph.graph.base import Graph
 
 
 def sequential_tasks_agent_graph():
