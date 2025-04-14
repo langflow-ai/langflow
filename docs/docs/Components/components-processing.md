@@ -92,8 +92,6 @@ This component performs the following operations on Pandas [DataFrame](https://p
 | output | DataFrame | The resulting DataFrame after the operation. |
 
 
-
-
 ## Filter data
 
 :::important
@@ -136,7 +134,6 @@ The Filter values component filters a list of data items based on a specified ke
 | Name | Display Name | Info |
 |------|--------------|------|
 | filtered_data | Filtered data | The resulting list of filtered data items. |
-
 
 
 ## Lambda filter
@@ -187,7 +184,6 @@ This component routes requests to the most appropriate LLM based on OpenRouter m
 |------|--------------|------|
 | output | Output | The response from the selected model |
 | selected_model | Selected Model | Name of the chosen model |
-
 
 ## Message to data
 
@@ -261,7 +257,44 @@ For an additional example of using the **Parser** component to format a DataFram
 
 ## Split text
 
-This component splits text into chunks based on specified criteria.
+This component splits text into chunks based on specified criteria. It's ideal for chunking data to be tokenized and embedded into vector databases.
+
+The **Split Text** component outputs **Chunks** or **DataFrame**.
+The **Chunks** output returns a list of individual text chunks.
+The **DataFrame** output returns a structured data format, with additional `text` and `metadata` columns applied.
+
+1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/concepts-objects) to the **Split Text** component's **Data** port.
+This example uses the **URL** component, which is fetching JSON placeholder data.
+2. In the **Split Text** component, define your data splitting parameters.
+
+This example splits incoming JSON data at the separator `},{`, so each chunk contains one complete JSON object.
+
+![Split text component and chroma-db](/img/component-split-text.png)
+
+The order of precedence is **Separator**, then **Chunk Size**, and then **Chunk Overlap**.
+If any segment after separator splitting is longer than `chunk_size`, it is split again to fit within `chunk_size`.
+
+After `chunk_size`, **Chunk Overlap** is applied between the chunks to maintain context between them.
+
+3. Connect a **Chat Output** component to the **Split Text** component's **DataFrame** output to view its output.
+4. Click **Playground**, and then click **Run Flow**.
+The output contains a table of JSON objects split at `},{`.
+```text
+{
+"userId": 1,
+"id": 1,
+"title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+"body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto"
+},
+```
+5. Clear the **Separator** field, and then run the flow again.
+The output contains chunked 50-character text with 10 characters of overlap.
+```text
+"title": "sunt aut facere repellat provident occae
+dent occaecati excepturi optio reprehenderit",
+erit",
+"body": "quia et suscipit\nsuscipit rec
+```
 
 ### Inputs
 
