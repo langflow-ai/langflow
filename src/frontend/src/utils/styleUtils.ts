@@ -19,6 +19,7 @@ import { SearchLexicalIcon } from "@/icons/SearchLexical";
 import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
+import { TwitterXIcon } from "@/icons/Twitter X";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { WikipediaIcon } from "@/icons/Wikipedia";
 import YouTubeIcon from "@/icons/Youtube/youtube";
@@ -1061,4 +1062,5 @@ export const nodeIconsLucide: iconsType = {
   DollarSign,
   BookOpenText,
   AudioLines,
+  TwitterXIcon,
 };

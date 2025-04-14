@@ -1,4 +1,10 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import {
+  DISCORD_URL,
+  DOCS_URL,
+  GITHUB_URL,
+  TWITTER_URL,
+} from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
@@ -85,7 +91,7 @@ export const AccountMenu = () => {
                   Settings
                 </span>
               </HeaderMenuItemButton>
-              <HeaderMenuItemLink newPage href="https://docs.langflow.org">
+              <HeaderMenuItemLink newPage href={DOCS_URL}>
                 <span data-testid="menu_docs_button" id="menu_docs_button">
                   Docs
                 </span>
@@ -93,10 +99,7 @@ export const AccountMenu = () => {
             </div>
 
             <div>
-              <HeaderMenuItemLink
-                newPage
-                href="https://github.com/langflow-ai/langflow"
-              >
+              <HeaderMenuItemLink newPage href={GITHUB_URL}>
                 <span
                   data-testid="menu_github_button"
                   id="menu_github_button"
@@ -106,7 +109,7 @@ export const AccountMenu = () => {
                   GitHub
                 </span>
               </HeaderMenuItemLink>
-              <HeaderMenuItemLink newPage href="https://discord.gg/EqksyE2EX9">
+              <HeaderMenuItemLink newPage href={DISCORD_URL}>
                 <span
                   data-testid="menu_discord_button"
                   id="menu_discord_button"
@@ -116,10 +119,7 @@ export const AccountMenu = () => {
                   Discord
                 </span>
               </HeaderMenuItemLink>
-              <HeaderMenuItemLink
-                newPage
-                href="https://twitter.com/langflow_ai"
-              >
+              <HeaderMenuItemLink newPage href={TWITTER_URL}>
                 <span
                   data-testid="menu_twitter_button"
                   id="menu_twitter_button"
@@ -127,7 +127,7 @@ export const AccountMenu = () => {
                 >
                   <ForwardedIconComponent
                     strokeWidth={2}
-                    name="TwitterLogoIcon"
+                    name="TwitterXIcon"
                     className="h-4 w-4 text-[#1DA1F2]"
                   />
                   X
