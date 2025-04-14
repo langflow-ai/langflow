@@ -239,7 +239,7 @@ There are two embeddings models in this flow that you can replace with **Hugging
 4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
 5. Run the flow. The local inference models generate embeddings for the input text.
 
-## IBM watson Embeddings
+## IBM watsonx embeddings
 
 This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
 
@@ -393,6 +393,23 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 | Name | Type | Description |
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using OpenAI |
+
+## Text embedder
+
+This component generates embeddings for a given message using a specified embedding model.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | The embedding model to use for generating embeddings. |
+| message | Message | The message for which to generate embeddings. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embedding Data | Data object containing the original text and its embedding vector. |
 
 ## VertexAI Embeddings
 
