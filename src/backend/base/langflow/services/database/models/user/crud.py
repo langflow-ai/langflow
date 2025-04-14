@@ -25,7 +25,7 @@ async def get_user_by_username(db: AsyncSession, username: str, include_deleted:
     if include_deleted:
         stmt = select(User).where(User.username == username)
     else:
-        stmt = select(User).where(User.username == username, User.is_deleted is False)
+        stmt = select(User).where(User.username == username, User.is_deleted == False)  # noqa: E712
     return (await db.exec(stmt)).first()
 
 
@@ -46,7 +46,7 @@ async def get_user_by_id(db: AsyncSession, user_id: UUID, include_deleted: bool 
     if include_deleted:
         stmt = select(User).where(User.id == user_id)
     else:
-        stmt = select(User).where(User.id == user_id, User.is_deleted is False)
+        stmt = select(User).where(User.id == user_id, User.is_deleted == False)  # noqa: E712
     return (await db.exec(stmt)).first()
 
 

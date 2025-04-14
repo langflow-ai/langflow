@@ -261,7 +261,7 @@ async def create_and_set_user_tokens(
     Returns:
         Token: Object containing the LangFlow access_token and refresh_token
     """
-    tokens = await create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+    tokens = Token(**await create_user_tokens(user_id=user.id, db=db, update_last_login=True))
     response.set_cookie(
         COOKIE_REFRESH_TOKEN,
         tokens["refresh_token"],
