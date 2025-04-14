@@ -457,14 +457,12 @@ export function VoiceAssistant({
                     variant={"outlineAmber"}
                     size={"icon"}
                     data-testid="voice-assistant-settings-icon-without-openai"
-                    className="group h-8 w-8"
+                    className="h-8 w-8"
                   >
                     <IconComponent
-                      name="Settings"
+                      name="Key"
                       strokeWidth={ICON_STROKE_WIDTH}
-                      className={cn(
-                        "h-4 w-4 text-accent-amber-foreground group-hover:text-accent-amber",
-                      )}
+                      className={cn("h-4 w-4 text-accent-amber-foreground")}
                     />
                   </Button>
                 </>
