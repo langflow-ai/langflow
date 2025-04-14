@@ -245,9 +245,13 @@ This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx
 
 To use **IBM watsonx.ai** embeddings components, replace an embeddings component with the IBM watsonx.ai component in a flow.
 
-An example flow looks like the following:
+An example document processing flow looks like the following:
 
 ![IBM watsonx embeddings model loading a chroma-db with split text](/img/component-watsonx-embeddings-chroma.png)
+
+This flow loads a PDF file from local storage and splits the text into chunks.
+
+The **IBM watsonx** embeddings component converts the text chunks into embeddings, which are then stored in a Chroma DB vector store.
 
 The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
 For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
