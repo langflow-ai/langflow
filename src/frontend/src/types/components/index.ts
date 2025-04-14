@@ -67,6 +67,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  toggle?: boolean;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -106,6 +107,8 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  showHiddenOutputs?: boolean;
+  hidden?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -672,6 +675,17 @@ export type textModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
+};
+export type queryModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  title: string;
+  description: string;
+  placeholder?: string;
+  disabled?: boolean;
+  children?: ReactNode;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {

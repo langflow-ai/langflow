@@ -199,6 +199,18 @@ export const lazyIconsMapping = {
     })),
   SearchAPI: () =>
     import("@/icons/SearchAPI").then((mod) => ({ default: mod.SearchAPIIcon })),
+  SearchLexical: () =>
+    import("@/icons/SearchLexical").then((mod) => ({
+      default: mod.SearchLexicalIcon,
+    })),
+  SearchHybrid: () =>
+    import("@/icons/SearchHybrid").then((mod) => ({
+      default: mod.SearchHybridIcon,
+    })),
+  SearchVector: () =>
+    import("@/icons/SearchVector").then((mod) => ({
+      default: mod.SearchVectorIcon,
+    })),
   Searx: () =>
     import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
   SerpSearch: () =>

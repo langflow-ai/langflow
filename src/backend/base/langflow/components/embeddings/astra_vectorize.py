@@ -112,7 +112,7 @@ class AstraVectorizeComponent(Component):
         if api_key_name:
             authentication["providerKey"] = api_key_name
         return {
-            # must match astrapy.info.CollectionVectorServiceOptions
+            # must match astrapy.info.VectorServiceOptions
             "collection_vector_service_options": {
                 "provider": provider_value,
                 "modelName": self.model_name,

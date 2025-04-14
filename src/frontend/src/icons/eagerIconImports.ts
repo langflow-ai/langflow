@@ -86,6 +86,9 @@ import { RedisIcon } from "@/icons/Redis";
 import { SambaNovaIcon } from "@/icons/SambaNova";
 import { ScrapeGraph } from "@/icons/ScrapeGraphAI";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
+import { SearchHybridIcon } from "@/icons/SearchHybrid";
+import { SearchLexicalIcon } from "@/icons/SearchLexical";
+import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SearxIcon } from "@/icons/Searx";
 import { SerperIcon } from "@/icons/Serper";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
@@ -196,6 +199,9 @@ export const eagerIconsMapping = {
   SambaNova: SambaNovaIcon,
   ScrapeGraph: ScrapeGraph,
   SearchAPI: SearchAPIIcon,
+  SearchLexical: SearchLexicalIcon,
+  SearchHybrid: SearchHybridIcon,
+  SearchVector: SearchVectorIcon,
   Searx: SearxIcon,
   SerpSearch: SerpSearchIcon,
   Serper: SerperIcon,
