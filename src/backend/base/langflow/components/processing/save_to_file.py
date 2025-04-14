@@ -217,7 +217,7 @@ class SaveToFileComponent(Component):
 
         # Get column names and data
         columns = dataframe.columns.tolist()
-        data = dataframe.values.tolist()
+        data = dataframe.to_numpy().tolist()
 
         # Calculate column widths
         col_widths = []
@@ -239,7 +239,7 @@ class SaveToFileComponent(Component):
         pdf.set_fill_color(200, 200, 200)  # Light gray background
         pdf.set_text_color(0, 0, 0)  # Black text
         for i, col in enumerate(columns):
-            pdf.cell(col_widths[i], 10, str(col), 1, 0, "C", True)
+            pdf.cell(w=col_widths[i], h=10, text=str(col), border=1, ln=0, align="C", fill=True)
         pdf.ln()
 
         # Add data rows
@@ -247,7 +247,7 @@ class SaveToFileComponent(Component):
         pdf.set_font("Arial", "", 12)
         for row in data:
             for i, cell in enumerate(row):
-                pdf.cell(col_widths[i], 10, str(cell), 1, 0, "C", True)
+                pdf.cell(w=col_widths[i], h=10, text=str(cell), border=1, ln=0, align="C", fill=True)
             pdf.ln()
 
         pdf.output(str(path))
