@@ -16,7 +16,6 @@ class NvidiaSystemAssistComponent(Component):
     )
     documentation = "https://docs.langflow.org/components-custom-components"
     icon = "NVIDIA"
-    name = "NvidiaSystemAssist"
     rise_initialized = False
 
     inputs = [
