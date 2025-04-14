@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy.engine import make_url
 
 from langflow.serialization import constants
@@ -54,3 +56,17 @@ def is_valid_database_url(url: str) -> bool:
         return False
 
     return True
+
+
+def to_pythonic_variable_name(name):
+    """Converts a given string into a Pythonic variable name in snake_case."""
+    # Remove any characters that are not alphanumeric or spaces
+    name = re.sub(r"[^\w\s]", "", name)
+    # Replace spaces or other delimiters with underscores
+    name = re.sub(r"[\s]+", "_", name)
+    # Convert to lowercase
+    name = name.lower()
+    # Prepend an underscore if the name starts with a digit
+    if name and name[0].isdigit():
+        name = f"_{name}"
+    return name
