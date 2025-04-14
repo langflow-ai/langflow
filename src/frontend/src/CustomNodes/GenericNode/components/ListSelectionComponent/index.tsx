@@ -291,7 +291,7 @@ const ListSelectionComponent = ({
             </div>
           </div>
         </DialogHeader>
-        {filteredList?.length > 20 && (
+        {(filteredList?.length > 20 || search) && (
           <div className="flex w-full items-center justify-between px-3">
             <SearchBarComponent
               searchCategories={searchCategories}

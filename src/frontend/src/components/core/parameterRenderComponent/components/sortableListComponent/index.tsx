@@ -185,7 +185,6 @@ const SortableListComponent = ({
       )}
 
       <ListSelectionComponent
-        {...baseInputProps}
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
@@ -193,6 +192,7 @@ const SortableListComponent = ({
         selectedList={listData}
         options={options}
         limit={limit}
+        {...baseInputProps}
       />
     </div>
   );
