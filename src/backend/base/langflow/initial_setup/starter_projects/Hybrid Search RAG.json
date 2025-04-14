@@ -1072,6 +1072,9 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
                   "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
@@ -1899,7 +1902,7 @@
                 "advanced": false,
                 "display_name": "Search Query",
                 "dynamic": false,
-                "info": "Enter a query to run a combined similarity and lexical terms search.",
+                "info": "Enter a query to run a similarity search.",
                 "input_types": [
                   "Message"
                 ],
