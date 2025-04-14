@@ -100,7 +100,7 @@ To use **Hybrid search** in the **Astra DB** component, do the following:
 3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
 4. In the **Database** field, select your database.
 5. In the **Collection** field, select the collection you want to search.
-Your collection must be configured for hybrid search at the time that you create the collection.
+You must enable support for hybrid search when you create the collection.
 6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
 Your query is sent to two components: an **OpenAI** model component and the **Astra DB** vector database component.
 The **OpenAI** component contains a prompt for creating the lexical query from your input:
