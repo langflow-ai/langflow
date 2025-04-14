@@ -3,7 +3,7 @@ title: Processing
 slug: /components-processing
 ---
 
-# Processing components in Langflow
+import Icon from "@site/src/components/icon";
 
 Processing components process and transform data within a flow.
 
@@ -298,12 +298,43 @@ This component formats `DataFrame` or `Data` objects into text using templates, 
 
 To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
 
+To use the **Parser** component with a **Structured Output** component, do the following:
+
+1. Connect a **Structured Output** component's **DataFrame** output to the **Parser** component's **DataFrame** input.
+2. Connect the **File** component to the **Structured Output** component's **Message** input.
+3. Connect the **OpenAI** model component's **Language Model** output to the **Structured Output** component's **Language Model** input.
+
+The flow looks like this:
+
+![A parser component connected to OpenAI and structured output](/img/component-parser.png)
+
+4. In the **Structured Output** component, click **Open Table**.
+This opens a pane for structuring your table.
+The table contains the rows **Name**, **Description**, **Type**, and **Multiple**.
+5. Create a table that maps to the data you're loading from the **File** loader.
+For example, to create a table for employees, you might have the rows `id`, `name`, and `email`, all of type `string`.
+6. In the **Template** field of the **Parser** component, enter a template for parsing the **Structured Output** component's DataFrame output into structured text.
+Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
+For example, to present a table of employees in Markdown:
+```text
+# Employee Profile
+## Personal Information
+- **Name:** {name}
+- **ID:** {id}
+- **Email:** {email}
+```
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
+8. To view your parsed text, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
+
+For an additional example of using the **Parser** component to format a DataFrame from a **Structured Output** component, see the **Market Research** template flow.
+
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| stringify | Stringify | Enable to convert input to a string instead of using a template. |
-| template | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names (e.g. `Name: {Name}`). For Data objects, use `{text}`. |
+| mode | Mode | Tab selection between "Parser" and "Stringify" modes. "Stringify" converts input to a string instead of using a template. |
+| pattern | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names, such as `Name: {Name}`. For Data objects, use `{text}`. |
 | input_data | Data or DataFrame | The input to parse - accepts either a DataFrame or Data object. |
 | sep | Separator | String used to separate rows/items. Default: newline. |
 | clean_data | Clean Data | When stringify is enabled, cleans data by removing empty rows and lines. |
