@@ -241,18 +241,38 @@ There are two embeddings models in this flow that you can replace with **Hugging
 
 ## IBM watson Embeddings
 
-This component generates embeddings using [IBM watsonx.ai](https://www.ibm.com/watsonx) models.
+This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
+
+To use **IBM watsonx.ai** embeddings components, replace an embeddings component with the IBM watsonx.ai component in a flow.
+
+An example flow looks like the following:
+
+![IBM watsonx embeddings model loading a chroma-db with split text](/img/component-watsonx-embeddings-chroma.png)
+
+The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
+For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
+
+### Default Models
+
+The component supports several default models with different vector dimensions:
+
+- `sentence-transformers/all-minilm-l12-v2`: 384-dimensional embeddings
+- `ibm/slate-125m-english-rtrvr-v2`: 768-dimensional embeddings
+- `ibm/slate-30m-english-rtrvr-v2`: 768-dimensional embeddings
+- `intfloat/multilingual-e5-large`: 1024-dimensional embeddings
+
+The component automatically fetches and updates the list of available models from your watsonx.ai instance when you provide your API endpoint and credentials.
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| url | watsonx API Endpoint | The base URL of the API. Options include various regional endpoints |
-| project_id | watsonx project id | The project ID for your watsonx.ai instance |
-| api_key | API Key | The API Key to use for the model (required) |
-| model_name | Model Name | Name of the embedding model to use |
-| truncate_input_tokens | Truncate Input Tokens | Maximum number of tokens to process (default: 200) |
-| input_text | Include the original text in the output | Whether to include the original text in the output (default: true) |
+| url | watsonx API Endpoint | The base URL of the API.|
+| project_id | watsonx project id | The project ID for your watsonx.ai instance. |
+| api_key | API Key | The API Key to use for the model.|
+| model_name | Model Name | The name of the embedding model to use.|
+| truncate_input_tokens | Truncate Input Tokens | The maximum number of tokens to process. Default: `200`. |
+| input_text | Include the original text in the output | Whether to include the original text in the output. Default: `True`. |
 
 ### Outputs
 
