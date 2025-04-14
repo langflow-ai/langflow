@@ -68,8 +68,8 @@ export const ThemeButtons = () => {
         unstyled
         className={`relative z-10 mx-1 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "dark"
-            ? "hover:bg-indigo-foreground bg-indigo-foreground text-primary"
-            : "hover:bg-indigo-foreground text-foreground hover:text-background"
+            ? "bg-indigo-foreground text-primary hover:bg-indigo-foreground"
+            : "text-foreground hover:bg-indigo-foreground hover:text-background"
         }`}
         onClick={() => handleThemeChange("dark")}
         data-testid="menu_dark_button"
