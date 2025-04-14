@@ -239,6 +239,27 @@ There are two embeddings models in this flow that you can replace with **Hugging
 4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
 5. Run the flow. The local inference models generate embeddings for the input text.
 
+## IBM watson Embeddings
+
+This component generates embeddings using [IBM watsonx.ai](https://www.ibm.com/watsonx) models.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| url | watsonx API Endpoint | The base URL of the API. Options include various regional endpoints |
+| project_id | watsonx project id | The project ID for your watsonx.ai instance |
+| api_key | API Key | The API Key to use for the model (required) |
+| model_name | Model Name | Name of the embedding model to use |
+| truncate_input_tokens | Truncate Input Tokens | Maximum number of tokens to process (default: 200) |
+| input_text | Include the original text in the output | Whether to include the original text in the output (default: true) |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | An instance for generating embeddings using watsonx.ai |
+
 ## LM Studio Embeddings
 
 This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
@@ -257,7 +278,6 @@ This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) 
 | Name | Display Name | Info |
 |------|--------------|------|
 | embeddings | Embeddings | The generated embeddings |
-
 
 ## MistralAI
 
@@ -353,23 +373,6 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 | Name | Type | Description |
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using OpenAI |
-
-## Text embedder
-
-This component generates embeddings for a given message using a specified embedding model.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embedding_model | Embedding Model | The embedding model to use for generating embeddings. |
-| message | Message | The message for which to generate embeddings. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embeddings | Embedding Data | Data object containing the original text and its embedding vector. |
 
 ## VertexAI Embeddings
 
