@@ -97,7 +97,7 @@ class SaveToFileComponent(Component):
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        file_path = self._check_file_format(file_path, file_format)
+        file_path = self._adjust_file_path_with_format(file_path, file_format)
 
         if input_type == "DataFrame":
             dataframe = self.df
@@ -112,7 +112,7 @@ class SaveToFileComponent(Component):
         error_msg = f"Unsupported input type: {input_type}"
         raise ValueError(error_msg)
 
-    def _check_file_format(self, path: Path, fmt: str) -> Path:
+    def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:
         file_extension = path.suffix.lower().lstrip(".")
 
         if fmt == "excel":
