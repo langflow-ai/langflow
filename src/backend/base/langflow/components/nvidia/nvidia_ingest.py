@@ -131,106 +131,26 @@ class NvidiaIngestComponent(BaseFileComponent):
         file_paths = [str(file.path) for file in file_list]
 
         try:
-            parsed_url = urlparse(self.base_url)
-            if not parsed_url.hostname:
-                err_msg = "Invalid URL: Missing hostname."
-                self.log(err_msg)
-                raise ValueError(err_msg)
-            port = parsed_url.port or (443 if parsed_url.scheme == "https" else 80)
+            urlparse(self.base_url)
 
         except Exception as e:
-            self.log(f"Error parsing URL: {e}")
+            self.log(f"Error parsing Base URL: {e}")
             raise
 
         self.log(
-            f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {port!r}",
+            f"Creating Ingestor for Base URL: {self.base_url!r}",
         )
         try:
-            from nv_ingest_api.util.service_clients.rest.rest_client import RestClient
             from nv_ingest_client.client import Ingestor
-
-            class AuthHeaderRestClient(RestClient):
-                def __init__(self, *args, bearer_token: str = None, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._bearer_token = bearer_token
-
-                @staticmethod
-                def generate_url(user_provided_url: str, user_provided_port: int) -> str:
-                    return user_provided_url
-
-                def _add_auth(self, headers: dict):
-                    if self._bearer_token:
-                        headers = headers.copy()
-                        headers.setdefault("Authorization", f"Bearer {self._bearer_token}")
-                    return headers
-
-                def submit_message(self, channel_name: str, message: str, for_nv_ingest: bool = False):
-                    url = f"{self.generate_url(self._host, self._port)}{self._submit_endpoint}"
-                    headers = self._add_auth({"Content-Type": "application/json"})
-
-                    result = requests.post(url, json={"payload": message}, headers=headers)
-                    return self._wrap_submit_response(result)
-
-                def fetch_message(self, job_id: str, timeout: float = (10, 600)):
-                    url = f"{self.generate_url(self._host, self._port)}{self._fetch_endpoint}/{job_id}"
-                    headers = self._add_auth({})
-
-                    with requests.get(url, timeout=timeout, stream=True, headers=headers) as result:
-                        return self._wrap_fetch_response(result, job_id)
-
-                def _wrap_submit_response(self, result):
-                    from nv_ingest_api.internal.schemas.message_brokers.response_schema import ResponseSchema
-                    if result.status_code == 200:
-                        return ResponseSchema(
-                            response_code=0,
-                            response_reason="OK",
-                            response=result.text,
-                            transaction_id=result.text,
-                            trace_id=result.headers.get("x-trace-id"),
-                        )
-                    else:
-                        return ResponseSchema(
-                            response_code=1,
-                            response_reason=f"Submit failed with code {result.status_code}",
-                            trace_id=result.headers.get("x-trace-id"),
-                        )
-
-                def _wrap_fetch_response(self, result, job_id):
-                    from nv_ingest_api.internal.schemas.message_brokers.response_schema import ResponseSchema
-
-                    if result.status_code == 200:
-                        response_chunks = []
-                        for chunk in result.iter_content(chunk_size=1024 * 1024):
-                            if chunk:
-                                response_chunks.append(chunk)
-                        full_response = b"".join(response_chunks).decode("utf-8")
-                        return ResponseSchema(
-                            response_code=0,
-                            response_reason="OK",
-                            response=full_response,
-                        )
-                    elif result.status_code == 202:
-                        return ResponseSchema(
-                            response_code=1,
-                            response_reason="Job is not ready yet. Retry later.",
-                        )
-                    else:
-                        return ResponseSchema(
-                            response_code=1,
-                            response_reason=f"Failed to fetch job {job_id}. HTTP {result.status_code}",
-                            response=result.text,
-                        )
 
             ingestor = (
                 Ingestor(
-                    message_client_hostname=parsed_url.hostname,
-                    message_client_port=port,
-                    message_client_allocator=lambda host, port, **kwargs: AuthHeaderRestClient(
-                        host=self.base_url,
-                        port=port,
-                        bearer_token=self.api_key,
-                        **kwargs
-                    )
+                    message_client_kwargs={
+                        "base_url": self.base_url,
+                        "headers": {"Authorization": f"Bearer {self.api_key}"},
+                        "max_retries": 3,
+                        "timeout": 60,
+                    }
                 )
                 .files(file_paths)
                 .extract(

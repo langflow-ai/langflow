@@ -208,8 +208,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    "nv-ingest-api @ file:///Users/jeffreycarpenter/nv-ingest/api/dist/nv_ingest_api-2025.4.8.dev20250408-py3-none-any.whl",
-    "nv-ingest-client @ file:///Users/jeffreycarpenter/nv-ingest/client/dist/nv_ingest_client-2025.4.7.dev20250407-py3-none-any.whl"
+    "nv-ingest-api @ file:///Users/jeffreycarpenter/nv-ingest/api/dist/nv_ingest_api-2025.4.11.dev20250411-py3-none-any.whl",
+    "nv-ingest-client @ file:///Users/jeffreycarpenter/nv-ingest/client/dist/nv_ingest_client-2025.4.11.dev20250411-py3-none-any.whl"
 ]
 
 postgresql = [
