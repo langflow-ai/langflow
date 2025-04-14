@@ -337,6 +337,7 @@ import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
 import { SpiderIcon } from "../icons/Spider";
 import { Streamlit } from "../icons/Streamlit";
+import { TessAIIcon } from "../icons/TessAI";
 import { UpstashSvgIcon } from "../icons/Upstash";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
@@ -599,6 +600,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Tess AI", name: "tessai", icon: "TessAI" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
   {
@@ -812,6 +814,7 @@ export const nodeIconsLucide: iconsType = {
   SearchAPI: SearchAPIIcon,
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
+  TessAI: TessAIIcon,
   Apify: ApifyIcon,
   ApifyWhite: ApifyWhiteIcon,
   HomeAssistant: HomeAssistantIcon,
