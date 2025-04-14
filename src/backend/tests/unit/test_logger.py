@@ -17,8 +17,6 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from loguru import logger as loguru_logger
-
 from langflow.logging.logger import (
     DEFAULT_LOG_FORMAT,
     AsyncFileSink,
@@ -30,6 +28,7 @@ from langflow.logging.logger import (
     is_valid_log_format,
     serialize_log,
 )
+from loguru import logger as loguru_logger
 
 # The filter from your logger config
 EXCLUDED_PATHS = ["/health", "/health_check", "/metrics"]
