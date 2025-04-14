@@ -99,6 +99,7 @@ export type DropDownComponentType = {
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   toggle?: boolean;
   toggleValue?: boolean;
+  toggleDisable?: boolean;
 };
 
 export type TextAreaComponentType = {

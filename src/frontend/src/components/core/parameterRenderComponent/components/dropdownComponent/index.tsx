@@ -18,6 +18,7 @@ export default function DropdownComponent({
   handleNodeClass,
   toggle,
   toggleValue,
+  toggleDisable,
   ...baseInputProps
 }: InputProps<string, DropDownComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
@@ -44,7 +45,7 @@ export default function DropdownComponent({
         handleOnNewValue={handleOnNewValue}
         {...baseInputProps}
       />
-      {toggle && (
+      {toggle && toggleDisable !== true ? (
         <ToggleShadComponent
           value={toggleValue ?? true}
           handleOnNewValue={(data) => {
@@ -57,6 +58,8 @@ export default function DropdownComponent({
           id={`toggle_dropdown_${id}`}
           disabled={disabled}
         />
+      ) : (
+        <></>
       )}
     </div>
   );
