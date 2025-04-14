@@ -120,7 +120,7 @@ class SaveToFileComponent(Component):
 
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
-    def _get_save_functions(self, is_dataframe: bool):
+    def _get_save_functions(self, *, is_dataframe: bool):
         """Get the appropriate save functions based on format and data type."""
         # Common save functions for both DataFrame and Data
         common_functions = {
