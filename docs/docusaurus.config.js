@@ -68,17 +68,7 @@ const config = {
               }
             }
             if (window.ketch) {
-              // When consent is loaded, track it to the gtag event
               window.ketch('on', 'consent', onKetchConsentGtagTrack)
-              // If the user is in the default jurisdiction, remove the preference center link
-              window.ketch('on', 'jurisdiction', (jurisdiction) => {
-                if (jurisdiction.includes('default')) {
-                  const preferenceCenterContainerElement = document.getElementById('preferenceCenterContainer')
-                  if (preferenceCenterContainerElement) {
-                    preferenceCenterContainerElement.remove()
-                  }
-                }
-              })
             }
           })()
         `,
