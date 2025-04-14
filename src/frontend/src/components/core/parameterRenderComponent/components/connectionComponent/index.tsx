@@ -236,6 +236,7 @@ const ConnectionComponent = ({
         setSelectedList={setSelectedItem}
         selectedList={selectedItem}
         options={options}
+        {...baseInputProps}
       />
     </div>
   );
