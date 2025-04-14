@@ -68,6 +68,7 @@ DIRECT_TYPES = [
     "sortableList",
     "auth",
     "connect",
+    "query",
 ]
 
 

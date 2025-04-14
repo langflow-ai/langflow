@@ -224,6 +224,10 @@ class Settings(BaseSettings):
     """The polling interval for the webhook in ms."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
+    ssl_cert_file: str | None = None
+    """Path to the SSL certificate file on the local system."""
+    ssl_key_file: str | None = None
+    """Path to the SSL key file on the local system."""
 
     # MCP Server
     mcp_server_enabled: bool = True
