@@ -95,7 +95,7 @@ The re-ranker model is `nvidia/llama-3.2-nv.reranker`.
 
 To use **Hybrid search** in the **Astra DB** component, do the following:
 
-1. Click **New Flow** > **RAG** > **Hybrid Search**.
+1. Click **New Flow** > **RAG** > **Hybrid Search RAG**.
 2. In the **OpenAI** model component, add your **OpenAI API key**.
 3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
 4. In the **Database** field, select your database.
