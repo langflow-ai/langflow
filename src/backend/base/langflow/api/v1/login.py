@@ -264,7 +264,7 @@ async def create_and_set_user_tokens(
     tokens = Token(**await create_user_tokens(user_id=user.id, db=db, update_last_login=True))
     response.set_cookie(
         COOKIE_REFRESH_TOKEN,
-        tokens["refresh_token"],
+        tokens.refresh_token,
         httponly=auth_settings.REFRESH_HTTPONLY,
         samesite=auth_settings.REFRESH_SAME_SITE,
         secure=auth_settings.REFRESH_SECURE,
@@ -273,7 +273,7 @@ async def create_and_set_user_tokens(
     )
     response.set_cookie(
         COOKIE_ACCESS_TOKEN,
-        tokens["access_token"],
+        tokens.access_token,
         httponly=auth_settings.ACCESS_HTTPONLY,
         samesite=auth_settings.ACCESS_SAME_SITE,
         secure=auth_settings.ACCESS_SECURE,
