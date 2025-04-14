@@ -3,6 +3,8 @@ title: Vector stores
 slug: /components-vector-stores
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Vector store components in Langflow
 
 Vector databases store vector data, which backs AI workloads like chatbots and Retrieval Augmented Generation.
@@ -77,6 +79,54 @@ The embedding model selection is made when creating a new collection and cannot 
 For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/starter-projects-vector-store-rag).
 
 For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+
+### Hybrid search
+
+The **Astra DB** component includes **hybrid search**, which is enabled by default.
+
+The component fields related to hybrid search are **Search Query**, **Lexical Terms**, and **Reranker**.
+
+* **Search Query** finds results by vector similarity.
+* **Lexical Terms** is a comma-separated string of keywords, like `features, data, attributes, characteristics`.
+* **Reranker** is the re-ranker model used in the hybrid search.
+The re-ranker model is `nvidia/llama-3.2-nv.reranker`.
+
+[Hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
+
+To use **Hybrid search** in the **Astra DB** component, do the following:
+
+1. Click **New Flow** > **RAG** > **Hybrid Search RAG**.
+2. In the **OpenAI** model component, add your **OpenAI API key**.
+3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
+4. In the **Database** field, select your database.
+5. In the **Collection** field, select the collection you want to search.
+You must enable support for hybrid search when you create the collection.
+6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
+Your query is sent to two components: an **OpenAI** model component and the **Astra DB** vector database component.
+The **OpenAI** component contains a prompt for creating the lexical query from your input:
+```text
+You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
+You should convert the query into:
+1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+2. A question to use as the basis for a QA embedding engine.
+Avoid common keywords associated with the user's subject matter.
+```
+7. To view the keywords and questions the **OpenAI** component generates from your collection, in the **OpenAI** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+```
+1. Keywords: features, data, attributes, characteristics
+2. Question: What characteristics can be identified in my data?
+```
+8. To view the [DataFrame](/concepts-objects#dataframe-object) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The DataFrame is passed to a **Parser** component, which parses the contents of the **Keywords** column into a string.
+
+    This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
+    Note that the **Search Query** port of the Astra DB port is connected to the **Chat Input** component from step 6.
+    This **Search Query** is vectorized, and both the **Search Query** and **Lexical Terms** content are sent to the reranker at the `find_and_rerank` endpoint.
+
+    The reranker compares the vector search results against the string of terms from the lexical search.
+    The highest-ranked results of your hybrid search are returned to the **Playground**.
+
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).
 
 ## AstraDB Graph vector store
 
