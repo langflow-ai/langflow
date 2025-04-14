@@ -3,7 +3,11 @@ from typing import Any
 import requests
 from loguru import logger
 
-from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
+from langflow.base.models.anthropic_constants import (
+    ANTHROPIC_MODELS,
+    TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS,
+    TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS,
+)
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -99,7 +103,7 @@ class AnthropicModelComponent(LCModelComponent):
 
             client = anthropic.Anthropic(api_key=self.api_key)
             models = client.models.list(limit=20).data
-            model_ids = [model.id for model in models]
+            model_ids = ANTHROPIC_MODELS + [model.id for model in models]
         except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = ANTHROPIC_MODELS
@@ -110,12 +114,17 @@ class AnthropicModelComponent(LCModelComponent):
                 msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
                 raise ImportError(msg) from e
             for model in model_ids:
+                if model in TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS:
+                    continue
                 model_with_tool = ChatAnthropic(
                     model=self.model_name,
                     anthropic_api_key=self.api_key,
                     anthropic_api_url=self.base_url,
                 )
-                if not self.supports_tool_calling(model_with_tool):
+                if (
+                    not self.supports_tool_calling(model_with_tool)
+                    or model in TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS
+                ):
                     model_ids.remove(model)
         return model_ids
 
@@ -151,6 +160,7 @@ class AnthropicModelComponent(LCModelComponent):
                         ids = ANTHROPIC_MODELS
                 build_config["model_name"]["options"] = ids
                 build_config["model_name"]["value"] = ids[0]
+                build_config["model_name"]["combobox"] = True
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e
