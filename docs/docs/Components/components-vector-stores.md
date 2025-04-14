@@ -87,9 +87,9 @@ The **Astra DB** component includes **hybrid search**, which is enabled by defau
 The component fields related to hybrid search are **Search Query**, **Lexical Terms**, and **Reranker**.
 
 * **Search Query** finds results by vector similarity.
-* **Lexical Terms** is a comma-separated list of keywords.
+* **Lexical Terms** is a comma-separated string of keywords, like `features, data, attributes, characteristics`.
 * **Reranker** is the re-ranker model used in the hybrid search.
-The default model is `nvidia/llama-3.2-nv.reranker`.
+The re-ranker model is `nvidia/llama-3.2-nv.reranker`.
 
 [Hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
 
@@ -100,6 +100,7 @@ To use **Hybrid search** in the **Astra DB** component, do the following:
 3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
 4. In the **Database** field, select your database.
 5. In the **Collection** field, select the collection you want to search.
+Your collection must be configured for hybrid search at the time that you create the collection.
 6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
 Your query is sent to two components: an **OpenAI** model component and the **Astra DB** vector database component.
 The **OpenAI** component contains a prompt for creating the lexical query from your input:
@@ -122,7 +123,7 @@ The DataFrame is passed to a **Parser** component, which parses the contents of 
     Note that the **Search Query** port of the Astra DB port is connected to the **Chat Input** component from step 6.
     This **Search Query** is vectorized, and both the **Search Query** and **Lexical Terms** content are sent to the reranker at the `find_and_rerank` endpoint.
 
-    The reranker compares the vector search results against the list of terms from the lexical search.
+    The reranker compares the vector search results against the string of terms from the lexical search.
     The highest-ranked results of your hybrid search are returned to the **Playground**.
 
 For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).
