@@ -265,16 +265,17 @@ The **DataFrame** output returns a structured data format, with additional `text
 
 1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/concepts-objects) to the **Split Text** component's **Data** port.
 This example uses the **URL** component, which is fetching JSON placeholder data.
+
+![Split text component and chroma-db](/img/component-split-text.png)
+
 2. In the **Split Text** component, define your data splitting parameters.
 
 This example splits incoming JSON data at the separator `},{`, so each chunk contains one complete JSON object.
 
-![Split text component and chroma-db](/img/component-split-text.png)
-
 The order of precedence is **Separator**, then **Chunk Size**, and then **Chunk Overlap**.
 If any segment after separator splitting is longer than `chunk_size`, it is split again to fit within `chunk_size`.
 
-After `chunk_size`, **Chunk Overlap** is applied between the chunks to maintain context between them.
+After `chunk_size`, **Chunk Overlap** is applied between chunks to maintain context.
 
 3. Connect a **Chat Output** component to the **Split Text** component's **DataFrame** output to view its output.
 4. Click **Playground**, and then click **Run Flow**.
@@ -288,12 +289,10 @@ The output contains a table of JSON objects split at `},{`.
 },
 ```
 5. Clear the **Separator** field, and then run the flow again.
-The output contains chunked 50-character text with 10 characters of overlap.
+Instead of JSON objects, the output contains 50-character lines of text with 10 characters of overlap.
 ```text
-"title": "sunt aut facere repellat provident occae
-dent occaecati excepturi optio reprehenderit",
-erit",
-"body": "quia et suscipit\nsuscipit rec
+First chunk:  "sunt aut facere repellat provident occaecati"
+Second chunk:           "occaecati excepturi optio reprehenderit"
 ```
 
 ### Inputs
