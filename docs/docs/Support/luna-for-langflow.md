@@ -20,5 +20,5 @@ Luna for Langflow support covers only the following software versions for Langfl
 Last updated: 2025-04-02
 
 ## Core information
-- **Langflow Version**: `1.3.1`
+- **Langflow Version**: `1.3.x`
 - **Python Version Required**: `>=3.10, <3.14`
