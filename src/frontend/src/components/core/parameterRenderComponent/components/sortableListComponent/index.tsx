@@ -52,7 +52,7 @@ const SortableListItem = memo(
 
         <span
           className={cn(
-            "truncate text-primary",
+            "truncate text-muted-foreground",
             limit === 1 ? "max-w-56 pl-3" : "max-w-48",
           )}
         >

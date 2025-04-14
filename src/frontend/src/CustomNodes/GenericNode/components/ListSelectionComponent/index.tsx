@@ -66,7 +66,7 @@ const ListItem = ({
       unstyled
       size="sm"
       className={cn(
-        "group w-full rounded-md py-0.5 pl-2 pr-2",
+        "group flex w-full rounded-md px-2 py-0.5",
         !isKeyboardNavActive && "hover:bg-muted", // Only apply hover styles when not in keyboard nav
         !item.metaData && "py-2.5",
         isFocused && "bg-muted",
@@ -88,15 +88,17 @@ const ListItem = ({
     >
       <div className="flex w-full items-center gap-2">
         {item.icon && (
-          <ForwardedIconComponent name={item.icon} className="mr-2 h-4 w-4" />
+          <div>
+            <ForwardedIconComponent name={item.icon} className="mr-2 h-4 w-4" />
+          </div>
         )}
-        <div>
-          <div className="flex truncate text-[13px] font-semibold">
-            {item.name}
+        <div className="flex w-full flex-col truncate">
+          <div className="flex w-full truncate text-[13px] font-semibold">
+            <span className="truncate">{item.name}</span>
           </div>
           {"metaData" in item && item.metaData && (
-            <div className="flex truncate text-[13px] text-gray-500">
-              {item.metaData}
+            <div className="flex w-full truncate text-[13px] text-gray-500">
+              <span className="truncate">{item.metaData}</span>
             </div>
           )}
         </div>
@@ -278,7 +280,7 @@ const ListSelectionComponent = ({
         className="flex max-h-[65vh] min-h-[15vh] flex-col rounded-xl p-0"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader className="flex w-full justify-between border-b px-4 py-3">
+        <DialogHeader className="flex w-full justify-between border-b px-3 py-3">
           <div className="flex items-center gap-2">
             <ForwardedIconComponent
               name={nodeClass?.icon || "unknown"}
@@ -301,7 +303,7 @@ const ListSelectionComponent = ({
 
         <div
           ref={listContainerRef}
-          className="flex flex-col gap-1 overflow-y-auto px-3 pb-3"
+          className="flex w-full flex-col gap-1 overflow-y-auto px-3 pb-3"
         >
           {filteredList.length > 0 ? (
             filteredList.map((item, index) => (
