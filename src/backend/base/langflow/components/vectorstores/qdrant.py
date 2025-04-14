@@ -70,15 +70,17 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
 
-        # Convert DataFrame to Data if needed using parent's method
-        self.ingest_data = self._prepare_ingest_data()
+        # Ingest data only if data is available
+        if self.ingest_data:
+            # Convert DataFrame to Data if needed using parent's method
+            self.ingest_data = self._prepare_ingest_data()
 
-        documents = []
-        for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
+            documents = []
+            for _input in self.ingest_data or []:
+                if isinstance(_input, Data):
+                    documents.append(_input.to_lc_document())
+                else:
+                    documents.append(_input)
 
         if not isinstance(self.embedding, Embeddings):
             msg = "Invalid embedding object"
