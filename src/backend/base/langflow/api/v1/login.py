@@ -246,7 +246,7 @@ def delete_cookies(response: Response) -> None:
 
 async def create_and_set_user_tokens(
     response: Response, db: AsyncSession, auth_settings: AuthSettings, user: User
-) -> dict:
+) -> Token:
     """Generate JWT tokens for a user and set them as HTTP-only cookies.
 
     This function creates access and refresh tokens for the user, stores them in cookies,
@@ -259,7 +259,7 @@ async def create_and_set_user_tokens(
         user (User): The authenticated user for whom tokens are generated.
 
     Returns:
-        dict: Dictionary containing the generated JWT access and refresh tokens.
+        Token: Object containing the LangFlow access_token and refresh_token
     """
     tokens = await create_user_tokens(user_id=user.id, db=db, update_last_login=True)
     response.set_cookie(

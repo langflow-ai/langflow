@@ -78,7 +78,7 @@ def get_cached_keycloak_config(service: KeycloakService) -> KeycloakConfig | dic
     )
 
 
-@router.get("/keycloak/config", response_model=KeycloakConfig | dict)
+@router.get("/keycloak/config", response_model=KeycloakConfig | dict[str, bool])
 async def get_keycloak_config(
     keycloak_service: Annotated[KeycloakService, Depends(get_keycloak_service)],
 ) -> KeycloakConfig | dict[str, bool]:
@@ -106,7 +106,7 @@ async def keycloak_callback(
     code: Annotated[str, Query(description="Authorization code")],
     nonce: Annotated[str, Query(description="Client-generated nonce")],
     keycloak_service: Annotated[KeycloakService, Depends(get_keycloak_service)],
-) -> dict:
+) -> Token:
     """Handle Keycloak authentication callback after successful SSO authentication.
 
     This endpoint is called by the frontend when the user is redirected back from Keycloak
@@ -121,7 +121,7 @@ async def keycloak_callback(
         keycloak_service: KeycloakService instance injected by FastAPI
 
     Returns:
-        dict: Dictionary containing the generated JWT access and refresh tokens.
+        Token: Object containing the LangFlow access_token and refresh_token
 
     Raises:
         HTTPException: If Keycloak is not enabled or authentication fails

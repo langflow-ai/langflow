@@ -66,11 +66,16 @@ echo "$ACCESS_LOG_FORMAT" >> /nginx-access-log/logging.conf
 
 # Check and set environment variables
 if [ -z "$BACKEND_URL" ]; then
-  if [ -n "$1" ] && echo "$1" | grep -Eq "^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/.*)?$"; then
-    BACKEND_URL="$1"
-    log "Using BACKEND_URL from command line argument: $BACKEND_URL"
+  if [ -n "$1" ]; then
+    if echo "$1" | grep -Eq "^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/.*)?$"; then
+      BACKEND_URL="$1"
+      log "Using BACKEND_URL from command line argument: $BACKEND_URL"
+    else
+      log "ERROR: Invalid BACKEND_URL format: $1"
+      exit 1
+    fi
   else
-    log "ERROR: Invalid BACKEND_URL format: $1"
+    log "ERROR: BACKEND_URL must be set as an environment variable or as first parameter. (e.g. http://localhost:7860)"
     exit 1
   fi
 fi
@@ -81,11 +86,6 @@ CLIENT_MAX_BODY_SIZE="${CLIENT_MAX_BODY_SIZE:-10m}"
 GZIP_COMPRESSION_LEVEL="${GZIP_COMPRESSION_LEVEL:-5}"
 CLIENT_TIMEOUT="${CLIENT_TIMEOUT:-12}"
 WORKER_CONNECTIONS="${WORKER_CONNECTIONS:-1024}"
-
-if [ -z "$BACKEND_URL" ]; then
-  log "ERROR: BACKEND_URL must be set as an environment variable or as first parameter. (e.g. http://localhost:7860)"
-  exit 1
-fi
 
 log "Configuration summary:"
 log "- Frontend port: $FRONTEND_PORT"

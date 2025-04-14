@@ -16,6 +16,7 @@ src/frontend/tests
 src/frontend/test-results
 src/frontend/playwright-report
 src/frontend/coverage
+docker/frontend/tests
 
 # Documentation not needed for build
 **/LICENSE

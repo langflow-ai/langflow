@@ -22,6 +22,7 @@ from langflow.services.database.models.user.model import User, UserUpdate
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.api.v1.schemas import Token
     from langflow.services.keycloak.service import KeycloakService
 
 
@@ -32,7 +33,7 @@ async def process_keycloak_login(
     response: Response,
     db: AsyncSession,
     keycloak_service: KeycloakService,
-) -> dict:
+) -> Token:
     """Process Keycloak OAuth callback and create Langflow authentication tokens.
 
     This function handles the entire authentication flow after receiving the authorization code
@@ -48,7 +49,7 @@ async def process_keycloak_login(
         keycloak_service: Keycloak Authentication Service, injected by FastAPI
 
     Returns:
-        dict: Token response containing access_token and token_type
+        Token: Object containing the LangFlow access_token and refresh_token
 
     Raises:
         HTTPException: If token retrieval fails, user information is invalid, or user

@@ -60,11 +60,11 @@ LABEL org.opencontainers.image.title=="Langflow Frontend" \
 
 
 # Copy only the build artifacts from builder stage
-COPY --from=builder-base --chown=nginx:nginx /frontend/build /usr/share/nginx/html
+COPY --from=builder-base --chown=${UID}:${GID} /frontend/build /usr/share/nginx/html
 
 # Copy configuration files
-COPY --chown=nginx:nginx ./docker/frontend/start-nginx.sh /start-nginx.sh
-COPY --chown=nginx:nginx ./docker/frontend/default.conf.template /etc/nginx/conf.d/default.conf.template
+COPY --chown=${UID}:${GID} ./docker/frontend/start-nginx.sh /start-nginx.sh
+COPY --chown=${UID}:${GID} ./docker/frontend/default.conf.template /etc/nginx/conf.d/default.conf.template
 
 # Switch to root user to create dir and set permissions
 USER root
