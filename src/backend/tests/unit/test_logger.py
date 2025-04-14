@@ -218,19 +218,27 @@ def test_configure_calls_standard(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(loguru_logger, "remove", lambda: None)
     monkeypatch.setattr(loguru_logger, "add", lambda *args, **kwargs: add_calls.append(kwargs))  # noqa: ARG005
     monkeypatch.setattr(loguru_logger, "configure", lambda handlers: config_calls.append(handlers))
-    with (
-        patch("langflow.logging.logger.setup_uvicorn_logger", lambda: None),
-        patch("langflow.logging.logger.setup_gunicorn_logger", lambda: None),
-    ):
-        temp_log_file: Path = Path(tempfile.gettempdir()) / "test_configure.log"
-        configure(
-            log_level="WARNING",
-            log_file=temp_log_file,
-            disable=False,
-            log_env="noncontainer",
-            log_format="%(message)s",
-            async_file=False,
-        )
+
+    # We'll add the functions to the module temporarily
+    import sys
+    from types import ModuleType
+
+    # Create temporary module or get existing one
+    logger_module = sys.modules.get("langflow.logging.logger", ModuleType("langflow.logging.logger"))
+
+    monkeypatch.setattr(logger_module, "setup_uvicorn_logger", lambda: None, raising=False)
+    monkeypatch.setattr(logger_module, "setup_gunicorn_logger", lambda: None, raising=False)
+
+    temp_log_file: Path = Path(tempfile.gettempdir()) / "test_configure.log"
+    configure(
+        log_level="WARNING",
+        log_file=temp_log_file,
+        disable=False,
+        log_env="noncontainer",
+        log_format="%(message)s",
+        async_file=False,
+    )
+
     assert len(config_calls) > 0
     assert len(add_calls) > 0
 
@@ -392,8 +400,7 @@ def test_serialize_log_basic():
     """Test basic serialization with minimal fields."""
     mock_record = create_mock_record()
 
-    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=False)
 
     parsed = json.loads(result)
     assert parsed["message"] == "Test message"
@@ -413,8 +420,7 @@ def test_serialize_log_with_exception_dev_mode():
 
     mock_record = create_mock_record(exception=exception_info)
 
-    with patch("langflow.logging.logger.DEV", True):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=True)
 
     parsed = json.loads(result)
     assert parsed["exception"]["type"] == "ValueError"
@@ -431,8 +437,7 @@ def test_serialize_log_with_exception_prod_mode():
 
     mock_record = create_mock_record(exception=exception_info)
 
-    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=False)
 
     parsed = json.loads(result)
     assert parsed["exception"] is None
@@ -443,8 +448,7 @@ def test_serialize_log_different_levels():
     for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
         mock_record = create_mock_record(level=level)
 
-        with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
-            result = serialize_log(mock_record)
+        result = serialize_log(mock_record, dev_mode=False)
 
         parsed = json.loads(result)
         assert parsed["level"] == level
@@ -452,12 +456,11 @@ def test_serialize_log_different_levels():
 
 def test_serialize_log_timestamp_format():
     """Test that timestamp is correctly formatted."""
-    fixed_time = datetime.datetime(2023, 1, 15, 12, 30, 45, 123456, tzinfo=datetime.timezone.UTC)
+    fixed_time = datetime.datetime(2023, 1, 15, 12, 30, 45, 123456, tzinfo=datetime.timezone.utc)
     mock_record = create_mock_record()
     mock_record["time"] = fixed_time
 
-    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=False)
 
     parsed = json.loads(result)
     assert parsed["timestamp"] == fixed_time.timestamp()
@@ -475,8 +478,7 @@ def test_serialize_log_with_non_standard_exception():
     exception_info = CustomException()
     mock_record = create_mock_record(exception=exception_info)
 
-    with patch("langflow.logging.logger.DEV", True):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=True)
 
     parsed = json.loads(result)
     assert "exception" in parsed
@@ -489,8 +491,7 @@ def test_serialize_log_with_unicode_message():
     unicode_message = "测试消息 - こんにちは - مرحبا"
     mock_record = create_mock_record(message=unicode_message)
 
-    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=False)
 
     parsed = json.loads(result)
     assert parsed["message"] == unicode_message
@@ -501,8 +502,7 @@ def test_serialize_log_with_very_long_message():
     long_message = "A" * 10000
     mock_record = create_mock_record(message=long_message)
 
-    with patch("langflow.logging.logger.DEV", False):  # noqa: FBT003
-        result = serialize_log(mock_record)
+    result = serialize_log(mock_record, dev_mode=False)
 
     parsed = json.loads(result)
     assert parsed["message"] == long_message

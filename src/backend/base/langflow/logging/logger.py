@@ -133,8 +133,15 @@ class SizedLogBuffer:
 log_buffer = SizedLogBuffer()
 
 
-def serialize_log(record):
-    """Serialize log record to JSON format with detailed information."""
+def serialize_log(record, dev_mode=None):
+    """Serialize log record to JSON format with detailed information.
+
+    Note: Since DEV is a global variable, is difficult to mock it in tests, especially in tests for Python 3.10.
+    So we need to provide a dev_mode parameter to override the global DEV value.
+    """
+    # Use provided dev_mode or global DEV
+    dev_mode = DEV if dev_mode is None else dev_mode
+
     subset = {
         "timestamp": record["time"].timestamp(),
         "time": record["time"].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
@@ -147,7 +154,7 @@ def serialize_log(record):
         "thread": record["thread"].name,
     }
 
-    if DEV is False:
+    if dev_mode is False:
         subset["exception"] = None
     # Add exception info if present
     elif record.get("exception"):
