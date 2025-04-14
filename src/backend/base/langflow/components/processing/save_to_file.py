@@ -120,50 +120,55 @@ class SaveToFileComponent(Component):
 
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
-    def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
-        # Mapping of format to save function
-        save_functions = {
-            "csv": lambda: dataframe.to_csv(path, index=False),
-            "excel": lambda: dataframe.to_excel(path, index=False, engine="openpyxl"),
-            "json": lambda: dataframe.to_json(path, orient="records", indent=2),
-            "markdown": lambda: path.write_text(dataframe.to_markdown(index=False), encoding="utf-8"),
-            "pdf": lambda: self._save_dataframe_to_pdf(dataframe, path),
+    def _get_save_functions(self, is_dataframe: bool):
+        """Get the appropriate save functions based on format and data type."""
+        # Common save functions for both DataFrame and Data
+        common_functions = {
+            "csv": lambda data, path: data.to_csv(path, index=False),
+            "excel": lambda data, path: data.to_excel(path, index=False, engine="openpyxl"),
+            "markdown": lambda data, path: path.write_text(data.to_markdown(index=False), encoding="utf-8"),
+            "pdf": lambda data, path: self._save_dataframe_to_pdf(data, path),
         }
+
+        # Additional function for Data objects
+        if not is_dataframe:
+            common_functions["json"] = lambda data, path: path.write_text(
+                json.dumps(data.data, indent=2), encoding="utf-8"
+            )
+        else:
+            common_functions["json"] = lambda data, path: data.to_json(path, orient="records", indent=2)
+
+        return common_functions
+
+    def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
+        """Save DataFrame to file in the specified format."""
+        save_functions = self._get_save_functions(is_dataframe=True)
 
         if fmt not in save_functions:
             error_msg = f"Unsupported DataFrame format: {fmt}"
             raise ValueError(error_msg)
 
-        # Execute the save function
-        save_functions[fmt]()
-
+        save_functions[fmt](dataframe, path)
         return f"DataFrame saved successfully as '{path}'"
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
+        """Save Data object to file in the specified format."""
         if isinstance(data, list):
             error_msg = "Data is a list, not a Data object"
             raise TypeError(error_msg)
 
-        # Handle single dictionary case
-        dataframe = pd.DataFrame([data.data]) if isinstance(data.data, dict) else pd.DataFrame(data.data)
-
-        # Mapping of format to save function
-        save_functions = {
-            "csv": lambda: dataframe.to_csv(path, index=False),
-            "excel": lambda: dataframe.to_excel(path, index=False, engine="openpyxl"),
-            "json": lambda: path.write_text(json.dumps(data.data, indent=2), encoding="utf-8"),
-            "markdown": lambda: path.write_text(dataframe.to_markdown(index=False), encoding="utf-8"),
-            "pdf": lambda: self._save_dataframe_to_pdf(data, path),
-        }
-
+        save_functions = self._get_save_functions(is_dataframe=False)
         if fmt not in save_functions:
             error_msg = f"Unsupported Data format: {fmt}"
             raise ValueError(error_msg)
 
-        # Execute the save function
-        save_functions[fmt]()
-
+        # For JSON format, we want to save the original data structure
+        formatted_data = data if fmt == "json" else self._handle_single_dict(data)
+        save_functions[fmt](formatted_data, path)
         return f"Data saved successfully as '{path}'"
+
+    def _handle_single_dict(self, data: Data) -> pd.DataFrame:
+        return pd.DataFrame([data.data]) if isinstance(data.data, dict) else pd.DataFrame(data.data)
 
     def _save_message(self, message: Message, path: Path, fmt: str) -> str:
         if message.text is None:
@@ -218,14 +223,14 @@ class SaveToFileComponent(Component):
         col_widths = []
         for col in columns:
             # Find the maximum width needed for this column
-            max_width = len(str(col)) * 7  # Approximate width per character
+            max_width = len(str(col)) * 7
             for row in data:
                 max_width = max(max_width, len(str(row[columns.index(col)])) * 7)
             col_widths.append(max_width)
 
         # Adjust column widths to fit page
         total_width = sum(col_widths)
-        page_width = pdf.w - 20  # Available width with margins
+        page_width = pdf.w - 20
         if total_width > page_width:
             ratio = page_width / total_width
             col_widths = [width * ratio for width in col_widths]
@@ -245,7 +250,6 @@ class SaveToFileComponent(Component):
                 pdf.cell(col_widths[i], 10, str(cell), 1, 0, "C", True)
             pdf.ln()
 
-        # Save the PDF
         pdf.output(str(path))
 
     def _save_message_to_pdf(self, content: str, path: Path) -> None:
@@ -254,11 +258,7 @@ class SaveToFileComponent(Component):
         class MyFPDF(FPDF, HTMLMixin):
             pass
 
-        # Create PDF document
         pdf = MyFPDF()
         pdf.add_page()
-
         pdf.write_html(content)
-
-        # Save the PDF
         pdf.output(str(path))
