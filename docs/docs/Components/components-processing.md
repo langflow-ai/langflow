@@ -13,30 +13,30 @@ The **Split Text** processing component in this flow splits the incoming [Data](
 
 The component offers control over chunk size, overlap, and separator, which affect context and granularity in vector store retrieval results.
 
-![](/img/vector-store-document-ingestion.png)
-
-## Alter metadata
-
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_value | Input | Objects to which Metadata should be added |
-| text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
-| metadata | Metadata | Metadata to add to each object |
-| remove_fields | Fields to Remove | Metadata Fields to Remove |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | List of Input objects, each with added metadata |
+![A vector store ingesting documents](/img/vector-store-document-ingestion.png)
 
 ## Combine text
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
+
+1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
+This example uses two **Text Input** components.
+
+![Combine text component](/img/component-combine-text.png)
+
+2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
+3. In the **Combine Text** component, enter an optional **Delimiter** value.
+The delimiter character separates the combined texts.
+This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
+4. Connect a **Chat Output** component to view the text combination.
+5. Click **Playground**, and then click **Run Flow**.
+The combined text appears in the **Playground**.
+```text
+This is the first text. Let's combine text!
+end first text
+start second text
+Here's the second part. We'll see how combining text works.
+```
 
 ### Inputs
 
@@ -52,49 +52,6 @@ This component concatenates two text sources into a single text chunk using a sp
 |------|--------------|------|
 |message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
 
-
-## Create data
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
-:::
-
-This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
-
-### Inputs
-| Name | Display Name | Info |
-|------|--------------|------|
-| number_of_fields | Number of Fields | The number of fields to be added to the record. |
-| text_key | Text Key | Key that identifies the field to be used as the text content. |
-| text_key_validator | Text Key Validator | If enabled, checks if the given `Text Key` is present in the given `Data`. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
-
-## Data combiner
-
-:::important
-Prior to Langflow version 1.1.3, this component was named **Merge Data**.
-:::
-
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
-
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A list of data objects to be merged. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
 
 ## DataFrame operations
 
@@ -135,33 +92,7 @@ This component performs the following operations on Pandas [DataFrame](https://p
 | output | DataFrame | The resulting DataFrame after the operation. |
 
 
-## Data to message
 
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-Instead, use the [Parser](#parser) component.
-:::
-
-:::important
-Prior to Langflow version 1.1.3, this component was named **Parse Data**.
-:::
-
-The ParseData component converts data objects into plain text using a specified template.
-This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The data to convert to text. |
-| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}`, or any other key in the data. |
-| sep | Separator | The separator to use between multiple data items. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| text | Text | The resulting formatted text string as a [Message](/concepts-objects#message-object) object. |
 
 ## Filter data
 
@@ -206,24 +137,7 @@ The Filter values component filters a list of data items based on a specified ke
 |------|--------------|------|
 | filtered_data | Filtered data | The resulting list of filtered data items. |
 
-## JSON cleaner
 
-The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| json_str | JSON String | The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
-| remove_control_chars | Remove Control Characters | If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
-| normalize_unicode | Normalize Unicode | When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
-| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output | Cleaned JSON String | The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
 ## Lambda filter
 
@@ -345,6 +259,158 @@ For an additional example of using the **Parser** component to format a DataFram
 |------|--------------|------|
 | parsed_text | Parsed Text | The resulting formatted text as a [Message](/concepts-objects#message-object) object. |
 
+## Split text
+
+This component splits text into chunks based on specified criteria.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_inputs | Input Documents | The data to split.The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
+| chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
+| chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
+| separator | Separator | The character to split on. Default: `newline`. |
+| text_key | Text Key | The key to use for the text column (advanced). Default: `text`. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| chunks | Chunks | List of split text chunks as [Data](/concepts-objects#data-object) objects. |
+| dataframe | DataFrame | List of split text chunks as [DataFrame](/concepts-objects#dataframe-object) objects. |
+
+## Update data
+
+This component dynamically updates or appends data with specified fields.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| old_data | Data | The records to update |
+| number_of_fields | Number of Fields | Number of fields to add (max 15) |
+| text_key | Text Key | Key for text content |
+| text_key_validator | Text Key Validator | Validates text key presence |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Updated [Data](/concepts-objects#data-object) objects. |
+
+## Legacy components
+
+### Alter metadata
+
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Input | Objects to which Metadata should be added |
+| text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
+| metadata | Metadata | Metadata to add to each object |
+| remove_fields | Fields to Remove | Metadata Fields to Remove |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | List of Input objects, each with added metadata |
+
+## Create data
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
+
+This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
+
+### Inputs
+| Name | Display Name | Info |
+|------|--------------|------|
+| number_of_fields | Number of Fields | The number of fields to be added to the record. |
+| text_key | Text Key | Key that identifies the field to be used as the text content. |
+| text_key_validator | Text Key Validator | If enabled, checks if the given `Text Key` is present in the given `Data`. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
+
+## Data to message
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+Instead, use the [Parser](#parser) component.
+:::
+
+:::important
+Prior to Langflow version 1.1.3, this component was named **Parse Data**.
+:::
+
+The ParseData component converts data objects into plain text using a specified template.
+This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The data to convert to text. |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}`, or any other key in the data. |
+| sep | Separator | The separator to use between multiple data items. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| text | Text | The resulting formatted text string as a [Message](/concepts-objects#message-object) object. |
+
+## JSON cleaner
+
+The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| json_str | JSON String | The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
+| remove_control_chars | Remove Control Characters | If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| normalize_unicode | Normalize Unicode | When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
+| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output | Cleaned JSON String | The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
+
+
+## Data combiner
+
+:::important
+Prior to Langflow version 1.1.3, this component was named **Merge Data**.
+:::
+
+This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of data objects to be merged. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+
 ## Parse DataFrame
 
 :::important
@@ -409,43 +475,3 @@ This component selects a single [Data](/concepts-objects#data-object) item from 
 | Name | Display Name | Info |
 |------|--------------|------|
 | selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
-
-## Split text
-
-This component splits text into chunks based on specified criteria.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data_inputs | Input Documents | The data to split.The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
-| chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
-| chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
-| separator | Separator | The character to split on. Default: `newline`. |
-| text_key | Text Key | The key to use for the text column (advanced). Default: `text`. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| chunks | Chunks | List of split text chunks as [Data](/concepts-objects#data-object) objects. |
-| dataframe | DataFrame | List of split text chunks as [DataFrame](/concepts-objects#dataframe-object) objects. |
-
-## Update data
-
-This component dynamically updates or appends data with specified fields.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| old_data | Data | The records to update |
-| number_of_fields | Number of Fields | Number of fields to add (max 15) |
-| text_key | Text Key | Key for text content |
-| text_key_validator | Text Key Validator | Validates text key presence |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | Updated [Data](/concepts-objects#data-object) objects. |
