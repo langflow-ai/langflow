@@ -14,6 +14,9 @@ import { MilvusIcon } from "@/icons/Milvus";
 import { OneDriveIcon } from "@/icons/OneDrive";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
+import { SearchHybridIcon } from "@/icons/SearchHybrid";
+import { SearchLexicalIcon } from "@/icons/SearchLexical";
+import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
@@ -240,6 +243,7 @@ import {
   Type,
   Undo,
   Ungroup,
+  UnlinkIcon,
   Unplug,
   Upload,
   User,
@@ -566,6 +570,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
@@ -596,6 +601,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  {
+    display_name: "Home Assistant",
+    name: "homeassistant",
+    icon: "HomeAssistant",
+  },
 ];
 
 export const categoryIcons = {
@@ -704,6 +714,7 @@ export const nodeIconsLucide: iconsType = {
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
   FirecrawlCrawlApi: FirecrawlIcon,
+  Unlink: UnlinkIcon,
   FirecrawlScrapeApi: FirecrawlIcon,
   FirecrawlMapApi: FirecrawlIcon,
   FirecrawlExtractApi: FirecrawlIcon,
@@ -746,6 +757,9 @@ export const nodeIconsLucide: iconsType = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   DeepSeek: DeepSeekIcon,
+  SearchLexical: SearchLexicalIcon,
+  SearchHybrid: SearchHybridIcon,
+  SearchVector: SearchVectorIcon,
   xAI: XAIIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
