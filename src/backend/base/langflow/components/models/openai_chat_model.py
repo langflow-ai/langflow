@@ -1,11 +1,17 @@
+from typing import Any
+
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
+from langflow.base.models.openai_constants import (
+    OPENAI_MODEL_NAMES,
+    OPENAI_REASONING_MODEL_NAMES,
+)
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.logging import logger
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -39,9 +45,10 @@ class OpenAIModelComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=OPENAI_MODEL_NAMES,
+            options=OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,
             value=OPENAI_MODEL_NAMES[1],
             combobox=True,
+            real_time_refresh=True,
         ),
         StrInput(
             name="openai_api_base",
@@ -64,7 +71,7 @@ class OpenAIModelComponent(LCModelComponent):
             display_name="Temperature",
             value=0.1,
             range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,
+            show=True,
         ),
         IntInput(
             name="seed",
@@ -90,30 +97,25 @@ class OpenAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        openai_api_key = self.api_key
-        temperature = self.temperature
-        model_name: str = self.model_name
-        max_tokens = self.max_tokens
-        model_kwargs = self.model_kwargs or {}
-        openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
-        json_mode = self.json_mode
-        seed = self.seed
-        max_retries = self.max_retries
-        timeout = self.timeout
+        parameters = {
+            "api_key": SecretStr(self.api_key).get_secret_value() if self.api_key else None,
+            "model_name": self.model_name,
+            "max_tokens": self.max_tokens or None,
+            "model_kwargs": self.model_kwargs or {},
+            "base_url": self.openai_api_base or "https://api.openai.com/v1",
+            "seed": self.seed,
+            "max_retries": self.max_retries,
+            "timeout": self.timeout,
+            "temperature": self.temperature if self.temperature is not None else 0.1,
+        }
 
-        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None
-        output = ChatOpenAI(
-            max_tokens=max_tokens or None,
-            model_kwargs=model_kwargs,
-            model=model_name,
-            base_url=openai_api_base,
-            api_key=api_key,
-            temperature=temperature if temperature is not None else 0.1,
-            seed=seed,
-            max_retries=max_retries,
-            request_timeout=timeout,
-        )
-        if json_mode:
+        logger.info(f"Model name: {self.model_name}")
+        if self.model_name in OPENAI_REASONING_MODEL_NAMES:
+            logger.info("Getting reasoning model parameters")
+            parameters.pop("temperature")
+            parameters.pop("seed")
+        output = ChatOpenAI(**parameters)
+        if self.json_mode:
             output = output.bind(response_format={"type": "json_object"})
 
         return output
@@ -136,3 +138,12 @@ class OpenAIModelComponent(LCModelComponent):
             if message:
                 return message
         return None
+
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        if field_name in {"base_url", "model_name", "api_key"} and field_value in OPENAI_REASONING_MODEL_NAMES:
+            build_config["temperature"]["show"] = False
+            build_config["seed"]["show"] = False
+        if field_name in {"base_url", "model_name", "api_key"} and field_value in OPENAI_MODEL_NAMES:
+            build_config["temperature"]["show"] = True
+            build_config["seed"]["show"] = True
+        return build_config
