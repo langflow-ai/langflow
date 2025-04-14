@@ -13,8 +13,8 @@ from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, Interface
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstanceError
-from langflow.schema.data import Data
 from langflow.schema.artifact import ArtifactType
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.serialization.serialization import serialize

@@ -13,8 +13,8 @@ from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,

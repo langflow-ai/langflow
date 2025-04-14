@@ -10,8 +10,8 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.schema.data import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
+from langflow.schema.data import Data
 from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:

@@ -13,8 +13,7 @@ from langflow.base.mcp.util import (
     create_tool_func,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.inputs.inputs import DropdownInput
-from langflow.inputs.inputs import InputTypes
+from langflow.inputs.inputs import DropdownInput, InputTypes
 from langflow.io import MessageTextInput, Output, TabInput
 from langflow.io.schema import schema_to_langflow_inputs
 from langflow.logging import logger

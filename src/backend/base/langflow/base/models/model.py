@@ -11,8 +11,7 @@ from langchain_core.output_parsers import BaseOutputParser
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom.custom_component.component import Component
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 

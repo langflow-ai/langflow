@@ -9,8 +9,7 @@ from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
