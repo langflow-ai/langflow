@@ -3965,7 +3965,7 @@
                 "advanced": false,
                 "display_name": "Search Query",
                 "dynamic": false,
-                "info": "Enter a query to run a combined similarity and lexical terms search.",
+                "info": "Enter a query to run a similarity search.",
                 "input_types": [
                   "Message"
                 ],
@@ -4728,7 +4728,7 @@
                 "advanced": false,
                 "display_name": "Search Query",
                 "dynamic": false,
-                "info": "Enter a query to run a combined similarity and lexical terms search.",
+                "info": "Enter a query to run a similarity search.",
                 "input_types": [
                   "Message"
                 ],
