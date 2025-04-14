@@ -3,11 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import pandas as pd
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
+from fpdf import FPDF, HTMLMixin
 
 from langflow.custom import Component
 from langflow.io import DataFrameInput, DataInput, DropdownInput, MessageInput, Output, StrInput
@@ -199,10 +195,7 @@ class SaveToFileComponent(Component):
         return f"Message saved successfully as '{path}'"
 
     def _save_dataframe_to_pdf(self, dataframe: DataFrame | pd.DataFrame | Data, path: Path) -> None:
-        """Save DataFrame to PDF format."""
-        doc = SimpleDocTemplate(str(path), pagesize=letter)
-        elements = []
-
+        """Save DataFrame to PDF format using FPDF."""
         if not isinstance(dataframe, pd.DataFrame):
             # Handle single row data by wrapping it in a list
             if isinstance(dataframe.data, dict):
@@ -210,59 +203,62 @@ class SaveToFileComponent(Component):
             else:
                 dataframe = pd.DataFrame(dataframe.data)
 
-        # Convert DataFrame to a list of lists for the table
-        data = [dataframe.columns.tolist()] + dataframe.values.tolist()
+        # Create PDF document
+        pdf = FPDF()
+        pdf.add_page()
 
-        # Create the table
-        table = Table(data)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 14),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                    ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
-                    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                    ("FONTSIZE", (0, 1), (-1, -1), 12),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ]
-            )
-        )
+        # Set font for header
+        pdf.set_font("Arial", "B", 14)
 
-        elements.append(table)
-        doc.build(elements)
+        # Get column names and data
+        columns = dataframe.columns.tolist()
+        data = dataframe.values.tolist()
+
+        # Calculate column widths
+        col_widths = []
+        for col in columns:
+            # Find the maximum width needed for this column
+            max_width = len(str(col)) * 7  # Approximate width per character
+            for row in data:
+                max_width = max(max_width, len(str(row[columns.index(col)])) * 7)
+            col_widths.append(max_width)
+
+        # Adjust column widths to fit page
+        total_width = sum(col_widths)
+        page_width = pdf.w - 20  # Available width with margins
+        if total_width > page_width:
+            ratio = page_width / total_width
+            col_widths = [width * ratio for width in col_widths]
+
+        # Add header row
+        pdf.set_fill_color(200, 200, 200)  # Light gray background
+        pdf.set_text_color(0, 0, 0)  # Black text
+        for i, col in enumerate(columns):
+            pdf.cell(col_widths[i], 10, str(col), 1, 0, "C", True)
+        pdf.ln()
+
+        # Add data rows
+        pdf.set_fill_color(245, 245, 220)  # Beige background
+        pdf.set_font("Arial", "", 12)
+        for row in data:
+            for i, cell in enumerate(row):
+                pdf.cell(col_widths[i], 10, str(cell), 1, 0, "C", True)
+            pdf.ln()
+
+        # Save the PDF
+        pdf.output(str(path))
 
     def _save_message_to_pdf(self, content: str, path: Path) -> None:
-        """Save Message content to PDF format."""
-        doc = SimpleDocTemplate(
-            str(path),
-            pagesize=letter,
-            leftMargin=1 * inch,
-            rightMargin=1 * inch,
-            topMargin=1 * inch,
-            bottomMargin=1 * inch,
-        )
-        elements = []
+        """Save Message content to PDF format using FPDF with HTML support."""
 
-        styles = getSampleStyleSheet()
-        message_style = ParagraphStyle(
-            "MessageStyle",
-            parent=styles["Normal"],
-            fontSize=12,
-            leading=14,  # Line spacing
-            spaceBefore=20,
-            spaceAfter=20,
-            textColor=colors.black,
-            fontName="Helvetica",
-        )
+        class MyFPDF(FPDF, HTMLMixin):
+            pass
 
-        # Process content with XML-like markups
-        # Add message content with proper wrapping and markup support
-        message = Paragraph(content, message_style)
-        elements.append(message)
+        # Create PDF document
+        pdf = MyFPDF()
+        pdf.add_page()
 
-        doc.build(elements)
+        pdf.write_html(content)
+
+        # Save the PDF
+        pdf.output(str(path))
