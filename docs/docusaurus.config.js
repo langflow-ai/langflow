@@ -110,11 +110,7 @@ const config = {
           ignorePatterns: ["/preferences"],
         },
         gtag: {
-          trackingID: "G-XHC7G628ZP",
-          anonymizeIP: true,
-        },
-        googleTagManager: {
-          containerId: "GTM-NK5M4ZT8",
+          trackingID: "G-SLQFLQ3KPT",
         },
         blog: false,
         theme: {

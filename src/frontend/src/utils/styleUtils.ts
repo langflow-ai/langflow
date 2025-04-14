@@ -14,6 +14,9 @@ import { MilvusIcon } from "@/icons/Milvus";
 import { OneDriveIcon } from "@/icons/OneDrive";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
+import { SearchHybridIcon } from "@/icons/SearchHybrid";
+import { SearchLexicalIcon } from "@/icons/SearchLexical";
+import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
@@ -567,6 +570,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
@@ -753,6 +757,9 @@ export const nodeIconsLucide: iconsType = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   DeepSeek: DeepSeekIcon,
+  SearchLexical: SearchLexicalIcon,
+  SearchHybrid: SearchHybridIcon,
+  SearchVector: SearchVectorIcon,
   xAI: XAIIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,

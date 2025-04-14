@@ -16,7 +16,7 @@
 }
 
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
-  margin-top: 1.5rem !important;
+  margin-top: 0.5rem !important;
 }
 
 .docusaurus-highlight-code-line {
@@ -274,7 +274,7 @@ body {
 .theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(
     :first-child
   ) {
-  margin-top: 0.25rem !important;
+  margin-top: 0.15rem !important;
 }
 
 /* Footer Styles */
@@ -321,16 +321,25 @@ body {
   flex-direction: row-reverse;
 }
 .sidebar-ad {
-  margin-top: 2rem;
   margin-left: -0.5rem;
   margin-right: -0.5rem;
-  margin-bottom: -0.5rem;
+  margin-bottom: 0;
   border-radius: 0;
   border-top: 1px solid var(--ifm-color-emphasis-300);
   border-bottom: 1px solid var(--ifm-color-emphasis-300);
   background-color: var(--ifm-background-color);
-  position: sticky;
-  bottom: -0.5rem;
+  position: fixed;
+  bottom: 0;
+  z-index: 100;
+  width: var(--doc-sidebar-width);
+}
+
+[data-theme="dark"] .sidebar-ad {
+  background-color: var(--ifm-background-color);
+}
+
+[data-theme="light"] .sidebar-ad {
+  background-color: var(--ifm-color-white);
 }
 
 .sidebar-ad a {
