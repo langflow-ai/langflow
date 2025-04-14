@@ -65,7 +65,7 @@ dependencies = [
     "langsmith==0.1.147",
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
-    "astra-assistants[tools]~=2.2.11",
+    "astra-assistants[tools]~=2.2.12",
     "composio-langchain==0.7.15",
     "composio-core==0.7.15",
     "spider-client==0.1.24",
@@ -79,7 +79,7 @@ dependencies = [
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
     "langchain-anthropic==0.3.0",
-    "langchain-astradb==0.5.3",
+    "langchain-astradb~=0.6.0",
     "langchain-openai==0.2.12",
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",
@@ -183,7 +183,6 @@ members = ["src/backend/base", "."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
-
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
