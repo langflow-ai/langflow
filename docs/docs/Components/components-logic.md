@@ -36,9 +36,10 @@ It includes code examples of REST and gRPC implementations to demonstrate integr
 
 ## Conditional router (If-Else component)
 
-This component routes messages by comparing two strings. It evaluates a condition by comparing two text inputs using the specified operator and routes the message to `true_result` or `false_result`.
+This component routes messages by comparing two strings.
+It evaluates a condition by comparing two text inputs using the specified operator and routes the message to `true_result` or `false_result`.
 
-The operator can looks for single strings based on your defined [Operator behavior](#operator-behavior), but it can also search for multiple words by regex matching.
+The operator looks for single strings based on your defined [Operator behavior](#operator-behavior), but it can also search for multiple words by regex matching.
 
 To use the **Conditional router** component to check incoming messages with regex matching, do the following:
 
@@ -70,13 +71,13 @@ Send a message that a new message has been received and added to the backlog.
 Send the flow some messages. Your messages route differently based on the if-else component's evaluation.
 ```
 User
-I want to go fishing
+A new user was created.
 
 AI
 A new message has been received and added to the backlog.
 
 User
-Caution, an important warning has arrived
+Sign-in warning: new user locked out.
 
 AI
 A new message has been received and added to the Urgent queue. Please review it at your earliest convenience.
