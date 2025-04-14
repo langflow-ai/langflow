@@ -1,15 +1,11 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize
-
-if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
 
 
 class TransactionBase(SQLModel):
@@ -20,7 +16,7 @@ class TransactionBase(SQLModel):
     outputs: dict | None = Field(default=None, sa_column=Column(JSON))
     status: str = Field(nullable=False)
     error: str | None = Field(default=None)
-    flow_id: UUID = Field(foreign_key="flow.id")
+    flow_id: UUID = Field()
 
     # Needed for Column(JSON)
     class Config:
@@ -47,7 +43,6 @@ class TransactionBase(SQLModel):
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "transaction"
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
-    flow: "Flow" = Relationship(back_populates="transactions")
 
 
 class TransactionReadResponse(TransactionBase):

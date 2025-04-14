@@ -78,13 +78,10 @@ module.exports = {
       items: [
         "Configuration/configuration-api-keys",
         "Configuration/configuration-authentication",
-        "Configuration/configuration-auto-saving",
-        "Configuration/configuration-backend-only",
         "Configuration/configuration-cli",
         "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
-        "Configuration/configuration-security-best-practices"
       ],
     },
     {
@@ -97,6 +94,7 @@ module.exports = {
         "Develop/memory",
         "Develop/session-id",
         "Develop/logging",
+        "Develop/webhook",
       ],
     },
     {

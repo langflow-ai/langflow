@@ -30,7 +30,7 @@ The **Parser** component converts the data coming from the **URL** component int
 
 To examine the flow's prompt, click the **Template** field of the **Prompt** component.
 
-```plain
+```text
 Reference 1:
 
 {references}

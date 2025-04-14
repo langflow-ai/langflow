@@ -1,5 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -150,7 +151,12 @@ export default function ChatView({
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
 
   const onDrop = (e) => {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND) {
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
+    e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
       e.dataTransfer.clearData();
