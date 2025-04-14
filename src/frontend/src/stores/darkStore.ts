@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getRepoStars } from "../controllers/API";
+import { getDiscordCount, getRepoStars } from "../controllers/API";
 import { DarkStoreType } from "../types/zustand/dark";
 
 const startedStars = Number(window.localStorage.getItem("githubStars")) ?? 0;
@@ -39,5 +39,11 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
         set(() => ({ stars: res, lastUpdated: new Date() }));
       });
     }
+  },
+  discordCount: 0,
+  refreshDiscordCount: () => {
+    getDiscordCount().then((res) => {
+      set(() => ({ discordCount: res }));
+    });
   },
 }));

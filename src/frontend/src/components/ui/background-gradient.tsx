@@ -1,6 +1,5 @@
 import { cn } from "@/utils/utils";
 import { motion } from "framer-motion";
-
 import React from "react";
 
 export const BackgroundGradient = ({
@@ -8,11 +7,13 @@ export const BackgroundGradient = ({
   className,
   containerClassName,
   animate = true,
+  borderColor,
 }: {
   children?: React.ReactNode;
   className?: string;
   containerClassName?: string;
   animate?: boolean;
+  borderColor?: string;
 }) => {
   const variants = {
     initial: {
@@ -22,13 +23,12 @@ export const BackgroundGradient = ({
       backgroundPosition: ["0, 50%", "100% 50%", "0 50%"],
     },
   };
+
+  const defaultGradient =
+    "radial-gradient(circle farthest-side at 0 100%,#00ccb1,transparent),radial-gradient(circle farthest-side at 100% 0,#7b61ff,transparent),radial-gradient(circle farthest-side at 100% 100%,#ffc414,transparent),radial-gradient(circle farthest-side at 0 0,#1ca0fb,#141316)";
+
   return (
-    <div
-      className={cn(
-        "group relative rounded-3xl bg-[#141316] p-[2px]",
-        containerClassName,
-      )}
-    >
+    <div className={cn("group relative p-[1px]", containerClassName)}>
       <motion.div
         variants={animate ? variants : undefined}
         initial={animate ? "initial" : undefined}
@@ -44,11 +44,16 @@ export const BackgroundGradient = ({
         }
         style={{
           backgroundSize: animate ? "400% 400%" : undefined,
+          background: borderColor || defaultGradient,
+          position: "absolute",
+          inset: 0,
+          borderRadius: "24px",
+          opacity: 0.2,
+          filter: "blur(8px)",
+          transition: "all 0.4s ease-in-out",
+          willChange: "transform",
         }}
-        className={cn(
-          "absolute inset-0 z-[1] rounded-3xl opacity-20 transition duration-500 will-change-transform group-hover:opacity-100 group-hover:blur-lg",
-          "bg-[linear-gradient(180deg,rgba(171,102,255,0.7)_0%,rgba(171,102,255,0.7)_45%,rgba(171,102,255,0.2)_50%,rgba(171,102,255,0.15)_100%)]",
-        )}
+        className="group-hover:filter-[blur(15px)] group-hover:opacity-70 group-hover:brightness-125"
       />
       <motion.div
         variants={animate ? variants : undefined}
@@ -63,17 +68,30 @@ export const BackgroundGradient = ({
               }
             : undefined
         }
-        style={{
-          backgroundSize: animate ? "400% 400%" : undefined,
-        }}
+        style={
+          {
+            backgroundSize: animate ? "400% 400%" : undefined,
+            background: borderColor || defaultGradient,
+            position: "absolute",
+            inset: 0,
+            borderRadius: "24px",
+            willChange: "transform",
+            transition: "all 0.4s ease-in-out",
+            "--border-color": borderColor,
+            "--border-color-transparent": borderColor
+              ? `${borderColor}20`
+              : undefined,
+          } as React.CSSProperties
+        }
         className={cn(
-          "absolute inset-0 z-[1] rounded-3xl will-change-transform",
-          "bg-[linear-gradient(180deg,rgba(171,102,255,0.7)_0%,rgba(171,102,255,0.7)_45%,rgba(171,102,255,0.2)_50%,rgba(171,102,255,0.15)_100%)]",
+          "group-hover:brightness-125",
+          borderColor
+            ? "group-hover:shadow-[0_0_15px_3px_var(--border-color),0_0_25px_5px_var(--border-color-transparent)]"
+            : "group-hover:shadow-[0_0_15px_3px_rgba(0,204,177,0.3),0_0_25px_5px_rgba(123,97,255,0.2)]",
         )}
       />
-      <div className={cn("relative z-10 rounded-3xl bg-[#141316]", className)}>
-        {children}
-      </div>
+
+      <div className={cn("relative z-10", className)}>{children}</div>
     </div>
   );
 };

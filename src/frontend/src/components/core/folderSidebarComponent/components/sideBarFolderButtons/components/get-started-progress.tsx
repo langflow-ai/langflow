@@ -1,0 +1,214 @@
+import IconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
+import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
+import ModalsComponent from "@/pages/MainPage/components/modalsComponent";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { Users } from "@/types/api";
+import { cn } from "@/utils/utils";
+import { FC, useEffect, useMemo, useState } from "react";
+import { FaDiscord, FaGithub } from "react-icons/fa";
+
+export const GetStartedProgress: FC<{
+  userData: Users;
+  isGithubStarred: boolean;
+  isDiscordJoined: boolean;
+  handleDismissDialog: () => void;
+}> = ({ userData, isGithubStarred, isDiscordJoined, handleDismissDialog }) => {
+  const [isGithubStarredChild, setIsGithubStarredChild] =
+    useState(isGithubStarred);
+  const [isDiscordJoinedChild, setIsDiscordJoinedChild] =
+    useState(isDiscordJoined);
+  const [newProjectModal, setNewProjectModal] = useState(false);
+
+  const flows = useFlowsManagerStore((state) => state.flows);
+
+  const { mutate: mutateLoggedUser } = useGetUserData();
+  const { mutate: updateUser } = useUpdateUser();
+
+  useEffect(() => {
+    if (!userData) {
+      mutateLoggedUser(null);
+    }
+  }, [userData, mutateLoggedUser]);
+
+  const hasFlows = flows && flows?.length > 0;
+
+  const percentageGetStarted = useMemo(() => {
+    const totalSteps = 3;
+    let hasFlowsCount = 0;
+    const completedSteps = Object.keys(userData?.optins ?? {}).filter(
+      (key) => userData?.optins?.[key],
+    )?.length;
+
+    if (hasFlows) {
+      hasFlowsCount = 33;
+    }
+
+    return Math.round((completedSteps / totalSteps) * 100) + hasFlowsCount;
+  }, [userData?.optins, isGithubStarredChild, isDiscordJoinedChild, hasFlows]);
+
+  const handleUserTrack = (key: string) => () => {
+    const optins = userData?.optins ?? {};
+    optins[key] = true;
+
+    updateUser(
+      {
+        user_id: userData?.id!,
+        user: { optins },
+      },
+      {
+        onSuccess: () => {
+          mutateLoggedUser({});
+          if (key === "github_starred") {
+            setIsGithubStarredChild(true);
+          } else if (key === "discord_clicked") {
+            setIsDiscordJoinedChild(true);
+          } else if (key === "dialog_dismissed") {
+            handleDismissDialog();
+          }
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="w-full pb-2">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Get started</h2>
+        <button
+          onClick={handleUserTrack("dialog_dismissed")}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <IconComponent name="X" className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="h-1 w-full rounded-full bg-muted">
+          <div
+            className="h-1 w-[33%] rounded-full bg-accent-pink-foreground"
+            style={{ width: `${percentageGetStarted}%` }}
+          />
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {percentageGetStarted}%
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        <Button
+          unstyled
+          className={cn(
+            "w-full",
+            isGithubStarredChild && "pointer-events-none",
+          )}
+          onClick={(e) => {
+            if (isGithubStarredChild) {
+              e.preventDefault();
+              return;
+            }
+            handleUserTrack("github_starred");
+            window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
+          }}
+        >
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              isGithubStarredChild && "pointer-events-none",
+            )}
+          >
+            {isGithubStarredChild ? (
+              <IconComponent
+                name="Check"
+                className="h-4 w-4 text-status-green"
+              />
+            ) : (
+              <FaGithub className="h-4 w-4" />
+            )}
+            <span
+              className={cn(
+                "text-sm",
+                isGithubStarredChild && "text-muted-foreground line-through",
+              )}
+            >
+              Star repo for updates
+            </span>
+          </div>
+        </Button>
+
+        <Button
+          unstyled
+          className={cn(
+            "w-full",
+            isDiscordJoinedChild && "pointer-events-none",
+          )}
+          onClick={(e) => {
+            if (isDiscordJoinedChild) {
+              e.preventDefault();
+              return;
+            }
+            handleUserTrack("discord_clicked")();
+            window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
+          }}
+        >
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              isDiscordJoinedChild && "pointer-events-none",
+            )}
+          >
+            {isDiscordJoinedChild ? (
+              <IconComponent
+                name="Check"
+                className="h-4 w-4 text-status-green"
+              />
+            ) : (
+              <FaDiscord className="h-4 w-4 text-[#5865F2]" />
+            )}
+            <span
+              className={cn(
+                "text-sm",
+                isDiscordJoinedChild && "text-muted-foreground line-through",
+              )}
+            >
+              Join the community
+            </span>
+          </div>
+        </Button>
+
+        <Button
+          unstyled
+          className={cn("w-full", hasFlows && "pointer-events-none")}
+          onClick={() => setNewProjectModal(true)}
+        >
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              hasFlows && "pointer-events-none text-muted-foreground",
+            )}
+          >
+            <IconComponent
+              name={hasFlows ? "Check" : "Plus"}
+              className={cn(
+                "h-4 w-4 text-primary",
+                hasFlows && "text-status-green",
+              )}
+            />
+            <span className={cn("text-sm", hasFlows && "line-through")}>
+              Create a flow
+            </span>
+          </div>
+        </Button>
+      </div>
+
+      <ModalsComponent
+        openModal={newProjectModal}
+        setOpenModal={setNewProjectModal}
+        openDeleteFolderModal={false}
+        setOpenDeleteFolderModal={() => {}}
+        handleDeleteFolder={() => {}}
+      />
+    </div>
+  );
+};

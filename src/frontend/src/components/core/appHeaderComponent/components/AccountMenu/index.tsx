@@ -10,7 +10,6 @@ import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import GithubStarComponent from "../GithubStarButton";
 import {
   HeaderMenu,
   HeaderMenuItemButton,
@@ -19,6 +18,7 @@ import {
   HeaderMenuItemsSection,
   HeaderMenuToggle,
 } from "../HeaderMenu";
+import GithubStarComponent from "../langflow-counts";
 import { ProfileIcon } from "../ProfileIcon";
 import ThemeButtons from "../ThemeButtons";
 
@@ -67,7 +67,6 @@ export const AccountMenu = () => {
                   Version {version}
                 </span>
               </div>
-              {!ENABLE_DATASTAX_LANGFLOW && <ThemeButtons />}
             </div>
             {ENABLE_DATASTAX_LANGFLOW ? (
               <HeaderMenuItemLink newPage href={`/settings/org/${id}/overview`}>
@@ -156,6 +155,16 @@ export const AccountMenu = () => {
               </span>
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>
+
+          {!ENABLE_DATASTAX_LANGFLOW && (
+            <div className="flex items-center justify-between px-4 py-3 text-sm">
+              <span className="">Theme</span>
+              <div className="float-right">
+                <ThemeButtons />
+              </div>
+            </div>
+          )}
+
           {ENABLE_DATASTAX_LANGFLOW ? (
             <HeaderMenuItemsSection>
               <HeaderMenuItemLink href="/session/logout" icon="log-out">

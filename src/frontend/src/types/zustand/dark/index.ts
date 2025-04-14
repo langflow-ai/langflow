@@ -5,4 +5,6 @@ export type DarkStoreType = {
   setDark: (dark: boolean) => void;
   refreshVersion: (v: string) => void;
   refreshStars: () => void;
+  discordCount: number;
+  refreshDiscordCount: () => void;
 };
