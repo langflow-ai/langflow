@@ -45,7 +45,7 @@ export default function DropdownComponent({
         handleOnNewValue={handleOnNewValue}
         {...baseInputProps}
       />
-      {toggle && (
+      {toggle && toggleDisable !== true ? (
         <ToggleShadComponent
           value={toggleValue ?? true}
           handleOnNewValue={(data) => {
@@ -56,8 +56,10 @@ export default function DropdownComponent({
           }}
           editNode={editNode}
           id={`toggle_dropdown_${id}`}
-          disabled={disabled || toggleDisable || false}
+          disabled={disabled}
         />
+      ) : (
+        <></>
       )}
     </div>
   );
