@@ -97,11 +97,19 @@ export type DropDownComponentType = {
   nodeId: string;
   nodeClass: APIClassType;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
+  toggle?: boolean;
+  toggleValue?: boolean;
 };
 
 export type TextAreaComponentType = {
   password?: boolean;
   updateVisibility?: () => void;
+};
+
+export type QueryComponentType = {
+  display_name: string;
+  info: string;
+  separator?: string;
 };
 
 export type InputGlobalComponentType = {
