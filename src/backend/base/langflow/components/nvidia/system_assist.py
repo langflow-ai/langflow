@@ -32,8 +32,8 @@ class NvidiaSystemAssistComponent(Component):
         Output(display_name="Response", name="response", method="sys_assist_prompt"),
     ]
 
-    def __init__(self, **args):
-        super().__init__(**args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if not NvidiaSystemAssistComponent.rise_initialized:
             register_rise_client()
             NvidiaSystemAssistComponent.rise_initialized = True
