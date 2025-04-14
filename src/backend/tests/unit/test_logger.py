@@ -17,6 +17,8 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from loguru import logger as loguru_logger
+
 from langflow.logging.logger import (
     DEFAULT_LOG_FORMAT,
     AsyncFileSink,
@@ -28,7 +30,6 @@ from langflow.logging.logger import (
     is_valid_log_format,
     serialize_log,
 )
-from loguru import logger as loguru_logger
 
 # The filter from your logger config
 EXCLUDED_PATHS = ["/health", "/health_check", "/metrics"]
@@ -452,7 +453,7 @@ def test_serialize_log_different_levels():
 
 def test_serialize_log_timestamp_format():
     """Test that timestamp is correctly formatted."""
-    fixed_time = datetime.datetime(2023, 1, 15, 12, 30, 45, 123456, tzinfo=datetime.UTC)
+    fixed_time = datetime.datetime(2023, 1, 15, 12, 30, 45, 123456, tzinfo=datetime.timezone.UTC)
     mock_record = create_mock_record()
     mock_record["time"] = fixed_time
 
