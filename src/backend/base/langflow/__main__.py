@@ -588,7 +588,7 @@ def api_key(
                     "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
-            from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
+            from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
 
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)

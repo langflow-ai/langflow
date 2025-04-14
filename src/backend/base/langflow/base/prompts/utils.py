@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 def data_to_string(record: Data) -> str:

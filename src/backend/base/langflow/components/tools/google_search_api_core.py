@@ -1,8 +1,8 @@
 from langchain_google_community import GoogleSearchAPIWrapper
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import IntInput, MultilineInput, Output, SecretStrInput
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
 
 
 class GoogleSearchAPICore(Component):

@@ -5,10 +5,10 @@ from langchain_core.tools import ToolException
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from langflow.custom import Component
-from langflow.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 

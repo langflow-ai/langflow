@@ -7,9 +7,9 @@ from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 

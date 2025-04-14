@@ -7,15 +7,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.novita_constants import MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import (
-    BoolInput,
-    DictInput,
-    DropdownInput,
-    IntInput,
-    SecretStrInput,
-    SliderInput,
-)
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, HandleInput, IntInput, SecretStrInput, SliderInput
 
 
 class NovitaModelComponent(LCModelComponent):

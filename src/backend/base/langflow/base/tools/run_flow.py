@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from typing_extensions import override
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
@@ -15,10 +15,11 @@ from langflow.inputs.inputs import (
     InputTypes,
     MessageInput,
 )
-from langflow.schema import Data, dotdict
+from langflow.schema.data import Data
+from langflow.schema.dotdict import dotdict
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 if TYPE_CHECKING:
     from langflow.base.tools.component_tool import ComponentToolkit

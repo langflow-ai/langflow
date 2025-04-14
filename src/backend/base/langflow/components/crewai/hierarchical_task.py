@@ -1,5 +1,5 @@
 from langflow.base.agents.crewai.tasks import HierarchicalTask
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import HandleInput, MultilineInput, Output
 
 

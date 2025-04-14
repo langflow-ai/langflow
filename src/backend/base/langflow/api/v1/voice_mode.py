@@ -30,7 +30,7 @@ from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import api_key_header, api_key_query, api_key_security, get_current_user_by_jwt
-from langflow.services.database.models import MessageTable
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import (

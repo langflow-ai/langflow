@@ -4,7 +4,7 @@ import requests
 
 from langflow.base.models.chat_result import get_chat_result
 from langflow.base.models.model_utils import get_model_name
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, HandleInput, Output
 from langflow.schema.message import Message
 

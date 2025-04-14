@@ -7,7 +7,7 @@ import anyio
 from aiofile import async_open
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 
 MAX_DEPTH = 2
 

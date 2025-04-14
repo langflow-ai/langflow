@@ -1,9 +1,9 @@
 import assemblyai as aai
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, DropdownInput, IntInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class AssemblyAIGetSubtitles(Component):

@@ -1,9 +1,9 @@
 from langchain_community.tools import DuckDuckGoSearchRun
 
-from langflow.custom import Component
-from langflow.inputs import IntInput, MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import IntInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 

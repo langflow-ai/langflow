@@ -13,7 +13,7 @@ import httpx
 import validators
 
 from langflow.base.curl.parse import parse_context
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -26,7 +26,7 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.dotdict import dotdict
 

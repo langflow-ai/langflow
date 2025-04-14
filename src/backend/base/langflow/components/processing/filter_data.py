@@ -1,6 +1,6 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class FilterDataComponent(Component):

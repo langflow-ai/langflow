@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     DataFrameInput,
     DataInput,
@@ -13,8 +13,10 @@ from langflow.io import (
     Output,
     StrInput,
 )
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
+from langflow.schema.message import Message
 
 class SaveToFileComponent(Component):
     display_name = "Save to File"

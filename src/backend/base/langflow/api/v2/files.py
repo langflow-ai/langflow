@@ -11,7 +11,7 @@ from sqlmodel import String, cast, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.file import File as UserFile
+from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 

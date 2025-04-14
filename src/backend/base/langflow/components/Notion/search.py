@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import DropdownInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import DropdownInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionSearch(LCToolComponent):

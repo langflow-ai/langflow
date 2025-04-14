@@ -1,9 +1,10 @@
 from pytube import Playlist  # Ensure you have pytube installed
 
-from langflow.custom import Component
-from langflow.inputs import MessageTextInput
-from langflow.schema import Data, DataFrame
-from langflow.template import Output
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import MessageTextInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class YouTubePlaylistComponent(Component):

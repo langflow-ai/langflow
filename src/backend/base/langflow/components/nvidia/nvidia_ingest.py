@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 from langflow.base.data.base_file import BaseFileComponent
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class NvidiaIngestComponent(BaseFileComponent):

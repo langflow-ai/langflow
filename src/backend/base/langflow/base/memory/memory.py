@@ -1,5 +1,5 @@
-from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.schema.data import Data
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 

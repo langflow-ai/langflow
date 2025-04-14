@@ -1,9 +1,9 @@
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 
 class DirectoryComponent(Component):

@@ -2,9 +2,9 @@ import importlib
 
 from langchain_experimental.utilities import PythonREPL
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import CodeInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class PythonREPLComponent(Component):
