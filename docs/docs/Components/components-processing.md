@@ -389,6 +389,78 @@ This component converts and extracts JSON fields using JQ queries.
 |------|--------------|------|
 | filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
 
+
+## Save to File
+
+This component saves DataFrames, Data, or Messages to various file formats.
+
+1. To use this component in a flow, connect a component that outputs [Message, Data, or DataFrame](/concepts-objects) to the **Save to File** component's input.
+This example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
+
+![Two save to file component connected to a webhook](/img/component-save-to-file.png)
+
+2. In the **Save to File** component's **Input Type** field, select the expected input type.
+This example expects **Data** from the **Webhook**.
+3. In the **File Format** field, select the file type for your saved file.
+This example uses `.md` in one **Save to File** component, and `.xlsx` in another.
+4. In the **File Path** field, enter the path for your saved file.
+This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
+The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
+5. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
+    "Role": ["Developer", "Designer", "Manager"],
+    "Department": ["Engineering", "Design", "Management"]
+}'
+```
+6. In your local filesystem, open the `outputs` directory.
+You should see two files created from the data you've sent: one in `.xlsx` for structured spreadsheets, and one in Markdown.
+```text
+| Name         | Role      | Department   |
+|:-------------|:----------|:-------------|
+| Alex Cruz    | Developer | Engineering  |
+| Kalani Smith | Designer  | Design       |
+| Noam Johnson | Manager   | Management   |
+```
+
+### File Format Options
+
+For DataFrame and Data inputs, the component can create:
+  - csv
+  - excel
+  - json
+  - markdown
+  - pdf
+
+- For Message inputs, the component can create:
+  - txt
+  - json
+  - markdown
+  - pdf
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_type | Input Type | Select the type of input to save (DataFrame, Data, or Message) |
+| df | DataFrame | The DataFrame to save (shown when input_type is DataFrame) |
+| data | Data | The Data object to save (shown when input_type is Data) |
+| message | Message | The Message to save (shown when input_type is Message) |
+| file_format | File Format | Select the file format to save the input (options vary based on input_type) |
+| file_path | File Path | The full file path including filename and extension |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| confirmation | Confirmation | Confirmation message after saving the file |
+
+
 ## Select data
 
 :::important
