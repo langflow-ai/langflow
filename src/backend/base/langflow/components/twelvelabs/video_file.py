@@ -6,26 +6,43 @@ import os
 
 
 class VideoFileComponent(BaseFileComponent):
-    """Handles loading and processing of individual or zipped text files.
+    """Handles loading and processing of video files.
 
-    This component supports processing multiple valid files within a zip archive,
-    resolving paths, validating file types, and optionally using multithreading for processing.
+    This component supports processing video files in common video formats.
     """
 
     display_name = "Video File"
-    description = "Load a video file to be used in your project."
+    description = "Load a video file in common video formats."
     icon = "video"
     name = "VideoFile"
 
-    VALID_EXTENSIONS = ["mp4"]
+    VALID_EXTENSIONS = [
+        # Common video formats
+        "mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", 
+        "mpg", "mpeg", "m4v", "3gp", "3g2", "m2v",
+        # Professional video formats
+        "mxf", "dv", "vob",
+        # Additional video formats
+        "ogv", "rm", "rmvb", "amv", "divx", "m2ts", "mts", "ts",
+        "qt", "yuv", "y4m"
+    ]
 
     inputs = [
         FileInput(
             display_name="Video File",
             name="file_path",
-            file_types=["mp4"],
+            file_types=[
+                # Common video formats
+                "mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", 
+                "mpg", "mpeg", "m4v", "3gp", "3g2", "m2v",
+                # Professional video formats
+                "mxf", "dv", "vob",
+                # Additional video formats
+                "ogv", "rm", "rmvb", "amv", "divx", "m2ts", "mts", "ts",
+                "qt", "yuv", "y4m"
+            ],
             required=True,
-            info="Upload a video file (MP4 format)",
+            info="Upload a video file in any common video format supported by ffmpeg",
         ),
     ]
 
