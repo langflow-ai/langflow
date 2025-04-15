@@ -11,6 +11,7 @@ from .language_model import LanguageModelComponent
 from .lmstudiomodel import LMStudioModelComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
+from .modelscope import ModelScopeModelComponent
 from .novita import NovitaModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
@@ -37,6 +38,7 @@ __all__ = [
     "LanguageModelComponent",
     "MaritalkModelComponent",
     "MistralAIModelComponent",
+    "ModelScopeModelComponent",
     "NVIDIAModelComponent",
     "NovitaModelComponent",
     "OpenAIModelComponent",
