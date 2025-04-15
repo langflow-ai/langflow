@@ -151,6 +151,18 @@ def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
         yield buffer + " "
 
 
+def common_response_create(session_id, original: dict | None = None) -> dict:
+    msg = {}
+    if original is not None:
+        msg = original
+    msg["type"] = "response.create"
+    voice_config = get_voice_config(session_id)
+    if voice_config.use_elevenlabs:
+        response = msg.setdefault("response", {})
+        response["modalities"] = ["text"]
+    return msg
+
+
 async def handle_function_call(
     websocket: WebSocket,
     openai_ws: websockets.WebSocketClientProtocol,
@@ -160,6 +172,7 @@ async def handle_function_call(
     background_tasks: BackgroundTasks,
     current_user: CurrentActiveUser,
     conversation_id: str,
+    session_id: str,
 ):
     """Handle function calls from the OpenAI API."""
     try:
@@ -175,8 +188,11 @@ async def handle_function_call(
                             {
                                 "type": "input_text",
                                 "text": (
-                                    f"Remember to tell the user you are now waiting "
-                                    f"for a response for {function_call_args}",
+                                    "Tell the user you are now looking into or solving "
+                                    "a request that will be explained later. Do not repeat "
+                                    "the prompt exactly, summarize what's being requested."
+                                    "Keep it very short."
+                                    f"\n\nThe request: {function_call_args}",
                                 ),
                             }
                         ],
@@ -184,7 +200,7 @@ async def handle_function_call(
                 }
             )
         )
-        await openai_ws.send(json.dumps({"type": "response.create"}))
+        await openai_ws.send(json.dumps(common_response_create(session_id)))
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
@@ -220,7 +236,7 @@ async def handle_function_call(
             },
         }
         await openai_ws.send(json.dumps(function_output))
-        await openai_ws.send(json.dumps({"type": "response.create"}))
+        await openai_ws.send(json.dumps(common_response_create(session_id)))
     except json.JSONDecodeError as e:
         trace = traceback.format_exc()
         logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
@@ -812,10 +828,7 @@ async def flow_as_tool_websocket(
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
                         elif msg.get("type") == "response.create":
-                            if voice_config.use_elevenlabs:
-                                response = msg.setdefault("response", {})
-                                response["modalities"] = ["text"]
-                            await openai_ws.send(json.dumps(msg))
+                            await openai_ws.send(json.dumps(common_response_create(session_id, msg)))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
                                 await openai_ws.send(message_text)
@@ -922,6 +935,7 @@ async def flow_as_tool_websocket(
                                         background_tasks,
                                         current_user,
                                         conversation_id,
+                                        session_id,
                                     )
                                 )
                                 # Store the task reference to prevent garbage collection
