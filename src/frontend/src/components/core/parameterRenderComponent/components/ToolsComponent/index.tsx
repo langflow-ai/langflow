@@ -68,23 +68,25 @@ export default function ToolsComponent({
             />
           </Button>
         )}
-        <div className="flex flex-wrap gap-1 py-1.5">
-          {visibleActions.map((action, index) => (
-            <Badge
-              key={index}
-              variant="secondaryStatic"
-              size="sq"
-              className="font-normal"
-            >
-              {action.name.toUpperCase().replaceAll("-", "_")}
-            </Badge>
-          ))}
-          {remainingCount > 0 && (
-            <span className="self-center text-sm font-normal text-muted-foreground">
-              +{remainingCount} more
-            </span>
-          )}
-        </div>
+        {visibleActions.length > 0 && (
+          <div className="flex flex-wrap gap-1 py-1.5">
+            {visibleActions.map((action, index) => (
+              <Badge
+                key={index}
+                variant="secondaryStatic"
+                size="sq"
+                className="font-normal"
+              >
+                {action.name.toUpperCase().replaceAll("-", "_")}
+              </Badge>
+            ))}
+            {remainingCount > 0 && (
+              <span className="ml-1 self-center text-xs font-normal text-muted-foreground">
+                +{remainingCount} more
+              </span>
+            )}
+          </div>
+        )}
 
         {visibleActions.length === 0 && (
           <Button
