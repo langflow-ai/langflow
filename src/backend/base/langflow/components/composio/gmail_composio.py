@@ -16,9 +16,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
     """Gmail API component for interacting with Gmail services."""
 
     display_name: str = "Gmail"
-    description: str = "Gmail API"
     name = "GmailAPI"
-    icon = "Gmail"
+    icon = "Google"
     documentation: str = "https://docs.composio.dev"
     app_name = "gmail"
 
