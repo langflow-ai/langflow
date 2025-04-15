@@ -1199,35 +1199,16 @@ class Component(CustomComponent):
             self.tools_metadata = tool_data
 
         try:
-            from langflow.io import TableInput
+            from langflow.io import ToolsInput
         except ImportError as e:
-            msg = "Failed to import TableInput from langflow.io"
+            msg = "Failed to import ToolsInput from langflow.io"
             raise ImportError(msg) from e
 
-        return TableInput(
+        return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
             display_name="Edit tools",
-            real_time_refresh=True,
-            table_schema=TOOL_TABLE_SCHEMA,
+            info=TOOLS_METADATA_INFO,
             value=tool_data,
-            table_icon="Hammer",
-            trigger_icon="Hammer",
-            trigger_text="",
-            table_options=TableOptions(
-                block_add=True,
-                block_delete=True,
-                block_edit=True,  # Allow editing for status toggle
-                block_sort=True,
-                block_filter=True,
-                block_hide=True,
-                block_select=True,
-                hide_options=True,
-                field_parsers={
-                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
-                    "commands": FieldParserType.COMMANDS,
-                },
-                description=TOOLS_METADATA_INFO,
-            ),
         )
 
     def get_project_name(self):
