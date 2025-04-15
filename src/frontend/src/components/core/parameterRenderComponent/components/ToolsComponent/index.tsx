@@ -76,9 +76,7 @@ export default function ToolsComponent({
                 size="sq"
                 className="truncate font-normal"
               >
-                <span className="truncate">
-                  {action.name.toUpperCase().replaceAll("-", "_")}
-                </span>
+                <span className="truncate">{action.name.toUpperCase()}</span>
               </Badge>
             ))}
             {remainingCount > 0 && (
@@ -92,7 +90,6 @@ export default function ToolsComponent({
         {visibleActions.length === 0 && (
           <Button
             disabled={disabled}
-            variant="primary"
             size={editNode ? "xs" : "default"}
             className={
               "w-full " +
@@ -100,11 +97,7 @@ export default function ToolsComponent({
             }
             onClick={() => setIsModalOpen(true)}
           >
-            <ForwardedIconComponent
-              name={"Settings2"}
-              className="mt-px h-4 w-4"
-            />
-            <span className="font-normal">Edit Actions</span>
+            <span>Select actions</span>
           </Button>
         )}
       </div>
