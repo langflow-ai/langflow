@@ -76,8 +76,8 @@ class TavilyExtractComponent(Component):
                 response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
 
-        except httpx.TimeoutException:
-            error_message = "Request timed out (90s). Please try again or reduce the number of URLs."
+        except httpx.TimeoutException as exc:
+            error_message = f"Request timed out (90s): {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
