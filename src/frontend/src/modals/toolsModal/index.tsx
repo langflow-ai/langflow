@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
   TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
+import ComboBoxItem from "@/CustomNodes/GenericNode/components/ListSelectionComponent/ComboBoxItem";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TableOptionsTypeAPI } from "@/types/api";
 import { AgGridReact } from "ag-grid-react";
@@ -56,7 +57,11 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
           />
           <span className="">{title}</span>
         </BaseModal.Header>
-        <BaseModal.Content>..</BaseModal.Content>
+        <BaseModal.Content>
+          {[{ name: "deon", metaData: "deon_meta_data" }].map((item) => (
+            <ComboBoxItem key={item.name} item={item} />
+          ))}
+        </BaseModal.Content>
       </BaseModal>
     );
   },
