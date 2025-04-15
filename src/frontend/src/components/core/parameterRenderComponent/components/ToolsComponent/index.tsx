@@ -81,7 +81,7 @@ export default function ToolsComponent({
               </Badge>
             ))}
             {remainingCount > 0 && (
-              <span className="self-center text-sm font-normal text-muted-foreground">
+              <span className="ml-1 self-center text-xs font-normal text-muted-foreground">
                 +{remainingCount} more
               </span>
             )}
