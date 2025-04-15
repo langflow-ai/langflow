@@ -11,6 +11,8 @@ from langflow.field_typing import Tool
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.schema import Data
 
+# Add at the top with other constants
+MAX_CHUNKS_PER_SOURCE = 3
 
 class TavilySearchDepth(Enum):
     BASIC = "basic"
@@ -37,13 +39,13 @@ class TavilySearchSchema(BaseModel):
     include_images: bool = Field(default=False, description="Include a list of query-related images in the response.")
     include_answer: bool = Field(default=False, description="Include a short answer to original query.")
     chunks_per_source: int = Field(
-        default=3,
+        default=MAX_CHUNKS_PER_SOURCE,
         description=(
             "The number of content chunks to retrieve from each source (max 500 chars each). "
             "Only for advanced search."
         ),
         ge=1,
-        le=3,
+        le=MAX_CHUNKS_PER_SOURCE,
     )
     include_domains: list[str] = Field(
         default=[],
@@ -103,8 +105,11 @@ Note: Check 'Advanced' for all options.
         IntInput(
             name="chunks_per_source",
             display_name="Chunks Per Source",
-            info="The number of content chunks to retrieve from each source (1-3). Only works with advanced search.",
-            value=3,
+            info=(
+                "The number of content chunks to retrieve from each source (1-3). "
+                "Only works with advanced search."
+            ),
+            value=MAX_CHUNKS_PER_SOURCE,
             advanced=True,
         ),
         DropdownInput(
@@ -243,7 +248,7 @@ Note: Check 'Advanced' for all options.
         max_results: int = 5,
         include_images: bool = False,
         include_answer: bool = False,
-        chunks_per_source: int = 3,
+        chunks_per_source: int = MAX_CHUNKS_PER_SOURCE,
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
         include_raw_content: bool = False,
@@ -259,8 +264,8 @@ Note: Check 'Advanced' for all options.
             raise TypeError(msg)
 
         # Validate chunks_per_source range
-        if not 1 <= chunks_per_source <= 3:
-            msg = f"chunks_per_source must be between 1 and 3, got {chunks_per_source}"
+        if not 1 <= chunks_per_source <= MAX_CHUNKS_PER_SOURCE:
+            msg = f"chunks_per_source must be between 1 and {MAX_CHUNKS_PER_SOURCE}, got {chunks_per_source}"
             raise ValueError(msg)
 
         # Validate days is positive
