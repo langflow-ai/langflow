@@ -128,7 +128,8 @@ export default function AppHeader(): JSX.Element {
                 />
                 <ForwardedIconComponent
                   name="Bell"
-                  className="side-bar-button-size h-4 w-4"
+                  className="side-bar-button-size ml-1 h-4 w-4 text-muted-foreground"
+                  strokeWidth={2}
                 />
                 <span className="hidden whitespace-nowrap">Notifications</span>
               </Button>

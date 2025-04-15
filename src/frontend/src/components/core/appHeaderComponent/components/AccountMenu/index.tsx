@@ -52,10 +52,10 @@ export const AccountMenu = () => {
             <ProfileIcon />
           </div>
         </HeaderMenuToggle>
-        <HeaderMenuItems position="right">
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <HeaderMenuItems position="right" classNameSize="w-[272px]">
+          <div className="divide-y divide-foreground/10">
             <div>
-              <div className="h-[46px] w-full items-center px-4 pt-3">
+              <div className="h-[46px] items-center px-4 pt-3">
                 <div className="flex items-center justify-between">
                   <span
                     data-testid="menu_version_button"
@@ -67,7 +67,7 @@ export const AccountMenu = () => {
                   <div
                     className={cn(
                       "float-right text-xs",
-                      isLatestVersion && "text-status-green",
+                      isLatestVersion && "text-accent-emerald-foreground",
                       !isLatestVersion && "text-accent-amber-foreground",
                     )}
                   >
@@ -128,11 +128,18 @@ export const AccountMenu = () => {
                   <ForwardedIconComponent
                     strokeWidth={2}
                     name="TwitterXIcon"
-                    className="h-4 w-4 text-[#1DA1F2]"
+                    className="h-4 w-4"
                   />
                   X
                 </span>
               </HeaderMenuItemLink>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-2 text-sm">
+              <span className="">Theme</span>
+              <div className="float-right">
+                <ThemeButtons />
+              </div>
             </div>
 
             {!autoLogin && (
@@ -142,13 +149,6 @@ export const AccountMenu = () => {
                 </HeaderMenuItemButton>
               </div>
             )}
-
-            <div className="flex items-center justify-between px-4 py-3 text-sm">
-              <span className="">Theme</span>
-              <div className="float-right">
-                <ThemeButtons />
-              </div>
-            </div>
           </div>
         </HeaderMenuItems>
       </HeaderMenu>

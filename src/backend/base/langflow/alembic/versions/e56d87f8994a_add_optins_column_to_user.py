@@ -1,7 +1,7 @@
 """add_optins_column_to_user
 
 Revision ID: e56d87f8994a
-Revises: f3b2d1f1002d
+Revises: 1b8b740a6fa3
 Create Date: 2025-04-09 15:57:46.904977
 
 """
@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = 'e56d87f8994a'
-down_revision: Union[str, None] = 'f3b2d1f1002d'
+down_revision: Union[str, None] = '1b8b740a6fa3'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

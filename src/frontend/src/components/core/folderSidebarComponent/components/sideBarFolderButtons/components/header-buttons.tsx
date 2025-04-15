@@ -2,6 +2,7 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { GetStartedProgress } from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons/components/get-started-progress";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import useAuthStore from "@/stores/authStore";
+import { Separator } from "@radix-ui/react-separator";
 import { useState } from "react";
 import { AddFolderButton } from "./add-folder-button";
 import { UploadFolderButton } from "./upload-folder-button";
@@ -39,7 +40,10 @@ export const HeaderButtons = ({
             isDiscordJoined={isDiscordJoined ?? false}
             handleDismissDialog={handleDismissDialog}
           />
-          <div className="relative right-4 h-1 w-[17.5rem] border-t p-0"></div>
+
+          <div className="-mx-4 mt-4 w-[280px]">
+            <hr className="border-t-1 w-full" />
+          </div>
         </>
       )}
 

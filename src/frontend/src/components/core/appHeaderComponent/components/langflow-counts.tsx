@@ -8,17 +8,15 @@ export const LangflowCounts = () => {
   const discordCount: number = useDarkStore((state) => state.discordCount);
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-5">
       <ShadTooltip
         content="Go to Github repo"
         side="bottom"
         styleClasses="z-10"
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
           <FaGithub className="h-4 w-4" />
-          <span className="text-xs font-semibold text-muted-foreground">
-            {formatNumber(stars)}
-          </span>
+          <span className="text-xs font-semibold">{formatNumber(stars)}</span>
         </div>
       </ShadTooltip>
 
@@ -27,9 +25,9 @@ export const LangflowCounts = () => {
         side="bottom"
         styleClasses="z-10"
       >
-        <div className="flex items-center gap-1">
-          <FaDiscord className="h-4 w-4 text-[#5865F2]" />
-          <span className="text-xs font-semibold text-muted-foreground">
+        <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <FaDiscord className="h-4 w-4" />
+          <span className="text-xs font-semibold">
             {formatNumber(discordCount)}
           </span>
         </div>

@@ -73,9 +73,9 @@ export const GetStartedProgress: FC<{
   };
 
   return (
-    <div className="w-full pb-2">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Get started</h2>
+    <div className="h-[180px] w-full">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-lg">Get started</h2>
         <button
           onClick={handleUserTrack("dialog_dismissed")}
           className="text-muted-foreground hover:text-foreground"
@@ -84,7 +84,7 @@ export const GetStartedProgress: FC<{
         </button>
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-1 flex items-center justify-between gap-3">
         <div className="h-1 w-full rounded-full bg-muted">
           <div
             className="h-1 w-[33%] rounded-full bg-accent-pink-foreground"
@@ -96,7 +96,7 @@ export const GetStartedProgress: FC<{
         </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-1">
         <Button
           unstyled
           className={cn(
@@ -121,7 +121,7 @@ export const GetStartedProgress: FC<{
             {isGithubStarredChild ? (
               <IconComponent
                 name="Check"
-                className="h-4 w-4 text-status-green"
+                className="h-4 w-4 text-accent-emerald-foreground"
               />
             ) : (
               <FaGithub className="h-4 w-4" />
@@ -161,7 +161,7 @@ export const GetStartedProgress: FC<{
             {isDiscordJoinedChild ? (
               <IconComponent
                 name="Check"
-                className="h-4 w-4 text-status-green"
+                className="h-4 w-4 text-accent-emerald-foreground"
               />
             ) : (
               <FaDiscord className="h-4 w-4 text-[#5865F2]" />
@@ -187,12 +187,13 @@ export const GetStartedProgress: FC<{
               "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
               hasFlows && "pointer-events-none text-muted-foreground",
             )}
+            data-testid="create_flow_btn_get_started"
           >
             <IconComponent
               name={hasFlows ? "Check" : "Plus"}
               className={cn(
                 "h-4 w-4 text-primary",
-                hasFlows && "text-status-green",
+                hasFlows && "text-accent-emerald-foreground",
               )}
             />
             <span className={cn("text-sm", hasFlows && "line-through")}>

@@ -68,10 +68,14 @@ export const HeaderMenuItemButton = ({ icon = "", onClick, children }) => (
 export const HeaderMenuItems = ({
   position = "left",
   children,
-}: React.PropsWithChildren<{ position?: "left" | "right" }>) => {
+  classNameSize = "w-[20rem]",
+}: React.PropsWithChildren<{
+  position?: "left" | "right";
+  classNameSize?: string;
+}>) => {
   const positionClass = position === "left" ? "left-0" : "right-0";
   return (
-    <DropdownMenuContent className={cn("w-[20rem]", positionClass)}>
+    <DropdownMenuContent className={cn(classNameSize, positionClass)}>
       {children}
     </DropdownMenuContent>
   );
