@@ -8,12 +8,14 @@ export const BackgroundGradient = ({
   containerClassName,
   animate = true,
   borderColor,
+  borderRadius,
 }: {
   children?: React.ReactNode;
   className?: string;
   containerClassName?: string;
   animate?: boolean;
   borderColor?: string;
+  borderRadius?: string;
 }) => {
   const variants = {
     initial: {
@@ -74,7 +76,7 @@ export const BackgroundGradient = ({
             background: borderColor || defaultGradient,
             position: "absolute",
             inset: 0,
-            borderRadius: "24px",
+            borderRadius: borderRadius || "24px",
             willChange: "transform",
             transition: "all 0.4s ease-in-out",
             "--border-color": borderColor,

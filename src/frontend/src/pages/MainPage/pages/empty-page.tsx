@@ -1,10 +1,10 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
-import { BackgroundGradient } from "@/components/ui/background-gradient";
 import { Button } from "@/components/ui/button";
 import { DotBackgroundDemo } from "@/components/ui/dot-background";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
+import { EnhancedBeamEffect } from "@/pages/MainPage/pages/enchanced-beam-effect";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -15,13 +15,10 @@ import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
 // const ARROW_GITHUB_ICON_CLASS =
-//   "relative right-16 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 const ARROW_DISCORD_ICON_CLASS =
-  "relative left-28 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
+  "absolute right-4 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 const ARROW_GITHUB_ICON_CLASS =
-  "relative -right-10 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
-const BACKGROUND_GRADIENT_CLASS =
-  "z-50 group overflow-hidden relative h-[100px] cursor-pointer content-center items-center justify-between rounded-3xl border border-border bg-background transition-colors hover:bg-muted";
+  "absolute right-4 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 
 export const EmptyPageCommunity = ({
   setOpenModal,
@@ -59,101 +56,96 @@ export const EmptyPageCommunity = ({
         onFileDrop={handleFileDrop}
       >
         <div className="m-0 h-full w-full bg-background p-0">
-          <div className="z-50 flex h-full w-full flex-col items-center justify-center">
+          <div className="z-50 flex h-full w-full flex-col items-center justify-center gap-6">
             <div className="z-50 flex flex-col items-center gap-3">
-              <LangflowLogo className="mb-4 h-[18px] w-5" />
-              <span className="z-50 text-2xl font-semibold text-primary">
+              {/* <BackgroundGradient
+                className="flex h-20 w-20 items-center justify-center rounded-lg border-[1px] bg-background dark:bg-background"
+                borderColor="#C661B8"
+                borderRadius="10px"
+                animate={true}
+              > */}
+
+              <EnhancedBeamEffect
+                className="h-20 w-20 rounded-lg border-[1px] bg-background shadow-[0_0_10px_rgba(198,97,184,0.3)] transition-all duration-300 hover:shadow-[0_0_20px_rgba(198,97,184,0.7)] hover:brightness-110 dark:bg-background"
+                primaryColor="#C661B8"
+                secondaryColor="#C661B8"
+              >
+                <LangflowLogo className="h-8 w-8" />
+              </EnhancedBeamEffect>
+              {/* </BackgroundGradient> */}
+              <span className="z-50 mt-4 text-2xl font-semibold text-foreground">
                 Your new favorite way to ship Agents
               </span>
 
-              <span className="z-50 font-[14px] text-muted-foreground">
+              <span className="z-50 text-[14px] text-secondary-foreground">
                 {folders?.length > 1
                   ? "Empty folder"
                   : "Design agents that connect to any API, model, or database."}
               </span>
             </div>
 
-            <div className="flex w-full max-w-[352px] flex-col gap-7">
+            <div className="flex w-full max-w-[480px] flex-col gap-8">
               <Button
                 unstyled
-                className="block"
+                className="group h-[84px]"
                 onClick={() => {
                   handleUserTrack("github_starred")();
                   window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
                 }}
               >
-                <BackgroundGradient
-                  className={BACKGROUND_GRADIENT_CLASS}
-                  borderColor="#C661B8"
-                >
-                  <DotBackgroundDemo
-                    className="rounded-3xl"
-                    containerClassName="rounded-3xl"
-                  >
-                    <div className="relative right-[24px] top-6 z-50 flex h-full flex-col px-4">
-                      <div className="z-50 flex w-full items-center justify-between">
-                        <div className="z-50 flex items-center gap-3">
-                          <FaGithub className="z-50 h-6 w-6" />
-                          <div>
-                            <span className="z-50 font-medium">GitHub</span>
-                            <span className="z-50 ml-2 text-muted-foreground">
-                              {formatNumber(stars)}
-                            </span>
-                          </div>
-                        </div>
-                        <HiArrowRight className={ARROW_GITHUB_ICON_CLASS} />
-                      </div>
-                      <div className="z-50 mt-2">
-                        <span className="z-50 text-[13px] text-muted-foreground">
-                          Star the project and follow our journey
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4">
+                  <div className="grid w-full items-center justify-between gap-2">
+                    <div className="flex gap-3">
+                      <FaGithub className="h-6 w-6" />
+                      <div>
+                        <span className="font-semibold">GitHub</span>
+                        <span className="ml-2 font-mono text-muted-foreground">
+                          {formatNumber(stars)}
                         </span>
                       </div>
                     </div>
-                  </DotBackgroundDemo>
-                </BackgroundGradient>
+                    <div>
+                      <span className="text-sm text-secondary-foreground">
+                        Follow development, star the repo, and shape the future.
+                      </span>
+                    </div>
+                  </div>
+                  <HiArrowRight className={ARROW_GITHUB_ICON_CLASS} />
+                </div>
               </Button>
+
               <Button
                 unstyled
-                className="block"
+                className="group h-[84px]"
                 onClick={() => {
-                  handleUserTrack("discord_clicked");
+                  handleUserTrack("discord_joined")();
                   window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
                 }}
               >
-                <BackgroundGradient
-                  className={BACKGROUND_GRADIENT_CLASS}
-                  borderColor="#5765F2"
-                >
-                  <DotBackgroundDemo
-                    className="rounded-3xl"
-                    containerClassName="rounded-3xl"
-                  >
-                    <div className="relative right-[60px] top-6 z-50 flex h-full flex-col">
-                      <div className="z-50 flex w-full items-center justify-between">
-                        <div className="z-50 flex items-center gap-3">
-                          <FaDiscord className="z-50 h-6 w-6 text-[#5765F2]" />
-                          <div>
-                            <span className="z-50 font-medium">Discord</span>
-                            <span className="z-50 ml-2 text-muted-foreground">
-                              {formatNumber(discordCount)}
-                            </span>
-                          </div>
-                        </div>
-                        <HiArrowRight className={ARROW_DISCORD_ICON_CLASS} />
-                      </div>
-                      <div className="z-50 mt-2">
-                        <span className="z-50 text-[13px] text-muted-foreground">
-                          Get started with Langflow
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4">
+                  <div className="grid w-full items-center justify-between gap-2">
+                    <div className="flex gap-3">
+                      <FaDiscord className="h-6 w-6 text-[#5765F2]" />
+                      <div>
+                        <span className="font-semibold">Discord</span>
+                        <span className="ml-2 font-mono text-muted-foreground">
+                          {formatNumber(discordCount)}
                         </span>
                       </div>
                     </div>
-                  </DotBackgroundDemo>
-                </BackgroundGradient>
+                    <div>
+                      <span className="text-sm text-secondary-foreground">
+                        Join builders, ask questions, and show off your agents.
+                      </span>
+                    </div>
+                  </div>
+                  <HiArrowRight className={ARROW_DISCORD_ICON_CLASS} />
+                </div>
               </Button>
 
               <Button
                 variant="default"
-                className="z-10 w-full font-bold"
+                className="z-10 m-auto h-10 w-full max-w-[155px] rounded-lg font-bold"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
