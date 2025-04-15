@@ -51,7 +51,7 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
             className="ml-2 cursor-pointer text-sm text-muted-foreground"
             htmlFor={`check-${item?.name}`}
           >
-            {item?.metaData}
+            {item?.description}
           </label>
         </Button>
       </div>

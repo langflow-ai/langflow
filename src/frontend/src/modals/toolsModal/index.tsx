@@ -46,21 +46,28 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
     return (
       <BaseModal
         open={open}
+        className="gap-0 p-0"
         setOpen={(newOpen) => {
           handleSetOpen(newOpen);
         }}
       >
         <BaseModal.Header>
-          <ForwardedIconComponent
-            name={icon ?? "Table"}
-            className="mr-2 h-6 w-6"
-          />
-          <span className="">{title}</span>
+          <div className="flex w-full flex-row items-center border-b border-border px-4 py-3">
+            <div className="mr-2 h-6 w-6 rounded-md border border-border bg-primary">
+              <ForwardedIconComponent
+                name={icon ?? "Table"}
+                className="h-6 w-6 p-1"
+              />
+            </div>
+            <div className="text-[13px]">{title}</div>
+          </div>
         </BaseModal.Header>
-        <BaseModal.Content>
-          {[{ name: "deon", metaData: "deon_meta_data" }].map((item) => (
-            <ComboBoxItem key={item.name} item={item} />
-          ))}
+        <BaseModal.Content className="px-4 py-3">
+          <div className="flex flex-col gap-2">
+            {rows.map((item) => (
+              <ComboBoxItem key={item.name} item={item} />
+            ))}
+          </div>
         </BaseModal.Content>
       </BaseModal>
     );
