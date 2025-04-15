@@ -196,7 +196,7 @@ This component generates text using Groq's language models.
 
 ![Groq component in a basic prompting flow](/img/component-groq.png)
 
-2. In the **Groq API Key** field, paste your Grok API key.
+2. In the **Groq API Key** field, paste your Groq API key.
 The Groq model component automatically retrieves a list of the latest models.
 To refresh your list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
 3. In the **Model** field, select the model you want to use for your LLM.
