@@ -743,9 +743,9 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-### Upload image files (v2)
+### Send files to your flows (v2)
 
-Send image files to the Langflow `/v2/files` endpoint for AI analysis.
+Send a file to your flow for analysis using the [File](/components-data#file) component.
 
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
 For more information, see [Supported environment variables](/environment-variables#supported-variables).
@@ -770,29 +770,25 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 }
 ```
 
-2. Use the returned `file_id.file_extension` path in the **Chat Input** component of a **Basic prompting** flow.
-Pass the value as an input in the **Tweaks** section of the curl call to Langflow:
-
-```bash
-curl -X POST \
-    "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
-    -H 'Content-Type: application/json'\
-    -d '{
-    "output_type": "chat",
-    "input_type": "chat",
-    "tweaks": {
-      "ChatInput-2MT6c": {
-        "files": "5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png",
-        "input_value": "what do you see?"
-      }
-    }
-}'
-```
-
-Your chatbot describes the image file you sent:
+2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
+3. To load the file into your flow, send it to the **File** component.
 
 ```text
-"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
+curl --request POST \
+  --url '$LANGFLOW_URL/api/v1/run/$FLOW_ID' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "input_value": "what do you see?",
+  "output_type": "chat",
+  "input_type": "text",
+  "tweaks": {
+    "File-t2Ngc": {
+      "path": [
+        "232f54ba-dd54-4760-977e-ed637f83e785/5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png"
+      ]
+    }
+  }
+}'
 ```
 
 ### List files (v2)
