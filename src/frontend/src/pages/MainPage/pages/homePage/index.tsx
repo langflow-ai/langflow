@@ -15,8 +15,9 @@ import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import EmptyFolder from "../emptyFolder";
+import McpServerTab from "./McpServerTab";
 
-const HomePage = ({ type }) => {
+const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
@@ -27,7 +28,9 @@ const HomePage = ({ type }) => {
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
 
-  const [flowType, setFlowType] = useState<"flows" | "components">(type);
+  const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
+    type,
+  );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
   const folderName =
@@ -92,6 +95,8 @@ const HomePage = ({ type }) => {
     }
   }, [isEmptyFolder]);
 
+  console.log("flowType", flowType);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
@@ -104,7 +109,6 @@ const HomePage = ({ type }) => {
         <div className="flex h-full w-full flex-col xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
 
-          {/* mt-10 to mt-8 for Datastax LF */}
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
             <div className="flex h-full flex-col justify-start">
               <HeaderComponent
@@ -133,7 +137,11 @@ const HomePage = ({ type }) => {
                         <ListSkeleton />
                       </div>
                     )
-                  ) : data && data.pagination.total > 0 ? (
+                  ) : flowType === "mcp" ? (
+                    <McpServerTab />
+                  ) : (flowType === "flows" || flowType === "components") &&
+                    data &&
+                    data.pagination.total > 0 ? (
                     view === "grid" ? (
                       <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                         {data.flows.map((flow) => (
@@ -177,19 +185,22 @@ const HomePage = ({ type }) => {
             </div>
           </div>
 
-          {!isLoading && !isEmptyFolder && data.pagination.total >= 10 && (
-            <div className="flex justify-end px-3 py-4">
-              <PaginatorComponent
-                pageIndex={data.pagination.page}
-                pageSize={data.pagination.size}
-                rowsCount={[12, 24, 48, 96]}
-                totalRowsCount={data.pagination.total}
-                paginate={handlePageChange}
-                pages={data.pagination.pages}
-                isComponent={flowType === "components"}
-              />
-            </div>
-          )}
+          {(flowType === "flows" || flowType === "components") &&
+            !isLoading &&
+            !isEmptyFolder &&
+            data.pagination.total >= 10 && (
+              <div className="flex justify-end px-3 py-4">
+                <PaginatorComponent
+                  pageIndex={data.pagination.page}
+                  pageSize={data.pagination.size}
+                  rowsCount={[12, 24, 48, 96]}
+                  totalRowsCount={data.pagination.total}
+                  paginate={handlePageChange}
+                  pages={data.pagination.pages}
+                  isComponent={flowType === "components"}
+                />
+              </div>
+            )}
         </div>
       </div>
 
