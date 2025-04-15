@@ -292,6 +292,7 @@ import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
 import { GitLoaderIcon } from "../icons/GitLoader";
+import { GithubIcon } from "../icons/Github";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
@@ -570,6 +571,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Github", name: "github", icon: "Github" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
@@ -662,6 +664,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Github: GithubIcon,
   Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
