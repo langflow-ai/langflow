@@ -135,9 +135,9 @@ export const AccountMenu = () => {
               </HeaderMenuItemLink>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-2 text-sm">
+            <div className="flex items-center justify-between px-4 py-1 text-sm">
               <span className="">Theme</span>
-              <div className="float-right">
+              <div className="relative top-[1px] float-right">
                 <ThemeButtons />
               </div>
             </div>
