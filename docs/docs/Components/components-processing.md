@@ -165,7 +165,51 @@ curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
 
 ## DataFrame operations
 
-This component performs the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html):
+This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
+
+To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
+
+This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
+
+![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
+
+1. The **API Request** component retrieves data with only `source` and `result` fields.
+For this example, the desired data is nested within the `result` field.
+2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+3. In the **Groq** model component, add your **Groq** API key.
+4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+For this example, enter:
+```
+I want to explode the result column out into a Data object
+```
+:::tip
+Avoid punctuation in the **Instructions** field, as it can cause errors.
+:::
+5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
+6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The result is a structured DataFrame.
+```text
+id | name             | company               | username        | email                              | address           | zip
+---|------------------|----------------------|-----------------|------------------------------------|-------------------|-------
+1  | Emily Johnson    | ABC Corporation      | emily_johnson   | emily.johnson@abccorporation.com   | 123 Main St       | 12345
+2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
+```
+7. Add the **DataFrame Operations** component, and a **Chat Output** component to the flow.
+8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
+9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
+10. Click **Playground**, and then click **Run Flow**.
+The flow extracts the values from the `name` column.
+```text
+name
+Emily Johnson
+Michael Williams
+John Smith
+...
+```
+
+### Operations
+
+This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
 
 | Operation | Description | Required Inputs |
 |-----------|-------------|-----------------|
