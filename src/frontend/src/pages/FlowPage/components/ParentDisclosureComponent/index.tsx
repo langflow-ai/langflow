@@ -3,7 +3,7 @@ import IconComponent from "../../../../components/common/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function ParentDisclosureComponent({
-  button: { title, Icon, buttons = [], beta },
+  button: { title, icon, buttons = [], beta },
   children,
   defaultOpen,
   testId,
@@ -28,7 +28,7 @@ export default function ParentDisclosureComponent({
               <div className="components-disclosure-div">
                 {buttons.map((btn, index) => (
                   <button key={index} onClick={btn.onClick}>
-                    {btn.Icon}
+                    <IconComponent name={btn.icon} />
                   </button>
                 ))}
                 <div>

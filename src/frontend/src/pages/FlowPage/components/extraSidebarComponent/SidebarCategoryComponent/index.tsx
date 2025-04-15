@@ -1,5 +1,5 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { nodeColors, nodeIconsLucide, nodeNames } from "@/utils/styleUtils";
+import { getNodeIcon, nodeColors } from "@/utils/styleUtils";
 import { removeCountFromString } from "@/utils/utils";
 import DisclosureComponent from "../../DisclosureComponent";
 import SidebarDraggableComponent from "../sideBarDraggableComponent";
@@ -19,8 +19,8 @@ export function SidebarCategoryComponent({
         getFilterEdge.length !== 0 || search.length !== 0 ? true : false
       }
       button={{
-        title: nodeNames[name] ?? nodeNames.unknown,
-        Icon: nodeIconsLucide[name] ?? nodeIconsLucide.unknown,
+        title: name,
+        icon: name,
       }}
     >
       <div className="side-bar-components-gap">
