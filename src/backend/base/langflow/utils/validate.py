@@ -216,7 +216,7 @@ def create_class(code, class_name):
                         temp_file.write(code)
 
                 filename = str(temp_file_path)
-            except Exception as e: # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 filename = "<string>"
                 logger.opt(exception=True).debug(f"Cannot save component code for {class_name}")
 
@@ -449,6 +449,5 @@ def cleanup_debug_code_directory():
     if DEBUG_CODE_DIR.exists():
         try:
             shutil.rmtree(DEBUG_CODE_DIR, ignore_errors=True)
-        except Exception as e: # noqa: BLE001
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug(f"Failed to delete {DEBUG_CODE_DIR}")
-            pass
