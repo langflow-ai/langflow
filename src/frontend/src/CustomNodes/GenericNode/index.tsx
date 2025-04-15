@@ -73,6 +73,7 @@ function GenericNode({
   yPos?: number;
 }): JSX.Element {
   const [isOutdated, setIsOutdated] = useState(false);
+  const [hasBreakingChange, setHasBreakingChange] = useState(false);
   const [isUserEdited, setIsUserEdited] = useState(false);
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
@@ -91,6 +92,7 @@ function GenericNode({
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
   const dismissAll = useUtilityStore((state) => state.dismissAll);
+  const setDismissAll = useUtilityStore((state) => state.setDismissAll);
 
   const showNode = data.showNode ?? true;
 
@@ -113,7 +115,14 @@ function GenericNode({
     updateNodeInternals,
   );
 
-  useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
+  useCheckCodeValidity(
+    data,
+    templates,
+    setIsOutdated,
+    setIsUserEdited,
+    setHasBreakingChange,
+    types,
+  );
 
   if (!data.node!.template) {
     setErrorData({
@@ -457,34 +466,51 @@ function GenericNode({
     );
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
+  // Compute node color based on status
+  const nodeStatusColor = useMemo(() => {
+    if (hasBreakingChange) return "border-destructive";
+    if (isOutdated) return "border-warning";
+    return "";
+  }, [hasBreakingChange, isOutdated]);
+
   return (
     <div
       className={cn(
-        isOutdated && !isUserEdited && !dismissAll ? "relative -mt-10" : "",
+        (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll
+          ? "relative -mt-10"
+          : "",
       )}
     >
       <div
         className={cn(
-          borderColor,
+          nodeStatusColor,
           showNode ? "w-80" : `w-48`,
           "generic-node-div group/node relative rounded-xl shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >
         {memoizedNodeToolbarComponent}
-        {isOutdated && !isUserEdited && !dismissAll && (
-          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
+        {(isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll && (
+          <div
+            className={cn(
+              "flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] p-2 px-4",
+              hasBreakingChange
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-warning text-warning-foreground",
+            )}
+          >
             <ForwardedIconComponent
               name="AlertTriangle"
               strokeWidth={ICON_STROKE_WIDTH}
               className="icon-size shrink-0"
             />
             <span className="flex-1 truncate text-sm font-medium">
-              {showNode && "Update Ready"}
+              {showNode &&
+                (hasBreakingChange ? "Breaking Change" : "Update Ready")}
             </span>
 
             <Button
-              variant="warning"
+              variant={hasBreakingChange ? "destructive" : "warning"}
               size="iconMd"
               className="shrink-0 px-2.5 text-xs"
               onClick={handleUpdateCode}
@@ -492,6 +518,20 @@ function GenericNode({
               data-testid="update-button"
             >
               Update
+            </Button>
+            <Button
+              variant="ghost"
+              size="iconSm"
+              className="ml-2 shrink-0 px-2.5 text-xs"
+              onClick={() => setDismissAll(true)}
+              aria-label="Dismiss warning bar"
+              data-testid="dismiss-warning-bar"
+            >
+              <ForwardedIconComponent
+                name="X"
+                strokeWidth={ICON_STROKE_WIDTH}
+                className="icon-size"
+              />
             </Button>
           </div>
         )}
@@ -524,8 +564,7 @@ function GenericNode({
               {!showNode && (
                 <>
                   {renderInputParameters()}
-                  {shownOutputs &&
-                    shownOutputs.length > 0 &&
+                  {shownOutputs.length > 0 &&
                     renderOutputs(shownOutputs, "render-outputs")}
                 </>
               )}
