@@ -1,6 +1,7 @@
 import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 from fpdf import FPDF, HTMLMixin
@@ -120,9 +121,22 @@ class SaveToFileComponent(Component):
 
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
-    def _get_save_functions(self, *, is_dataframe: bool):
-        """Get the appropriate save functions based on format and data type."""
-        # Common save functions for both DataFrame and Data
+    def _check_format_supported(self, fmt: str, save_functions: dict, data_type: str) -> None:
+        """Check if the format is supported and raise ValueError if not."""
+        if fmt not in save_functions:
+            error_msg = f"Unsupported {data_type} format: {fmt}"
+            raise ValueError(error_msg)
+
+    def _get_save_functions(self, data_type: Literal["dataframe", "data", "message"]):
+        """Get the appropriate save functions based on data type."""
+        if data_type == "message":
+            return {
+                "txt": lambda data, path: path.write_text(data, encoding="utf-8"),
+                "json": lambda data, path: path.write_text(json.dumps({"message": data}, indent=2), encoding="utf-8"),
+                "markdown": lambda data, path: path.write_text(f"**Message:**\n\n{data}", encoding="utf-8"),
+                "pdf": lambda data, path: self._save_message_to_pdf(data, path),
+            }
+
         common_functions = {
             "csv": lambda data, path: data.to_csv(path, index=False),
             "excel": lambda data, path: data.to_excel(path, index=False, engine="openpyxl"),
@@ -130,8 +144,7 @@ class SaveToFileComponent(Component):
             "pdf": lambda data, path: self._save_dataframe_to_pdf(data, path),
         }
 
-        # Additional function for Data objects
-        if not is_dataframe:
+        if data_type == "data":
             common_functions["json"] = lambda data, path: path.write_text(
                 json.dumps(data.data, indent=2), encoding="utf-8"
             )
@@ -142,12 +155,8 @@ class SaveToFileComponent(Component):
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save DataFrame to file in the specified format."""
-        save_functions = self._get_save_functions(is_dataframe=True)
-
-        if fmt not in save_functions:
-            error_msg = f"Unsupported DataFrame format: {fmt}"
-            raise ValueError(error_msg)
-
+        save_functions = self._get_save_functions("dataframe")
+        self._check_format_supported(fmt, save_functions, "DataFrame")
         save_functions[fmt](dataframe, path)
         return f"DataFrame saved successfully as '{path}'"
 
@@ -157,10 +166,8 @@ class SaveToFileComponent(Component):
             error_msg = "Data is a list, not a Data object"
             raise TypeError(error_msg)
 
-        save_functions = self._get_save_functions(is_dataframe=False)
-        if fmt not in save_functions:
-            error_msg = f"Unsupported Data format: {fmt}"
-            raise ValueError(error_msg)
+        save_functions = self._get_save_functions("data")
+        self._check_format_supported(fmt, save_functions, "Data")
 
         # For JSON format, we want to save the original data structure
         formatted_data = data if fmt == "json" else self._handle_single_dict(data)
@@ -183,20 +190,9 @@ class SaveToFileComponent(Component):
         else:
             content = str(message.text)
 
-        # Mapping of format to save function
-        save_functions = {
-            "txt": lambda: path.write_text(content, encoding="utf-8"),
-            "json": lambda: path.write_text(json.dumps({"message": content}, indent=2), encoding="utf-8"),
-            "markdown": lambda: path.write_text(f"**Message:**\n\n{content}", encoding="utf-8"),
-            "pdf": lambda: self._save_message_to_pdf(content, path),
-        }
-
-        if fmt not in save_functions:
-            error_msg = f"Unsupported Message format: {fmt}"
-            raise ValueError(error_msg)
-
-        save_functions[fmt]()
-
+        save_functions = self._get_save_functions("message")
+        self._check_format_supported(fmt, save_functions, "Message")
+        save_functions[fmt](content, path)
         return f"Message saved successfully as '{path}'"
 
     def _save_dataframe_to_pdf(self, dataframe: DataFrame | pd.DataFrame | Data, path: Path) -> None:
