@@ -200,8 +200,6 @@ def create_class(code, class_name):
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
-        module = ast.parse(code)
-
         filename = "<string>"
         if os.environ.get("LANGFLOW_LOG_LEVEL", "").lower() == "debug":
             try:
@@ -220,10 +218,13 @@ def create_class(code, class_name):
                 filename = "<string>"
                 logger.opt(exception=True).debug(f"Cannot save component code for {class_name}")
 
+        module = ast.parse(code, filename=filename)
         exec_globals = prepare_global_scope(module, filename)
         class_code = extract_class_code(module, class_name)
         compiled_class = compile_class_code(class_code, filename=filename)
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        constructor = build_class_constructor(compiled_class, exec_globals, class_name)
+        if os.environ.get("LANGFLOW_LOG_LEVEL", "").lower() == "debug":
+            constructor.__sourcefile__ = filename
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
@@ -238,6 +239,7 @@ def create_class(code, class_name):
     except Exception as e:
         msg = f"Error creating class: {e!s}"
         raise ValueError(msg) from e
+    return constructor
 
 
 def create_type_ignore_class():
