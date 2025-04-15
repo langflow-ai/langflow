@@ -24,6 +24,7 @@ from .input_mixin import (
     ListableInputMixin,
     MetadataTraceMixin,
     MultilineMixin,
+    QueryMixin,
     RangeMixin,
     SerializableFieldTypes,
     SliderMixin,
@@ -279,7 +280,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = ["Message"]
+    input_types: list[str] = []
     load_from_db: CoalesceBool = True
 
     @field_validator("value")
@@ -458,6 +459,8 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
         options_metadata (Optional[list[dict[str, str]]): List of dictionaries with metadata for each option.
             Default is None.
         combobox (CoalesceBool): Variable that defines if the user can insert custom values in the dropdown.
+        toggle (CoalesceBool): Variable that defines if a toggle button is shown.
+        toggle_value (CoalesceBool | None): Variable that defines the value of the toggle button. Defaults to None.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
@@ -465,6 +468,9 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+    toggle: bool = False
+    toggle_disable: bool | None = None
+    toggle_value: bool | None = None
 
 
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
@@ -490,6 +496,22 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.AUTH
     show: bool = False
+
+
+class QueryInput(MessageTextInput, QueryMixin):
+    """Represents a query input field.
+
+    This class represents an query input field and provides functionality for handling search values.
+    It inherits from the `BaseInputMixin` and `QueryMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SEARCH.
+        separator (str | None): The separator for the query input. Defaults to None.
+        value (str): The value for the query input. Defaults to an empty string.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.QUERY
+    separator: str | None = Field(default=None)
 
 
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
@@ -606,6 +628,7 @@ class DefaultPromptField(Input):
 InputTypes: TypeAlias = (
     Input
     | AuthInput
+    | QueryInput
     | DefaultPromptField
     | BoolInput
     | DataInput
