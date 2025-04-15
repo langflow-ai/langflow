@@ -46,7 +46,8 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
     return (
       <BaseModal
         open={open}
-        className="gap-0 p-0"
+        size="large-h-full"
+        className="flex max-h-[50vh] gap-0 p-0"
         setOpen={(newOpen) => {
           handleSetOpen(newOpen);
         }}

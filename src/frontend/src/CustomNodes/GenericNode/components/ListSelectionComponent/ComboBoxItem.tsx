@@ -9,8 +9,8 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
   const [isChecked, setIsChecked] = useState(false);
 
   return (
-    <div className="flex flex-row">
-      <div className="inline-flex w-1/4 justify-start truncate">
+    <div className="flex flex-row pb-1">
+      <div className="inline-flex justify-start">
         <label
           className="relative flex cursor-pointer"
           htmlFor={`check-${item?.name}`}
@@ -19,10 +19,10 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
             type="checkbox"
             checked={isChecked}
             onChange={() => setIsChecked(!isChecked)}
-            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 shadow transition-all checked:border-slate-800 checked:bg-slate-800 hover:shadow-md"
+            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-border border-muted-foreground shadow transition-all hover:shadow-md"
             id={`check-${item?.name}`}
           />
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform text-white opacity-0 peer-checked:opacity-100">
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform text-black opacity-0 peer-checked:bg-primary peer-checked:opacity-100">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-3.5 w-3.5"
@@ -39,19 +39,22 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
             </svg>
           </span>
         </label>
-        <Button unstyled className="flex w-full justify-start hover:bg-red-500">
+        <Button
+          unstyled
+          className="mx-2 flex w-full justify-start rounded-md hover:bg-accent"
+        >
           <label
-            className="ml-1 cursor-pointer text-sm text-primary"
+            className="ml-2 flex w-72 cursor-pointer text-sm font-bold text-primary"
             htmlFor={`check-${item?.name}`}
           >
-            {item?.name}
+            <span className="truncate">{item?.name}</span>
           </label>
 
           <label
-            className="ml-2 cursor-pointer text-sm text-muted-foreground"
+            className="flex w-72 cursor-pointer text-sm text-muted-foreground"
             htmlFor={`check-${item?.name}`}
           >
-            {item?.description}
+            <span className="truncate">{item?.description}</span>
           </label>
         </Button>
       </div>
