@@ -548,9 +548,14 @@ async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user)
         background_tasks=background_tasks,
         current_user=current_user,
         queue_service=queue_service,
+        event_delivery=EventDeliveryType.STREAMING,
     )
     job_id = build_response["job_id"]
-    return await get_build_events(job_id, queue_service)
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        event_delivery=EventDeliveryType.STREAMING,
+    )
 
 
 @router.post("/build_public_tmp/{flow_id}/flow")
