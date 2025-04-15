@@ -24,7 +24,7 @@ Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/g
 
 1. To install Langflow, use one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -43,7 +43,7 @@ pip install langflow
 
 2. To run Langflow, use one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
     <TabItem value="uv" label="uv">
 
 ```bash
@@ -51,7 +51,7 @@ uv run langflow run
 ```
 
 </TabItem>
-<TabItem value="Python" label="Python">
+<TabItem value="pip" label="pip">
 
 ```bash
 python -m langflow run
@@ -68,7 +68,7 @@ After confirming that Langflow is running, create your first flow with the [Quic
 
 To upgrade Langflow to the latest version, use one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -86,7 +86,7 @@ pip install langflow -U
 </Tabs>
 
 To install a specific version of the Langflow package, add the required version to the command.
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -104,7 +104,7 @@ pip install langflow==1.3.2
 </Tabs>
 
 To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -129,7 +129,7 @@ These dependencies are listed in the [pyproject.toml](https://github.com/langflo
 
 Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -148,7 +148,7 @@ pip install "langflow[postgresql]"
 
 To install multiple extras, enter one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -279,4 +279,4 @@ The application restarts with the new version installed.
 
 ## DataStax Langflow {#datastax-langflow}
 
-**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
+**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
