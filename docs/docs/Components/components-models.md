@@ -3,6 +3,8 @@ title: Models
 slug: /components-models
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Model components in Langflow
 
 Model components generate text using large language models.
@@ -189,6 +191,22 @@ For more information, see the [Google Generative AI documentation](https://cloud
 ## Groq
 
 This component generates text using Groq's language models.
+
+1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/starter-projects-basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
+
+![Groq component in a basic prompting flow](/img/component-groq.png)
+
+2. In the **Groq API Key** field, paste your Grok API key.
+The Groq model component automatically retrieves a list of the latest models.
+To refresh your list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Model** field, select the model you want to use for your LLM.
+This example uses [llama-3.1-8b-instant](https://console.groq.com/docs/model/llama-3.1-8b-instant), which Grok recommends for real-time conversational interfaces.
+4. In the **Prompt** component, enter:
+```text
+You are a helpful assistant who supports their claims with sources.
+```
+5. Click **Playground** and ask your Grok LLM a question.
+The responses include a list of sources.
 
 For more information, see the [Groq documentation](https://groq.com/).
 
