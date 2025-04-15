@@ -1206,7 +1206,7 @@ class Component(CustomComponent):
 
         return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Edit tools",
+            display_name="Actions",
             info=TOOLS_METADATA_INFO,
             value=tool_data,
         )
