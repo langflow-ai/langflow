@@ -45,7 +45,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                 "max_results",
                 "query",
                 "page_token",
-                "query",
                 "label_ids",
                 "include_spam_trash",
             ],
