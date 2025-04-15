@@ -50,4 +50,4 @@ By passing the event trigger data payload directly into a flow, you can also par
 
 ## Trigger flows with Composio webhooks
 
-Now that you've triggered the webhook component manually, follow along with this step-by-step video guide for triggering flows with payloads from external applications, [How to Use Webhooks in Langflow](https://www.youtube.com/watch?v=IC1CAtzFRE0).
+Now that you've triggered the webhook component manually, follow along with this step-by-step video guide for triggering flows with payloads from external applications: [How to Use Webhooks in Langflow](https://www.youtube.com/watch?v=IC1CAtzFRE0).
