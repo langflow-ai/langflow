@@ -392,9 +392,9 @@ This component converts and extracts JSON fields using JQ queries.
 
 ## Save to File
 
-This component saves DataFrames, Data, or Messages to various file formats.
+This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
 
-1. To use this component in a flow, connect a component that outputs [Message, Data, or DataFrame](/concepts-objects) to the **Save to File** component's input.
+1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
 This example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
 
 ![Two save to file component connected to a webhook](/img/component-save-to-file.png)
@@ -428,37 +428,37 @@ You should see two files created from the data you've sent: one in `.xlsx` for s
 | Noam Johnson | Manager   | Management   |
 ```
 
-### File Format Options
+### File input format options
 
-For DataFrame and Data inputs, the component can create:
-  - csv
-  - excel
-  - json
-  - markdown
-  - pdf
+For `DataFrame` and `Data` inputs, the component can create:
+  - `csv`
+  - `excel`
+  - `json`
+  - `markdown`
+  - `pdf`
 
-- For Message inputs, the component can create:
-  - txt
-  - json
-  - markdown
-  - pdf
+For `Message` inputs, the component can create:
+  - `txt`
+  - `json`
+  - `markdown`
+  - `pdf`
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_type | Input Type | Select the type of input to save (DataFrame, Data, or Message) |
-| df | DataFrame | The DataFrame to save (shown when input_type is DataFrame) |
-| data | Data | The Data object to save (shown when input_type is Data) |
-| message | Message | The Message to save (shown when input_type is Message) |
-| file_format | File Format | Select the file format to save the input (options vary based on input_type) |
-| file_path | File Path | The full file path including filename and extension |
+| input_type | Input Type | Select the type of input to save.|
+| df | DataFrame | The DataFrame to save. |
+| data | Data | The Data object to save. |
+| message | Message | The Message to save. |
+| file_format | File Format | Select the file format to save the input. |
+| file_path | File Path | The full file path including filename and extension. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| confirmation | Confirmation | Confirmation message after saving the file |
+| confirmation | Confirmation | Confirmation message after saving the file. |
 
 
 ## Select data
