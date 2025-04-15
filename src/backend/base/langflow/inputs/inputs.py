@@ -469,6 +469,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
     toggle: bool = False
+    toggle_disable: bool | None = None
     toggle_value: bool | None = None
 
 

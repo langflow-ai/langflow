@@ -357,12 +357,12 @@
     "@babel/types" "^7.25.9"
 
 "@babel/helpers@^7.26.9":
-  version "7.26.9"
-  resolved "https://registry.npmjs.org/@babel/helpers/-/helpers-7.26.9.tgz"
-  integrity sha512-Mz/4+y8udxBKdmzt/UjPACs4G3j5SshJJEFFKxlCGPydG4JAHXxjWjAwjd09tf6oINvl1VfMJo+nB7H2YKQ0dA==
+  version "7.27.0"
+  resolved "https://registry.yarnpkg.com/@babel/helpers/-/helpers-7.27.0.tgz#53d156098defa8243eab0f32fa17589075a1b808"
+  integrity sha512-U5eyP/CTFPuNE3qk+WZMxFkp/4zUzdceQlfzf7DdGdhp+Fezd7HD+i8Y24ZuTMKX3wQBld449jijbGq6OdGNQg==
   dependencies:
-    "@babel/template" "^7.26.9"
-    "@babel/types" "^7.26.9"
+    "@babel/template" "^7.27.0"
+    "@babel/types" "^7.27.0"
 
 "@babel/parser@^7.26.9":
   version "7.26.9"
@@ -370,6 +370,13 @@
   integrity sha512-81NWa1njQblgZbQHxWHpxxCzNsa3ZwvFqpUg7P+NNUU6f3UU2jBEg4OlF/J6rl8+PQGh1q6/zWScd001YwcA5A==
   dependencies:
     "@babel/types" "^7.26.9"
+
+"@babel/parser@^7.27.0":
+  version "7.27.0"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.27.0.tgz#3d7d6ee268e41d2600091cbd4e145ffee85a44ec"
+  integrity sha512-iaepho73/2Pz7w2eMS0Q5f83+0RKI7i4xmiYeBmDzfRVbQtTOG7Ts0S4HzJVsTMGI9keU8rNfuZr8DKfSt7Yyg==
+  dependencies:
+    "@babel/types" "^7.27.0"
 
 "@babel/plugin-bugfix-firefox-class-in-computed-class-key@^7.25.9":
   version "7.25.9"
@@ -1024,9 +1031,9 @@
     regenerator-runtime "^0.14.0"
 
 "@babel/runtime@^7.1.2", "@babel/runtime@^7.10.3", "@babel/runtime@^7.12.13", "@babel/runtime@^7.12.5", "@babel/runtime@^7.15.4", "@babel/runtime@^7.25.9", "@babel/runtime@^7.8.4", "@babel/runtime@^7.9.2":
-  version "7.26.9"
-  resolved "https://registry.npmjs.org/@babel/runtime/-/runtime-7.26.9.tgz"
-  integrity sha512-aA63XwOkcl4xxQa3HjPMqOP6LiK0ZDv3mUPYEFXkpHbaFjtGggE1A61FjFzJnB+p7/oy2gA8E+rcBNl/zC1tMg==
+  version "7.26.10"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.26.10.tgz#a07b4d8fa27af131a633d7b3524db803eb4764c2"
+  integrity sha512-2WJMeRQPHKSPemqk/awGrAiuFfzBmOIPXKizAsVhWH9YJqLZ0H+HS4c8loHGgW6utJ3E/ejXQUsiGaQy2NZ9Fw==
   dependencies:
     regenerator-runtime "^0.14.0"
 
@@ -1038,6 +1045,15 @@
     "@babel/code-frame" "^7.26.2"
     "@babel/parser" "^7.26.9"
     "@babel/types" "^7.26.9"
+
+"@babel/template@^7.27.0":
+  version "7.27.0"
+  resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.27.0.tgz#b253e5406cc1df1c57dcd18f11760c2dbf40c0b4"
+  integrity sha512-2ncevenBqXI6qRMukPlXwHKHchC7RyMuu4xv5JBXRfOGVcTy1mXCD12qrp7Jsoxll1EV3+9sE4GugBVRjT2jFA==
+  dependencies:
+    "@babel/code-frame" "^7.26.2"
+    "@babel/parser" "^7.27.0"
+    "@babel/types" "^7.27.0"
 
 "@babel/traverse@^7.25.9", "@babel/traverse@^7.26.5", "@babel/traverse@^7.26.8", "@babel/traverse@^7.26.9":
   version "7.26.9"
@@ -1056,6 +1072,14 @@
   version "7.26.9"
   resolved "https://registry.npmjs.org/@babel/types/-/types-7.26.9.tgz"
   integrity sha512-Y3IR1cRnOxOCDvMmNiym7XpXQ93iGDDPHx+Zj+NM+rg0fBaShfQLkg+hKPaZCEvg5N/LeCo4+Rj/i3FuJsIQaw==
+  dependencies:
+    "@babel/helper-string-parser" "^7.25.9"
+    "@babel/helper-validator-identifier" "^7.25.9"
+
+"@babel/types@^7.27.0":
+  version "7.27.0"
+  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.27.0.tgz#ef9acb6b06c3173f6632d993ecb6d4ae470b4559"
+  integrity sha512-H45s8fVLYjbhFH62dIJ3WtmJ6RSPt/3DRO0ZcT2SUiYiQyz3BLVb9ADEnLl91m74aQPS3AzzeajZHYOalWe3bg==
   dependencies:
     "@babel/helper-string-parser" "^7.25.9"
     "@babel/helper-validator-identifier" "^7.25.9"

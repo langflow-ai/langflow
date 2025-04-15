@@ -51,7 +51,7 @@ def upgrade() -> None:
             sa.Column("build_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("valid", sa.BOOLEAN(), nullable=False),
-            sa.PrimaryKeyConstraint("build_id", name="pk_vertex_build"),
+            sa.PrimaryKeyConstraint("build_id", name="pk_temp_vertex_build"),
         )
 
         # Copy data - use a window function to ensure build_id uniqueness across SQLite, PostgreSQL and MySQL
@@ -89,7 +89,7 @@ def upgrade() -> None:
             sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("error", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-            sa.PrimaryKeyConstraint("id", name="pk_transaction"),
+            sa.PrimaryKeyConstraint("id", name="pk_temp_transaction"),
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
@@ -125,7 +125,7 @@ def upgrade() -> None:
             sa.Column("properties", sa.JSON(), nullable=True),
             sa.Column("category", sa.Text(), nullable=True),
             sa.Column("content_blocks", sa.JSON(), nullable=True),
-            sa.PrimaryKeyConstraint("id", name="pk_message"),
+            sa.PrimaryKeyConstraint("id", name="pk_temp_message"),
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL

@@ -206,6 +206,8 @@ class DropDownMixin(BaseModel):
     """Variable that defines if a toggle button is shown."""
     toggle_value: bool | None = None
     """Variable that defines the value of the toggle button. Defaults to None."""
+    toggle_disable: bool | None = None
+    """Variable that defines if the toggle button is disabled. Defaults to None."""
 
     @field_validator("toggle_value")
     @classmethod

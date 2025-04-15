@@ -48,4 +48,6 @@ You have successfully parsed data out of an external JSON payload.
 
 By passing the event trigger data payload directly into a flow, you can also parse the event data with a chain of components, and use its data to trigger other events.
 
+## Trigger flows with Composio webhooks
 
+Now that you've triggered the webhook component manually, follow along with this step-by-step video guide for triggering flows with payloads from external applications: [How to Use Webhooks in Langflow](https://www.youtube.com/watch?v=IC1CAtzFRE0).
