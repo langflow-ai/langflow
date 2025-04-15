@@ -76,7 +76,7 @@ class TavilyExtractComponent(Component):
                 response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
 
-        except httpx.TimeoutException as exc:
+        except httpx.TimeoutException:
             error_message = "Request timed out (90s). Please try again or reduce the number of URLs."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
@@ -96,11 +96,7 @@ class TavilyExtractComponent(Component):
             for result in extract_results.get("results", []):
                 raw_content = result.get("raw_content", "")
                 images = result.get("images", [])
-                result_data = {
-                    "url": result.get("url"),
-                    "raw_content": raw_content,
-                    "images": images
-                }
+                result_data = {"url": result.get("url"), "raw_content": raw_content, "images": images}
                 data_results.append(Data(text=raw_content, data=result_data))
 
             # Process failed extractions

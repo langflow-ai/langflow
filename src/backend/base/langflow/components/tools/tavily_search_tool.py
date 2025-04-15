@@ -14,6 +14,7 @@ from langflow.schema import Data
 # Add at the top with other constants
 MAX_CHUNKS_PER_SOURCE = 3
 
+
 class TavilySearchDepth(Enum):
     BASIC = "basic"
     ADVANCED = "advanced"
@@ -41,8 +42,7 @@ class TavilySearchSchema(BaseModel):
     chunks_per_source: int = Field(
         default=MAX_CHUNKS_PER_SOURCE,
         description=(
-            "The number of content chunks to retrieve from each source (max 500 chars each). "
-            "Only for advanced search."
+            "The number of content chunks to retrieve from each source (max 500 chars each). Only for advanced search."
         ),
         ge=1,
         le=MAX_CHUNKS_PER_SOURCE,
@@ -105,10 +105,7 @@ Note: Check 'Advanced' for all options.
         IntInput(
             name="chunks_per_source",
             display_name="Chunks Per Source",
-            info=(
-                "The number of content chunks to retrieve from each source (1-3). "
-                "Only works with advanced search."
-            ),
+            info=("The number of content chunks to retrieve from each source (1-3). Only works with advanced search."),
             value=MAX_CHUNKS_PER_SOURCE,
             advanced=True,
         ),
