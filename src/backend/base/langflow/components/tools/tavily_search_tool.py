@@ -254,12 +254,12 @@ Note: Check 'Advanced' for all options.
         if not isinstance(topic, TavilySearchTopic):
             msg = f"Invalid topic value: {topic}"
             raise TypeError(msg)
-            
+
         # Validate chunks_per_source range
         if not 1 <= chunks_per_source <= 3:
             msg = f"chunks_per_source must be between 1 and 3, got {chunks_per_source}"
             raise ValueError(msg)
-            
+
         # Validate days is positive
         if days < 1:
             msg = f"days must be greater than or equal to 1, got {days}"

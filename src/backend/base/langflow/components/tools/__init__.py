@@ -22,9 +22,9 @@ from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
+from .tavily_extract import TavilyExtractComponent
 from .tavily_search import TavilySearchComponent
 from .tavily_search_tool import TavilySearchToolComponent
-from .tavily_extract import TavilyExtractComponent
 from .wikidata import WikidataComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia import WikipediaComponent
@@ -61,9 +61,9 @@ __all__ = [
     "SearchComponent",
     "SerpAPIComponent",
     "SerpComponent",
+    "TavilyExtractComponent",
     "TavilySearchComponent",
     "TavilySearchToolComponent",
-    "TavilyExtractComponent",
     "WikidataAPIComponent",
     "WikidataComponent",
     "WikipediaAPIComponent",

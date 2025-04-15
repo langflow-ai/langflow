@@ -80,18 +80,14 @@ class TavilyExtractComponent(Component):
             response.raise_for_status()
             extract_results = response.json()
 
-            data_results = [] # Initialize list to hold Data objects
+            data_results = []  # Initialize list to hold Data objects
 
             # Process successful extractions
             for result in extract_results.get("results", []):
                 raw_content = result.get("raw_content", "")
                 images = result.get("images", [])
                 # Create structured data with only url and content (as raw_content)
-                result_data = {
-                    "url": result.get("url"),
-                    "raw_content": raw_content,     
-                    "images": images
-                }
+                result_data = {"url": result.get("url"), "raw_content": raw_content, "images": images}
                 # The 'text' field of Data still holds the main content for compatibility
                 data_results.append(Data(text=raw_content, data=result_data))
 
@@ -105,11 +101,11 @@ class TavilyExtractComponent(Component):
                     )
                 )
 
-            self.status = data_results # Set status to the list of Data objects
-            return data_results # Return the list
+            self.status = data_results  # Set status to the list of Data objects
+            return data_results  # Return the list
 
         # Updated error handling to return list[Data]
-        except httpx.TimeoutException as exc:
+        except httpx.TimeoutException:
             error_message = "Request timed out (90s). Please try again or reduce the number of URLs."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
@@ -126,13 +122,13 @@ class TavilyExtractComponent(Component):
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except Exception as exc:
-             error_message = f"An unexpected error occurred: {exc}"
-             logger.error(error_message)
-             return [Data(text=error_message, data={"error": error_message})]
+            error_message = f"An unexpected error occurred: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
 
     def fetch_content_text(self) -> Message:
         # This method should still work as it expects a list from fetch_content
         data = self.fetch_content()
         result_string = data_to_text("{text}", data)
         self.status = result_string
-        return Message(text=result_string) 
+        return Message(text=result_string)

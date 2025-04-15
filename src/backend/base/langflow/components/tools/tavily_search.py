@@ -50,7 +50,7 @@ class TavilySearchComponent(Component):
             value="general",
             advanced=True,
         ),
-         IntInput(
+        IntInput(
             name="days",
             display_name="Days",
             info="Number of days back from current date to include. Only available with news topic.",
@@ -71,7 +71,7 @@ class TavilySearchComponent(Component):
             value=True,
             advanced=True,
         ),
-           DropdownInput(
+        DropdownInput(
             name="time_range",
             display_name="Time Range",
             info="The time range back from the current date to filter results.",
@@ -104,7 +104,7 @@ class TavilySearchComponent(Component):
             info="Include the cleaned and parsed HTML content of each search result.",
             value=False,
             advanced=True,
-        )
+        ),
     ]
 
     outputs = [
@@ -137,7 +137,7 @@ class TavilySearchComponent(Component):
                 "days": self.days,
                 "time_range": self.time_range,
                 "include_domains": self.include_domains,
-                "exclude_domains": self.exclude_domains
+                "exclude_domains": self.exclude_domains,
             }
 
             # Add conditional parameters only if they should be included
@@ -178,7 +178,7 @@ class TavilySearchComponent(Component):
                     "title": result.get("title"),
                     "url": result.get("url"),
                     "content": content,
-                    "score": result.get("score")
+                    "score": result.get("score"),
                 }
                 if self.include_raw_content:
                     result_data["raw_content"] = result.get("raw_content")
@@ -188,7 +188,7 @@ class TavilySearchComponent(Component):
             if self.include_images and search_results.get("images"):
                 data_results.append(Data(text="Images found", data={"images": search_results["images"]}))
 
-        except httpx.TimeoutException as exc:
+        except httpx.TimeoutException:
             error_message = "Request timed out (90s). Please try again or adjust parameters."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
