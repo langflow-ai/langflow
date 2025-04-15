@@ -7,6 +7,7 @@ from langchain_community.document_loaders import RecursiveUrlLoader
 
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
+from langflow.inputs.inputs import TableInput
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
@@ -84,6 +85,36 @@ class URLComponent(Component):
             required=False,
             advanced=True,
         ),
+        TableInput(
+            name="headers",
+            display_name="Headers",
+            info="The headers to send with the request as a dictionary.",
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
+            ],
+            value=[
+                {
+                    "key": "User-Agent",
+                    "value": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/115.0.0.0 Safari/537.36"
+                    ),
+                }
+            ],
+            advanced=True,
+            input_types=["DataFrame"],
+        ),
     ]
 
     outputs = [
@@ -127,6 +158,7 @@ class URLComponent(Component):
                 logger.info(msg)
 
                 extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+                headers_dict = {header["key"]: header["value"] for header in self.headers}
                 loader = RecursiveUrlLoader(
                     url=processed_url,
                     max_depth=self.max_depth,
@@ -134,12 +166,7 @@ class URLComponent(Component):
                     use_async=self.use_async,
                     extractor=extractor,
                     timeout=self.timeout,
-                    headers={
-                        "User-Agent": (
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/115.0.0.0 Safari/537.36"
-                        )
-                    },
+                    headers=headers_dict,
                 )
 
                 try:
