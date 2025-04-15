@@ -1,6 +1,7 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+
 const McpServerTab = () => {
   const [selectedMode, setSelectedMode] = useState<string>("Cursor");
 
@@ -122,6 +123,7 @@ const McpServerTab = () => {
               <div className="w-full border-b border-border" />
             </div>
             <div className="p-4">
+              {/* Use a <pre> tag for preserving whitespace and applying font */}
               <div className="whitespace-pre-wrap font-mono text-sm">
                 {MCP_SERVER_EXAMPLE[selectedMode]}
               </div>
