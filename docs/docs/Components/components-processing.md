@@ -34,6 +34,28 @@ This component modifies metadata of input objects. It can add new metadata, upda
 |------|--------------|------|
 | data | Data | List of Input objects, each with added metadata |
 
+## Combine data
+
+:::important
+Prior to Langflow version 1.1.3, this component was named **Merge Data**.
+:::
+
+This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of data objects to be merged. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+
 ## Combine text
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
@@ -74,27 +96,72 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 |------|--------------|------|
 | data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
 
-## Data combiner
+## Data to DataFrame
 
-:::important
-Prior to Langflow version 1.1.3, this component was named **Merge Data**.
-:::
+This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
 
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
+This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
+2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
 
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
+
+3. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Alex Cruz - Employee Profile",
+    "data": {
+        "Name": "Alex Cruz",
+        "Role": "Developer",
+        "Department": "Engineering"
+    }
+}'
+```
+
+4. In the **Playground**, view the output of your flow.
+The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
+```text
+| text                         | data                                                                    |
+|:-----------------------------|:------------------------------------------------------------------------|
+| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
+```
+
+5. Send another employee data object.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Kalani Smith - Employee Profile",
+    "data": {
+        "Name": "Kalani Smith",
+        "Role": "Designer",
+        "Department": "Design"
+    }
+}'
+```
+
+6. In the **Playground**, this request is also converted to `DataFrame`.
+```text
+| text                            | data                                                                 |
+|:--------------------------------|:---------------------------------------------------------------------|
+| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
+```
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A list of data objects to be merged. |
+| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a 'text' column. |
 
 ## DataFrame operations
 
