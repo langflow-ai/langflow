@@ -107,25 +107,37 @@ class AnthropicModelComponent(LCModelComponent):
         except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = ANTHROPIC_MODELS
+
         if tool_model_enabled:
             try:
                 from langchain_anthropic.chat_models import ChatAnthropic
             except ImportError as e:
                 msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
                 raise ImportError(msg) from e
+
+            # Create a new list instead of modifying while iterating
+            filtered_models = []
             for model in model_ids:
                 if model in TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS:
+                    filtered_models.append(model)
                     continue
+
                 model_with_tool = ChatAnthropic(
-                    model=self.model_name,
+                    model=model,  # Use the current model being checked
                     anthropic_api_key=self.api_key,
                     anthropic_api_url=self.base_url,
                 )
+
                 if (
                     not self.supports_tool_calling(model_with_tool)
                     or model in TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS
                 ):
-                    model_ids.remove(model)
+                    continue
+
+                filtered_models.append(model)
+
+            return filtered_models
+
         return model_ids
 
     def _get_exception_message(self, exception: Exception) -> str | None:
