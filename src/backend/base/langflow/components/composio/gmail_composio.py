@@ -395,8 +395,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             ):
                 msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
-            else:
-                return result_data
+            return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
