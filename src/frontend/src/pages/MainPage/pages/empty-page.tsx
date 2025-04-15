@@ -59,16 +59,18 @@ export const EmptyPageCommunity = ({
         onFileDrop={handleFileDrop}
       >
         <div className="m-0 h-full w-full bg-background p-0">
-          <div className="z-50 flex h-full flex-col items-center justify-center gap-8">
+          <div className="z-50 flex h-full w-full flex-col items-center justify-center">
             <div className="z-50 flex flex-col items-center gap-3">
               <LangflowLogo className="mb-4 h-[18px] w-5" />
-              <h1 className="z-50 text-lg font-semibold text-primary">
-                Welcome to Langflow
-              </h1>
+              <span className="z-50 text-2xl font-semibold text-primary">
+                Your new favorite way to ship Agents
+              </span>
 
-              <p className="z-50 text-sm text-muted-foreground">
-                {folders?.length > 1 ? "Empty folder" : "Let's get started"}
-              </p>
+              <span className="z-50 font-[14px] text-muted-foreground">
+                {folders?.length > 1
+                  ? "Empty folder"
+                  : "Design agents that connect to any API, model, or database."}
+              </span>
             </div>
 
             <div className="flex w-full max-w-[352px] flex-col gap-7">

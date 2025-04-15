@@ -12,6 +12,8 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
@@ -46,9 +48,17 @@ export default function AppHeader(): JSX.Element {
 
   useResetDismissUpdateAll();
 
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const examples = useFlowsManagerStore((state) => state.examples);
+  const folders = useFolderStore((state) => state.folders);
+
+  const isEmpty = flows?.length !== examples?.length || folders?.length > 1;
+
   return (
     <div
-      className="flex h-[44px] w-full items-center justify-between border-b p-6 dark:bg-background"
+      className={`flex h-[44px] w-full items-center justify-between border-b p-6 dark:bg-background ${
+        !isEmpty ? "hidden" : ""
+      }`}
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -122,7 +132,7 @@ export default function AppHeader(): JSX.Element {
                 <span
                   className={
                     notificationCenter
-                      ? `absolute left-[31px] top-[10px] h-1 w-1 rounded-full bg-destructive`
+                      ? `absolute right-[5.3rem] top-[10px] h-1 w-1 rounded-full bg-destructive`
                       : "hidden"
                   }
                 />

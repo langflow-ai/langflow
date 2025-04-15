@@ -75,7 +75,7 @@ export const GetStartedProgress: FC<{
   return (
     <div className="h-[180px] w-full">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-lg">Get started</h2>
+        <span className="font-[14px]">Get started</span>
         <button
           onClick={handleUserTrack("dialog_dismissed")}
           className="text-muted-foreground hover:text-foreground"
