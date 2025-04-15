@@ -1,12 +1,56 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-
+import { useState } from "react";
 const McpServerTab = () => {
+  const [selectedMode, setSelectedMode] = useState<string>("Cursor");
+
+  const MCP_SERVER_EXAMPLE = {
+    Cursor: `{
+      "Cursor": {
+        "flow-id": {
+          "name": "Example Cursor Flow",
+          "description": "Short description of this cursor flow",
+          "command": "run-flow.sh",
+          "args": ["--some-flag"],
+          "env": {
+            "MCP_HOST": "http://127.0.0.1:7860"
+          }     
+        } 
+      }
+    }`,
+    Claude: `{
+      "Claude": {
+        "flow-id": {
+          "name": "Example Claude Flow",
+          "description": "Short description of this claude flow",
+          "command": "run-flow.sh",
+          "args": ["--some-flag"],
+          "env": {
+            "MCP_HOST": "http://127.0.0.1:7860"
+          }
+        }
+      }
+    }`,
+    "Raw JSON": `{
+      "JSON": {
+        "flow-id": {
+          "name": "Example JSON Flow",
+          "description": "Short description of this json flow",
+          "command": "run-flow.sh",
+          "args": ["--some-flag"],
+          "env": {
+            "MCP_HOST": "http://127.0.0.1:7860"
+          }
+        }
+      }
+    }`,
+  };
+
   return (
     <div>
       <div className="text-md pb-2 font-bold">MCP Server</div>
       <div className="pb-4 text-xs text-muted-foreground">
-        Access your Project’s flows as Actions within a MCP Server. Learn how to
+        Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
           className="text-pink-500"
           href="https://docs.langflow.org/mcp-server/deploying-mcp-server"
@@ -24,7 +68,7 @@ const McpServerTab = () => {
             <Button
               unstyled
               size="icon"
-              className="flex items-center gap-2 text-[13px] text-muted-foreground"
+              className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
             >
               <ForwardedIconComponent
                 name="settings-2"
@@ -55,19 +99,33 @@ const McpServerTab = () => {
         </div>
         <div className="w-2/3 pl-4">
           <div className="rounded-lg border border-border">
-            <div className="flex flex-row justify-start gap-2 border-b border-border p-2">
-              {["Cursor", "Claude", "Raw JSON"].map((item) => (
-                <div key={item} className="flex flex-row items-center gap-2">
+            <div className="flex flex-row justify-start">
+              {["Cursor", "Claude", "Raw JSON"].map((item, index) => (
+                <Button
+                  unstyled
+                  key={item}
+                  className={`flex flex-row items-center gap-2 text-nowrap border-b border-border ${
+                    selectedMode === item
+                      ? "border-b-2 border-white font-bold"
+                      : ""
+                  } border-r border-r-border p-2 text-[13px]`}
+                  onClick={() => setSelectedMode(item)}
+                >
                   <ForwardedIconComponent
                     name={"unknown"}
                     className="h-4 w-4"
                     aria-hidden="true"
                   />
                   {item}
-                </div>
+                </Button>
               ))}
+              <div className="w-full border-b border-border" />
             </div>
-            <div className="p-4">content</div>
+            <div className="p-4">
+              <div className="whitespace-pre-wrap font-mono text-sm">
+                {MCP_SERVER_EXAMPLE[selectedMode]}
+              </div>
+            </div>
           </div>
         </div>
       </div>
