@@ -2,7 +2,11 @@ import requests
 from loguru import logger
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.groq_constants import GROQ_MODELS
+from langflow.base.models.groq_constants import (
+    GROQ_MODELS,
+    TOOL_CALLING_UNSUPPORTED_GROQ_MODELS,
+    UNSUPPORTED_GROQ_MODELS,
+)
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -78,7 +82,9 @@ class GroqModel(LCModelComponent):
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
-            model_ids = [model["id"] for model in model_list.get("data", [])]
+            model_ids = [
+                model["id"] for model in model_list.get("data", []) if model["id"] not in UNSUPPORTED_GROQ_MODELS
+            ]
         except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = GROQ_MODELS
@@ -94,7 +100,7 @@ class GroqModel(LCModelComponent):
                     api_key=self.api_key,
                     base_url=self.base_url,
                 )
-                if not self.supports_tool_calling(model_with_tool):
+                if not self.supports_tool_calling(model_with_tool) or model in TOOL_CALLING_UNSUPPORTED_GROQ_MODELS:
                     model_ids.remove(model)
             return model_ids
         return model_ids
