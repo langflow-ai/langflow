@@ -555,6 +555,7 @@ This means files are accessed based on user ownership, and not tied to specific 
 You can upload a file to Langflow one time, and use it with multiple flows.
 * In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 * Responses from the `/v2` endpoint contain more descriptive metadata.
+* The `v2` endpoints require authentication by an API key or JWT.
 
 ## Files/V1 Endpoints
 
@@ -710,6 +711,9 @@ curl -X DELETE \
 
 ## Files/V2 Endpoints
 
+The `v2` endpoints require authentication by an API key or JWT.
+To create a Langflow API key and export it as an environment variable, see [Export values](#export-values).
+
 ### Upload file (v2)
 
 Upload a file to your user account. The file can be used across multiple flows.
@@ -724,6 +728,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v2/files" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -F "file=@FILE_NAME.txt"
 ```
 
@@ -755,6 +760,7 @@ Replace **FILE_NAME** with the uploaded file name.
 ```bash
 curl -X POST "$LANGFLOW_URL/api/v2/files" \
   -H "Content-Type: multipart/form-data" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -F "file=@FILE_NAME.png"
 ```
 
@@ -777,6 +783,7 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 curl --request POST \
   --url '$LANGFLOW_URL/api/v1/run/$FLOW_ID' \
   --header 'Content-Type: application/json' \
+  --header 'x-api-key: $LANGFLOW_API_KEY' \
   --data '{
   "input_value": "what do you see?",
   "output_type": "chat",
@@ -801,7 +808,8 @@ List all files associated with your user account.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -837,6 +845,7 @@ You must specify the file type you expect in the `--output` value.
 curl -X GET \
   "$LANGFLOW_URL/api/v2/files/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34" \
   -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   --output downloaded_file.txt
 ```
 
@@ -860,7 +869,8 @@ Change a file name.
 ```bash
 curl -X PUT \
   "$LANGFLOW_URL/api/v2/files/$FILE_ID?name=new_file_name" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -888,7 +898,8 @@ Delete a specific file by its ID.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v2/files/$FILE_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -913,7 +924,8 @@ Delete all files associated with your user account.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
