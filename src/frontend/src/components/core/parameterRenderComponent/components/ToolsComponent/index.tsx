@@ -18,7 +18,6 @@ export default function ToolsComponent({
   disabled = false,
 }: InputProps<any[], ToolsComponentType>): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const actions = value
     ?.filter((action) => action.status === true)
     .map((action) => {
@@ -29,8 +28,8 @@ export default function ToolsComponent({
       };
     });
 
-  const visibleActions = actions?.slice(0, 2) || [];
-  const remainingCount = actions ? Math.max(0, actions.length - 2) : 0;
+  const visibleActions = actions?.slice(0, 4) || [];
+  const remainingCount = actions ? Math.max(0, actions.length - 4) : 0;
 
   return (
     <div
@@ -69,15 +68,17 @@ export default function ToolsComponent({
           </Button>
         )}
         {visibleActions.length > 0 && (
-          <div className="flex flex-wrap gap-1 py-1.5">
+          <div className="flex w-full flex-wrap gap-1 overflow-hidden py-1.5">
             {visibleActions.map((action, index) => (
               <Badge
                 key={index}
                 variant="secondaryStatic"
                 size="sq"
-                className="font-normal"
+                className="truncate font-normal"
               >
-                {action.name.toUpperCase().replaceAll("-", "_")}
+                <span className="truncate">
+                  {action.name.toUpperCase().replaceAll("-", "_")}
+                </span>
               </Badge>
             ))}
             {remainingCount > 0 && (
