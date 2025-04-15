@@ -18,8 +18,8 @@ TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
 ]
 TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS = [
-    "claude-2.0",
     "claude-2.1",
+    "claude-2.0",
 ]
 
 DEPRECATED_MODELS = [
