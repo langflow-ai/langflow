@@ -9,7 +9,7 @@ from langflow.schema.message import Message
 
 
 class TavilyExtractComponent(Component):
-    """Separate component specifically for Tavily Extract functionality"""
+    """Separate component specifically for Tavily Extract functionality."""
 
     display_name = "Tavily Extract API"
     description = """**Tavily Extract** extract raw content from URLs."""
@@ -104,8 +104,7 @@ class TavilyExtractComponent(Component):
             self.status = data_results  # Set status to the list of Data objects
             return data_results  # Return the list
 
-        # Updated error handling to return list[Data]
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as exc:
             error_message = "Request timed out (90s). Please try again or reduce the number of URLs."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
@@ -113,12 +112,8 @@ class TavilyExtractComponent(Component):
             error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
-        except httpx.RequestError as exc:
-            error_message = f"Request error occurred: {exc}"
-            logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
-        except ValueError as exc:
-            error_message = f"Invalid response format: {exc}"
+        except (ValueError, KeyError, AttributeError) as exc:
+            error_message = f"Data processing error: {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except Exception as exc:

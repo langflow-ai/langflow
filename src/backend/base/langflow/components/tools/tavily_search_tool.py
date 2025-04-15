@@ -38,7 +38,10 @@ class TavilySearchSchema(BaseModel):
     include_answer: bool = Field(default=False, description="Include a short answer to original query.")
     chunks_per_source: int = Field(
         default=3,
-        description="The number of content chunks to retrieve from each source (max 500 chars each). Only for advanced search.",
+        description=(
+            "The number of content chunks to retrieve from each source (max 500 chars each). "
+            "Only for advanced search."
+        ),
         ge=1,
         le=3,
     )

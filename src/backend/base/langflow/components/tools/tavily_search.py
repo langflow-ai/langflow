@@ -38,7 +38,10 @@ class TavilySearchComponent(Component):
         IntInput(
             name="chunks_per_source",
             display_name="Chunks Per Source",
-            info="The number of content chunks to retrieve from each source (1-3). Only available with advanced search.",
+            info=(
+                "The number of content chunks to retrieve from each source (1-3). "
+                "Only works with advanced search."
+            ),
             value=3,
             advanced=True,
         ),
