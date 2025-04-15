@@ -1,7 +1,12 @@
 import ast
 import contextlib
+import hashlib
 import importlib
+import os
+import shutil
+import tempfile
 import warnings
+from pathlib import Path
 from types import FunctionType
 from typing import Optional, Union
 
@@ -10,6 +15,8 @@ from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+
+DEBUG_CODE_DIR = Path(tempfile.gettempdir()) / "langflow_custom_component_dbg"
 
 
 def add_type_ignores() -> None:
@@ -194,11 +201,27 @@ def create_class(code, class_name):
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
-        exec_globals = prepare_global_scope(module)
 
+        filename = "<string>"
+        if os.environ.get("LANGFLOW_LOG_LEVEL", "").lower() == "debug":
+            try:
+                DEBUG_CODE_DIR.mkdir(parents=True, exist_ok=True)
+
+                code_hash = hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+                temp_file_path = DEBUG_CODE_DIR / f"{class_name}_{code_hash}.py"
+
+                if not temp_file_path.exists():
+                    with open(temp_file_path, "w", encoding="utf-8") as temp_file:
+                        temp_file.write(code)
+
+                filename = str(temp_file_path)
+            except Exception as exc:
+                filename = "<string>"
+
+        exec_globals = prepare_global_scope(module, filename)
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
-
+        compiled_class = compile_class_code(class_code, filename=filename)
         return build_class_constructor(compiled_class, exec_globals, class_name)
 
     except SyntaxError as e:
@@ -229,7 +252,7 @@ def create_type_ignore_class():
     return TypeIgnore
 
 
-def prepare_global_scope(module):
+def prepare_global_scope(module, filename: str):
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
@@ -289,7 +312,7 @@ def prepare_global_scope(module):
 
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
-        compiled_code = compile(combined_module, "<string>", "exec")
+        compiled_code = compile(combined_module, filename, "exec")
         exec(compiled_code, exec_globals)
 
     return exec_globals
@@ -311,7 +334,7 @@ def extract_class_code(module, class_name):
     return class_code
 
 
-def compile_class_code(class_code):
+def compile_class_code(class_code, filename: str):
     """Compiles the AST node of a class into a code object.
 
     Args:
@@ -320,7 +343,7 @@ def compile_class_code(class_code):
     Returns:
         Compiled code object of the class
     """
-    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
+    return compile(ast.Module(body=[class_code], type_ignores=[]), filename, "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
@@ -417,3 +440,11 @@ def extract_class_name(code: str) -> str:
     except SyntaxError as e:
         msg = f"Invalid Python code: {e!s}"
         raise ValueError(msg) from e
+
+
+def cleanup_debug_code_directory():
+    if DEBUG_CODE_DIR.exists():
+        try:
+            shutil.rmtree(DEBUG_CODE_DIR, ignore_errors=True)
+        except Exception as e:
+            pass
