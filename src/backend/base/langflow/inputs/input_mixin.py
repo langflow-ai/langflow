@@ -115,6 +115,36 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
         dump["_input_type"] = self.__class__.__name__
         return dump
 
+    @field_validator("input_types")
+    @classmethod
+    def validate_input_types(cls, v, info):
+        """Validates the input_types field.
+
+        input_types will always be a list of strings.
+        If is_list is True, ensures every string is of the form "List[Type]".
+        If not, wraps the string in "List[...]" where needed.
+        """
+        if info.data.get("is_list") is None:
+            msg = "is_list is required to validate input_types"
+            raise ValueError(msg)
+        is_list = info.data.get("is_list")
+        if not v:
+            return v
+        if is_list:
+            # input_types is always a list of strings
+            new_v = []
+            for item in v:
+                if not isinstance(item, str):
+                    msg = f"input_types must be a list of strings. Got: {item!r}"
+                    raise ValueError(msg)  # noqa: TRY004
+                # If item already looks like "List[...]", keep as is
+                if item.startswith("List[") and item.endswith("]"):
+                    new_v.append(item)
+                else:
+                    new_v.append(f"List[{item}]")
+            return new_v
+        return v
+
 
 class ToolModeMixin(BaseModel):
     tool_mode: bool = False
