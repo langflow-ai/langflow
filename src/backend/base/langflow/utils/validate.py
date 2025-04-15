@@ -212,7 +212,7 @@ def create_class(code, class_name):
                 temp_file_path = DEBUG_CODE_DIR / f"{class_name}_{code_hash}.py"
 
                 if not temp_file_path.exists():
-                    with open(temp_file_path, "w", encoding="utf-8") as temp_file:
+                    with Path.open(temp_file_path, "w", encoding="utf-8") as temp_file:
                         temp_file.write(code)
 
                 filename = str(temp_file_path)
@@ -257,6 +257,7 @@ def prepare_global_scope(module, filename: str):
 
     Args:
         module: AST parsed module
+        filename: Name of compiled component
 
     Returns:
         Dictionary representing the global scope with imported modules
@@ -339,6 +340,7 @@ def compile_class_code(class_code, filename: str):
 
     Args:
         class_code: AST node of the class
+        filename: Name of compiled component
 
     Returns:
         Compiled code object of the class
