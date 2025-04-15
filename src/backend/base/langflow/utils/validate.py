@@ -216,7 +216,7 @@ def create_class(code, class_name):
                         temp_file.write(code)
 
                 filename = str(temp_file_path)
-            except Exception as exc:
+            except Exception:
                 filename = "<string>"
 
         exec_globals = prepare_global_scope(module, filename)
@@ -446,5 +446,5 @@ def cleanup_debug_code_directory():
     if DEBUG_CODE_DIR.exists():
         try:
             shutil.rmtree(DEBUG_CODE_DIR, ignore_errors=True)
-        except Exception as e:
+        except Exception:
             pass
