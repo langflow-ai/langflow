@@ -1,74 +1,65 @@
+import logging
+
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_community.utilities import SQLDatabase
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import Text
+from langflow.custom.custom_component.component import Component
+from langflow.io import MessageTextInput, Output
+from langflow.schema.message import Message
+
+logger = logging.getLogger(__name__)
 
 
-class SQLExecutorComponent(CustomComponent):
-    display_name = "SQL Query"
-    description = "Execute SQL query."
-    name = "SQLExecutor"
-    beta: bool = True
+class SQLComponent(Component):
+    """A sql component."""
 
-    def build_config(self):
-        return {
-            "database_url": {
-                "display_name": "Database URL",
-                "info": "The URL of the database.",
-            },
-            "include_columns": {
-                "display_name": "Include Columns",
-                "info": "Include columns in the result.",
-            },
-            "passthrough": {
-                "display_name": "Passthrough",
-                "info": "If an error occurs, return the query instead of raising an exception.",
-            },
-            "add_error": {
-                "display_name": "Add Error",
-                "info": "Add the error to the result.",
-            },
-        }
+    display_name = "SQL"
+    description = "Load and parse child links from a root URL recursively"
+    icon = "layout-template"
+    name = "SQLComponent"
 
-    def clean_up_uri(self, uri: str) -> str:
-        if uri.startswith("postgresql://"):
-            uri = uri.replace("postgresql://", "postgres://")
-        return uri.strip()
+    inputs = [
+        MessageTextInput(
+            name="database_url",
+            display_name="database url",
+            placeholder="Enter a URL...",
+            list_add_label="Add URL",
+        ),
+        MessageTextInput(
+            name="query",
+            display_name="query",
+            placeholder="query...",
+            list_add_label="query",
+            tool_mode=True,
+        ),
+    ]
 
-    def build(
+    outputs = [
+        Output(display_name="Message", name="text", method="build_component"),
+    ]
+
+    def build_component(
         self,
-        query: str,
-        database_url: str,
-        *,
-        include_columns: bool = False,
-        passthrough: bool = False,
-        add_error: bool = False,
-        **kwargs,
-    ) -> Text:
-        _ = kwargs
+    ) -> Message:
         error = None
         try:
-            database = SQLDatabase.from_uri(database_url)
+            database = SQLDatabase.from_uri(self.database_url)
         except Exception as e:
             msg = f"An error occurred while connecting to the database: {e}"
             raise ValueError(msg) from e
         try:
             tool = QuerySQLDataBaseTool(db=database)
-            result = tool.run(query, include_columns=include_columns)
+            result = tool.run(self.query, include_columns=True)
             self.status = result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result = str(e)
             self.status = result
-            if not passthrough:
-                raise
             error = repr(e)
 
-        if add_error and error is not None:
-            result = f"{result}\n\nError: {error}\n\nQuery: {query}"
+        if error is not None:
+            result = f"{result}\n\nError: {error}\n\nQuery: {self.query}"
         elif error is not None:
             # Then we won't add the error to the result
-            # but since we are in passthrough mode, we will return the query
-            result = query
+            result = self.query
 
-        return result
+        return Message(text=result)
