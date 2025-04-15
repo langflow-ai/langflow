@@ -6,7 +6,7 @@ from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import BoolInput
-from langflow.io import HandleInput, MultilineInput, Output
+from langflow.io import HandleInput, Output, QueryInput
 from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
@@ -62,9 +62,11 @@ class LCVectorStoreComponent(Component):
             input_types=["Data", "DataFrame"],
             is_list=True,
         ),
-        MultilineInput(
+        QueryInput(
             name="search_query",
             display_name="Search Query",
+            info="Enter a query to run a similarity search.",
+            placeholder="Enter a query...",
             tool_mode=True,
         ),
         BoolInput(
