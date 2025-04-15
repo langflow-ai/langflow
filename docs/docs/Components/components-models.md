@@ -200,12 +200,12 @@ This component generates text using Groq's language models.
 The Groq model component automatically retrieves a list of the latest models.
 To refresh your list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
 3. In the **Model** field, select the model you want to use for your LLM.
-This example uses [llama-3.1-8b-instant](https://console.groq.com/docs/model/llama-3.1-8b-instant), which Grok recommends for real-time conversational interfaces.
+This example uses [llama-3.1-8b-instant](https://console.groq.com/docs/model/llama-3.1-8b-instant), which Groq recommends for real-time conversational interfaces.
 4. In the **Prompt** component, enter:
 ```text
 You are a helpful assistant who supports their claims with sources.
 ```
-5. Click **Playground** and ask your Grok LLM a question.
+5. Click **Playground** and ask your Groq LLM a question.
 The responses include a list of sources.
 
 For more information, see the [Groq documentation](https://groq.com/).
@@ -215,10 +215,10 @@ For more information, see the [Groq documentation](https://groq.com/).
 | Name           | Type          | Description                                                     |
 |----------------|---------------|-----------------------------------------------------------------|
 | groq_api_key    | SecretString   | API key for the Groq API.                                      |
-| groq_api_base   | String         | Base URL path for API requests. Default: `https://api.groq.com` (advanced). |
-| max_tokens      | Integer        | The maximum number of tokens to generate (advanced).           |
+| groq_api_base   | String         | Base URL path for API requests. Default: `https://api.groq.com`. |
+| max_tokens      | Integer        | The maximum number of tokens to generate.           |
 | temperature     | Float          | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.1`. |
-| n               | Integer        | Number of chat completions to generate for each prompt (advanced). |
+| n               | Integer        | Number of chat completions to generate for each prompt. |
 | model_name      | String         | The name of the Groq model to use. Options are dynamically fetched from the Groq API. |
 
 ### Outputs
