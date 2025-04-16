@@ -14,10 +14,8 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
 
     display_name: str = "Google Meet"
     description: str = "Google Meet API"
-    name = "GooglemeetAPI"
     icon = "Googlemeet"
     documentation: str = "https://docs.composio.dev"
-    app_name = "googlemeet"
 
     # Google Meet specific actions
     _actions_data: dict = {
