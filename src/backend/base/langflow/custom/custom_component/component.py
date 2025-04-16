@@ -1125,7 +1125,11 @@ class Component(CustomComponent):
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
-        return old_tags != new_tags
+        # First check length - if different lengths, they can't be equal
+        if len(old_tags) != len(new_tags):
+            return True
+        # Use set comparison for O(n) average case complexity, earlier the old_tags.sort() != new_tags.sort() was used
+        return set(old_tags) != set(new_tags)
 
     def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
         """Filter tools based on their status in metadata.
