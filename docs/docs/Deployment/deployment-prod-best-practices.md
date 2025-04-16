@@ -34,7 +34,6 @@ A typical Langflow deployment includes:
 
 It is recommended to deploy and run two separate environments for Langflow, with one environment reserved for Development use and another for Production use.
 
-One environment to be reserved for Development use and another for Production use.
 
 ![Langflow Environments](/img/langflow-env.png)
 
