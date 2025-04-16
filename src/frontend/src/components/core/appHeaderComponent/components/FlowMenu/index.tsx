@@ -4,6 +4,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { customStringify } from "@/utils/reactflowUtils";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import IconComponent from "@/components/common/genericIconComponent";
@@ -66,6 +67,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
       currentFlowGradient: state.currentFlow?.gradient,
     })),
   );
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const { updated_at: updatedAt } = useFlowsManagerStore(
     useShallow((state) => ({
       updated_at: state.currentFlow?.updated_at,
@@ -80,7 +83,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
-  const changesNotSaved = useUnsavedChanges();
+  const changesNotSaved =
+    customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -535,7 +539,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 <p className="text-muted-foreground">
                   <a
                     href="https://docs.langflow.org/configuration-auto-save"
-                    className="text-primary underline"
+                    className="text-secondary underline"
                   >
                     Enable auto-saving
                   </a>{" "}
