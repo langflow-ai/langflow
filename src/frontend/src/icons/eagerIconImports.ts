@@ -110,6 +110,8 @@ import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
 import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
+import { ClaudeIcon } from "./Claude";
+import { CursorIcon } from "./Cursor";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
@@ -132,6 +134,7 @@ export const eagerIconsMapping = {
   BWPython: BWPythonIcon,
   Cassandra: CassandraIcon,
   Chroma: ChromaIcon,
+  Claude: ClaudeIcon,
   Clickhouse: ClickhouseIcon,
   Cloudflare: CloudflareIcon,
   Cohere: CohereIcon,
@@ -139,6 +142,7 @@ export const eagerIconsMapping = {
   Confluence: ConfluenceIcon,
   Couchbase: CouchbaseIcon,
   CrewAI: CrewAiIcon,
+  Cursor: CursorIcon,
   DeepSeek: DeepSeekIcon,
   Dropbox: DropboxIcon,
   DuckDuckGo: DuckDuckGoIcon,

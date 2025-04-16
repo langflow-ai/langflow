@@ -50,11 +50,11 @@ const McpServerTab = () => {
 
   return (
     <div>
-      <div className="text-md pb-2 font-bold">MCP Server</div>
+      <div className="text-md -mt-2 pb-2 font-bold">MCP Server</div>
       <div className="pb-4 text-xs text-muted-foreground">
         Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
-          className="text-pink-500"
+          className="text-accent-pink-foreground"
           href="https://docs.langflow.org/mcp-server/deploying-mcp-server"
           target="_blank"
           rel="noreferrer"
@@ -102,32 +102,60 @@ const McpServerTab = () => {
         <div className="w-2/3 pl-4">
           <div className="rounded-lg border border-border">
             <div className="flex flex-row justify-start">
-              {["Cursor", "Claude", "Raw JSON"].map((item, index) => (
+              {[
+                { name: "Cursor", icon: "Cursor" },
+                { name: "Claude", icon: "Claude" },
+                { name: "Raw JSON", icon: "file-json" },
+              ].map((item, index) => (
                 <Button
                   unstyled
-                  key={item}
+                  key={item.name}
                   className={`flex flex-row items-center gap-2 text-nowrap border-b border-border ${
-                    selectedMode === item
+                    selectedMode === item.name
                       ? "border-b-2 border-white font-bold"
-                      : ""
-                  } border-r border-r-border p-2 text-[13px]`}
-                  onClick={() => setSelectedMode(item)}
+                      : "text-muted-foreground hover:text-foreground"
+                  } border-r border-r-border px-3 py-2 text-[13px]`}
+                  onClick={() => setSelectedMode(item.name)}
                 >
                   <ForwardedIconComponent
-                    name={"unknown"}
+                    name={item.icon}
                     className="h-4 w-4"
                     aria-hidden="true"
                   />
-                  {item}
+                  {item.name}
                 </Button>
               ))}
               <div className="w-full border-b border-border" />
             </div>
-            <div className="p-4">
-              <SyntaxHighlighter language="json">
-                {MCP_SERVER_EXAMPLE[selectedMode]}
-              </SyntaxHighlighter>
-            </div>
+            <SyntaxHighlighter
+              style={{
+                "hljs-string": {
+                  color: "hsla(158, 64%, 52%, 1)",
+                },
+                "hljs-attr": {
+                  color: "hsla(329, 86%, 70%, 1)",
+                },
+              }}
+              CodeTag={({ children }) => (
+                <div className="relative rounded-lg p-4 text-[13px]">
+                  <Button
+                    unstyled
+                    size="icon"
+                    className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground"
+                  >
+                    <ForwardedIconComponent
+                      name="copy"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
+                  </Button>
+                  {children}
+                </div>
+              )}
+              language="json"
+            >
+              {MCP_SERVER_EXAMPLE[selectedMode]}
+            </SyntaxHighlighter>
           </div>
         </div>
       </div>

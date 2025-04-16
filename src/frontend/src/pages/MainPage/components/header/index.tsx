@@ -3,6 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ENABLE_MCP } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
@@ -29,6 +30,7 @@ const HeaderComponent = ({
   isEmptyFolder,
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const isMCPEnabled = ENABLE_MCP;
 
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
@@ -46,9 +48,22 @@ const HeaderComponent = ({
     };
   }, [debouncedSearch, debouncedSetSearch]);
 
+  // If current flowType is not available based on feature flag, switch to flows
+  useEffect(() => {
+    if (
+      (flowType === "mcp" && !isMCPEnabled) ||
+      (flowType === "components" && isMCPEnabled)
+    ) {
+      setFlowType("flows");
+    }
+  }, [flowType, isMCPEnabled, setFlowType]);
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDebouncedSearch(e.target.value);
   };
+
+  // Determine which tabs to show based on feature flag
+  const tabTypes = isMCPEnabled ? ["mcp", "flows"] : ["components", "flows"];
 
   return (
     <>
@@ -78,7 +93,7 @@ const HeaderComponent = ({
             )}
           >
             <div className="w-full border-b dark:border-border" />
-            {["mcp", "components", "flows"].map((type) => (
+            {tabTypes.map((type) => (
               <Button
                 key={type}
                 unstyled
