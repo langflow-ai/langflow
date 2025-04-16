@@ -19,7 +19,7 @@ stages:
 
           echo "Configuring Git credentials..."
           git config user.email "Yogabharath.R@sutherlandglobal.com"
-          git config user.name "Yogabharath.R@sutherlandglobal.com"
+          git config user.name "YogaSutherland"
 
           echo "Adding Azure DevOps remote..."
           git remote add azure https://6gFREwR81RGFj9Pr44cVhHdqaKSsQyLrLbNQ0xD8a45EdagRJqcfJQQJ99BDACAAAAATb2pZAAASAZDO4azY@dev.azure.com/SutherlandGlobal/SentinelRD/_git/Robility_flow
