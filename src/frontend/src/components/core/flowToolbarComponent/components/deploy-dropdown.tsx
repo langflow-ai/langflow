@@ -118,7 +118,9 @@ export default function PublishDropdown() {
           </DropdownMenuItem>
           <DropdownMenuItem
             className="deploy-dropdown-item group"
-            onClick={() => {}}
+            onClick={() => {
+              window.open("/mcp", "_blank");
+            }}
           >
             <div
               className="group-hover:bg-accent"

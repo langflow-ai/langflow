@@ -7,6 +7,7 @@ import { ENABLE_MCP } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components" | "mcp";
@@ -31,7 +32,7 @@ const HeaderComponent = ({
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
-
+  const navigate = useNavigate();
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -99,9 +100,10 @@ const HeaderComponent = ({
                 unstyled
                 id={`${type}-btn`}
                 data-testid={`${type}-btn`}
-                onClick={() =>
-                  setFlowType(type as "flows" | "components" | "mcp")
-                }
+                onClick={() => {
+                  setFlowType(type as "flows" | "components" | "mcp");
+                  navigate(`/${type}`);
+                }}
                 className={`border-b ${
                   flowType === type
                     ? "border-b-2 border-foreground text-foreground"

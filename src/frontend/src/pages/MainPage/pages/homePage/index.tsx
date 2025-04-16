@@ -95,8 +95,6 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     }
   }, [isEmptyFolder]);
 
-  console.log("flowType", flowType);
-
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
