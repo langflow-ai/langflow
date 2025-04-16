@@ -3,6 +3,8 @@ title: Data
 slug: /components-data
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Data components in Langflow
 
 Data components load data from a source into your flow.
@@ -26,7 +28,7 @@ In this example of a document ingestion pipeline, the URL component outputs raw 
 
 This component makes HTTP requests using URLs or cURL commands.
 
-1. To use this component in a flow, connect the **Data** or **DataFrame** outputs to a component that accepts the input.
+1. To use this component in a flow, connect the **Data** output to a component that accepts the input.
 For example, connect the **API Request** component to a **Chat Output** component.
 
 ![API request into a chat output component](/img/component-api-request-chat-output.png)
@@ -42,7 +44,33 @@ The component also supports POST, PATCH, PUT, and DELETE.
 The equivalent call in this example is `curl -v https://dummy-json.mock.beeceptor.com/posts`.
 
 5. Click **Playground**, and then click **Run Flow**.
-Your request returns a list of blog posts.
+Your request returns a list of blog posts in the `result` field.
+
+### Filter API request data
+
+The **API Request** component retrieved a list of JSON objects in the `result` field.
+For this example, you will use the **Lambda Filter** to extract the desired data nested within the `result` field.
+
+1. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+2. In the **Groq** model component, add your **Groq** API key.
+3. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+For this example, enter:
+```
+I want to explode the result column out into a Data object
+```
+:::tip
+Avoid punctuation in the **Instructions** field, as it can cause errors.
+:::
+4. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
+5. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The result is a structured DataFrame.
+```text
+| userId | id | title | body | link | comment_count |
+|---|----|-------|------|------|---------------|
+| 1 | 1 | Introduction to Artificial Intelligence | Learn the basics of AI ...| https://example.com/article1 | 8 |
+| 2 | 2 | Web Development with React | Build modern web applications ...| https://example.com/article2 | 12 |
+```
+
 
 ### Inputs
 
@@ -64,8 +92,8 @@ Your request returns a list of blog posts.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The result of the API requests. |
-
+| data | Data | The result of the API requests. Returns a Data object containing source URL and results.  |
+| dataframe | DataFrame | Converts the API response data into a tabular DataFrame format. |
 
 ## Directory
 
