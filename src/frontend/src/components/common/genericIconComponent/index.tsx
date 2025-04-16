@@ -1,11 +1,10 @@
-import dynamicIconImports from "lucide-react/dynamicIconImports";
-import { Suspense, forwardRef, lazy, memo } from "react";
+import React, { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
-import { nodeIconsLucide } from "../../../utils/styleUtils";
+import { getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
-import Loading from "../../ui/loading";
 
-import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCallback, useEffect, useState } from "react";
 
 export const ForwardedIconComponent = memo(
   forwardRef(
@@ -23,28 +22,32 @@ export const ForwardedIconComponent = memo(
       ref,
     ) => {
       const [showFallback, setShowFallback] = useState(false);
+      const [iconError, setIconError] = useState(false);
+      const [TargetIcon, setTargetIcon] = useState<any>(null);
 
       useEffect(() => {
+        // Reset states when icon name changes
+        setIconError(false);
+        setTargetIcon(null);
+
         const timer = setTimeout(() => {
           setShowFallback(true);
         }, 30);
 
-        return () => clearTimeout(timer);
-      }, []);
+        // Load the icon if we have a name
+        if (name && typeof name === "string") {
+          getNodeIcon(name)
+            .then((component) => {
+              setTargetIcon(component);
+            })
+            .catch((error) => {
+              console.error(`Error loading icon ${name}:`, error);
+              setIconError(true);
+            });
+        }
 
-      let TargetIcon =
-        nodeIconsLucide[name] ||
-        nodeIconsLucide[
-          name
-            ?.split("-")
-            ?.map((x) => String(x[0])?.toUpperCase() + String(x).slice(1))
-            ?.join("")
-        ];
-      if (!TargetIcon) {
-        if (!dynamicIconImports[name]) {
-          TargetIcon = nodeIconsLucide["unknown"];
-        } else TargetIcon = lazy(dynamicIconImports[name]);
-      }
+        return () => clearTimeout(timer);
+      }, [name]);
 
       const style = {
         strokeWidth: strokeWidth ?? 1.5,
@@ -52,13 +55,30 @@ export const ForwardedIconComponent = memo(
         ...(iconColor && { color: iconColor, stroke: stroke }),
       };
 
-      if (!TargetIcon) {
-        return null; // Render nothing until the icon is loaded
+      // Handler for when the Suspense component throws
+      const handleError = useCallback(() => {
+        setIconError(true);
+      }, []);
+
+      if (!TargetIcon || iconError) {
+        // Return a placeholder div or null depending on settings
+        return skipFallback ? null : (
+          <div
+            className={cn(className, "flex items-center justify-center")}
+            data-testid={
+              dataTestId
+                ? dataTestId
+                : id
+                  ? `${id}-placeholder`
+                  : `icon-placeholder`
+            }
+          />
+        );
       }
 
       const fallback = showFallback ? (
         <div className={cn(className, "flex items-center justify-center")}>
-          <Loading />
+          <Skeleton className="h-4 w-4" />
         </div>
       ) : (
         <div className={className}></div>
@@ -66,18 +86,34 @@ export const ForwardedIconComponent = memo(
 
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
-          <TargetIcon
-            className={className}
-            style={style}
-            ref={ref}
-            data-testid={
-              dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
-            }
-          />
+          <ErrorBoundary onError={handleError}>
+            <TargetIcon
+              className={className}
+              style={style}
+              ref={ref}
+              data-testid={
+                dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
+              }
+            />
+          </ErrorBoundary>
         </Suspense>
       );
     },
   ),
 );
+
+// Simple error boundary component for catching lazy load errors
+class ErrorBoundary extends React.Component<{
+  children: React.ReactNode;
+  onError: () => void;
+}> {
+  componentDidCatch(error: any) {
+    this.props.onError();
+  }
+
+  render() {
+    return this.props.children;
+  }
+}
 
 export default ForwardedIconComponent;
