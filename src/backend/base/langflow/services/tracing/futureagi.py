@@ -11,24 +11,26 @@ from typing import TYPE_CHECKING, Any
 from fi_instrumentation.fi_types import FiMimeTypeValues, SpanAttributes
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langflow.schema.data import Data
-from langflow.schema.message import Message
-from langflow.services.tracing.base import BaseTracer
 from loguru import logger
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from typing_extensions import override
 
+from langflow.schema.data import Data
+from langflow.schema.message import Message
+from langflow.services.tracing.base import BaseTracer
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
-    from langflow.graph.vertex.base import Vertex
-    from langflow.services.tracing.schema import Log
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
+
+    from langflow.graph.vertex.base import Vertex
+    from langflow.services.tracing.schema import Log
 
 
 class FiTracer(BaseTracer):
@@ -69,9 +71,7 @@ class FiTracer(BaseTracer):
                 name=self.flow_id,
                 start_time=self._get_current_timestamp(),
             )
-            self.root_span.set_attribute(
-                SpanAttributes.SESSION_ID, self.session_id or self.flow_id
-            )
+            self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.session_id or self.flow_id)
             self.root_span.set_attribute(SpanAttributes.FI_SPAN_KIND, self.trace_type)
             self.root_span.set_attribute("langflow.project.name", self.project_name)
             self.root_span.set_attribute("langflow.flow.name", self.flow_name)
@@ -93,7 +93,6 @@ class FiTracer(BaseTracer):
 
     def setup_fi(self) -> bool:
         """Configures Future AGI specific environment variables and registers the tracer provider."""
-
         fi_api_key = os.getenv("FI_API_KEY", None)
         fi_secret_key = os.getenv("FI_SECRET_KEY", None)
         session_name = os.getenv("FI_SESSION_NAME", None)
@@ -107,19 +106,13 @@ class FiTracer(BaseTracer):
             from fi_instrumentation.fi_types import ProjectType
 
             name_without_space = self.flow_name.replace(" ", "-")
-            project_name = (
-                self.project_name
-                if name_without_space == "None"
-                else name_without_space
-            )
+            project_name = self.project_name if name_without_space == "None" else name_without_space
             project_type_str = os.getenv("FI_PROJECT_TYPE", "observe")
 
             try:
                 project_type = ProjectType(project_type_str)
             except ValueError:
-                print(
-                    f"Invalid project type: {project_type_str}, defaulting to OBSERVE"
-                )
+                print(f"Invalid project type: {project_type_str}, defaulting to OBSERVE")
                 project_type = ProjectType.OBSERVE
 
             register_params = {
@@ -136,9 +129,7 @@ class FiTracer(BaseTracer):
 
             self.tracer_provider = tracer_provider
         except ImportError:
-            logger.exception(
-                "Could not import traceAI. Please install it with `pip install traceaAI-langchain`."
-            )
+            logger.exception("Could not import traceAI. Please install it with `pip install traceaAI-langchain`.")
             return False
 
         try:
@@ -147,8 +138,7 @@ class FiTracer(BaseTracer):
             LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider)
         except ImportError:
             logger.exception(
-                "Could not import LangChainInstrumentor."
-                "Please install it with `pip install traceaAI-langchain`."
+                "Could not import LangChainInstrumentor.Please install it with `pip install traceaAI-langchain`."
             )
             return False
 
@@ -182,15 +172,9 @@ class FiTracer(BaseTracer):
 
         processed_inputs = self._convert_to_fi_types(inputs) if inputs else {}
         if processed_inputs:
-            child_span.set_attribute(
-                SpanAttributes.RAW_INPUT, self._safe_json_dumps(processed_inputs)
-            )
-            child_span.set_attribute(
-                SpanAttributes.INPUT_VALUE, self._safe_json_dumps(processed_inputs)
-            )
-            child_span.set_attribute(
-                SpanAttributes.INPUT_MIME_TYPE, FiMimeTypeValues.JSON.value
-            )
+            child_span.set_attribute(SpanAttributes.RAW_INPUT, self._safe_json_dumps(processed_inputs))
+            child_span.set_attribute(SpanAttributes.INPUT_VALUE, self._safe_json_dumps(processed_inputs))
+            child_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, FiMimeTypeValues.JSON.value)
 
         processed_metadata = self._convert_to_fi_types(metadata) if metadata else {}
         if processed_metadata:
@@ -222,24 +206,12 @@ class FiTracer(BaseTracer):
 
         processed_outputs = self._convert_to_fi_types(outputs) if outputs else {}
         if processed_outputs:
-            child_span.set_attribute(
-                SpanAttributes.RAW_OUTPUT, self._safe_json_dumps(processed_outputs)
-            )
-            child_span.set_attribute(
-                SpanAttributes.OUTPUT_VALUE, self._safe_json_dumps(processed_outputs)
-            )
-            child_span.set_attribute(
-                SpanAttributes.OUTPUT_MIME_TYPE, FiMimeTypeValues.JSON.value
-            )
+            child_span.set_attribute(SpanAttributes.RAW_OUTPUT, self._safe_json_dumps(processed_outputs))
+            child_span.set_attribute(SpanAttributes.OUTPUT_VALUE, self._safe_json_dumps(processed_outputs))
+            child_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, FiMimeTypeValues.JSON.value)
 
-        logs_dicts = [
-            log if isinstance(log, dict) else log.model_dump() for log in logs
-        ]
-        processed_logs = (
-            self._convert_to_fi_types({log.get("name"): log for log in logs_dicts})
-            if logs
-            else {}
-        )
+        logs_dicts = [log if isinstance(log, dict) else log.model_dump() for log in logs]
+        processed_logs = self._convert_to_fi_types({log.get("name"): log for log in logs_dicts}) if logs else {}
         if processed_logs:
             for key, value in processed_logs.items():
                 child_span.set_attribute(f"logs.{key}", value)
@@ -261,31 +233,17 @@ class FiTracer(BaseTracer):
             return
 
         if self.root_span:
-            self.root_span.set_attribute(
-                SpanAttributes.RAW_INPUT, self._safe_json_dumps(inputs)
-            )
-            self.root_span.set_attribute(
-                SpanAttributes.INPUT_VALUE, self.chat_input_value
-            )
-            self.root_span.set_attribute(
-                SpanAttributes.INPUT_MIME_TYPE, FiMimeTypeValues.TEXT.value
-            )
-            self.root_span.set_attribute(
-                SpanAttributes.RAW_OUTPUT, self._safe_json_dumps(outputs)
-            )
-            self.root_span.set_attribute(
-                SpanAttributes.OUTPUT_VALUE, self.chat_output_value
-            )
-            self.root_span.set_attribute(
-                SpanAttributes.OUTPUT_MIME_TYPE, FiMimeTypeValues.TEXT.value
-            )
+            self.root_span.set_attribute(SpanAttributes.RAW_INPUT, self._safe_json_dumps(inputs))
+            self.root_span.set_attribute(SpanAttributes.INPUT_VALUE, self.chat_input_value)
+            self.root_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, FiMimeTypeValues.TEXT.value)
+            self.root_span.set_attribute(SpanAttributes.RAW_OUTPUT, self._safe_json_dumps(outputs))
+            self.root_span.set_attribute(SpanAttributes.OUTPUT_VALUE, self.chat_output_value)
+            self.root_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, FiMimeTypeValues.TEXT.value)
 
             processed_metadata = self._convert_to_fi_types(metadata) if metadata else {}
             if processed_metadata:
                 for key, value in processed_metadata.items():
-                    self.root_span.set_attribute(
-                        f"{SpanAttributes.METADATA}.{key}", value
-                    )
+                    self.root_span.set_attribute(f"{SpanAttributes.METADATA}.{key}", value)
 
             self._set_span_status(self.root_span, error)
             self.root_span.end()
@@ -293,22 +251,15 @@ class FiTracer(BaseTracer):
         try:
             from traceai_langchain import LangChainInstrumentor
 
-            LangChainInstrumentor().uninstrument(
-                tracer_provider=self.tracer_provider, skip_dep_check=True
-            )
+            LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
         except ImportError:
             logger.exception(
-                "Could not import LangChainInstrumentor."
-                "Please install it with `pip install traceAI-langchain`."
+                "Could not import LangChainInstrumentor.Please install it with `pip install traceAI-langchain`."
             )
 
     def _convert_to_fi_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Future AGI compatible formats."""
-        return {
-            str(key): self._convert_to_fi_type(value)
-            for key, value in io_dict.items()
-            if key is not None
-        }
+        return {str(key): self._convert_to_fi_type(value) for key, value in io_dict.items() if key is not None}
 
     def _convert_to_fi_type(self, value):
         """Recursively converts a value to a Future AGI compatible type."""
@@ -344,9 +295,7 @@ class FiTracer(BaseTracer):
         error_message = None
         if error:
             string_stacktrace = traceback.format_exception(error)
-            error_message = (
-                f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
-            )
+            error_message = f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
         return error_message
 
     @staticmethod

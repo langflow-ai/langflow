@@ -46,6 +46,7 @@ def _get_arize_phoenix_tracer():
 
     return ArizePhoenixTracer
 
+
 def _get_futureagi_tracer():
     from langflow.services.tracing.futureagi import FiTracer
 
