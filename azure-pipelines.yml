@@ -2,6 +2,9 @@ trigger:
   branches:
     include:
     - main
+  paths:
+    exclude:
+      - azure-pipelines.yml
 
 variables:
 - group: Robilityflowgroup
