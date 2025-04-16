@@ -17,7 +17,6 @@ import {
   HeaderMenuItemButton,
   HeaderMenuItemLink,
   HeaderMenuItems,
-  HeaderMenuItemsSection,
   HeaderMenuToggle,
 } from "../HeaderMenu";
 import { ProfileIcon } from "../ProfileIcon";

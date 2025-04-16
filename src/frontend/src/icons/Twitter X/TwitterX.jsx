@@ -1,5 +1,4 @@
 const TwitterXSVG = (props) => {
-  console.log(props.isdark);
 
   return props.isdark === "true" ? (
     <svg
