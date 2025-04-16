@@ -68,6 +68,10 @@ export default function NodeInputField({
     name,
   });
 
+  const hasRefreshButton = useMemo(() => {
+    return data.node?.template[name]?.refresh_button;
+  }, [data.node?.template, name]);
+
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
     return {
       flowId: currentFlow?.id ?? "",
@@ -89,7 +93,8 @@ export default function NodeInputField({
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
-    !isToolMode;
+    !isToolMode &&
+    !hasRefreshButton;
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
@@ -147,6 +152,7 @@ export default function NodeInputField({
                       title,
                       nodeId: data.id,
                       isFlexView,
+                      required,
                     })}
                   </span>
                 }
@@ -160,13 +166,13 @@ export default function NodeInputField({
                         title,
                         nodeId: data.id,
                         isFlexView,
+                        required,
                       })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={"text-status-red"}>{required ? "*" : ""}</span>
             <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
@@ -175,7 +181,7 @@ export default function NodeInputField({
                     <IconComponent
                       name="Info"
                       strokeWidth={ICON_STROKE_WIDTH}
-                      className="relative bottom-px ml-1 h-3 w-3 text-placeholder"
+                      className="relative ml-1 h-3 w-3 text-placeholder"
                     />
                   </div>
                 </ShadTooltip>

@@ -6,7 +6,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { BuildStatus } from "../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
@@ -65,22 +65,27 @@ function ApiInterceptor() {
         const isAuthenticationError =
           error?.response?.status === 403 || error?.response?.status === 401;
 
-        if (isAuthenticationError && !IS_AUTO_LOGIN) {
-          if (autoLogin !== undefined && !autoLogin) {
-            if (error?.config?.url?.includes("github")) {
-              return Promise.reject(error);
-            }
-            const stillRefresh = checkErrorCount();
-            if (!stillRefresh) {
-              return Promise.reject(error);
-            }
+        const shouldRetryRefresh =
+          (isAuthenticationError && !IS_AUTO_LOGIN) ||
+          (isAuthenticationError && !autoLogin && autoLogin !== undefined);
 
-            await tryToRenewAccessToken(error);
+        if (shouldRetryRefresh) {
+          if (
+            error?.config?.url?.includes("github") ||
+            error?.config?.url?.includes("public")
+          ) {
+            return Promise.reject(error);
+          }
+          const stillRefresh = checkErrorCount();
+          if (!stillRefresh) {
+            return Promise.reject(error);
+          }
 
-            const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-            if (!accessToken && error?.config?.url?.includes("login")) {
-              return Promise.reject(error);
-            }
+          await tryToRenewAccessToken(error);
+
+          const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+          if (!accessToken && error?.config?.url?.includes("login")) {
+            return Promise.reject(error);
           }
         }
 
@@ -258,6 +263,7 @@ export type StreamingRequestParams = {
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
   buildController: AbortController;
+  eventDeliveryConfig?: EventDeliveryType;
 };
 
 async function performStreamingRequest({
