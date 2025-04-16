@@ -10,9 +10,11 @@ import DurationDisplay from "./DurationDisplay";
 export default function ContentDisplay({
   content,
   chatId,
+  playgroundPage,
 }: {
   content: ContentType;
   chatId: string;
+  playgroundPage?: boolean;
 }) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
@@ -39,8 +41,13 @@ export default function ContentDisplay({
       </div>
     </>
   );
+<<<<<<< HEAD
   const renderDuration = content.duration !== undefined && (
     <div className="absolute top-4 right-2">
+=======
+  const renderDuration = content.duration !== undefined && !playgroundPage && (
+    <div className="absolute right-2 top-4">
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
       <DurationDisplay duration={content.duration} chatId={chatId} />
     </div>
   );

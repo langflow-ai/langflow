@@ -85,9 +85,13 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
+  options?: string[];
+  active_tab?: number;
   [key: string]: any;
   icon?: string;
   text?: string;
+  temp_file?: boolean;
+  separator?: string;
 };
 
 export type OutputFieldProxyType = {
@@ -104,6 +108,7 @@ export type OutputFieldType = {
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
   function: { errors: Array<string> };
@@ -241,13 +246,17 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
-export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+export type useQueryFunctionType<
+  T = undefined,
+  R = any,
+  O = {},
+> = T extends undefined
   ? (
-      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey"> & O,
     ) => UseQueryResult<R>
   : (
       params: T,
-      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey"> & O,
     ) => UseQueryResult<R>;
 
 export type QueryFunctionType = (

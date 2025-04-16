@@ -24,7 +24,11 @@ const UploadFileButton = ({
         />
         <Button
           disabled={isBuilding}
+<<<<<<< HEAD
           className={`bg-muted flex h-[32px] w-[32px] items-center justify-center rounded-md font-bold transition-all ${
+=======
+          className={`btn-playground-actions ${
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
             isBuilding
               ? "cursor-not-allowed"
               : "text-muted-foreground hover:text-primary"

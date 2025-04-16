@@ -253,7 +253,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| task_output | Sequential Task | List of SequentialTask objects representing the created task(s) |
+| task_output | Sequential Task | List of SequentialTask objects representing the created tasks |
 
 ## Tool Calling Agent
 

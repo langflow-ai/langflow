@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
 import { ChatViewWrapperProps } from "../types/chat-view-wrapper";
-import ChatView from "./chatView/chat-view";
+import ChatView from "./chatView/components/chat-view";
 
 export const ChatViewWrapper = ({
   selectedViewField,
@@ -21,23 +21,23 @@ export const ChatViewWrapper = ({
   sendMessage,
   canvasOpen,
   setOpen,
+  playgroundTitle,
+  playgroundPage,
 }: ChatViewWrapperProps) => {
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col justify-between p-4",
+        "flex h-full w-full flex-col justify-between px-4 pb-4 pt-2",
         selectedViewField ? "hidden" : "",
       )}
     >
-      <div className="mb-4 h-[5%] text-[16px] font-semibold">
-        {visibleSession && sessions.length > 0 && sidebarOpen && (
-          <div className="hidden lg:block">
-            {visibleSession === currentFlowId
-              ? "Default Session"
-              : `${visibleSession}`}
-          </div>
+      <div
+        className={cn(
+          "mb-4 flex h-[5%] items-center text-[16px] font-semibold",
+          playgroundPage ? "justify-between" : "lg:justify-start",
         )}
-        <div className={cn(sidebarOpen ? "lg:hidden" : "")}>
+      >
+        <div className={cn(sidebarOpen ? "lg:hidden" : "left-4")}>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -50,14 +50,31 @@ export const ChatViewWrapper = ({
                 className="text-ring h-[18px] w-[18px]"
               />
             </Button>
-            <div className="font-semibold">Playground</div>
           </div>
         </div>
+        {visibleSession && sessions.length > 0 && (
+          <div
+            className={cn(
+              "truncate text-center font-semibold",
+              playgroundPage ? "" : "mr-12 flex-grow lg:mr-0",
+              sidebarOpen ? "blur-sm lg:blur-0" : "",
+            )}
+          >
+            {visibleSession === currentFlowId
+              ? "Default Session"
+              : `${visibleSession}`}
+          </div>
+        )}
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
+<<<<<<< HEAD
             "ring-offset-background focus:ring-ring absolute flex h-8 items-center justify-center rounded-sm transition-opacity focus:ring-2 focus:ring-offset-2 focus:outline-none",
             isPlayground ? "top-4 right-2" : "top-2 right-12",
+=======
+            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
           )}
         >
           <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
@@ -76,9 +93,10 @@ export const ChatViewWrapper = ({
               />
             </Button>
           </ShadTooltip>
-          {!isPlayground && <Separator orientation="vertical" />}
+          {!playgroundPage && <Separator orientation="vertical" />}
         </div>
       </div>
+<<<<<<< HEAD
       <div
         className={cn(
           visibleSession ? "h-[95%]" : "h-full",
@@ -102,6 +120,25 @@ export const ChatViewWrapper = ({
           />
         )}
       </div>
+=======
+
+      {messagesFetched && (
+        <ChatView
+          focusChat={sessionId}
+          sendMessage={sendMessage}
+          visibleSession={visibleSession}
+          closeChat={
+            !canvasOpen
+              ? undefined
+              : () => {
+                  setOpen(false);
+                }
+          }
+          playgroundPage={playgroundPage}
+          sidebarOpen={sidebarOpen}
+        />
+      )}
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
     </div>
   );
 };

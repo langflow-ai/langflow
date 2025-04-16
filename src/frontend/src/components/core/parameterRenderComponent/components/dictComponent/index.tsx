@@ -8,7 +8,7 @@ import { Button } from "../../../../ui/button";
 import { InputProps } from "../../types";
 
 export default function DictComponent({
-  value = [],
+  value,
   handleOnNewValue,
   disabled,
   editNode = false,
@@ -16,7 +16,7 @@ export default function DictComponent({
   name = "",
 }: InputProps<object | object[] | string, { name: string }>): JSX.Element {
   useEffect(() => {
-    if (disabled) {
+    if (disabled || value === null) {
       handleOnNewValue({ value: {} }, { skipSnapshot: true });
     }
   }, [disabled]);

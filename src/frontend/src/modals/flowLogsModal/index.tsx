@@ -4,6 +4,7 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "@/types/components";
+import { convertUTCToLocalTimezone } from "@/utils/utils";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import BaseModal from "../baseModal";
@@ -31,6 +32,13 @@ export default function FlowLogsModal({
   useEffect(() => {
     if (data) {
       const { columns, rows } = data;
+
+      if (data?.rows?.length > 0) {
+        data.rows.map((row: any) => {
+          row.timestamp = convertUTCToLocalTimezone(row.timestamp);
+        });
+      }
+
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     }

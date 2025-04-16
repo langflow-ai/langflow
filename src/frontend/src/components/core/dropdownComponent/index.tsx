@@ -47,19 +47,35 @@ export default function Dropdown({
   editNode = false,
   id = "",
   children,
+  nodeId,
+  nodeClass,
+  handleNodeClass,
   name,
   dialogInputs,
+  handleOnNewValue,
+  toggle,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
-  const validOptions = useMemo(() => filterNullOptions(options), [options]);
+  const validOptions = useMemo(
+    () => filterNullOptions(options),
+    [options, value],
+  );
 
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(validOptions);
+  const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
   const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
+
+  value = useMemo(() => {
+    if (!options.includes(value) && !filteredOptions.includes(value)) {
+      return null;
+    }
+    return value;
+  }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
   const placeholderName = name
@@ -69,14 +85,13 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { nodeClass, nodeId, handleNodeClass, tooltip, helperText } =
-    baseInputProps;
+  const { helperText } = baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
-    parameterId: name || "",
-    nodeId: nodeId || "",
-    node: nodeClass!,
+    parameterId: name,
+    nodeId: nodeId,
+    node: nodeClass,
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -92,11 +107,32 @@ export default function Dropdown({
 
   const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
+    setCustomValue(value);
+
+    if (!value) {
+      // If search is cleared, show all options
+      setFilteredOptions(validOptions);
+      setFilteredMetadata(optionsMetaData);
+      return;
+    }
+
+    // Search existing options
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-    if (!filtered.includes(value) && combobox && value) filtered.push(value);
-    setFilteredOptions(value ? filtered : validOptions);
-    setCustomValue(value);
+
+    // Update filteredOptions with the search results
+    setFilteredOptions(filtered);
+
+    // Update filteredMetadata to match the filtered options
+    if (optionsMetaData) {
+      const newMetadata = filtered.map((option) => {
+        const originalIndex = validOptions.indexOf(option);
+        return optionsMetaData[originalIndex];
+      });
+      setFilteredMetadata(newMetadata);
+    } else {
+      setFilteredMetadata(optionsMetaData);
+    }
   };
 
   const handleRefreshButtonPress = async () => {
@@ -144,15 +180,27 @@ export default function Dropdown({
 
   useEffect(() => {
     if (open) {
-      const filtered = cloneDeep(validOptions);
-      if (customValue === value && value && combobox) {
-        filtered.push(customValue);
-      }
-      setFilteredOptions(filtered);
+      setFilteredOptions(validOptions);
+      setCustomValue("");
     }
-  }, [open]);
+  }, [open, validOptions]);
 
-  // Render helper functions
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      if (open && customValue) {
+        const newOptions = [...validOptions];
+        if (!newOptions.includes(customValue)) {
+          newOptions.push(customValue);
+        }
+
+        setFilteredOptions(newOptions);
+
+        handleOnNewValue?.({ value: customValue });
+        onSelect(customValue);
+        setOpen(false);
+      }
+    }
+  };
 
   const renderLoadingButton = () => (
     <Button
@@ -184,11 +232,11 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "w-full justify-between font-normal",
+            "no-focus-visible w-full justify-between font-normal",
           )}
         >
           <span
-            className="flex items-center gap-2 truncate"
+            className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
             {optionsMetaData?.[
@@ -200,12 +248,14 @@ export default function Dropdown({
                     filteredOptions.findIndex((option) => option === value)
                   ]?.icon
                 }
-                className="h-4 w-4"
+                className="h-4 w-4 flex-shrink-0"
               />
             )}
-            {value && filteredOptions.includes(value)
-              ? value
-              : placeholderName}{" "}
+            <span className="truncate">
+              {value && filteredOptions.includes(value)
+                ? value
+                : placeholderName}{" "}
+            </span>
           </span>
           <ForwardedIconComponent
             name="ChevronsUpDown"
@@ -234,9 +284,11 @@ export default function Dropdown({
       />
       <input
         onChange={searchRoleByTerm}
+        onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
         className="placeholder:text-muted-foreground flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
+        data-testid="dropdown_search_input"
       />
     </div>
   );
@@ -313,37 +365,47 @@ export default function Dropdown({
                   data-testid={`${option}-${index}-option`}
                 >
                   <div className="flex w-full items-center gap-2">
-                    {optionsMetaData?.[index]?.icon && (
+                    {filteredMetadata?.[index]?.icon && (
                       <ForwardedIconComponent
+<<<<<<< HEAD
                         name={optionsMetaData?.[index]?.icon || "Unknown"}
                         className="text-primary h-4 w-4 shrink-0"
+=======
+                        name={filteredMetadata?.[index]?.icon || "Unknown"}
+                        className="h-4 w-4 shrink-0 text-primary"
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
                       />
                     )}
                     <div
                       className={cn("flex truncate", {
                         "flex-col":
-                          optionsMetaData && optionsMetaData?.length > 0,
-                        "w-full pl-2": !optionsMetaData?.[index]?.icon,
+                          filteredMetadata && filteredMetadata?.length > 0,
+                        "w-full pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
                       <div className="flex truncate">
                         {option}{" "}
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            optionsMetaData?.[index]?.status,
+                            filteredMetadata?.[index]?.status,
                           )}`}
                         >
                           <LoadingTextComponent
-                            text={optionsMetaData?.[
+                            text={filteredMetadata?.[
                               index
                             ]?.status?.toLowerCase()}
                           />
                         </span>
                       </div>
+<<<<<<< HEAD
                       {optionsMetaData && optionsMetaData?.length > 0 ? (
                         <div className="text-muted-foreground flex w-full items-center">
+=======
+                      {filteredMetadata && filteredMetadata?.length > 0 ? (
+                        <div className="flex w-full items-center overflow-hidden text-muted-foreground">
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
                           {Object.entries(
-                            filterMetadataKeys(optionsMetaData?.[index] || {}),
+                            filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
                             .filter(
                               ([key, value]) =>
@@ -353,18 +415,23 @@ export default function Dropdown({
                               <div
                                 key={key}
                                 className={cn("flex items-center", {
-                                  truncate: i === arr.length - 1,
+                                  "flex-1 overflow-hidden":
+                                    i === arr.length - 1,
                                 })}
                               >
                                 {i > 0 && (
                                   <ForwardedIconComponent
                                     name="Circle"
+<<<<<<< HEAD
                                     className="fill-muted-foreground mx-1 h-1 w-1 overflow-visible"
+=======
+                                    className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
                                   />
                                 )}
                                 <div
                                   className={cn("text-xs", {
-                                    truncate: i === arr.length - 1,
+                                    "w-full truncate": i === arr.length - 1,
                                   })}
                                 >{`${String(value)} ${key}`}</div>
                               </div>
@@ -408,7 +475,7 @@ export default function Dropdown({
       }
     >
       <Command>
-        {filteredOptions?.length > 0 && renderSearchInput()}
+        {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
@@ -430,8 +497,21 @@ export default function Dropdown({
         <PopoverAnchor>{children}</PopoverAnchor>
       ) : refreshOptions || isLoading ? (
         renderLoadingButton()
+      ) : validOptions.length === 1 &&
+        toggle &&
+        !combobox &&
+        value === validOptions[0] ? (
+        <div className="flex w-full items-center gap-2 truncate">
+          {optionsMetaData?.[0]?.icon && (
+            <ForwardedIconComponent
+              name={optionsMetaData?.[0]?.icon}
+              className="h-4 w-4 flex-shrink-0"
+            />
+          )}
+          <span className="truncate text-sm">{value}</span>
+        </div>
       ) : (
-        renderTriggerButton()
+        <div className="w-full truncate">{renderTriggerButton()}</div>
       )}
       {renderPopoverContent()}
     </Popover>

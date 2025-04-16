@@ -7,7 +7,9 @@ from .clickhouse import ClickhouseVectorStoreComponent
 from .couchbase import CouchbaseVectorStoreComponent
 from .elasticsearch import ElasticsearchVectorStoreComponent
 from .faiss import FaissVectorStoreComponent
+from .graph_rag import GraphRAGComponent
 from .hcd import HCDVectorStoreComponent
+from .local_db import LocalDBComponent
 from .milvus import MilvusVectorStoreComponent
 from .mongodb_atlas import MongoVectorStoreComponent
 from .opensearch import OpenSearchVectorStoreComponent
@@ -32,7 +34,9 @@ __all__ = [
     "CouchbaseVectorStoreComponent",
     "ElasticsearchVectorStoreComponent",
     "FaissVectorStoreComponent",
+    "GraphRAGComponent",
     "HCDVectorStoreComponent",
+    "LocalDBComponent",
     "MilvusVectorStoreComponent",
     "MongoVectorStoreComponent",
     "OpenSearchVectorStoreComponent",

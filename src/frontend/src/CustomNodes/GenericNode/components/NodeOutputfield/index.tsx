@@ -168,6 +168,8 @@ function NodeOutputField({
   lastOutput,
   colorName,
   isToolMode = false,
+  showHiddenOutputs,
+  hidden,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -214,6 +216,12 @@ function NodeOutputField({
     [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
   );
 
+  const emptyOutput = useMemo(() => {
+    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
+    );
+  }, [flowPoolNode?.data?.outputs]);
+
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
     [edges, id],
@@ -256,10 +264,10 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && data.node?.outputs![index].hidden) {
+    if (disabledOutput && hidden) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
+  }, [disabledOutput, handleUpdateOutputHide, hidden]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -370,6 +378,10 @@ function NodeOutputField({
     ],
   );
 
+  const disabledInspectButton =
+    !displayOutputPreview || unknownOutput || emptyOutput;
+
+  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (
@@ -392,7 +404,7 @@ function NodeOutputField({
           <HideShowButton
             disabled={disabledOutput}
             onClick={() => handleUpdateOutputHide()}
-            hidden={!!data.node?.outputs![index].hidden}
+            hidden={!!hidden}
             isToolMode={isToolMode}
             title={title}
           />
@@ -425,7 +437,7 @@ function NodeOutputField({
           <ShadTooltip
             content={
               displayOutputPreview
-                ? unknownOutput
+                ? unknownOutput || emptyOutput
                   ? "Output can't be displayed"
                   : "Inspect output"
                 : "Please build the component first"
@@ -436,12 +448,12 @@ function NodeOutputField({
               <OutputModal
                 open={openOutputModal}
                 setOpen={setOpenOutputModal}
-                disabled={!displayOutputPreview || unknownOutput}
+                disabled={disabledInspectButton}
                 nodeId={flowPoolId}
                 outputName={internalOutputName}
               >
                 <InspectButton
-                  disabled={!displayOutputPreview || unknownOutput}
+                  disabled={disabledInspectButton}
                   displayOutputPreview={displayOutputPreview}
                   unknownOutput={unknownOutput ?? false}
                   errorOutput={errorOutput ?? false}

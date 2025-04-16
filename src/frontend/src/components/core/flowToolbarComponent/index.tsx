@@ -1,20 +1,15 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import PlaygroundButton from "@/components/core/flowToolbarComponent/components/playground-button";
-import {
-  ENABLE_API,
-  ENABLE_LANGFLOW_STORE,
-} from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { Panel } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import ApiModal from "../../../modals/apiModal";
 import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";
 import { useShortcutsStore } from "../../../stores/shortcuts";
 import { useStoreStore } from "../../../stores/storeStore";
-import { classNames, isThereModal } from "../../../utils/utils";
+import { classNames, cn, isThereModal } from "../../../utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
+import FlowToolbarOptions from "./components/flow-toolbar-options";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
@@ -119,6 +114,7 @@ export default function FlowToolbar(): JSX.Element {
     <>
       <Panel className="!m-2" position="top-right">
         <div
+<<<<<<< HEAD
           className={
             "hover:shadow-round-btn-shadow bg-background flex items-center justify-center gap-7 rounded-md border p-1.5 shadow transition-all"
           }
@@ -175,6 +171,13 @@ export default function FlowToolbar(): JSX.Element {
               </div>
             )}
           </div>
+=======
+          className={cn(
+            "hover:shadow-round-btn-shadow flex h-11 items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
+          )}
+        >
+          <FlowToolbarOptions />
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
         </div>
       </Panel>
     </>

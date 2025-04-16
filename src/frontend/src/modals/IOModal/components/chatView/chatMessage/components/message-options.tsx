@@ -10,6 +10,7 @@ export function EditMessageButton({
   onEvaluate,
   isBotMessage,
   evaluation,
+  isAudioMessage,
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   onEdit: () => void;
   onCopy: () => void;
@@ -17,6 +18,7 @@ export function EditMessageButton({
   onEvaluate?: (value: boolean | null) => void;
   isBotMessage?: boolean;
   evaluation?: boolean | null;
+  isAudioMessage?: boolean;
 }) {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -31,6 +33,7 @@ export function EditMessageButton({
   };
 
   return (
+<<<<<<< HEAD
     <div className="border-border bg-background flex items-center rounded-md border">
       <ShadTooltip styleClasses="z-50" content="Edit message" side="top">
         <div className="p-1">
@@ -44,6 +47,23 @@ export function EditMessageButton({
           </Button>
         </div>
       </ShadTooltip>
+=======
+    <div className="flex items-center rounded-md border border-border bg-background">
+      {!isAudioMessage && (
+        <ShadTooltip styleClasses="z-50" content="Edit message" side="top">
+          <div className="p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="h-8 w-8"
+            >
+              <IconComponent name="Pen" className="h-4 w-4" />
+            </Button>
+          </div>
+        </ShadTooltip>
+      )}
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
 
       <ShadTooltip
         styleClasses="z-50"

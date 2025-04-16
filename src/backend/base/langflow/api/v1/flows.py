@@ -21,15 +21,17 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.model import FlowHeader
+from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
+from langflow.utils.compression import compress_response
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -237,8 +239,12 @@ async def read_flows(
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
-                return [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-            return flows
+                # Convert to FlowHeader objects and compress the response
+                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                return compress_response(flow_headers)
+
+            # Compress the full flows response
+            return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
         return await paginate(session, stmt, params=params)
@@ -276,6 +282,21 @@ async def read_flow(
     if user_flow := await _read_flow(session, flow_id, current_user.id, get_settings_service()):
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")
+
+
+@router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
+async def read_public_flow(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+):
+    """Read a public flow."""
+    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
+    if access_type is not AccessTypeEnum.PUBLIC:
+        raise HTTPException(status_code=403, detail="Flow is not public")
+
+    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -522,7 +543,10 @@ async def read_basic_examples(
             return []
 
         # Get all flows in the starter folder
-        return (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+        flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+
+        # Return compressed response using our utility function
+        return compress_response(flows)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
