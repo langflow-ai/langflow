@@ -1,5 +1,4 @@
 from typing import Any
-import json
 
 from composio import Action
 
@@ -263,6 +262,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Order By",
             info="The order of the events returned in the result. Acceptable values are 'startTime' and 'updated'.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_FIND_EVENT-show_deleted",
@@ -284,12 +284,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Timemax",
             info="Upper bound (exclusive) for an event's start time to filter by. Accepts multiple formats:, 1. ISO format with timezone (e.g., 2024-12-06T13:00:00Z), 2. Comma-separated format (e.g., 2024,12,06,13,00,00), 3. Simple datetime format (e.g., 2024-12-06 13:00:00)",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_EVENT-timeMin",
             display_name="Timemin",
             info="Lower bound (exclusive) for an event's end time to filter by. Accepts multiple formats:, 1. ISO format with timezone (e.g., 2024-12-06T13:00:00Z), 2. Comma-separated format (e.g., 2024,12,06,13,00,00), 3. Simple datetime format (e.g., 2024-12-06 13:00:00)",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_EVENT-updated_min",
@@ -352,6 +354,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Description",
             info="Description of the event. Can contain HTML. Optional.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-eventType",
@@ -359,12 +362,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Type of the event, immutable post-creation. Currently, only 'default'",
             show=False,
             value="default",
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_CREATE_EVENT-create_meeting_room",
             display_name="Create Meeting Room",
             info="If true, a Google Meet link is created and added to the event.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_CREATE_EVENT-guestsCanSeeOtherGuests",
@@ -441,6 +446,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Send Updates",
             info="Defaults to True. Whether to send updates to the attendees.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-start_datetime",
@@ -455,6 +461,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Number of hours (0-24).",
             show=False,
             value=0,
+            advanced=True,
         ),
         IntInput(
             name="GOOGLECALENDAR_CREATE_EVENT-event_duration_minutes",
@@ -462,6 +469,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Number of minutes (0-59).",
             show=False,
             value=30,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_CREATE_EVENT-calendar_id",
@@ -490,12 +498,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Time Min",
             info="The start datetime of the interval for the query. Supports multiple formats:, 1. ISO format with timezone (e.g., 2024-12-06T13:00:00Z), 2. Comma-separated format (e.g., 2024,12,06,13,00,00), 3. Simple datetime format (e.g., 2024-12-06 13:00:00)",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_FREE_SLOTS-time_max",
             display_name="Time Max",
             info="The end datetime of the interval for the query. Supports multiple formats:, 1. ISO format with timezone (e.g., 2024-12-06T13:00:00Z), 2. Comma-separated format (e.g., 2024,12,06,13,00,00), 3. Simple datetime format (e.g., 2024-12-06 13:00:00)",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_FREE_SLOTS-timezone",
@@ -503,6 +513,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Time zone used in the response. Optional. The default is UTC.",
             show=False,
             value="UTC",
+            advanced=True,
         ),
         IntInput(
             name="GOOGLECALENDAR_FIND_FREE_SLOTS-group_expansion_max",
@@ -510,6 +521,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Maximal number of calendar identifiers to be provided for a single group. Optional. An error is returned for a group with more members than this value. Maximum value is 100.",  # noqa: E501
             show=False,
             value=100,
+            advanced=True,
         ),
         IntInput(
             name="GOOGLECALENDAR_FIND_FREE_SLOTS-calendar_expansion_max",
@@ -517,6 +529,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Maximal number of calendars for which FreeBusy information is to be provided. Optional. Maximum value is 50.",  # noqa: E501
             show=False,
             value=50,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_FIND_FREE_SLOTS-items",
@@ -544,6 +557,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Guests who should receive notifications about the creation of the new event. Accepted fields include 'all', 'none', 'externalOnly'",  # noqa: E501
             show=False,
             value="none",
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_PATCH_CALENDAR-calendar_id",
@@ -557,12 +571,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Description",
             info="Description of the calendar. Optional.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_PATCH_CALENDAR-location",
             display_name="Location",
             info="Geographic location of the calendar as free-form text.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_PATCH_CALENDAR-summary",
@@ -576,6 +592,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Timezone",
             info="The time zone of the calendar. (Formatted as an IANA Time Zone Database name, e.g. 'Europe/Zurich').",
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="GOOGLECALENDAR_GET_CURRENT_DATE_TIME-timezone",
@@ -583,12 +600,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="The timezone offset from UTC to retrieve current date and time, like for location of UTC+6, you give 6, for UTC -9, your give -9.",  # noqa: E501
             show=False,
             value=0,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-description",
             display_name="Description",
             info="Description of the event. Can contain HTML. Optional.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-eventType",
@@ -596,12 +615,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Type of the event, immutable post-creation. Currently, only 'default' and 'workingLocation' can be created.",  # noqa: E501
             show=False,
             value="default",
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-create_meeting_room",
             display_name="Create Meeting Room",
             info="If true, a Google Meet link is created and added to the event.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-guestsCanSeeOtherGuests",
@@ -651,12 +672,14 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Timezone",
             info="IANA timezone name (e.g., 'America/New_York'). Required if datetime is naive. If datetime includes timezone info (Z or offset), this field is optional and defaults to UTC.",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-recurrence",
             display_name="Recurrence",
             info="List of RRULE, EXRULE, RDATE, EXDATE lines for recurring events.",
             show=False,
+            advanced=True,
         ),
         BoolInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-guests_can_modify",
@@ -677,6 +700,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             display_name="Send Updates",
             info="Defaults to True. Whether to send updates to the attendees.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-start_datetime",
@@ -691,6 +715,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Number of hours (0-24).",
             show=False,
             value=0,
+            advanced=True,
         ),
         IntInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-event_duration_minutes",
@@ -698,6 +723,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             info="Number of minutes (0-59).",
             show=False,
             value=30,
+            advanced=True,
         ),
         MessageTextInput(
             name="GOOGLECALENDAR_UPDATE_EVENT-calendar_id",
@@ -752,17 +778,8 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
                 params=params,
             )
             if not result.get("successful"):
-                message_str = result.get("data", {}).get("message", "{}")
-                try:
-                    error_data = json.loads(message_str).get("error", {})
-                except json.JSONDecodeError:
-                    error_data = {"error": "Failed to get exact error details"}
-                return {
-                    "code": error_data.get("code"),
-                    "message": error_data.get("message"),
-                    "errors": error_data.get("errors", []),
-                    "status": error_data.get("status"),
-                }
+                message_str = result.get("error", {})
+                return {"error": message_str}
 
             result_data = result.get("data", [])
             if (
@@ -772,7 +789,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             ):
                 msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
-            return result_data  # noqa: TRY300
+            return result_data[next(iter(result_data))]
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
