@@ -1,5 +1,5 @@
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
@@ -303,7 +303,7 @@ export default function Dropdown({
                 <>
                   {value && filteredOptions.includes(value)
                     ? value
-                    : placeholderName}{" "}
+                    : SELECT_AN_OPTION}{" "}
                 </>
               )}
             </span>
