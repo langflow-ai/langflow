@@ -1,7 +1,7 @@
 """add category column in variable
 
 Revision ID: e5fc330efa7c
-Revises: 93e2705fa8d6
+Revises: 1b8b740a6fa3
 Create Date: 2025-03-14 15:12:39.234016
 
 """
@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = 'e5fc330efa7c'
-down_revision: Union[str, None] = 'f3b2d1f1002d'
+down_revision: Union[str, None] = '1b8b740a6fa3'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
