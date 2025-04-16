@@ -14,7 +14,18 @@ import { HiArrowRight } from "react-icons/hi";
 import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
-// const ARROW_GITHUB_ICON_CLASS =
+const EMPTY_PAGE_TITLE = "Your new favorite way to ship Agents";
+const EMPTY_PAGE_DESCRIPTION =
+  "Design agents that connect to any API, model, or database.";
+const EMPTY_PAGE_GITHUB_DESCRIPTION =
+  "Follow development, star the repo, and shape the future.";
+const EMPTY_PAGE_DISCORD_DESCRIPTION =
+  "Join builders, ask questions, and show off your agents.";
+const EMPTY_PAGE_DRAG_AND_DROP_TEXT =
+  "Already have a flow? Drag and drop to upload.";
+const EMPTY_PAGE_FOLDER_DESCRIPTION = "Empty folder";
+const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = <>+&nbsp; Create first flow</>;
+
 const ARROW_DISCORD_ICON_CLASS =
   "absolute right-4 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 const ARROW_GITHUB_ICON_CLASS =
@@ -70,17 +81,26 @@ export const EmptyPageCommunity = ({
                 primaryColor="#C661B8"
                 secondaryColor="#C661B8"
               >
-                <LangflowLogo className="h-8 w-8" />
+                <LangflowLogo
+                  data-testid="empty_page_logo"
+                  className="h-8 w-8"
+                />
               </EnhancedBeamEffect>
               {/* </BackgroundGradient> */}
-              <span className="z-50 mt-4 text-2xl font-semibold text-foreground">
-                Your new favorite way to ship Agents
+              <span
+                data-testid="empty_page_title"
+                className="z-50 mt-4 text-2xl font-semibold text-foreground"
+              >
+                {EMPTY_PAGE_TITLE}
               </span>
 
-              <span className="z-50 text-[14px] text-secondary-foreground">
+              <span
+                data-testid="empty_page_description"
+                className="z-50 text-[14px] text-secondary-foreground"
+              >
                 {folders?.length > 1
-                  ? "Empty folder"
-                  : "Design agents that connect to any API, model, or database."}
+                  ? EMPTY_PAGE_FOLDER_DESCRIPTION
+                  : EMPTY_PAGE_DESCRIPTION}
               </span>
             </div>
 
@@ -92,6 +112,7 @@ export const EmptyPageCommunity = ({
                   handleUserTrack("github_starred")();
                   window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
                 }}
+                data-testid="empty_page_github_button"
               >
                 <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4">
                   <div className="grid w-full items-center justify-between gap-2">
@@ -106,7 +127,7 @@ export const EmptyPageCommunity = ({
                     </div>
                     <div>
                       <span className="text-sm text-secondary-foreground">
-                        Follow development, star the repo, and shape the future.
+                        {EMPTY_PAGE_GITHUB_DESCRIPTION}
                       </span>
                     </div>
                   </div>
@@ -121,6 +142,7 @@ export const EmptyPageCommunity = ({
                   handleUserTrack("discord_joined")();
                   window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
                 }}
+                data-testid="empty_page_discord_button"
               >
                 <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4">
                   <div className="grid w-full items-center justify-between gap-2">
@@ -135,7 +157,7 @@ export const EmptyPageCommunity = ({
                     </div>
                     <div>
                       <span className="text-sm text-secondary-foreground">
-                        Join builders, ask questions, and show off your agents.
+                        {EMPTY_PAGE_DISCORD_DESCRIPTION}
                       </span>
                     </div>
                   </div>
@@ -150,13 +172,16 @@ export const EmptyPageCommunity = ({
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
               >
-                <span>+</span> Create first flow
+                <span>{EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT}</span>
               </Button>
             </div>
           </div>
         </div>
-        <p className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-sm text-muted-foreground">
-          Already have a flow? Drag and drop to upload.
+        <p
+          data-testid="empty_page_drag_and_drop_text"
+          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-sm text-muted-foreground"
+        >
+          {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>
       </CardsWrapComponent>
     </DotBackgroundDemo>

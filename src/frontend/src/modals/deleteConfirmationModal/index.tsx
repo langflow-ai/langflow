@@ -61,6 +61,7 @@ export default function DeleteConfirmationModal({
               onClick={(e) => e.stopPropagation()}
               className="mr-1"
               variant="outline"
+              data-testid="btn_cancel_delete_confirmation_modal"
             >
               Cancel
             </Button>
@@ -72,6 +73,7 @@ export default function DeleteConfirmationModal({
               onClick={(e) => {
                 onConfirm(e);
               }}
+              data-testid="btn_delete_delete_confirmation_modal"
             >
               Delete
             </Button>

@@ -48,7 +48,7 @@ export const GetStartedProgress: FC<{
     return Math.round((completedSteps / totalSteps) * 100) + hasFlowsCount;
   }, [userData?.optins, isGithubStarredChild, isDiscordJoinedChild, hasFlows]);
 
-  const handleUserTrack = (key: string) => () => {
+  const handleUserTrack = (key: string) => {
     const optins = userData?.optins ?? {};
     optins[key] = true;
 
@@ -62,8 +62,10 @@ export const GetStartedProgress: FC<{
           mutateLoggedUser({});
           if (key === "github_starred") {
             setIsGithubStarredChild(true);
+            window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
           } else if (key === "discord_clicked") {
             setIsDiscordJoinedChild(true);
+            window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
           } else if (key === "dialog_dismissed") {
             handleDismissDialog();
           }
@@ -77,8 +79,9 @@ export const GetStartedProgress: FC<{
       <div className="mb-2 flex items-center justify-between">
         <span className="font-[14px]">Get started</span>
         <button
-          onClick={handleUserTrack("dialog_dismissed")}
+          onClick={() => handleUserTrack("dialog_dismissed")}
           className="text-muted-foreground hover:text-foreground"
+          data-testid="close_get_started_dialog"
         >
           <IconComponent name="X" className="h-4 w-4" />
         </button>
@@ -91,13 +94,17 @@ export const GetStartedProgress: FC<{
             style={{ width: `${percentageGetStarted}%` }}
           />
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span
+          className="text-xs text-muted-foreground"
+          data-testid="get_started_progress_percentage"
+        >
           {percentageGetStarted}%
         </span>
       </div>
 
       <div className="space-y-1">
         <Button
+          data-testid="github_starred_btn_get_started"
           unstyled
           className={cn(
             "w-full",
@@ -109,7 +116,6 @@ export const GetStartedProgress: FC<{
               return;
             }
             handleUserTrack("github_starred");
-            window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
           }}
         >
           <div
@@ -119,10 +125,12 @@ export const GetStartedProgress: FC<{
             )}
           >
             {isGithubStarredChild ? (
-              <IconComponent
-                name="Check"
-                className="h-4 w-4 text-accent-emerald-foreground"
-              />
+              <span data-testid="github_starred_icon_get_started">
+                <IconComponent
+                  name="Check"
+                  className="h-4 w-4 text-accent-emerald-foreground"
+                />
+              </span>
             ) : (
               <FaGithub className="h-4 w-4" />
             )}
@@ -138,6 +146,7 @@ export const GetStartedProgress: FC<{
         </Button>
 
         <Button
+          data-testid="discord_joined_btn_get_started"
           unstyled
           className={cn(
             "w-full",
@@ -148,8 +157,7 @@ export const GetStartedProgress: FC<{
               e.preventDefault();
               return;
             }
-            handleUserTrack("discord_clicked")();
-            window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
+            handleUserTrack("discord_clicked");
           }}
         >
           <div
@@ -159,10 +167,12 @@ export const GetStartedProgress: FC<{
             )}
           >
             {isDiscordJoinedChild ? (
-              <IconComponent
-                name="Check"
-                className="h-4 w-4 text-accent-emerald-foreground"
-              />
+              <span data-testid="discord_joined_icon_get_started">
+                <IconComponent
+                  name="Check"
+                  className="h-4 w-4 text-accent-emerald-foreground"
+                />
+              </span>
             ) : (
               <FaDiscord className="h-4 w-4 text-[#5865F2]" />
             )}
@@ -189,13 +199,15 @@ export const GetStartedProgress: FC<{
             )}
             data-testid="create_flow_btn_get_started"
           >
-            <IconComponent
-              name={hasFlows ? "Check" : "Plus"}
-              className={cn(
-                "h-4 w-4 text-primary",
-                hasFlows && "text-accent-emerald-foreground",
-              )}
-            />
+            <span data-testid="create_flow_icon_get_started">
+              <IconComponent
+                name={hasFlows ? "Check" : "Plus"}
+                className={cn(
+                  "h-4 w-4 text-primary",
+                  hasFlows && "text-accent-emerald-foreground",
+                )}
+              />
+            </span>
             <span className={cn("text-sm", hasFlows && "line-through")}>
               Create a flow
             </span>
