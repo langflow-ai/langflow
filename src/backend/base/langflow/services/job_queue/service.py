@@ -283,6 +283,7 @@ class JobQueueService(Service):
         Args:
             task (asyncio.Task): The task to check.
             main_queue (asyncio.Queue): The queue associated with the task.
+
         Returns:
             bool: True if the task is cleanable, False otherwise.
         """
