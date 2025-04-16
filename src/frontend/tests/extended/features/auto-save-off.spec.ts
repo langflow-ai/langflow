@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to manually save a flow when the auto_save is off",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@components"] },
   async ({ page }) => {
     await page.route("**/api/v1/config", (route) => {
       route.fulfill({
