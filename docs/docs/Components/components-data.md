@@ -26,6 +26,24 @@ In this example of a document ingestion pipeline, the URL component outputs raw 
 
 This component makes HTTP requests using URLs or cURL commands.
 
+1. To use this component in a flow, connect the **Data** or **DataFrame** outputs to a component that accepts the input.
+For example, connect the **API Request** component to a **Chat Output** component.
+
+![API request into a chat output component](/img/component-api-request-chat-output.png)
+
+2. In the API component's **URLs** field, enter the endpoint for your request.
+This example uses `https://dummy-json.mock.beeceptor.com/posts`, which is a list of technology blog posts.
+
+3. In the **Method** field, enter the type of request.
+This example uses GET to retrieve a list of blog posts.
+The component also supports POST, PATCH, PUT, and DELETE.
+
+4. Optionally, enable the **Use cURL** button to create a field for pasting curl requests.
+The equivalent call in this example is `curl -v https://dummy-json.mock.beeceptor.com/posts`.
+
+5. Click **Playground**, and then click **Run Flow**.
+Your request returns a list of blog posts.
+
 ### Inputs
 
 | Name | Display Name | Info |
