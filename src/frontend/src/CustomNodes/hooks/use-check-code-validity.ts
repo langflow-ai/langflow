@@ -68,15 +68,19 @@ const useCheckCodeValidity = (
     const userOutputs = data.node?.outputs;
     const originalTemplate = template;
     const userTemplate = data.node?.template;
-    setIsOutdated(codeIsOutdated(currentCode, thisNodesCode, data.type));
-    setHasBreakingChange(
-      codeHasBreakingChange(
-        originalOutputs,
-        userOutputs,
-        originalTemplate,
-        userTemplate,
-      ),
+    const hasBreakingChange = codeHasBreakingChange(
+      originalOutputs,
+      userOutputs,
+      originalTemplate,
+      userTemplate,
     );
+    if (hasBreakingChange) {
+      setIsOutdated(false);
+      setHasBreakingChange(true);
+    } else {
+      setIsOutdated(codeIsOutdated(currentCode, thisNodesCode, data.type));
+      setHasBreakingChange(false);
+    }
     setIsUserEdited(data.node?.edited ?? false);
   }, [
     data.node,
