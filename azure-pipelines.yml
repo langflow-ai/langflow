@@ -1,0 +1,28 @@
+trigger:
+  branches:
+    include:
+    - main
+stages:
+- stage: __default
+  jobs:
+  - job: Job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: CmdLine@2
+      displayName: 'Clone GitHub and Push to Azure DevOps'
+      inputs:
+        script: |
+          echo "Cloning GitHub repo..."
+          git clone https://github.com/YogaSutherland/robility.git
+          cd langflow
+
+          echo "Configuring Git credentials..."
+          git config user.email "Yogabharath.R@sutherlandglobal.com"
+          git config user.name "Yogabharath.R@sutherlandglobal.com"
+
+          echo "Adding Azure DevOps remote..."
+          git remote add azure https://6gFREwR81RGFj9Pr44cVhHdqaKSsQyLrLbNQ0xD8a45EdagRJqcfJQQJ99BDACAAAAATb2pZAAASAZDO4azY@dev.azure.com/SutherlandGlobal/SentinelRD/_git/Robility_flow
+
+          echo "Pushing code to Azure DevOps..."
+          git push azure main --force
