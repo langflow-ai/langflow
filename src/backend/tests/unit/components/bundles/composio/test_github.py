@@ -59,7 +59,7 @@ class TestGitHubComponent(ComponentTestBaseWithoutClient):
             Action,
             "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER",
             MockAction.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER,
-        )  # noqa: E501
+        )
 
         # Setup component
         component = component_class(**default_kwargs)
