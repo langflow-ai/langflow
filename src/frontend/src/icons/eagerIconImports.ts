@@ -112,6 +112,7 @@ import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { ClaudeIcon } from "./Claude";
 import { CursorIcon } from "./Cursor";
+import { McpIcon } from "./MCP";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
@@ -176,6 +177,7 @@ export const eagerIconsMapping = {
   Langwatch: LangwatchIcon,
   LMStudio: LMStudioIcon,
   Maritalk: MaritalkIcon,
+  Mcp: McpIcon,
   Mem0: Mem0,
   Meta: MetaIcon,
   Midjourney: MidjourneyIcon,

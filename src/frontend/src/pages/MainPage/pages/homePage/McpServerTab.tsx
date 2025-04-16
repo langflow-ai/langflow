@@ -81,22 +81,31 @@ const McpServerTab = () => {
             </Button>
           </div>
           <div className="flex flex-row flex-wrap gap-2 pt-3">
-            {[
-              "something",
-              "something_else",
-              "something_other",
-              "something_new",
-              "something_else_again",
-              "something_other_again",
-              "something_new_again",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-sm border border-muted bg-muted p-1 text-xs text-muted-foreground"
-              >
-                {item}
+            {false ? (
+              <div className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border p-6">
+                <div className="pb-2 text-xs text-muted-foreground">
+                  No actions added to this server.
+                </div>
+                <Button className="h-9 text-[13px]">Add Actions</Button>
               </div>
-            ))}
+            ) : (
+              [
+                "something",
+                "something_else",
+                "something_other",
+                "something_new",
+                "something_else_again",
+                "something_other_again",
+                "something_new_again",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-sm border border-muted bg-muted p-1 text-xs text-muted-foreground"
+                >
+                  {item}
+                </div>
+              ))
+            )}
           </div>
         </div>
         <div className="w-2/3 pl-4">
@@ -130,10 +139,10 @@ const McpServerTab = () => {
             <SyntaxHighlighter
               style={{
                 "hljs-string": {
-                  color: "hsla(158, 64%, 52%, 1)",
+                  color: "hsla(158, 64%, 52%, 1)", // Accent Green
                 },
                 "hljs-attr": {
-                  color: "hsla(329, 86%, 70%, 1)",
+                  color: "hsla(329, 86%, 70%, 1)", // Accent Pink
                 },
               }}
               CodeTag={({ children }) => (
