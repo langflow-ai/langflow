@@ -26,7 +26,7 @@ stages:
 
           echo "Configuring Git credentials..."
           git config user.email $(GithubEmail)
-          git config user.name $(YogaSutherland)
+          git config user.name $(Githubname)
 
           echo "Adding Azure DevOps remote..."
           git remote add azure $(AZURE_DEVOPS_URL)
