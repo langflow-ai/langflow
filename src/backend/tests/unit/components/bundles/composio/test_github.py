@@ -120,19 +120,27 @@ class TestGitHubComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.api_key = "test_key"
         component.action = [{"name": "List Repository Issues"}]
-        setattr(component, "GITHUB_LIST_BRANCHES-owner", "langflow-ai")
-        setattr(component, "GITHUB_LIST_BRANCHES-repo", "langflow")
+        setattr(component, "GITHUB_LIST_REPOSITORY_ISSUES-owner", "langflow-ai")
+        setattr(component, "GITHUB_LIST_REPOSITORY_ISSUES-repo", "langflow")
 
         # For this specific test, customize the _actions_data to not use get_result_field
         component._actions_data = {
-            "GITHUB_LIST_BRANCHES": {
-                "display_name": "List Branches",
+            "GITHUB_LIST_REPOSITORY_ISSUES": {
+                "display_name": "List Repository Issues",
                 "action_fields": [
-                    "GITHUB_LIST_BRANCHES-owner",
-                    "GITHUB_LIST_BRANCHES-repo",
-                    "GITHUB_LIST_BRANCHES-protected",
-                    "GITHUB_LIST_BRANCHES-per_page",
-                    "GITHUB_LIST_BRANCHES-page",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-owner",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-repo",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-milestone",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-state",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-assignee",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-creator",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-mentioned",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-labels",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-sort",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-direction",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-since",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-per_page",
+                    "GITHUB_LIST_REPOSITORY_ISSUES-page",
                 ],
             },
         }
