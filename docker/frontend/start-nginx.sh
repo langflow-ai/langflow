@@ -24,7 +24,7 @@ if [ -z "$BACKEND_URL" ]; then
 fi
 
 # Export variables for envsubst
-export BACKEND_URL FRONTEND_PORT
+export BACKEND_URL FRONTEND_PORT LANGFLOW_MAX_FILE_SIZE_UPLOAD
 
 # Use envsubst to substitute environment variables in the template
 envsubst '${BACKEND_URL} ${FRONTEND_PORT} ${LANGFLOW_MAX_FILE_SIZE_UPLOAD}' < /etc/nginx/conf.d/default.conf.template > $CONFIG_DIR/default.conf
