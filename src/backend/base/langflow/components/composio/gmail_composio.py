@@ -391,3 +391,9 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return super().update_build_config(build_config, field_value, field_name)
+
+    def set_default_tools(self):
+        self._default_tools = {
+            self.sanitize_action_name("GMAIL_SEND_EMAIL").replace(" ", "-"),
+            self.sanitize_action_name("GMAIL_FETCH_EMAILS").replace(" ", "-"),
+        }

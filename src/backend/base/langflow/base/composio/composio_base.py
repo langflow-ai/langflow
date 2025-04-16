@@ -285,6 +285,7 @@ class ComposioBaseComponent(Component):
     async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
         toolset = self._build_wrapper()
+        self.set_default_tools()
         return self.configure_tools(toolset)
 
     @property
@@ -296,3 +297,7 @@ class ComposioBaseComponent(Component):
     @abstractmethod
     def execute_action(self) -> list[dict]:
         """Execute action and return response as Message."""
+
+    @abstractmethod
+    def set_default_tools(self):
+        """Set the default tools."""
