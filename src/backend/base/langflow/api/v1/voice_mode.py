@@ -163,6 +163,204 @@ def common_response_create(session_id, original: dict | None = None) -> dict:
     return msg
 
 
+class VoiceConfig:
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.use_elevenlabs = False
+        self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
+        self.elevenlabs_model = "eleven_multilingual_v2"
+        self.elevenlabs_client = None
+        self.elevenlabs_key = None
+        self.barge_in_enabled = False
+        self.progress_enabled = True
+
+        self.default_openai_realtime_session = {
+            "modalities": ["text", "audio"],
+            "instructions": SESSION_INSTRUCTIONS,
+            "voice": "echo",
+            "temperature": 0.8,
+            "input_audio_format": "pcm16",
+            "output_audio_format": "pcm16",
+            "turn_detection": {
+                "type": "server_vad",
+                "threshold": SILENCE_THRESHOLD,
+                "prefix_padding_ms": PREFIX_PADDING_MS,
+                "silence_duration_ms": SILENCE_DURATION_MS,
+            },
+            "input_audio_transcription": {"model": "whisper-1"},
+            "tools": [],
+            "tool_choice": "auto",
+        }
+        self.openai_realtime_session: dict[str, Any] = {}
+
+    def get_session_dict(self):
+        return dict(self.default_openai_realtime_session)
+
+
+class ElevenLabsClientManager:
+    _instance = None
+    _api_key = None
+
+    @classmethod
+    async def get_client(cls, user_id=None, session=None):
+        """Get or create an ElevenLabs client with the API key."""
+        if cls._instance is None:
+            if cls._api_key is None and user_id and session:
+                variable_service = get_variable_service()
+                try:
+                    cls._api_key = await variable_service.get_variable(
+                        user_id=user_id,
+                        name="ELEVENLABS_API_KEY",
+                        field="elevenlabs_api_key",
+                        session=session,
+                    )
+                except (InvalidToken, ValueError) as e:
+                    logger.error(f"Error with ElevenLabs API key: {e}")
+                    cls._api_key = os.getenv("ELEVENLABS_API_KEY", "")
+                    if not cls._api_key:
+                        logger.error("ElevenLabs API key not found")
+                        return None
+                except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
+                    logger.error(f"Exception getting ElevenLabs API key: {e}")
+                    return None
+
+            if cls._api_key:
+                cls._instance = ElevenLabs(api_key=cls._api_key)
+
+        return cls._instance
+
+
+def get_voice_config(session_id: str) -> VoiceConfig:
+    if session_id is None:
+        msg = "session_id cannot be None"
+        raise ValueError(msg)
+    if session_id not in voice_config_cache:
+        voice_config_cache[session_id] = VoiceConfig(session_id)
+    return voice_config_cache[session_id]
+
+
+class TTSConfig:
+    def __init__(self, session_id: str, openai_key: str):
+        self.session_id = session_id
+        self.use_elevenlabs = False
+        self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
+        self.elevenlabs_model = "eleven_multilingual_v2"
+        self.elevenlabs_client = None
+        self.default_tts_session = {
+            "type": "transcription_session.update",
+            "session": {
+                "input_audio_format": "pcm16",
+                "input_audio_transcription": {
+                    "model": "gpt-4o-transcribe",
+                    "language": "en",
+                },
+                "turn_detection": {
+                    "type": "server_vad",
+                    "threshold": SILENCE_THRESHOLD,
+                    "prefix_padding_ms": PREFIX_PADDING_MS,
+                    "silence_duration_ms": SILENCE_DURATION_MS,
+                },
+                "input_audio_noise_reduction": {"type": "near_field"},
+                "include": [],
+            },
+        }
+        self.tts_session: dict[str, Any] = {}
+        self.oai_client = OpenAI(api_key=openai_key)
+        self.openai_voice = "echo"
+
+    def get_session_dict(self):
+        return dict(self.default_tts_session)
+
+    def get_openai_client(self):
+        return self.oai_client
+
+    def get_openai_voice(self):
+        return self.openai_voice
+
+
+def get_tts_config(session_id: str, openai_key: str) -> TTSConfig:
+    if session_id is None:
+        msg = "session_id cannot be None"
+        raise ValueError(msg)
+    if session_id not in tts_config_cache:
+        tts_config_cache[session_id] = TTSConfig(session_id, openai_key)
+    return tts_config_cache[session_id]
+
+
+async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
+    """Enforce alternating sequence by checking the last sender.
+
+    If two consecutive messages come from the same party (e.g. AI/AI), wait briefly.
+    """
+    queue_key = f"{flow_id}:{session_id}"
+
+    # If the incoming sender is the same as the last recorded sender,
+    # wait for a change (with a timeout as a fallback).
+    if last_sender_by_session[queue_key] == sender:
+        await wait_for_sender_change(queue_key, sender, timeout=5)
+    last_sender_by_session[queue_key] = sender
+
+    # Now proceed to create the message
+    message_obj = MessageTable(
+        text=message,
+        sender=sender,
+        sender_name=sender_name,
+        session_id=session_id,
+        files=[],
+        flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
+        properties=Properties().model_dump(),
+        content_blocks=[],
+        category="message",
+    )
+
+    await message_queues[queue_key].put(message_obj)
+    # Update last sender for this session
+
+    if queue_key not in message_tasks or message_tasks[queue_key].done():
+        message_tasks[queue_key] = asyncio.create_task(process_message_queue(queue_key, session))
+
+
+async def wait_for_sender_change(queue_key, current_sender, timeout=5):
+    """Wait until the last sender for this session is not the same as current_sender.
+
+    or until the timeout expires.
+    """
+    waited = 0
+    interval = 0.05
+    while last_sender_by_session[queue_key] == current_sender and waited < timeout:
+        await asyncio.sleep(interval)
+        waited += interval
+
+
+async def process_message_queue(queue_key, session):
+    """Process messages from the queue one by one."""
+    try:
+        while True:
+            message = await message_queues[queue_key].get()
+
+            try:
+                await aadd_messagetables([message], session)
+                logger.debug(f"Added message to DB: {message.text[:30]}...")
+            except ValueError as e:
+                logger.error(f"Error saving message to database (ValueError): {e}")
+                logger.error(traceback.format_exc())
+            except sqlalchemy.exc.SQLAlchemyError as e:
+                logger.error(f"Error saving message to database (SQLAlchemyError): {e}")
+                logger.error(traceback.format_exc())
+            except (KeyError, AttributeError, TypeError) as e:
+                # More specific exceptions instead of blind Exception
+                logger.error(f"Error saving message to database: {e}")
+                logger.error(traceback.format_exc())
+            finally:
+                message_queues[queue_key].task_done()
+
+            if message_queues[queue_key].empty():
+                break
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Message queue processor for {queue_key} was cancelled: {e}")
+        logger.error(traceback.format_exc())
+
+
 async def handle_function_call(
     websocket: WebSocket,
     openai_ws: websockets.WebSocketClientProtocol,
@@ -173,34 +371,36 @@ async def handle_function_call(
     current_user: CurrentActiveUser,
     conversation_id: str,
     session_id: str,
+    voice_config: VoiceConfig,
 ):
     """Handle function calls from the OpenAI API."""
     try:
         # trigger response that tool was called
-        await openai_ws.send(
-            json.dumps(
-                {
-                    "type": "conversation.item.create",
-                    "item": {
-                        "type": "message",
-                        "role": "system",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": (
-                                    "Tell the user you are now looking into or solving "
-                                    "a request that will be explained later. Do not repeat "
-                                    "the prompt exactly, summarize what's being requested."
-                                    "Keep it very short."
-                                    f"\n\nThe request: {function_call_args}",
-                                ),
-                            }
-                        ],
-                    },
-                }
+        if voice_config.progress_enabled:
+            await openai_ws.send(
+                json.dumps(
+                    {
+                        "type": "conversation.item.create",
+                        "item": {
+                            "type": "message",
+                            "role": "system",
+                            "content": [
+                                {
+                                    "type": "input_text",
+                                    "text": (
+                                        "Tell the user you are now looking into or solving "
+                                        "a request that will be explained later. Do not repeat "
+                                        "the prompt exactly, summarize what's being requested."
+                                        "Keep it very short."
+                                        f"\n\nThe request: {function_call_args}",
+                                    ),
+                                }
+                            ],
+                        },
+                    }
+                )
             )
-        )
-        await openai_ws.send(json.dumps(common_response_create(session_id)))
+            await openai_ws.send(json.dumps(common_response_create(session_id)))
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
@@ -287,210 +487,8 @@ async def handle_function_call(
         await openai_ws.send(json.dumps(function_output))
 
 
-# --- Config Classes and Caches ---
-
-
-class VoiceConfig:
-    def __init__(self, session_id: str):
-        self.session_id = session_id
-        self.use_elevenlabs = False
-        self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
-        self.elevenlabs_model = "eleven_multilingual_v2"
-        self.elevenlabs_client = None
-        self.elevenlabs_key = None
-        self.barge_in_enabled = False
-
-        self.default_openai_realtime_session = {
-            "modalities": ["text", "audio"],
-            "instructions": SESSION_INSTRUCTIONS,
-            "voice": "echo",
-            "temperature": 0.8,
-            "input_audio_format": "pcm16",
-            "output_audio_format": "pcm16",
-            "turn_detection": {
-                "type": "server_vad",
-                "threshold": SILENCE_THRESHOLD,
-                "prefix_padding_ms": PREFIX_PADDING_MS,
-                "silence_duration_ms": SILENCE_DURATION_MS,
-            },
-            "input_audio_transcription": {"model": "whisper-1"},
-            "tools": [],
-            "tool_choice": "auto",
-        }
-        self.openai_realtime_session: dict[str, Any] = {}
-
-    def get_session_dict(self):
-        return dict(self.default_openai_realtime_session)
-
-
-class ElevenLabsClientManager:
-    _instance = None
-    _api_key = None
-
-    @classmethod
-    async def get_client(cls, user_id=None, session=None):
-        """Get or create an ElevenLabs client with the API key."""
-        if cls._instance is None:
-            if cls._api_key is None and user_id and session:
-                variable_service = get_variable_service()
-                try:
-                    cls._api_key = await variable_service.get_variable(
-                        user_id=user_id,
-                        name="ELEVENLABS_API_KEY",
-                        field="elevenlabs_api_key",
-                        session=session,
-                    )
-                except (InvalidToken, ValueError) as e:
-                    logger.error(f"Error with ElevenLabs API key: {e}")
-                    cls._api_key = os.getenv("ELEVENLABS_API_KEY", "")
-                    if not cls._api_key:
-                        logger.error("ElevenLabs API key not found")
-                        return None
-                except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
-                    logger.error(f"Exception getting ElevenLabs API key: {e}")
-                    return None
-
-            if cls._api_key:
-                cls._instance = ElevenLabs(api_key=cls._api_key)
-
-        return cls._instance
-
-
 voice_config_cache: dict[str, VoiceConfig] = {}
-
-
-def get_voice_config(session_id: str) -> VoiceConfig:
-    if session_id is None:
-        msg = "session_id cannot be None"
-        raise ValueError(msg)
-    if session_id not in voice_config_cache:
-        voice_config_cache[session_id] = VoiceConfig(session_id)
-    return voice_config_cache[session_id]
-
-
-class TTSConfig:
-    def __init__(self, session_id: str, openai_key: str):
-        self.session_id = session_id
-        self.use_elevenlabs = False
-        self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
-        self.elevenlabs_model = "eleven_multilingual_v2"
-        self.elevenlabs_client = None
-        self.default_tts_session = {
-            "type": "transcription_session.update",
-            "session": {
-                "input_audio_format": "pcm16",
-                "input_audio_transcription": {
-                    "model": "gpt-4o-transcribe",
-                    "language": "en",
-                },
-                "turn_detection": {
-                    "type": "server_vad",
-                    "threshold": SILENCE_THRESHOLD,
-                    "prefix_padding_ms": PREFIX_PADDING_MS,
-                    "silence_duration_ms": SILENCE_DURATION_MS,
-                },
-                "input_audio_noise_reduction": {"type": "near_field"},
-                "include": [],
-            },
-        }
-        self.tts_session: dict[str, Any] = {}
-        self.oai_client = OpenAI(api_key=openai_key)
-        self.openai_voice = "echo"
-
-    def get_session_dict(self):
-        return dict(self.default_tts_session)
-
-    def get_openai_client(self):
-        return self.oai_client
-
-    def get_openai_voice(self):
-        return self.openai_voice
-
-
 tts_config_cache: dict[str, TTSConfig] = {}
-
-
-def get_tts_config(session_id: str, openai_key: str) -> TTSConfig:
-    if session_id is None:
-        msg = "session_id cannot be None"
-        raise ValueError(msg)
-    if session_id not in tts_config_cache:
-        tts_config_cache[session_id] = TTSConfig(session_id, openai_key)
-    return tts_config_cache[session_id]
-
-
-async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
-    """Enforce alternating sequence by checking the last sender.
-
-    If two consecutive messages come from the same party (e.g. AI/AI), wait briefly.
-    """
-    queue_key = f"{flow_id}:{session_id}"
-
-    # If the incoming sender is the same as the last recorded sender,
-    # wait for a change (with a timeout as a fallback).
-    if last_sender_by_session[queue_key] == sender:
-        await wait_for_sender_change(queue_key, sender, timeout=5)
-    last_sender_by_session[queue_key] = sender
-
-    # Now proceed to create the message
-    message_obj = MessageTable(
-        text=message,
-        sender=sender,
-        sender_name=sender_name,
-        session_id=session_id,
-        files=[],
-        flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
-        properties=Properties().model_dump(),
-        content_blocks=[],
-        category="message",
-    )
-
-    await message_queues[queue_key].put(message_obj)
-    # Update last sender for this session
-
-    if queue_key not in message_tasks or message_tasks[queue_key].done():
-        message_tasks[queue_key] = asyncio.create_task(process_message_queue(queue_key, session))
-
-
-async def wait_for_sender_change(queue_key, current_sender, timeout=5):
-    """Wait until the last sender for this session is not the same as current_sender.
-
-    or until the timeout expires.
-    """
-    waited = 0
-    interval = 0.05
-    while last_sender_by_session[queue_key] == current_sender and waited < timeout:
-        await asyncio.sleep(interval)
-        waited += interval
-
-
-async def process_message_queue(queue_key, session):
-    """Process messages from the queue one by one."""
-    try:
-        while True:
-            message = await message_queues[queue_key].get()
-
-            try:
-                await aadd_messagetables([message], session)
-                logger.debug(f"Added message to DB: {message.text[:30]}...")
-            except ValueError as e:
-                logger.error(f"Error saving message to database (ValueError): {e}")
-                logger.error(traceback.format_exc())
-            except sqlalchemy.exc.SQLAlchemyError as e:
-                logger.error(f"Error saving message to database (SQLAlchemyError): {e}")
-                logger.error(traceback.format_exc())
-            except (KeyError, AttributeError, TypeError) as e:
-                # More specific exceptions instead of blind Exception
-                logger.error(f"Error saving message to database: {e}")
-                logger.error(traceback.format_exc())
-            finally:
-                message_queues[queue_key].task_done()
-
-            if message_queues[queue_key].empty():
-                break
-    except Exception as e:  # noqa: BLE001
-        logger.debug(f"Message queue processor for {queue_key} was cancelled: {e}")
-        logger.error(traceback.format_exc())
 
 
 # --- Global Queues and Message Processing ---
@@ -834,6 +832,9 @@ async def flow_as_tool_websocket(
                                 await openai_ws.send(message_text)
                                 log_event(msg, "↑")
                                 num_audio_samples = 0
+                        elif msg.get("type") == "langflow.voice_mode.config":
+                            logger.info(f"langflow.voice_mode.config {msg}")
+                            voice_config.progress_enabled = msg.get("enabled", True)
                         elif msg.get("type") == "langflow.elevenlabs.config":
                             logger.info(f"langflow.elevenlabs.config {msg}")
                             voice_config.use_elevenlabs = msg["enabled"]
@@ -936,6 +937,7 @@ async def flow_as_tool_websocket(
                                         current_user,
                                         conversation_id,
                                         session_id,
+                                        voice_config,
                                     )
                                 )
                                 # Store the task reference to prevent garbage collection
