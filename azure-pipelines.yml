@@ -22,8 +22,8 @@ stages:
           cd robility
 
           echo "Configuring Git credentials..."
-          git config user.email "Yogabharath.R@sutherlandglobal.com"
-          git config user.name "YogaSutherland"
+          git config user.email $(GithubEmail)
+          git config user.name $(YogaSutherland)
 
           echo "Adding Azure DevOps remote..."
           git remote add azure $(AZURE_DEVOPS_URL)
