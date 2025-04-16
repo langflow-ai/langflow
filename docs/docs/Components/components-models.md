@@ -3,6 +3,8 @@ title: Models
 slug: /components-models
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Model components in Langflow
 
 Model components generate text using large language models.
@@ -439,7 +441,16 @@ For more information, see [NVIDIA AI documentation](https://developer.nvidia.com
 
 This component generates text using Ollama's language models.
 
-For more information, see [Ollama documentation](https://ollama.com/).
+To use this component in a flow, connect Langflow to your locally running Ollama server.
+
+1. In the Ollama component, in the **Base URL** field, enter the address for your locally running Ollama server. The default base URL is `127.0.0.1:11434`.
+2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Model Name** field, select a model. This example uses `llama2:latest`.
+4. Connect the **Ollama** model component to a flow. For example, this flow connects a local Ollama server running a Deepseek model as the custom model for an [Agent](/components-agents) component.
+
+![Ollama model as Agent custom model](/img/starter-flow-basic-prompting.png)
+
+For more information, see the [Ollama documentation](https://ollama.com/).
 
 ### Inputs
 
