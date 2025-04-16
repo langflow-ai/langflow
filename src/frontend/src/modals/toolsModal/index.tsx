@@ -52,6 +52,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
     const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
     const agGrid = useRef<AgGridReact>(null);
     const [data, setData] = useState<any[]>(cloneDeep(rows));
+    const [focusedRow, setFocusedRow] = useState<any | null>(null);
 
     const handleSetOpen = (newOpen: boolean) => {
       if (setOpen) {
@@ -169,12 +170,16 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
               ]}
               ref={agGrid}
               rowSelection="multiple"
+              suppressRowClickSelection={true}
               className="ag-tool-mode w-full overflow-visible"
               headerHeight={32}
               rowHeight={32}
               onSelectionChanged={handleSelectionChanged}
               tableOptions={{
                 block_hide: true,
+              }}
+              onRowClicked={(event) => {
+                setFocusedRow(event.data);
               }}
             />
           </div>

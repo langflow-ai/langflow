@@ -134,3 +134,11 @@
 .ag-tool-mode .ag-cell {
   padding: 0rem 1rem !important;
 }
+
+.ag-tool-mode .ag-row-focus {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.ag-tool-mode .ag-row-selected:not(.ag-row-focus)::before {
+  background-color: hsl(var(--background)) !important;
+}
