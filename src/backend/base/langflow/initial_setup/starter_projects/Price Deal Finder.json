@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-BPZh4",
+            "id": "AgentQL-reBlu",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-BPZh4{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-BPZh4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Bh2Yb{œfieldNameœ:œtoolsœ,œidœ:œAgent-Bh2Ybœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-reBlu{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-reBluœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oRYZX{œfieldNameœ:œtoolsœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-BPZh4",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-BPZh4œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Bh2Yb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Bh2Ybœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-reBlu",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-reBluœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oRYZX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-E2Kiz",
+            "id": "ChatOutput-hdvqT",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Bh2Yb{œdataTypeœ:œAgentœ,œidœ:œAgent-Bh2Ybœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-E2Kiz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-E2Kizœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-oRYZX{œdataTypeœ:œAgentœ,œidœ:œAgent-oRYZXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-hdvqT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hdvqTœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Bh2Yb",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Bh2Ybœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-E2Kiz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-E2Kizœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-oRYZX",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-oRYZXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-hdvqT",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hdvqTœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-EKeDo",
+            "id": "TavilySearchComponent-STQC5",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-EKeDo{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-EKeDoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Bh2Yb{œfieldNameœ:œtoolsœ,œidœ:œAgent-Bh2Ybœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-STQC5{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-STQC5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oRYZX{œfieldNameœ:œtoolsœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-EKeDo",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-EKeDoœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Bh2Yb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Bh2Ybœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-STQC5",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-STQC5œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oRYZX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5OxIN",
+            "id": "ChatInput-DwzkZ",
             "name": "message",
             "output_types": [
               "Message"
@@ -101,25 +101,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-5OxIN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5OxINœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Bh2Yb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Bh2Ybœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-DwzkZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DwzkZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-oRYZX{œfieldNameœ:œinput_valueœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-5OxIN",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5OxINœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Bh2Yb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Bh2Ybœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-DwzkZ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DwzkZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-oRYZX",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-5OxIN",
+          "id": "ChatInput-DwzkZ",
           "node": {
             "base_classes": [
               "Message"
@@ -147,7 +147,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -297,7 +297,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "iPhone 16 Pro 512 GB"
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -416,7 +416,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-5OxIN",
+        "id": "ChatInput-DwzkZ",
         "measured": {
           "height": 66,
           "width": 192
@@ -430,7 +430,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-E2Kiz",
+          "id": "ChatOutput-hdvqT",
           "node": {
             "base_classes": [
               "Message"
@@ -458,7 +458,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -728,7 +728,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-E2Kiz",
+        "id": "ChatOutput-hdvqT",
         "measured": {
           "height": 66,
           "width": 192
@@ -742,7 +742,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-EKeDo",
+          "id": "TavilySearchComponent-STQC5",
           "node": {
             "base_classes": [
               "Data",
@@ -768,7 +768,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1081,7 +1081,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-EKeDo",
+        "id": "TavilySearchComponent-STQC5",
         "measured": {
           "height": 437,
           "width": 320
@@ -1097,7 +1097,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-BPZh4",
+          "id": "AgentQL-reBlu",
           "node": {
             "base_classes": [
               "Data"
@@ -1124,7 +1124,7 @@
             "frozen": false,
             "icon": "AgentQL",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1224,7 +1224,7 @@
               },
               "is_stealth_mode_enabled": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Enable Stealth Mode (Beta)",
                 "dynamic": false,
                 "info": "Enable experimental anti-bot evasion strategies. May not work for all websites at all times.",
@@ -1238,7 +1238,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
-                "value": false
+                "value": true
               },
               "mode": {
                 "_input_type": "DropdownInput",
@@ -1490,9 +1490,9 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-BPZh4",
+        "id": "AgentQL-reBlu",
         "measured": {
-          "height": 602,
+          "height": 644,
           "width": 320
         },
         "position": {
@@ -1504,7 +1504,7 @@
       },
       {
         "data": {
-          "id": "Agent-Bh2Yb",
+          "id": "Agent-oRYZX",
           "node": {
             "base_classes": [
               "Message"
@@ -1547,7 +1547,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1649,9 +1649,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1849,11 +1847,15 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
                   "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -2036,7 +2038,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an deal finder assistant that helps find and compare the prices of products across different e-commerce platforms. You must use the Tavily Search API to find the URLs of the ecommerce platforms that sell these products. Then use the AgentQL tool to extract the prices of the product in those websites. Make sure to include the name of the product, the shop name, and the price of the product. The price has to be retrieved, so if it can't don't include it.\n\nHere's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
+                "value": "You are an deal finder assistant that helps find and compare the prices of products across different e-commerce platforms. You must use the Tavily Search API to find the URLs of the ecommerce platforms that sell these products. Then use the AgentQL tool to extract the prices of the product in those websites. Make sure to include the name of the product, the price of the product, the shop name, and the URL link of the page to where you can add the product to a cart or checkout immediately. The price and URL link has to be retrieved, so if it's not available or doesn't work don't include it.\n\nHere's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -2153,7 +2155,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Bh2Yb",
+        "id": "Agent-oRYZX",
         "measured": {
           "height": 624,
           "width": 320
@@ -2167,7 +2169,7 @@
       },
       {
         "data": {
-          "id": "note-IpT5f",
+          "id": "note-4MelF",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2179,7 +2181,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-IpT5f",
+        "id": "note-4MelF",
         "measured": {
           "height": 324,
           "width": 324
@@ -2193,7 +2195,7 @@
       },
       {
         "data": {
-          "id": "note-vZk9B",
+          "id": "note-eqCK2",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2206,7 +2208,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-vZk9B",
+        "id": "note-eqCK2",
         "measured": {
           "height": 346,
           "width": 324
@@ -2220,9 +2222,9 @@
       },
       {
         "data": {
-          "id": "note-ljICz",
+          "id": "note-Dkzfl",
           "node": {
-            "description": "# Price Deal Finder \n\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
+            "description": "# Price Deal Finder \n\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"iPhone 16 Pro 512 GB\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -2231,7 +2233,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-ljICz",
+        "id": "note-Dkzfl",
         "measured": {
           "height": 674,
           "width": 467
@@ -2247,7 +2249,7 @@
       },
       {
         "data": {
-          "id": "note-izBjK",
+          "id": "note-NQ1ez",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2260,7 +2262,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-izBjK",
+        "id": "note-NQ1ez",
         "measured": {
           "height": 324,
           "width": 344
@@ -2276,18 +2278,18 @@
       }
     ],
     "viewport": {
-      "x": 347.94750627231167,
-      "y": 72.60494065370943,
-      "zoom": 0.5984998010566305
+      "x": 340.94156691373735,
+      "y": 122.308952499881,
+      "zoom": 0.5784136824388973
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
   "icon": "DollarSign",
-  "id": "325260a0-6ecf-4e55-b96f-0a56536ddc66",
+  "id": "05ef0b34-a755-4c9e-af28-8cf989d2a9a5",
   "is_component": false,
-  "last_tested_version": "1.2.0",
-  "name": "Price Deal Finder ",
+  "last_tested_version": "1.3.2",
+  "name": "Price Deal Finder",
   "tags": [
     "web-scraping",
     "agents"

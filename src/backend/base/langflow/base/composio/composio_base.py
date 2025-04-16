@@ -38,7 +38,6 @@ class ComposioBaseComponent(Component):
             name="api_key",
             display_name="Composio API Key",
             required=True,
-            info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
             value="COMPOSIO_API_KEY",
         ),
@@ -53,12 +52,11 @@ class ComposioBaseComponent(Component):
             placeholder="Select action",
             options=[],
             value="disabled",
-            info="Select action to pass to the agent",
             helper_text="Please connect before selecting actions.",
             helper_text_metadata={"variant": "destructive"},
             show=True,
+            required=False,
             real_time_refresh=True,
-            required=True,
             limit=1,
         ),
     ]
@@ -66,8 +64,6 @@ class ComposioBaseComponent(Component):
     _bool_variables: set[str] = set()
     _actions_data: dict[str, dict[str, Any]] = {}
     _default_tools: set[str] = set()
-    _readonly_actions: frozenset[str] = frozenset()
-    _action_fields_cache: dict[str, set[str]] = {}
     _display_to_key_map: dict[str, str] = {}
     _key_to_display_map: dict[str, str] = {}
     _sanitized_names: dict[str, str] = {}
@@ -293,7 +289,7 @@ class ComposioBaseComponent(Component):
 
     @property
     def enabled_tools(self):
-        if not hasattr(self, "action") or not self.action:
+        if not hasattr(self, "action") or not self.action or not isinstance(self.action, list):
             return list(self._default_tools)
         return list(self._default_tools.union(action["name"].replace(" ", "-") for action in self.action))
 
