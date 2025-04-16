@@ -1,4 +1,5 @@
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
@@ -54,7 +55,6 @@ export default function Dropdown({
   dialogInputs,
   handleOnNewValue,
   toggle,
-  hasRefreshButton,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
@@ -277,14 +277,11 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal",
+            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
           <span
-            className={cn(
-              "flex w-full items-center gap-2 overflow-hidden",
-              hasRefreshButton && "max-w-[11rem]",
-            )}
+            className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
             {optionsMetaData?.[
@@ -300,17 +297,23 @@ export default function Dropdown({
               />
             )}
             <span className="truncate">
-              {value && filteredOptions.includes(value)
-                ? value
-                : placeholderName}{" "}
+              {disabled ? (
+                RECEIVING_INPUT_VALUE
+              ) : (
+                <>
+                  {value && filteredOptions.includes(value)
+                    ? value
+                    : placeholderName}{" "}
+                </>
+              )}
             </span>
           </span>
           <ForwardedIconComponent
-            name="ChevronsUpDown"
+            name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
               "ml-2 h-4 w-4 shrink-0 text-foreground",
               disabled
-                ? "hover:text-placeholder-foreground"
+                ? "text-placeholder-foreground hover:text-placeholder-foreground"
                 : "hover:text-foreground",
             )}
           />
