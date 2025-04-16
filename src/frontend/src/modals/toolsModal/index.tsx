@@ -5,6 +5,7 @@ import TableComponent, {
 import { Input } from "@/components/ui/input";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TableOptionsTypeAPI } from "@/types/api";
+import { parseString } from "@/utils/stringManipulation";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
@@ -97,6 +98,8 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
         headerName: "Name",
         flex: 1,
         valueGetter: (params) => params.data.name,
+        valueParser: (params) =>
+          parseString(params.newValue, ["snake_case", "no_blank"]),
       },
       {
         field: "description",
