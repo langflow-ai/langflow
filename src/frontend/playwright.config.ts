@@ -68,15 +68,15 @@ export default defineConfig({
     //     },
     //   },
     // },
-    {
-      name: "safari",
-      use: {
-        ...devices["Desktop Safari"],
-        launchOptions: {
-          // headless: false,
-        },
-      },
-    },
+    // {
+    //   name: "safari",
+    //   use: {
+    //     ...devices["Desktop Safari"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
     // {
     //   name: "arc",
     //   use: {
