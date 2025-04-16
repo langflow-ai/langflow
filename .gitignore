@@ -277,3 +277,7 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
+
+# Cline
+.clinerules
+memory-bank/
