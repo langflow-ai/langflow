@@ -1125,7 +1125,7 @@ class Component(CustomComponent):
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
-        return old_tags != new_tags
+        return old_tags.sort() != new_tags.sort()
 
     def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
         """Filter tools based on their status in metadata.
