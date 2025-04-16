@@ -12,8 +12,8 @@ NC=\033[0m # No Color
 GREEN=\033[0;32m
 
 log_level ?= debug
-host ?= 0.0.0.0
-port ?= 7860
+host ?= 127.0.0.1
+port ?= 7868
 env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
@@ -471,7 +471,7 @@ alembic-stamp: ## stamp the database with a specific revision
 # Default values for locust configuration
 locust_users ?= 10
 locust_spawn_rate ?= 1
-locust_host ?= http://localhost:7860
+locust_host ?= http://127.0.1:7868
 locust_headless ?= true
 locust_time ?= 300s
 locust_api_key ?= your-api-key
