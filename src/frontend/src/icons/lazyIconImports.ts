@@ -97,6 +97,10 @@ export const lazyIconsMapping = {
     })),
   Gmail: () =>
     import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
+  GoogleMeet: () =>
+    import("@/icons/googlemeet").then((mod) => ({
+      default: mod.GooglemeetIcon,
+    })),
   GradientInfinity: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientInfinity,
