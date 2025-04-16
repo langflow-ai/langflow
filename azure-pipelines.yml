@@ -15,7 +15,7 @@ stages:
         script: |
           echo "Cloning GitHub repo..."
           git clone https://github.com/YogaSutherland/robility.git
-          cd langflow
+          cd robility
 
           echo "Configuring Git credentials..."
           git config user.email "Yogabharath.R@sutherlandglobal.com"
