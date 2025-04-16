@@ -91,6 +91,23 @@ export const AccountMenu = () => {
                   Settings
                 </span>
               </HeaderMenuItemButton>
+
+              {isAdmin && (
+                <div>
+                  <HeaderMenuItemButton
+                    onClick={() => {
+                      navigate("/admin");
+                    }}
+                  >
+                    <span
+                      data-testid="menu_admin_page_button"
+                      id="menu_admin_page_button"
+                    >
+                      Admin Page
+                    </span>
+                  </HeaderMenuItemButton>
+                </div>
+              )}
               <HeaderMenuItemLink newPage href={DOCS_URL}>
                 <span data-testid="menu_docs_button" id="menu_docs_button">
                   Docs
