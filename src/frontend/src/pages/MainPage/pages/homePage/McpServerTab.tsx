@@ -1,5 +1,6 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 import SyntaxHighlighter from "react-syntax-highlighter";
 
@@ -146,11 +147,24 @@ const McpServerTab = () => {
                 },
               }}
               CodeTag={({ children }) => (
-                <div className="relative rounded-lg p-4 text-[13px]">
+                <div className="relative rounded-lg bg-background text-[13px]">
+                  {selectedMode === "Cursor" && (
+                    <div className="flex flex-row items-center justify-between border-b border-border p-1.5 px-4">
+                      <span className="font-[Inter] text-[13px]">
+                        Add this server to Cursor config
+                      </span>
+                      <Button className="font-[Inter] text-[13px]" size="sm">
+                        Add to Client
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     unstyled
                     size="icon"
-                    className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground"
+                    className={cn(
+                      "absolute right-4 top-4 h-4 w-4 text-muted-foreground hover:text-foreground",
+                      selectedMode === "Cursor" && "top-[65px]",
+                    )}
                   >
                     <ForwardedIconComponent
                       name="copy"
@@ -158,7 +172,7 @@ const McpServerTab = () => {
                       aria-hidden="true"
                     />
                   </Button>
-                  {children}
+                  <div className="p-4">{children}</div>
                 </div>
               )}
               language="json"
