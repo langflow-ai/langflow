@@ -71,7 +71,6 @@ The result is a structured DataFrame.
 | 2 | 2 | Web Development with React | Build modern web applications ...| https://example.com/article2 | 12 |
 ```
 
-
 ### Inputs
 
 | Name | Display Name | Info |
@@ -284,6 +283,40 @@ This component executes SQL queries on a specified database.
 
 This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.
 
+1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
+For example, connect the **URL** component to a **Chat Output** component.
+
+![URL request into a chat output component](/img/component-url.png)
+
+2. In the URL component's **URLs** field, enter the URL for your request.
+This example uses `langflow.org`.
+
+3. Optionally, in the **Max Depth** field, enter how many pages away from the initial URL you want to crawl.
+Select `1` to crawl only the page specified in the **URLs** field.
+Select `2` to crawl all pages linked from that page.
+The component crawls by link traversal, not by URL path depth.
+
+4. Click **Playground**, and then click **Run Flow**.
+The text contents of the URL are returned to the Playground as a structured DataFrame.
+
+5. In the **URL** component, change the output port to **Message**, and then run the flow again.
+The text contents of the URL are returned as unstructured raw text, which you can extract patterns from with the **Regex Extractor** tool.
+
+6. Connect the **URL** component to a **Regex Extractor** and **Chat Output**.
+
+![Regex extractor connected to url component](/img/component-url-regex.png)
+
+7. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
+This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`.
+```
+In the news\s*\n(.*?)(?=\n\n)
+```
+
+Result:
+```
+Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
+```
+
 ### Inputs
 
 | Name | Display Name | Info |
@@ -299,7 +332,7 @@ This component fetches content from one or more URLs, processes the content, and
 |------|--------------|------|
 | data | Data | List of [Data](/concepts-objects) objects containing fetched content and metadata. |
 | text | Text | Fetched content as formatted text, with applied separators and cleaning. |
-| dataframe | DataFrame | Content formatted as a [Data](/concepts-objects#dataframe-object) object. |
+| dataframe | DataFrame | Content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
 
 ## Webhook
 
