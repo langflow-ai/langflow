@@ -21,7 +21,7 @@ import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
-import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import ExportModal from "@/modals/exportModal";
 import FlowLogsModal from "@/modals/flowLogsModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
