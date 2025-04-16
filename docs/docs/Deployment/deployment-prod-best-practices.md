@@ -49,7 +49,7 @@ This separation is designed to enhance security, optimize resource allocation, a
   * **Access Control**: Different security policies and access controls can be applied to each environment. Developers may require broader access in the IDE for testing and debugging, while the runtime environment can be locked down with stricter security measures.
   * **Reduced Attack Surface**: The runtime environment is configured to only include essential components, reducing the attack surface and potential vulnerabilities.
 * **Resource Allocation**
-  * **Optimized Resource Usage and cost efficiency**: By separating the two, we can allocate resources more effectively. Additionally, each flow can be deployed independently, providing fine-grained resource control.
+  * **Optimized Resource Usage and cost efficiency**: By separating the two environments, you can allocate resources more effectively. Each flow can be deployed independently, providing fine-grained resource control.
   * **Scalability**: The runtime environment can be scaled independently based on application load and performance requirements, without affecting the development environment.
 
 
