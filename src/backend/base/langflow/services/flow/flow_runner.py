@@ -6,17 +6,15 @@ from typing import Any
 from uuid import UUID
 
 from aiofile import async_open
-from loguru import logger
-from sqlalchemy import delete, text
-
+from langflow.api.utils import cascade_delete_flow
+from langflow.graph import Graph
 from langflow.load import aload_flow_from_json
 from langflow.processing.process import run_graph
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.message import MessageTable
-from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, session_scope
+from loguru import logger
+from sqlalchemy import text
 
 
 class LangFlowRunner:
@@ -35,14 +33,26 @@ class LangFlowRunner:
         flow_dict = await self.get_flow_dict(flow)
         # we must modify the flow schema to set the session_id and for load_from_db=True we load the value from env vars
         self.modification(flow_dict, lambda obj, parent, key: self.modify_flow_schema(session_id, obj, parent, key))
-        await self.clear_previous_sessions(session_id, flow_dict)
+        await self.add_flow_to_db(session_id, flow_dict)
+        await self.clear_flow_state(session_id, flow_dict)
         graph = await self.create_graph_from_flow(session_id, flow_dict)
-        result = await self.run_graph(input_value, input_type, output_type, session_id, graph)
+        try:
+            result = await self.run_graph(input_value, input_type, output_type, session_id, graph)
+        finally:
+            await self.clear_flow_state(session_id, flow_dict)
         logger.info(f"Finish Handling {session_id=}")
         return result
 
     @staticmethod
-    async def run_graph(input_value, input_type, output_type, session_id, graph):
+    async def add_flow_to_db(session_id: str, flow_dict: dict):
+        async with session_scope() as session:
+            flow_dict["id"] = session_id
+            flow_db = Flow(name=session_id, id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}))
+            session.add(flow_db)
+            await session.commit()
+
+    @staticmethod
+    async def run_graph(input_value: str, input_type: str, output_type: str, session_id: str, graph: Graph):
         return await run_graph(
             graph=graph,
             session_id=session_id,
@@ -59,15 +69,10 @@ class LangFlowRunner:
         return graph
 
     @staticmethod
-    async def clear_previous_sessions(session_id, flow_dict):
+    async def clear_flow_state(_session_id: str, flow_dict: dict):
         await get_cache_service().clear()
         async with session_scope() as session:
-            flow_db = Flow(name=session_id, id=UUID(session_id), data=flow_dict.get("data", {}))
-            await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_db.id))
-            await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_db.id))
-            await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_db.id))
-            await session.exec(delete(Flow).where(Flow.id == flow_db.id))
-            session.add(flow_db)
+            await cascade_delete_flow(session, UUID(flow_dict["id"]))
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
