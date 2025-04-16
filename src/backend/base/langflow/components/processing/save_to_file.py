@@ -20,6 +20,14 @@ class SaveToFileComponent(Component):
     # File format options for different types
     DATA_FORMAT_CHOICES = ["csv", "excel", "json", "markdown", "pdf"]
     MESSAGE_FORMAT_CHOICES = ["txt", "json", "markdown", "pdf"]
+    SUPPORTED_EXTENSIONS = {
+        "txt": ["txt"],
+        "excel": ["xlsx", "xls"],
+        "csv": ["csv"],
+        "json": ["json"],
+        "markdown": ["md", "markdown"],
+        "pdf": ["pdf"],
+    }
 
     inputs = [
         DropdownInput(
@@ -115,11 +123,11 @@ class SaveToFileComponent(Component):
 
     def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:
         file_extension = path.suffix.lower().lstrip(".")
-
-        if fmt == "excel":
-            return Path(f"{path}.xlsx").expanduser() if file_extension not in ["xlsx", "xls"] else path
-
-        return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
+        return (
+            Path(f"{path}.{self.SUPPORTED_EXTENSIONS[fmt][0]}").expanduser()
+            if file_extension not in self.SUPPORTED_EXTENSIONS[fmt]
+            else path
+        )
 
     def _check_format_supported(self, fmt: str, save_functions: dict, data_type: str) -> None:
         """Check if the format is supported and raise ValueError if not."""
