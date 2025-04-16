@@ -110,18 +110,18 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
     _bool_variables = {"is_html", "include_spam_trash"}
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._default_tools = {
-            self.sanitize_action_name("GMAIL_SEND_EMAIL").replace(" ", "-"),
-            self.sanitize_action_name("GMAIL_FETCH_EMAILS").replace(" ", "-"),
-        }
-        # Build the action maps right away
-        self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
-        self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
-        self._sanitized_names = {
-            action: self._name_sanitizer.sub("-", self.sanitize_action_name(action)) for action in self._actions_data
-        }
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self._default_tools = {
+    #         self.sanitize_action_name("GMAIL_SEND_EMAIL").replace(" ", "-"),
+    #         self.sanitize_action_name("GMAIL_FETCH_EMAILS").replace(" ", "-"),
+    #     }
+    #     # Build the action maps right away
+    #     self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
+    #     self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
+    #     self._sanitized_names = {
+    #         action: self._name_sanitizer.sub("-", self.sanitize_action_name(action)) for action in self._actions_data
+    #     }
 
     # Combine base inputs with Gmail-specific inputs
     inputs = [
