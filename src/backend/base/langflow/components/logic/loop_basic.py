@@ -10,6 +10,7 @@ class BasicLoopComponent(Component):
         "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
     )
     icon = "infinity"
+    legacy: bool = True
 
     inputs = [
         HandleInput(

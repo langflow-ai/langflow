@@ -10,7 +10,7 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
-    await addLegacyComponents(page);
+    // await addLegacyComponents(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
