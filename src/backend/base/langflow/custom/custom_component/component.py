@@ -18,7 +18,6 @@ from pydantic import BaseModel, ValidationError
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
-    TOOL_TABLE_SCHEMA,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
@@ -33,7 +32,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
-from langflow.schema.table import FieldParserType, TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
