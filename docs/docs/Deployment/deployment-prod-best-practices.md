@@ -42,7 +42,7 @@ It is recommended to deploy and run two separate environments for Langflow, with
 
 ## Why is it important to have separate deployments?
 
-This separation is designed to enhance security, optimize resource allocation, and streamline management. Understanding the rationale behind these deployment options help you make informed decisions about how to best deploy and manage your applications.
+This separation is designed to enhance security, optimize resource allocation, and streamline management.
 
 * **Security**
   * **Isolation**: By separating the development and production environments, you can better isolate different phases of the application lifecycle. This isolation minimizes the risk of development-related issues impacting the production environments.
