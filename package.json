@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "@tailwindcss/forms": "^0.5.10",
-    "prettier": "^3.5.3",
-    "prettier-plugin-organize-imports": "^4.1.0",
-    "prettier-plugin-tailwindcss": "^0.6.11"
-  }
-}
