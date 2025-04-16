@@ -6,16 +6,14 @@ from typing import Any
 from uuid import UUID
 
 from aiofile import async_open
-from loguru import logger
-from sqlalchemy import text
-
 from langflow.api.utils import cascade_delete_flow
 from langflow.graph import Graph
 from langflow.load import aload_flow_from_json
 from langflow.processing.process import run_graph
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import initialize_database
-from langflow.services.deps import get_cache_service, session_scope
+from loguru import logger
+from sqlalchemy import text
 
 
 class LangFlowRunner:
@@ -32,10 +30,11 @@ class LangFlowRunner:
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
         flow_dict = await self.get_flow_dict(flow)
+        self.set_flow_id(session_id, flow_dict)
         # we must modify the flow schema to set the session_id and for load_from_db=True we load the value from env vars
         self.modification(flow_dict, lambda obj, parent, key: self.modify_flow_schema(session_id, obj, parent, key))
-        await self.add_flow_to_db(session_id, flow_dict)
         await self.clear_flow_state(session_id, flow_dict)
+        await self.add_flow_to_db(session_id, flow_dict)
         graph = await self.create_graph_from_flow(session_id, flow_dict)
         try:
             result = await self.run_graph(input_value, input_type, output_type, session_id, graph)
@@ -45,9 +44,12 @@ class LangFlowRunner:
         return result
 
     @staticmethod
+    def set_flow_id(session_id: str, flow_dict: dict) -> None:
+        flow_dict["id"] = session_id
+
+    @staticmethod
     async def add_flow_to_db(session_id: str, flow_dict: dict):
         async with session_scope() as session:
-            flow_dict["id"] = session_id
             flow_db = Flow(name=session_id, id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}))
             session.add(flow_db)
             await session.commit()
