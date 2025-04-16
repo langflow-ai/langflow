@@ -19,6 +19,7 @@ export default function DropdownComponent({
   toggle,
   toggleValue,
   toggleDisable,
+  hasRefreshButton,
   ...baseInputProps
 }: InputProps<string, DropDownComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
@@ -43,6 +44,7 @@ export default function DropdownComponent({
         name={name}
         dialogInputs={dialogInputs}
         handleOnNewValue={handleOnNewValue}
+        hasRefreshButton={hasRefreshButton}
         {...baseInputProps}
       />
       {toggle && toggleDisable !== true ? (
