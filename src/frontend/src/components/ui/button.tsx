@@ -15,7 +15,7 @@ const buttonVariants = cva(
         outline:
           "border border-input hover:bg-input hover:text-accent-foreground ",
         outlineAmber:
-          "border border-accent-amber-foreground hover:border-accent-amber",
+          "border border-accent-amber-foreground hover:bg-accent-amber",
         primary:
           "border bg-background text-secondary-foreground hover:bg-muted hover:shadow-sm",
         warning:
@@ -61,9 +61,11 @@ export interface ButtonProps
 
 function toTitleCase(text: string) {
   return text
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+    ?.split(" ")
+    ?.map(
+      (word) => word?.charAt(0)?.toUpperCase() + word?.slice(1)?.toLowerCase(),
+    )
+    ?.join(" ");
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
