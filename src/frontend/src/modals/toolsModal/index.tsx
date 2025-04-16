@@ -82,7 +82,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
     useEffect(() => {
       if (!open && selectedRows) {
         handleOnNewValue({
-          value: rows.map((row) =>
+          value: data.map((row) =>
             selectedRows?.some((selected) => selected.name === row.name)
               ? { ...row, status: true }
               : { ...row, status: false },
@@ -96,7 +96,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
         field: "name",
         headerName: "Name",
         flex: 1,
-        valueGetter: (params) => params.data.name.replaceAll("-", " "),
+        valueGetter: (params) => params.data.name,
       },
       {
         field: "description",
@@ -109,7 +109,6 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
         headerName: "Tags",
         flex: 1,
         hide: true,
-        valueGetter: (params) => params.data.tags.join(", "),
       },
     ];
     const handleSelectionChanged = (event) => {
@@ -152,6 +151,19 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
               columnDefs={columnDefs}
               rowData={data}
               quickFilterText={searchQuery}
+              stopEditingWhenCellsLoseFocus={true}
+              editable={[
+                {
+                  field: "name",
+                  editableCell: true,
+                  onUpdate: () => {},
+                },
+                {
+                  field: "description",
+                  editableCell: true,
+                  onUpdate: () => {},
+                },
+              ]}
               ref={agGrid}
               rowSelection="multiple"
               className="ag-tool-mode w-full overflow-visible"
