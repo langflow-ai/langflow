@@ -5,7 +5,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
 import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
@@ -43,8 +43,8 @@ const BUNDLES = SIDEBAR_BUNDLES;
 
 interface FlowSidebarComponentProps {
   isLoading?: boolean;
-  showLegacy: boolean;
-  setShowLegacy: (value: boolean) => void;
+  showLegacy?: boolean;
+  setShowLegacy?: (value: boolean) => void;
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
