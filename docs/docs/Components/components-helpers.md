@@ -68,27 +68,6 @@ record_number: {batch_index}, name: {text_input}, summary: {model_response}
 |------|--------------|--------|------|
 | batch_results | Batch Results | run_batch | A DataFrame with columns: 'text_input', 'model_response', 'batch_index', and optional 'metadata' containing processing information. |
 
-## Create List
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
-
-This component dynamically creates a record with a specified number of fields.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| n_fields | Number of Fields | Number of fields to be added to the record. |
-| text_key | Text Key | Key used as text. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| list | List | The dynamically created list with the specified number of fields. |
-
 ## Current date
 
 The Current Date component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
@@ -171,48 +150,6 @@ It provides flexibility in managing message storage and retrieval within a chat 
 |------|--------------|------|
 | stored_messages | Stored Messages | The list of stored messages after the current message has been added. |
 
-## Output Parser
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
-
-This component transforms the output of a language model into a specified format. It supports CSV format parsing, which converts LLM responses into comma-separated lists using Langchain's `CommaSeparatedListOutputParser`.
-
-:::note
-This component only provides formatting instructions and parsing functionality. It does not include a prompt. You'll need to connect it to a separate Prompt component to create the actual prompt template for the LLM to use.
-:::
-
-Both the **Output Parser** and **Structured Output** components format LLM responses, but they have different use cases.
-The **Output Parser** is simpler and focused on converting responses into comma-separated lists. Use this when you just need a list of items, for example `["item1", "item2", "item3"]`.
-The **Structured Output** is more complex and flexible, and allows you to define custom schemas with multiple fields of different types. Use this when you need to extract structured data with specific fields and types.
-
-To use this component:
-
-1. Create a Prompt component and connect the Output Parser's `format_instructions` output to it. This ensures the LLM knows how to format its response.
-2. Write your actual prompt text in the Prompt component, including the `{format_instructions}` variable.
-For example, in your Prompt component, the template might look like:
-```
-{format_instructions}
-Please list three fruits.
-```
-3. Connect the `output_parser` output to your LLM model.
-
-4. The output parser converts this into a Python list: `["apple", "banana", "orange"]`.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| parser_type | Parser | Select the parser type. Currently supports "CSV". |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| format_instructions | Format Instructions | Pass to a prompt template to include formatting instructions for LLM responses. |
-| output_parser | Output Parser | The constructed output parser that can be used to parse LLM responses. |
-
 ## Structured output
 
 This component transforms LLM responses into structured data formats.
@@ -252,3 +189,62 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 |------|--------------|------|
 | structured_output | Structured Output | The structured output is a Data object based on the defined schema. |
 | structured_output_dataframe | DataFrame | The structured output converted to a [DataFrame](/concepts-objects#dataframe-object) format. |
+
+## Legacy components
+
+Legacy components are no longer in active development but are backward compatible.
+
+### Create List
+
+This component dynamically creates a record with a specified number of fields.
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| n_fields | Number of Fields | Number of fields to be added to the record. |
+| text_key | Text Key | Key used as text. |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| list | List | The dynamically created list with the specified number of fields. |
+
+### Output Parser
+
+This component transforms the output of a language model into a specified format. It supports CSV format parsing, which converts LLM responses into comma-separated lists using Langchain's `CommaSeparatedListOutputParser`.
+
+:::note
+This component only provides formatting instructions and parsing functionality. It does not include a prompt. You'll need to connect it to a separate Prompt component to create the actual prompt template for the LLM to use.
+:::
+
+Both the **Output Parser** and **Structured Output** components format LLM responses, but they have different use cases.
+The **Output Parser** is simpler and focused on converting responses into comma-separated lists. Use this when you just need a list of items, for example `["item1", "item2", "item3"]`.
+The **Structured Output** is more complex and flexible, and allows you to define custom schemas with multiple fields of different types. Use this when you need to extract structured data with specific fields and types.
+
+To use this component:
+
+1. Create a Prompt component and connect the Output Parser's `format_instructions` output to it. This ensures the LLM knows how to format its response.
+2. Write your actual prompt text in the Prompt component, including the `{format_instructions}` variable.
+For example, in your Prompt component, the template might look like:
+```
+{format_instructions}
+Please list three fruits.
+```
+3. Connect the `output_parser` output to your LLM model.
+
+4. The output parser converts this into a Python list: `["apple", "banana", "orange"]`.
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| parser_type | Parser | Select the parser type. Currently supports "CSV". |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| format_instructions | Format Instructions | Pass to a prompt template to include formatting instructions for LLM responses. |
+| output_parser | Output Parser | The constructed output parser that can be used to parse LLM responses. |
