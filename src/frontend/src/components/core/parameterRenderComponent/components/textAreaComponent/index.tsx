@@ -20,6 +20,8 @@ const inputClasses = {
 };
 
 const WEBHOOK_VALUE = "CURL_WEBHOOK";
+const MCP_SSE_VALUE = "MCP_SSE";
+const URL_MCP_SSE = `${window.location.protocol}//${window.location.host}/api/v1/mcp/sse`;
 
 const externalLinkIconClasses = {
   gradient: ({
@@ -75,6 +77,11 @@ export default function TextAreaComponent({
     [nodeInformationMetadata?.nodeType],
   );
 
+  const isMCPSSE = useMemo(
+    () => nodeInformationMetadata?.nodeType === "mcp_sse",
+    [nodeInformationMetadata?.nodeType],
+  );
+
   useEffect(() => {
     if (isWebhook && value === WEBHOOK_VALUE) {
       const curlWebhookCode = getCurlWebhookCode({
@@ -84,8 +91,11 @@ export default function TextAreaComponent({
         format: "singleline",
       });
       handleOnNewValue({ value: curlWebhookCode });
+    } else if (value === MCP_SSE_VALUE) {
+      const mcpSSEUrl = `${URL_MCP_SSE}`;
+      handleOnNewValue({ value: mcpSSEUrl });
     }
-  }, [isWebhook]);
+  }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
 
   const getInputClassName = () => {
     return cn(
