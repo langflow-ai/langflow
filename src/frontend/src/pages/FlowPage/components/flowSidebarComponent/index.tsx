@@ -37,6 +37,7 @@ import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { UniqueInputsComponents } from "./types";
+import { useShallow } from "zustand/react/shallow";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -48,30 +49,19 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
-  const { data, templates } = useTypesStore(
-    useCallback(
-      (state) => ({
-        data: state.data,
-        templates: state.templates,
-      }),
-      [],
-    ),
-  );
+  const data = useTypesStore((state) => state.data);
 
-  const { getFilterEdge, setFilterEdge, filterType, nodes } = useFlowStore(
-    useCallback(
+  const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
+    useShallow(
       (state) => ({
         getFilterEdge: state.getFilterEdge,
         setFilterEdge: state.setFilterEdge,
         filterType: state.filterType,
-        nodes: state.nodes,
       }),
-      [],
     ),
   );
 
   const hasStore = useStoreStore((state) => state.hasStore);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { setOpen } = useSidebar();
   const addComponent = useAddComponent();
 
@@ -86,15 +76,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
-  const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
-  const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
-    return {
-      chatInput: chatInputAdded,
-      webhookInput: webhookInputAdded,
-    };
-  }, [chatInputAdded, webhookInputAdded]);
 
   const customComponent = useMemo(() => {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
@@ -358,7 +339,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   nodeColors={nodeColors}
                   onDragStart={onDragStart}
                   sensitiveSort={sensitiveSort}
-                  uniqueInputsComponents={uniqueInputsComponents}
                 />
 
                 {hasBundleItems && (
@@ -373,7 +353,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                     openCategories={openCategories}
                     setOpenCategories={setOpenCategories}
                     handleKeyDownInput={handleKeyDownInput}
-                    uniqueInputsComponents={uniqueInputsComponents}
                   />
                 )}
               </>
