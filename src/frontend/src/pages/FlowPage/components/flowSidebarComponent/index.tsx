@@ -5,7 +5,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
 import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
@@ -22,7 +22,6 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
@@ -35,6 +34,7 @@ import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
 import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
+import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { UniqueInputsComponents } from "./types";
 
@@ -43,8 +43,8 @@ const BUNDLES = SIDEBAR_BUNDLES;
 
 interface FlowSidebarComponentProps {
   isLoading?: boolean;
-  showLegacy: boolean;
-  setShowLegacy: (value: boolean) => void;
+  showLegacy?: boolean;
+  setShowLegacy?: (value: boolean) => void;
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
