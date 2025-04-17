@@ -102,7 +102,6 @@ const HeaderComponent = ({
                 data-testid={`${type}-btn`}
                 onClick={() => {
                   setFlowType(type as "flows" | "components" | "mcp");
-                  navigate(`/${type}`);
                 }}
                 className={`border-b ${
                   flowType === type
