@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.77070d65.css">
-<script src="/assets/js/runtime~main.ca585053.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.3fd877df.js" defer="defer"></script>
 <script src="/assets/js/main.dc65e6c6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -42,7 +42,7 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-a-vector-store-component-in-a-flow">Use a vector store component in a flow<a href="#use-a-vector-store-component-in-a-flow" class="hash-link" aria-label="Direct link to Use a vector store component in a flow" title="Direct link to Use a vector store component in a flow">​</a></h2>
 <p>This example uses the <strong>Astra DB vector store</strong> component. Your vector store component&#x27;s parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected <a href="/components-models">model</a> component, and stores them in the connected Astra DB database.</p>
 <p>This vector data can then be retrieved for workloads like Retrieval Augmented Generation.</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/vector-store-retrieval-3d2d30b0bfef46783987efd758fc5497.png" width="2894" height="1014" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="/assets/images/vector-store-retrieval-3201f1ea2f13a5f8a87652c81a5386c6.png" width="2734" height="1402" class="img_ev3q"></p>
 <p>The user&#x27;s chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
 The results are output from the vector database component as a <a href="/concepts-objects">Data</a> object and parsed into text.
 This text fills the <code>{context}</code> variable in the <strong>Prompt</strong> component, which informs the <strong>Open AI model</strong> component&#x27;s responses.</p>
