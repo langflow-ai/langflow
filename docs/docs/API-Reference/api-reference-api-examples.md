@@ -557,7 +557,7 @@ You can upload a file to Langflow one time, and use it with multiple flows.
 * Responses from the `/v2` endpoint contain more descriptive metadata.
 * The `v2` endpoints require authentication by an API key or JWT.
 
-## Files/V1 Endpoints
+## Files/V1 endpoints
 
 ### Upload file (v1)
 
