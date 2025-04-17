@@ -256,9 +256,9 @@ The **IBM watsonx** embeddings component converts the text chunks into embedding
 The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
 For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
 
-### Default Models
+### Default models
 
-The component supports several default models with different vector dimensions:
+The component supports several default models with the following vector dimensions:
 
 - `sentence-transformers/all-minilm-l12-v2`: 384-dimensional embeddings
 - `ibm/slate-125m-english-rtrvr-v2`: 768-dimensional embeddings
@@ -276,7 +276,7 @@ The component automatically fetches and updates the list of available models fro
 | api_key | API Key | The API Key to use for the model.|
 | model_name | Model Name | The name of the embedding model to use.|
 | truncate_input_tokens | Truncate Input Tokens | The maximum number of tokens to process. Default: `200`. |
-| input_text | Include the original text in the output | Whether to include the original text in the output. Default: `True`. |
+| input_text | Include the original text in the output | Determines if the original text is included in the output. Default: `True`. |
 
 ### Outputs
 
