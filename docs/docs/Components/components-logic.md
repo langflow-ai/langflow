@@ -218,7 +218,9 @@ Your flow should now look like this:
 
 ## Legacy components
 
-## Data Conditional Router
+Legacy components are no longer in active development but are backward compatible.
+
+### Data Conditional Router
 
 :::important
 This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
@@ -228,7 +230,7 @@ This component routes `Data` objects based on a condition applied to a specified
 
 This component is particularly useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
 
-### Inputs
+#### Inputs
 
 | Name          | Type     | Description                                                                       |
 |---------------|----------|-----------------------------------------------------------------------------------|
@@ -237,14 +239,14 @@ This component is particularly useful in workflows that require conditional rout
 | operator      | Dropdown | The operator to apply. Options: "equals", "not equals", "contains", "starts with", "ends with", "boolean validator". Default: "equals". |
 | compare_value | String   | The value to compare against. Not shown/used when operator is "boolean validator". |
 
-### Outputs
+#### Outputs
 
 | Name         | Type        | Description                                          |
 |--------------|-------------|------------------------------------------------------|
 | true_output  | Data/List   | Output when the condition is met.                    |
 | false_output | Data/List   | Output when the condition is not met.                |
 
-### Operator behavior
+#### Operator behavior
 
 - **equals**: Exact match comparison between the key's value and compare_value
 - **not equals**: Inverse of exact match
@@ -256,7 +258,7 @@ This component is particularly useful in workflows that require conditional rout
   - Strings: "true", "1", "yes", "y", "on" (case-insensitive)
   - Any other value is converted using Python's `bool()` function
 
-### List processing
+#### List processing
 
 The following actions occur when processing a list of Data objects:
 - Each object in the list is evaluated individually
@@ -266,7 +268,9 @@ The following actions occur when processing a list of Data objects:
 
 ## Deprecated components
 
-## Flow as tool {#flow-as-tool}
+Deprecated components have been replaced by newer alternatives and should not be used in new projects.
+
+### Flow as tool {#flow-as-tool}
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
@@ -275,7 +279,7 @@ Instead, use the [Run flow component](/components-logic#run-flow)
 
 This component constructs a tool from a function that runs a loaded flow.
 
-### Inputs
+#### Inputs
 
 | Name             | Type     | Description                                                |
 |------------------|----------|------------------------------------------------------------|
@@ -284,13 +288,13 @@ This component constructs a tool from a function that runs a loaded flow.
 | tool_description | String   | The description of the tool.                               |
 | return_direct    | Boolean  | If true, returns the result directly from the tool.        |
 
-### Outputs
+#### Outputs
 
 | Name           | Type | Description                            |
 |----------------|------|----------------------------------------|
 | api_build_tool | Tool | The constructed tool from the flow.    |
 
-## Sub flow
+### Sub flow
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
@@ -301,13 +305,13 @@ This `SubFlowComponent` generates a component from a flow with all of its inputs
 
 This component can integrate entire flows as components within a larger workflow. It dynamically generates inputs based on the selected flow and executes the flow with provided parameters.
 
-### Inputs
+#### Inputs
 
 | Name      | Type     | Description                        |
 |-----------|----------|------------------------------------|
 | flow_name | Dropdown | The name of the flow to run.       |
 
-### Outputs
+#### Outputs
 
 | Name         | Type        | Description                           |
 |--------------|-------------|---------------------------------------|
