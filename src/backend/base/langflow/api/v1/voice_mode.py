@@ -387,13 +387,11 @@ async def handle_function_call(
                             "content": [
                                 {
                                     "type": "input_text",
-                                    "text": (
-                                        "Tell the user you are now looking into or solving "
-                                        "a request that will be explained later. Do not repeat "
-                                        "the prompt exactly, summarize what's being requested."
-                                        "Keep it very short."
-                                        f"\n\nThe request: {function_call_args}",
-                                    ),
+                                    "text": "Tell the user you are now looking into or solving "
+                                    "a request that will be explained later. Do not repeat "
+                                    "the prompt exactly, summarize what's being requested."
+                                    "Keep it very short."
+                                    f"\n\nThe request: {function_call_args}",
                                 }
                             ],
                         },
