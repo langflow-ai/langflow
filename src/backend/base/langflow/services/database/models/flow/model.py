@@ -83,7 +83,7 @@ class FlowBase(SQLModel):
         if v is not None and not isinstance(v, str):
             msg = "Icon background color must be a string"
             raise ValueError(msg)
-        # validate that is is a hex color
+        # validate that is a hex color
         if v and not v.startswith("#"):
             msg = "Icon background color must start with #"
             raise ValueError(msg)
