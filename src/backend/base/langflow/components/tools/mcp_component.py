@@ -351,12 +351,7 @@ class MCPToolsComponent(Component):
                     self.tools = await self.stdio_client.connect_to_server(command)
             elif mode == "SSE" and not self.sse_client.session:
                 try:
-                    is_valid, _ = await self.sse_client.validate_url(url)
-                    if not is_valid:
-                        msg = f"Invalid SSE URL configuration: {url}. Please check the SSE URL and try again."
-                        logger.error(msg)
-                        return []
-                    self.tools = await self.sse_client.connect_to_server(url, {})
+                    self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
                 except ValueError as e:
                     # URL validation error
                     logger.error(f"SSE URL validation error: {e}")
