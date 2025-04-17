@@ -250,8 +250,6 @@ function GenericNode({
     [data.node?.outputs],
   );
 
-  console.log(shownOutputs, hiddenOutputs);
-
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
 
