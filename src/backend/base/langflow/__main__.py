@@ -405,8 +405,15 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
-        "We collect anonymous usage data to improve Langflow.\n"
-        "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        (
+            "We collect anonymous usage data to improve Langflow.\n"
+            "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        )
+        if os.getenv("DO_NOT_TRACK", os.getenv("LANGFLOW_DO_NOT_TRACK", "False")).lower() != "true"
+        else (
+            "We are [bold]not[/bold] collecting anonymous usage data to improve Langflow.\n"
+            "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
+        )
     )
     access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{host}:{port}]{protocol}://{host}:{port}[/link]"
 
