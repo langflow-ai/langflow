@@ -709,7 +709,7 @@ curl -X DELETE \
   </TabItem>
 </Tabs>
 
-## Files/V2 Endpoints
+## Files/V2 endpoints
 
 The `v2` endpoints require authentication by an API key or JWT.
 To create a Langflow API key and export it as an environment variable, see [Export values](#export-values).
