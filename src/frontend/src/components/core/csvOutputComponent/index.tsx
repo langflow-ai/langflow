@@ -81,7 +81,7 @@ function CsvOutputComponent({
   }, [separator]);
 
   return (
-    <div className="h-full rounded-md border bg-muted">
+    <div className="bg-muted h-full rounded-md border">
       {status === "nodata" && (
         <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">

@@ -7,7 +7,7 @@ export default function LoadingComponent({
     <div role="status" className="flex flex-col items-center justify-center">
       <svg
         aria-hidden="true"
-        className={`w-${remSize} h-${remSize} animate-spin fill-primary text-muted`}
+        className={`w-${remSize} h-${remSize} fill-primary text-muted animate-spin`}
         viewBox="0 0 100 101"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -22,7 +22,7 @@ export default function LoadingComponent({
         />
       </svg>
       <br></br>
-      <span className="animate-pulse text-lg text-primary">Loading...</span>
+      <span className="text-primary animate-pulse text-lg">Loading...</span>
     </div>
   );
 }

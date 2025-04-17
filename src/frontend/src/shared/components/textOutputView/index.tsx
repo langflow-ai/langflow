@@ -14,6 +14,15 @@ const TextOutputView = ({
   const isTruncated = value?.length > 20000;
 
   return (
+<<<<<<< HEAD
+    <Textarea
+      className={`custom-scroll w-full ${left ? "min-h-32" : "h-full"}`}
+      placeholder={"Empty"}
+      readOnly
+      // update to real value on flowPool
+      value={value}
+    />
+=======
     <>
       {" "}
       <Textarea
@@ -29,6 +38,7 @@ const TextOutputView = ({
         </div>
       )}
     </>
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
   );
 };
 

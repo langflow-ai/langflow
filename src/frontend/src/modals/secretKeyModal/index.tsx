@@ -127,9 +127,16 @@ export default function SecretKeyModal({
           )
         }
       >
+
         <HeaderRender
+<<<<<<< HEAD
+          title={modalProps?.title}
+          showIcon={modalProps?.showIcon}
+
+=======
           title={modalConfigProps?.title}
           showIcon={modalConfigProps?.showIcon}
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
         />
       </BaseModal.Header>
       <BaseModal.Content>

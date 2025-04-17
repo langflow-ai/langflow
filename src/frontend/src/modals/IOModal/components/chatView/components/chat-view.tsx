@@ -199,6 +199,26 @@ export default function ChatView({
               ))}
             </>
           ) : (
+<<<<<<< HEAD:src/frontend/src/modals/IOModal/components/chatView/chat-view.tsx
+            <div className="flex h-full w-full flex-col items-center justify-center">
+              <div className="flex flex-col items-center justify-center gap-4 p-8">
+                <LangflowLogo
+                  title="Langflow logo"
+                  className="h-10 w-10 scale-[1.5]"
+                />
+                <div className="flex flex-col items-center justify-center">
+                  <h3 className="text-primary mt-2 pb-2 text-2xl font-semibold">
+                    New chat
+                  </h3>
+                  <p
+                    className="text-muted-foreground text-lg"
+                    data-testid="new-chat-text"
+                  >
+                    <TextEffectPerChar>
+                      Test your flow with a chat prompt
+                    </TextEffectPerChar>
+                  </p>
+=======
             <>
               <div className="flex h-full w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
@@ -219,6 +239,7 @@ export default function ChatView({
                       </TextEffectPerChar>
                     </p>
                   </div>
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b:src/frontend/src/modals/IOModal/components/chatView/components/chat-view.tsx
                 </div>
               </div>
             </>
@@ -226,7 +247,7 @@ export default function ChatView({
         <div
           className={
             displayLoadingMessage
-              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+              ? "word-break-break-word w-full max-w-[768px] py-4 md:w-5/6"
               : ""
           }
           ref={ref}

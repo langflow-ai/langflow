@@ -221,7 +221,11 @@ export default function PromptModal({
           <div className="flex">
             <IconComponent
               name="TerminalSquare"
+<<<<<<< HEAD
+              className="text-primary h-6 w-6 pl-1"
+=======
               className="h-6 w-6 pr-1 text-primary"
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
               aria-hidden="true"
             />
             <span className="pl-2" data-testid="modal-title">
@@ -237,7 +241,7 @@ export default function PromptModal({
               id={"modal-" + id}
               data-testid={"modal-" + id}
               ref={textareaRef}
-              className="form-input h-full w-full resize-none rounded-lg border-0 custom-scroll focus-visible:ring-1"
+              className="form-input custom-scroll h-full w-full resize-none rounded-lg border-0 focus-visible:ring-1"
               value={inputValue}
               onBlur={() => {
                 setScrollPosition(textareaRef.current?.scrollTop || 0);
@@ -270,14 +274,14 @@ export default function PromptModal({
             <div className="mr-2">
               <div
                 ref={divRef}
-                className="max-h-20 overflow-y-auto custom-scroll"
+                className="custom-scroll max-h-20 overflow-y-auto"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <IconComponent
                     name="Braces"
-                    className="flex h-4 w-4 text-primary"
+                    className="text-primary flex h-4 w-4"
                   />
-                  <span className="text-md font-semibold text-primary">
+                  <span className="text-md text-primary font-semibold">
                     Prompt Variables:
                   </span>
 
@@ -305,7 +309,7 @@ export default function PromptModal({
                   ))}
                 </div>
               </div>
-              <span className="mt-2 text-xs text-muted-foreground">
+              <span className="text-muted-foreground mt-2 text-xs">
                 Prompt variables can be created with any chosen name inside
                 curly brackets, e.g. {"{variable_name}"}
               </span>

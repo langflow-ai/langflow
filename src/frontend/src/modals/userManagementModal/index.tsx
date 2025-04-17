@@ -71,9 +71,15 @@ export default function UserManagementModal({
       <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader}>
         <span className="pr-2">{title}</span>
+<<<<<<< HEAD
+        <Icon
+          name="icon"
+          className="text-foreground h-6 w-6 pl-1"
+=======
         <IconComponent
           name={icon}
           className="h-6 w-6 pl-1 text-foreground"
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
           aria-hidden="true"
         />
       </BaseModal.Header>
@@ -101,7 +107,7 @@ export default function UserManagementModal({
               >
                 <Form.Label className="data-[invalid]:label-invalid">
                   Username{" "}
-                  <span className="font-medium text-destructive">*</span>
+                  <span className="text-destructive font-medium">*</span>
                 </Form.Label>
               </div>
               <Form.Control asChild>
@@ -136,7 +142,7 @@ export default function UserManagementModal({
                   >
                     <Form.Label className="data-[invalid]:label-invalid flex">
                       Password{" "}
-                      <span className="ml-1 mr-1 font-medium text-destructive">
+                      <span className="text-destructive mr-1 ml-1 font-medium">
                         *
                       </span>
                       {pwdVisible && (
@@ -194,7 +200,7 @@ export default function UserManagementModal({
                   >
                     <Form.Label className="data-[invalid]:label-invalid flex">
                       Confirm password{" "}
-                      <span className="ml-1 mr-1 font-medium text-destructive">
+                      <span className="text-destructive mr-1 ml-1 font-medium">
                         *
                       </span>
                       {confirmPwdVisible && (

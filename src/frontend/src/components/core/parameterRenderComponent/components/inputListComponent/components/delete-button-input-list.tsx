@@ -24,7 +24,7 @@ export const DeleteButtonInputList = ({
       className={cn(
         "hit-area-icon delete-btn-group flex items-center justify-center",
         disabled
-          ? "pointer-events-none bg-background hover:bg-background"
+          ? "bg-background hover:bg-background pointer-events-none"
           : "bg-background hover:bg-smooth-red hover:text-destructive",
         editNode && "h-4 w-4",
       )}
@@ -32,9 +32,9 @@ export const DeleteButtonInputList = ({
       <IconComponent
         name="X"
         className={cn(
-          "icon-size justify-self-center text-muted-foreground",
+          "icon-size text-muted-foreground justify-self-center",
           !disabled &&
-            "hover:cursor-pointer [.delete-btn-group:hover_&]:text-destructive",
+            "[.delete-btn-group:hover_&]:text-destructive hover:cursor-pointer",
         )}
         strokeWidth={ICON_STROKE_WIDTH}
       />

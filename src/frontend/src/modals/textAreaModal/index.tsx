@@ -50,7 +50,11 @@ export default function ComponentTextModal({
           <div className="flex">
             <IconComponent
               name={"FileText"}
+<<<<<<< HEAD
+              className="text-primary h-6 w-6 pl-1"
+=======
               className="h-6 w-6 pr-1 text-primary"
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
               aria-hidden="true"
             />
             <span className="pl-2" data-testid="modal-title">
@@ -66,7 +70,7 @@ export default function ComponentTextModal({
               >
                 <IconComponent
                   name={password ? "Eye" : "EyeOff"}
-                  className="h-6 w-6 cursor-pointer text-primary"
+                  className="text-primary h-6 w-6 cursor-pointer"
                 />
               </button>
             </div>

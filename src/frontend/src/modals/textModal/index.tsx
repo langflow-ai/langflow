@@ -41,7 +41,7 @@ export default function TextModal({
         <span className="pr-2">View Text</span>
         <IconComponent
           name="Type"
-          className="h-6 w-6 pl-1 text-primary"
+          className="text-primary h-6 w-6 pl-1"
           aria-hidden="true"
         />
       </BaseModal.Header>

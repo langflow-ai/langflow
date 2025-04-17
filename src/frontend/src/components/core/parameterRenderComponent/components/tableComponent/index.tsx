@@ -195,7 +195,7 @@ const TableComponent = forwardRef<
           <Alert variant={"default"} className="w-fit">
             <ForwardedIconComponent
               name="AlertCircle"
-              className="h-5 w-5 text-primary"
+              className="text-primary h-5 w-5"
             />
             <AlertTitle>{alertTitle}</AlertTitle>
             <AlertDescription>{alertDescription}</AlertDescription>
@@ -211,7 +211,7 @@ const TableComponent = forwardRef<
             <Alert variant={"default"} className="w-fit">
               <ForwardedIconComponent
                 name="AlertCircle"
-                className="h-5 w-5 text-primary"
+                className="text-primary h-5 w-5"
               />
               <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
               <AlertDescription>

@@ -45,7 +45,7 @@ const PasswordFormComponent = ({
             <div className="flex w-full gap-4">
               <Form.Field name="password" className="w-full">
                 <InputComponent
-                  id="pasword"
+                  id="password"
                   onChange={(value) => {
                     handleInput({ target: { name: "password", value } });
                   }}

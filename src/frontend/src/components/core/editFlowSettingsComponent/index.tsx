@@ -83,7 +83,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             data-testid="input-flow-name"
           />
         ) : (
-          <span className="font-normal text-muted-foreground word-break-break-word">
+          <span className="text-muted-foreground word-break-break-word font-normal">
             {name}
           </span>
         )}
@@ -110,7 +110,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         ) : (
           <div
             className={cn(
-              "max-h-[250px] overflow-auto pt-2 font-normal text-muted-foreground word-break-break-word",
+              "text-muted-foreground word-break-break-word max-h-[250px] overflow-auto pt-2 font-normal",
               description === "" ? "font-light italic" : "",
             )}
           >

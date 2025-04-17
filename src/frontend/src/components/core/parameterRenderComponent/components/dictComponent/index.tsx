@@ -42,7 +42,7 @@ export default function DictComponent({
               variant="primary"
               size="sm"
               className={cn(
-                "hover:bg-mute w-full font-medium text-primary",
+                "hover:bg-mute text-primary w-full font-medium",
                 editNode ? "h-fit px-3 py-0.5" : "",
               )}
               data-testid={editNode ? `edit_${id}` : `${id}`}

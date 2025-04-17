@@ -243,9 +243,13 @@ function BaseModal({
     className,
   );
 
+<<<<<<< HEAD
+  //UPDATE COLORS AND STYLE CLASSES
+=======
   const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
 
   //UPDATE COLORS AND STYLE CLASSSES
+>>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
   return (
     <>
       {type === "modal" ? (

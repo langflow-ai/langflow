@@ -19,7 +19,7 @@ const TextEditorArea = ({
   return (
     <Textarea
       readOnly={readonly}
-      className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"} ${
+      className={`custom-scroll w-full ${left ? "min-h-32" : "h-full"} ${
         resizable ? "resize-y" : "resize-none"
       }`}
       placeholder={"Empty"}
