@@ -230,6 +230,25 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 ## Chroma DB
 
 This component creates a Chroma Vector Store with search capabilities.
+
+The Chroma DB component creates an ephemeral vector database for experimentation and vector storage.
+
+1. To use this component in a flow, connect it to a component that outputs **Data** or **DataFrame**.
+This example splits text from a [URL](/components-data#url) component, and computes embeddings with the connected **OpenAI Embeddings** component. Chroma DB computes embeddings by default, but you can connect your own embeddings model, as seen in this example.
+
+![ChromaDB receiving split text](/img/component-chroma-db.png)
+
+2. In the **Chroma DB** component, in the **Collection** field, enter a name for your embeddings collection.
+3. Optionally, to persist the Chroma database, in the **Persist** field, enter a directory to store the `chroma.sqlite3` file.
+This example uses `./chroma-db` to create a directory relative to where Langflow is running.
+4. To load data and embeddings into your Chroma database, in the **Chroma DB** component, click <Icon name="Play" aria-label="Play icon" />.
+:::tip
+When loading duplicate documents, enable the **Allow Duplicates** option in Chroma DB if you want to store multiple copies of the same content, or disable it to automatically deduplicate your data.
+:::
+5. To view the split data, in the **Split Text** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+6. To query your loaded data, open the **Playground** and query your database.
+Your input is converted to vector data and compared to the stored vectors in a vector similarity search.
+
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
 
 ### Inputs
@@ -318,6 +337,37 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 |----------------|------------------------|--------------------------------|
 | vector_store   | CouchbaseVectorStore    | A Couchbase vector store instance configured with the specified parameters. |
 
+## Local DB
+
+This component creates a local Chroma Vector Store with search capabilities.
+
+Local DB is a Langflow wrapper for a local Chroma vector store.
+
+
+
+For more information, see the [Chroma documentation](https://docs.trychroma.com/).
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| collection_name | String | The name of the Chroma collection. Default: "langflow". |
+| persist_directory | String | Custom base directory to save the vector store. Collections will be stored under `{directory}/vector_stores/{collection_name}`. If not specified, it will use your system's cache folder. |
+| existing_collections | String | Select a previously created collection to search through its stored data. |
+| embedding | Embeddings | The embedding function to use for the vector store. |
+| allow_duplicates | Boolean | If false, will not add documents that are already in the Vector Store. |
+| search_type | String | Type of search to perform: "Similarity" or "MMR". |
+| ingest_data | Data/DataFrame | Data to store. It will be embedded and indexed for semantic search. |
+| search_query | String | Enter text to search for similar content in the selected collection. |
+| number_of_results | Integer | Number of results to return. Default: 10. |
+| limit | Integer | Limit the number of records to compare when Allow Duplicates is False. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| vector_store | Chroma | A local Chroma vector store instance configured with the specified parameters. |
+| search_results | List[Data](/concepts-objects#data-object) | Results of similarity search. |
 
 ## Elasticsearch
 
