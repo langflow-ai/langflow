@@ -1,4 +1,5 @@
-import React, {
+import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -41,7 +42,7 @@ import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
 
-export const MenuBar = React.memo((): JSX.Element => {
+export const MenuBar = memo((): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
