@@ -79,7 +79,7 @@ class FirecrawlExtractApi(Component):
     outputs = [
         Output(display_name="Data", name="data", method="extract"),
     ]
-    
+
     enable_web_search: bool = False
     ignoreSitemap: bool = False
     includeSubdomains: bool = True

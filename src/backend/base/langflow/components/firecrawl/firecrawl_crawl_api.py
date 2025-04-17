@@ -93,10 +93,10 @@ class FirecrawlCrawlApi(Component):
             "maxDepth": self.max_depth,
             "limit": self.limit,
         }
-        
+
         if self.crawlerOptions:
             params.update(self.crawlerOptions.__dict__["data"])
-        
+
         if self.scrapeOptions:
             scrape_options = self.scrapeOptions.__dict__["data"]
             if scrape_options:
@@ -121,9 +121,6 @@ class FirecrawlCrawlApi(Component):
 
         app = FirecrawlApp(api_key=self.api_key)
         crawl_status = app.crawl_url(
-            self.url, 
-            params=params, 
-            idempotency_key=self.idempotency_key,
-            poll_interval=self.poll_interval
+            self.url, params=params, idempotency_key=self.idempotency_key, poll_interval=self.poll_interval
         )
         return Data(data={"results": crawl_status})
