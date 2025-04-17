@@ -13,6 +13,7 @@ from .local_db import LocalDBComponent
 from .milvus import MilvusVectorStoreComponent
 from .mongodb_atlas import MongoVectorStoreComponent
 from .opensearch import OpenSearchVectorStoreComponent
+from .oraclevs import OracleVectorStoreComponent
 from .pgvector import PGVectorStoreComponent
 from .pinecone import PineconeVectorStoreComponent
 from .qdrant import QdrantVectorStoreComponent
@@ -40,6 +41,7 @@ __all__ = [
     "MilvusVectorStoreComponent",
     "MongoVectorStoreComponent",
     "OpenSearchVectorStoreComponent",
+    "OracleVectorStoreComponent",
     "PGVectorStoreComponent",
     "PineconeVectorStoreComponent",
     "QdrantVectorStoreComponent",
