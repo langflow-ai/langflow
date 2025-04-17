@@ -30,7 +30,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         for fmt in formats:
             try:
                 parsed = datetime.strptime(timestamp.strip(), fmt).replace(tzinfo=timezone.utc)
-                return parsed.strftime("%Y-%m-%d %H:%M:%S %Z")
+                return parsed.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
             except ValueError:
                 continue
 
@@ -40,7 +40,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
     # Handle datetime object
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+    return timestamp.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
 
 
 def str_to_timestamp(timestamp: str | datetime) -> datetime:

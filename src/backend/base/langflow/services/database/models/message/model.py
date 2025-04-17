@@ -36,6 +36,8 @@ class MessageBase(SQLModel):
     def validate_timestamp(cls, value):
         if isinstance(value, str):
             return datetime.fromisoformat(value)
+        if isinstance(value, datetime) and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
         return value
 
     @field_validator("files", mode="before")
@@ -64,9 +66,9 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS UTC" to datetime
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.ssssss UTC" to datetime
             try:
-                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
             except ValueError:
                 # Fallback for ISO format if the above fails
                 timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
