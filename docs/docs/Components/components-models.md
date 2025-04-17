@@ -220,6 +220,7 @@ For more information, see the [Groq documentation](https://groq.com/).
 | temperature     | Float          | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.1`. |
 | n               | Integer        | Number of chat completions to generate for each prompt. |
 | model_name      | String         | The name of the Groq model to use. Options are dynamically fetched from the Groq API. |
+| tool_mode_enabled | Bool | If enabled, the component only displays models that work with tools. |
 
 ### Outputs
 
