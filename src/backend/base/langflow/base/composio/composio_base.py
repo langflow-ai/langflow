@@ -91,7 +91,7 @@ class ComposioBaseComponent(Component):
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""
-        if len(self._display_to_key_map) == 0 or len(self._key_to_display_map) == 0:
+        if not self._display_to_key_map or not self._key_to_display_map:
             self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
             self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
             self._sanitized_names = {
