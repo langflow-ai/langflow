@@ -92,8 +92,8 @@ A new message has been received and added to the Urgent queue. Please review it 
 | operator       | Dropdown | The operator to compare texts. Options: "equals", "not equals", "contains", "starts with", "ends with", "regex". Default: "equals". |
 | case_sensitive | Boolean  | If true, the comparison is case sensitive. This setting is ignored for regex comparison. Default: false. |
 | message        | Message  | The message to pass through either route.                         |
-| max_iterations | Integer  | (Advanced) The maximum number of iterations for the conditional router. Default: 10. |
-| default_route  | Dropdown | (Advanced) The default route to take when max iterations are reached. Options: "true_result" or "false_result". Default: "false_result". |
+| max_iterations | Integer  | The maximum number of iterations for the conditional router. Default: 10. |
+| default_route  | Dropdown | The default route to take when max iterations are reached. Options: "true_result" or "false_result". Default: "false_result". |
 
 ### Outputs
 
@@ -108,11 +108,11 @@ The **If-else** component includes a comparison operator to compare the values i
 
 All options respect the `case_sensitive` setting except **regex**.
 
-- **equals**: Exact match comparison
-- **not equals**: Inverse of exact match
-- **contains**: Checks if match_text is found within input_text
-- **starts with**: Checks if input_text begins with match_text
-- **ends with**: Checks if input_text ends with match_text
+- **equals**: Exact match comparison.
+- **not equals**: Inverse of exact match.
+- **contains**: Checks if match_text is found within input_text.
+- **starts with**: Checks if input_text begins with match_text.
+- **ends with**: Checks if input_text ends with match_text.
 - **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
 
 ## Listen
@@ -248,15 +248,15 @@ This component is particularly useful in workflows that require conditional rout
 
 #### Operator behavior
 
-- **equals**: Exact match comparison between the key's value and compare_value
-- **not equals**: Inverse of exact match
-- **contains**: Checks if compare_value is found within the key's value
-- **starts with**: Checks if the key's value begins with compare_value
-- **ends with**: Checks if the key's value ends with compare_value
+- **equals**: Exact match comparison between the key's value and compare_value.
+- **not equals**: Inverse of exact match.
+- **contains**: Checks if compare_value is found within the key's value.
+- **starts with**: Checks if the key's value begins with compare_value.
+- **ends with**: Checks if the key's value ends with compare_value.
 - **boolean validator**: Treats the key's value as a boolean. The following values are considered true:
-  - Boolean `true`
-  - Strings: "true", "1", "yes", "y", "on" (case-insensitive)
-  - Any other value is converted using Python's `bool()` function
+  - Boolean `true`.
+  - Strings: "true", "1", "yes", "y", "on" (case-insensitive).
+  - Any other value is converted using Python's `bool()` function.
 
 #### List processing
 
