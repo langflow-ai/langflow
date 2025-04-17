@@ -176,7 +176,7 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
             vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
     graph.session_id = session_id
-    await graph.initialize_run()
+    await graph.initialize_run(session_scope)
     return graph
 
 

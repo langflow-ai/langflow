@@ -23,8 +23,18 @@ if TYPE_CHECKING:
 
 
 class LangSmithTracer(BaseTracer):
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    @staticmethod
+    def get_required_variable_names():
+        return [
+            "LANGCHAIN_API_KEY",
+        ]
+
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, global_vars: dict | None = None
+    ):
         try:
+            self.global_vars = global_vars or {}
+
             self._ready = self.setup_langsmith()
             if not self._ready:
                 return
@@ -51,12 +61,15 @@ class LangSmithTracer(BaseTracer):
         return self._ready
 
     def setup_langsmith(self) -> bool:
-        if os.getenv("LANGCHAIN_API_KEY") is None:
+        if os.getenv("LANGCHAIN_API_KEY") is None and "LANGCHAIN_API_KEY" not in self.global_vars:
             return False
         try:
             from langsmith import Client
 
-            self._client = Client()
+            if "LANGCHAIN_API_KEY" in self.global_vars:
+                self._client = Client(api_key=self.global_vars["LANGCHAIN_API_KEY"])
+            else:
+                self._client = Client()
         except ImportError:
             logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False
