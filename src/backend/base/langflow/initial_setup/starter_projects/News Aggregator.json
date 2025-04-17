@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-u82BE",
+            "id": "AgentQL-TCADj",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-PZpvb",
+            "id": "Agent-x50rv",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-u82BE{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-u82BEœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-PZpvb{œfieldNameœ:œtoolsœ,œidœ:œAgent-PZpvbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-TCADj{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-TCADjœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-x50rv{œfieldNameœ:œtoolsœ,œidœ:œAgent-x50rvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-u82BE",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-u82BEœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-PZpvb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PZpvbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-TCADj",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-TCADjœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-x50rv",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-x50rvœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-NRSAi",
+            "id": "ChatInput-LwqUD",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-PZpvb",
+            "id": "Agent-x50rv",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-NRSAi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NRSAiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-PZpvb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-PZpvbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-LwqUD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-LwqUDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-x50rv{œfieldNameœ:œinput_valueœ,œidœ:œAgent-x50rvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-NRSAi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NRSAiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-PZpvb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-PZpvbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-LwqUD",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-LwqUDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-x50rv",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-x50rvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-PZpvb",
+            "id": "Agent-x50rv",
             "name": "response",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-EKVmm",
+            "id": "ChatOutput-RB2DM",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__Agent-PZpvb{œdataTypeœ:œAgentœ,œidœ:œAgent-PZpvbœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-EKVmm{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EKVmmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-x50rv{œdataTypeœ:œAgentœ,œidœ:œAgent-x50rvœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RB2DM{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RB2DMœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-PZpvb",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-PZpvbœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-EKVmm",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-EKVmmœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-x50rv",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-x50rvœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-RB2DM",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RB2DMœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatOutput",
-            "id": "ChatOutput-EKVmm",
+            "id": "ChatOutput-RB2DM",
             "name": "message",
             "output_types": [
               "Message"
@@ -101,25 +101,25 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "SaveToFile-yBiQe",
+            "id": "SaveToFile-FmELb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatOutput-EKVmm{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-EKVmmœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-yBiQe{œfieldNameœ:œmessageœ,œidœ:œSaveToFile-yBiQeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatOutput-RB2DM{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-RB2DMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-FmELb{œfieldNameœ:œmessageœ,œidœ:œSaveToFile-FmELbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatOutput-EKVmm",
-        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-EKVmmœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SaveToFile-yBiQe",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œSaveToFile-yBiQeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatOutput-RB2DM",
+        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-RB2DMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SaveToFile-FmELb",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œSaveToFile-FmELbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-2ZNem",
+          "id": "note-Z1JPk",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -131,7 +131,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-2ZNem",
+        "id": "note-Z1JPk",
         "measured": {
           "height": 324,
           "width": 324
@@ -145,7 +145,7 @@
       },
       {
         "data": {
-          "id": "note-HtN4B",
+          "id": "note-7vrvb",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -158,7 +158,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-HtN4B",
+        "id": "note-7vrvb",
         "measured": {
           "height": 346,
           "width": 324
@@ -174,7 +174,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-u82BE",
+          "id": "AgentQL-TCADj",
           "node": {
             "base_classes": [
               "Data"
@@ -201,7 +201,7 @@
             "frozen": false,
             "icon": "AgentQL",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -301,7 +301,7 @@
               },
               "is_stealth_mode_enabled": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Enable Stealth Mode (Beta)",
                 "dynamic": false,
                 "info": "Enable experimental anti-bot evasion strategies. May not work for all websites at all times.",
@@ -315,7 +315,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
-                "value": false
+                "value": true
               },
               "mode": {
                 "_input_type": "DropdownInput",
@@ -567,9 +567,9 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-u82BE",
+        "id": "AgentQL-TCADj",
         "measured": {
-          "height": 602,
+          "height": 644,
           "width": 320
         },
         "position": {
@@ -581,7 +581,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-NRSAi",
+          "id": "ChatInput-LwqUD",
           "node": {
             "base_classes": [
               "Message"
@@ -609,7 +609,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -760,7 +760,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "Write a JSON file of all job postings from the following career page: https://www.ycombinator.com/jobs Include columns for: Posted Date (in MM-DD-YYYY format) | Job Title | Company | Location | Job URL | Employment Type (Full-time, Part-time, Contract, etc.) | Remote Eligibility (Yes/No) | Suggested Outreach  In the Suggested Outreach column: Suggest a brief message our recruiters could send to a potential candidate.  At the end, summarize the most in-demand skills and trends based on the job descriptions in a paragraph for our internal hiring strategy report."
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -879,21 +879,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-NRSAi",
+        "id": "ChatInput-LwqUD",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 823.1132878482413,
-          "y": 728.3243379433505
+          "x": 808.8830410213426,
+          "y": 771.0150784240468
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-PZpvb",
+          "id": "Agent-x50rv",
           "node": {
             "base_classes": [
               "Message"
@@ -936,7 +936,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1572,7 +1572,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-PZpvb",
+        "id": "Agent-x50rv",
         "measured": {
           "height": 624,
           "width": 320
@@ -1586,7 +1586,7 @@
       },
       {
         "data": {
-          "id": "note-sjGvZ",
+          "id": "note-DqbD6",
           "node": {
             "description": "# News Aggregator\n\nThis flow extracts structured data from a URL and saves it into a JSON file.\n\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\n\nThe **Agent** component populates the **AgentQL** component's **URL** and **Query** fields, and returns a structured response to your question. Then the extracted data is saved into a JSON file `news-aggregated.json`, which can be found in your current project directory.",
             "display_name": "",
@@ -1598,7 +1598,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-sjGvZ",
+        "id": "note-DqbD6",
         "measured": {
           "height": 717,
           "width": 325
@@ -1612,7 +1612,7 @@
       },
       {
         "data": {
-          "id": "SaveToFile-yBiQe",
+          "id": "SaveToFile-FmELb",
           "node": {
             "base_classes": [
               "Text"
@@ -1635,7 +1635,7 @@
             "frozen": false,
             "icon": "save",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1819,7 +1819,7 @@
           "type": "SaveToFile"
         },
         "dragging": false,
-        "id": "SaveToFile-yBiQe",
+        "id": "SaveToFile-FmELb",
         "measured": {
           "height": 497,
           "width": 320
@@ -1833,7 +1833,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-EKVmm",
+          "id": "ChatOutput-RB2DM",
           "node": {
             "base_classes": [
               "Message"
@@ -1860,7 +1860,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -2126,7 +2126,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-EKVmm",
+        "id": "ChatOutput-RB2DM",
         "measured": {
           "height": 66,
           "width": 192
@@ -2137,46 +2137,20 @@
         },
         "selected": false,
         "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-CWRHQ",
-          "node": {
-            "description": "# Example Input\n\nYou can start off with this example on **Playground**:\n\n\"\"\"\n\nWrite a JSON file of all job postings from the following career pages:\nhttps://www.ycombinator.com/jobs\nhttps://www.indeed.com/jobs?q=Full+Time&l=Palo+Alto,+CA&from=mobRdr&utm_source=/m/&utm_medium=redir&utm_campaign=dt&vjk=87bf09250c117a5b\n\nInclude columns for: Posted Date (in MM-DD-YYYY format) | Job Title | Company | Location | Job URL | Employment Type (Full-time, Part-time, Contract, etc.) | Remote Eligibility (Yes/No) | Suggested Outreach\n\nIn the Suggested Outreach column: Suggest a brief message our recruiters could send to a potential candidate.\n\nAt the end, summarize the most in-demand skills and trends based on the job descriptions in a paragraph for our internal hiring strategy report.\n\n\"\"\"",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-CWRHQ",
-        "measured": {
-          "height": 772,
-          "width": 325
-        },
-        "position": {
-          "x": 10.416897440247894,
-          "y": 74.31274172013815
-        },
-        "selected": false,
-        "type": "noteNode"
       }
     ],
     "viewport": {
-      "x": 58.56326820207494,
-      "y": 87.91060080304197,
-      "zoom": 0.6029309563132144
+      "x": -215.98323049294243,
+      "y": 32.882716478010025,
+      "zoom": 0.6324556495385397
     }
   },
   "description": "Extracts data and information from webpages.",
   "endpoint_name": null,
   "icon": "Newspaper",
-  "id": "30cdfac5-8aca-48f1-8a90-72e2573473c4",
+  "id": "e76ee0ae-b1cd-4a89-a720-2010e5c7ab7b",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.3.2",
   "name": "News Aggregator",
   "tags": [
     "web-scraping",
