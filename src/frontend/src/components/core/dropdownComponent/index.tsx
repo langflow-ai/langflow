@@ -54,6 +54,7 @@ export default function Dropdown({
   dialogInputs,
   handleOnNewValue,
   toggle,
+  hasRefreshButton,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
@@ -236,7 +237,10 @@ export default function Dropdown({
           )}
         >
           <span
-            className="flex w-full items-center gap-2 overflow-hidden"
+            className={cn(
+              "flex w-full items-center gap-2 overflow-hidden",
+              hasRefreshButton && "max-w-[11rem]",
+            )}
             data-testid={`value-dropdown-${id}`}
           >
             {optionsMetaData?.[
