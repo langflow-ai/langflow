@@ -28,7 +28,17 @@ class MCPToolsComponent(Component):
     tools: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
-    default_keys: list[str] = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
+    default_keys: list[str] = [
+        "code",
+        "_type",
+        "mode",
+        "command",
+        "env",
+        "sse_url",
+        "tool_placeholder",
+        "tool_mode",
+        "tool",
+    ]
 
     display_name = "MCP Server"
     description = "Connect to an MCP server and expose tools."
@@ -51,6 +61,14 @@ class MCPToolsComponent(Component):
             value="uvx mcp-server-fetch",
             show=True,
             refresh_button=True,
+        ),
+        MessageTextInput(
+            name="env",
+            display_name="Env",
+            info="Env vars to include in mcp stdio connection (i.e. DEBUG=true)",
+            value="",
+            list=True,
+            show=True,
         ),
         MessageTextInput(
             name="sse_url",
@@ -143,9 +161,11 @@ class MCPToolsComponent(Component):
                 self.remove_non_default_keys(build_config)
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
+                    build_config["env"]["show"] = True
                     build_config["sse_url"]["show"] = False
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
+                    build_config["env"]["show"] = False
                     build_config["sse_url"]["show"] = True
                     _, port, _ = await self.find_langflow_instance()
                     if port:
@@ -182,6 +202,7 @@ class MCPToolsComponent(Component):
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
+                        env=build_config["env"]["value"],
                     )
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
@@ -197,6 +218,7 @@ class MCPToolsComponent(Component):
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
+                        env=build_config["env"]["value"],
                     )
                 if self.tool is None:
                     return build_config
@@ -264,6 +286,7 @@ class MCPToolsComponent(Component):
                 mode=build_config["mode"]["value"],
                 command=build_config["command"]["value"],
                 url=build_config["sse_url"]["value"],
+                env=build_config["env"]["value"],
             )
 
         if not tool_name:
@@ -336,7 +359,7 @@ class MCPToolsComponent(Component):
             raise ValueError(msg) from e
 
     async def update_tools(
-        self, mode: str | None = None, command: str | None = None, url: str | None = None
+        self, mode: str | None = None, command: str | None = None, url: str | None = None, env: list[str] | None = None
     ) -> list[StructuredTool]:
         """Connect to the MCP server and update available tools with improved error handling."""
         try:
@@ -344,13 +367,15 @@ class MCPToolsComponent(Component):
                 mode = self.mode
             if command is None:
                 command = self.command
+            if env is None:
+                env = self.env
             if url is None:
                 url = self.sse_url
             await self._validate_connection_params(mode, command, url)
 
             if mode == "Stdio":
                 if not self.stdio_client.session:
-                    self.tools = await self.stdio_client.connect_to_server(command)
+                    self.tools = await self.stdio_client.connect_to_server(command, env)
             elif mode == "SSE" and not self.sse_client.session:
                 try:
                     is_valid, _ = await self.sse_client.validate_url(url)

@@ -123,12 +123,21 @@ class MCPStdioClient:
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
 
-    async def connect_to_server(self, command_str: str):
+    async def connect_to_server(self, command_str: str, env: list[str] | None = None):
+        if env is None:
+            env = []
+            env_dict = {}
+        env_dict = {}
+        for var in env:
+            if "=" not in var:
+                msg = f"Invalid env var format: {var}. Must be in the format 'VAR_NAME=VAR_VALUE'"
+                raise ValueError(msg)
+            env_dict[var.split("=")[0]] = var.split("=")[1]
         command = command_str.split(" ")
         server_params = StdioServerParameters(
             command=command[0],
             args=command[1:],
-            env={"DEBUG": "true", "PATH": os.environ["PATH"]},
+            env={"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})},
         )
         stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
         self.stdio, self.write = stdio_transport
