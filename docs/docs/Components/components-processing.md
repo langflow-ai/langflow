@@ -406,6 +406,10 @@ This example uses `.md` in one **Save to File** component, and `.xlsx` in anothe
 4. In the **File Path** field, enter the path for your saved file.
 This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
 The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
+:::tip
+If you enter a format in the `file_path` that is not accepted, the component appends the proper format to the file.
+For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file will be saved as `./output/test.txt.csv` so the file is not corrupted.
+:::
 5. Send a POST request to the **Webhook** containing your JSON data.
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
