@@ -1,7 +1,6 @@
 from langflow.custom import Component
-from langflow.io import HandleInput, Output
+from langflow.io import DataInput, Output
 from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
 
 
 class LoopComponent(Component):
@@ -10,13 +9,13 @@ class LoopComponent(Component):
         "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
     )
     icon = "infinity"
+    legacy: bool = True
 
     inputs = [
-        HandleInput(
+        DataInput(
             name="data",
-            display_name="Data or DataFrame",
-            info="The initial list of Data objects or DataFrame to iterate over.",
-            input_types=["Data", "DataFrame"],
+            display_name="Data",
+            info="The initial list of Data objects to iterate over.",
         ),
     ]
 
@@ -45,13 +44,11 @@ class LoopComponent(Component):
 
     def _validate_data(self, data):
         """Validate and return a list of Data objects."""
-        if isinstance(data, DataFrame):
-            return data.to_data_list()
         if isinstance(data, Data):
             return [data]
         if isinstance(data, list) and all(isinstance(item, Data) for item in data):
             return data
-        msg = "The 'data' input must be a DataFrame, a list of Data objects, or a single Data object."
+        msg = "The 'data' input must be a list of Data objects or a single Data object."
         raise TypeError(msg)
 
     def evaluate_stop_loop(self) -> bool:
@@ -81,7 +78,7 @@ class LoopComponent(Component):
         self.update_ctx({f"{self._id}_index": current_index + 1})
         return current_item
 
-    def done_output(self) -> DataFrame:
+    def done_output(self) -> Data:
         """Trigger the done output when iteration is complete."""
         self.initialize_data()
 
@@ -89,10 +86,9 @@ class LoopComponent(Component):
             self.stop("item")
             self.start("done")
 
-            aggregated = self.ctx.get(f"{self._id}_aggregated", [])
-            return DataFrame(aggregated)
+            return self.ctx.get(f"{self._id}_aggregated", [])
         self.stop("done")
-        return DataFrame([])
+        return Data(text="")
 
     def loop_variables(self):
         """Retrieve loop variables from context."""
@@ -101,7 +97,7 @@ class LoopComponent(Component):
             self.ctx.get(f"{self._id}_index", 0),
         )
 
-    def aggregated_output(self) -> list[Data]:
+    def aggregated_output(self) -> Data:
         """Return the aggregated list once all items are processed."""
         self.initialize_data()
 
