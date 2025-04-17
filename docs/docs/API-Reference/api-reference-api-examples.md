@@ -548,7 +548,7 @@ curl -X POST \
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
 There are `/v1` and `/v2` versions of the `/files` endpoints.
-The `files/v2` version offers several improvements over `/v1`:
+The `v2/files` version offers several improvements over `/v1`:
 
 * In `v1`, files are organized by `flow_id`. In `v2`, files are organized by `user_id`.
 This means files are accessed based on user ownership, and not tied to specific flows.
@@ -561,8 +561,8 @@ You can upload a file to Langflow one time, and use it with multiple flows.
 
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
-* In `v1/files`, files are organized by `flow_id`.
-* In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
+* In `v1`, files are organized by `flow_id`.
+* In `v2`, files are organized by `user_id` and tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 
 ### Upload file (v1)
 
@@ -716,6 +716,7 @@ curl -X DELETE \
 
 ## Files/V2 endpoints
 
+In `v2`, files are organized by `user_id` and tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 The `v2` endpoints require authentication by an API key or JWT.
 To create a Langflow API key and export it as an environment variable, see [Export values](#export-values).
 
@@ -723,7 +724,7 @@ To create a Langflow API key and export it as an environment variable, see [Expo
 
 Upload a file to your user account. The file can be used across multiple flows.
 
-The file is uploaded in the format`USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
+The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
 Replace **FILE_NAME** with the uploaded file name.
 <Tabs>
   <TabItem value="curl" label="curl" default>
