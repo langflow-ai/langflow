@@ -104,10 +104,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "provider":
-            if field_value == "OpenAI":
-                build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
-                build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
-                build_config["api_key"]["display_name"] = "OpenAI API Key"
-                build_config["api_base"]["display_name"] = "OpenAI API Base URL"
+        if field_name == "provider" and field_value == "OpenAI":
+            build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
+            build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
+            build_config["api_key"]["display_name"] = "OpenAI API Key"
+            build_config["api_base"]["display_name"] = "OpenAI API Base URL"
         return build_config
