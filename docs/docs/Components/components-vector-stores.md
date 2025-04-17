@@ -339,10 +339,24 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 
 ## Local DB
 
-This component creates a local Chroma Vector Store with search capabilities.
+The **Local DB** component is Langflow's enhanced version of Chroma DB.
 
-Local DB is a Langflow wrapper for a local Chroma vector store.
+It  that adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
 
+Local DB includes **Ingest** and **Retrieve** modes.
+The **Ingest** mode works similarly to [ChromaDB](#chroma-db).
+
+The **Retrieve** mode can be used to query your **Chroma DB** collections.
+
+![ChromaDB receiving split text](/img/component-chroma-db.png)
+
+This description highlights the key Langflow-specific features:
+
+Dual-mode operation (Ingest/Retrieve)
+Automatic collection management
+Built-in persistence in Langflow's cache
+Simplified interface compared to standard Chroma DB
+No server setup required
 
 
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
