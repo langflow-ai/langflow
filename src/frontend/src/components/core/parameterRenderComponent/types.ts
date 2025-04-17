@@ -40,6 +40,12 @@ export type TableComponentType = {
   table_icon?: string;
 };
 
+export type ToolsComponentType = {
+  description: string;
+  title: string;
+  icon: string;
+};
+
 export type FloatComponentType = {
   rangeSpec: RangeSpecType;
 };
