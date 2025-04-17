@@ -344,7 +344,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | input_value | Input | Objects to which Metadata should be added |
 | text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object |
-| remove_fields | Fields to Remove | Metadata Fields to Remove |
+| remove_fields | Fields to Remove | Metadata fields to remove |
 
 ### Outputs
 
@@ -412,7 +412,7 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 | json_str | JSON String | The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
 | remove_control_chars | Remove Control Characters | If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
 | normalize_unicode | Normalize Unicode | When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
-| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
 
 ### Outputs
 
