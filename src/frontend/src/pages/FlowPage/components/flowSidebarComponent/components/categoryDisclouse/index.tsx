@@ -53,10 +53,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
     [item.name, setOpenCategories],
   );
   return (
-    <Disclosure
-      open={isOpen}
-      onOpenChange={handleOpenChange}
-    >
+    <Disclosure open={isOpen} onOpenChange={handleOpenChange}>
       <SidebarMenuItem>
         <DisclosureTrigger className="group/collapsible">
           <SidebarMenuButton asChild>

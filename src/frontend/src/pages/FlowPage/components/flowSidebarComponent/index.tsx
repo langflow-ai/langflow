@@ -18,6 +18,7 @@ import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -37,7 +38,6 @@ import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { UniqueInputsComponents } from "./types";
-import { useShallow } from "zustand/react/shallow";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -52,13 +52,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const data = useTypesStore((state) => state.data);
 
   const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
-    useShallow(
-      (state) => ({
-        getFilterEdge: state.getFilterEdge,
-        setFilterEdge: state.setFilterEdge,
-        filterType: state.filterType,
-      }),
-    ),
+    useShallow((state) => ({
+      getFilterEdge: state.getFilterEdge,
+      setFilterEdge: state.setFilterEdge,
+      filterType: state.filterType,
+    })),
   );
 
   const hasStore = useStoreStore((state) => state.hasStore);

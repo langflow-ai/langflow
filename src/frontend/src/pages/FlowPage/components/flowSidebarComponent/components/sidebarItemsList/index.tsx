@@ -1,12 +1,12 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { removeCountFromString } from "@/utils/utils";
-import { disableItem } from "../../helpers/disable-item";
-import { getDisabledTooltip } from "../../helpers/get-disabled-tooltip";
-import SidebarDraggableComponent from "../sidebarDraggableComponent";
 import useFlowStore from "@/stores/flowStore";
 import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
-import { UniqueInputsComponents } from "../../types";
+import { removeCountFromString } from "@/utils/utils";
 import { useMemo } from "react";
+import { disableItem } from "../../helpers/disable-item";
+import { getDisabledTooltip } from "../../helpers/get-disabled-tooltip";
+import { UniqueInputsComponents } from "../../types";
+import SidebarDraggableComponent from "../sidebarDraggableComponent";
 
 const SidebarItemsList = ({
   item,
@@ -49,7 +49,7 @@ const SidebarItemsList = ({
                 onDragStart={onDragStart}
                 nodeColors={nodeColors}
               />
-            )
+            );
           }
           return (
             <ShadTooltip
@@ -93,12 +93,15 @@ const UniqueInputsDraggableComponent = ({
   idx,
   onDragStart,
   nodeColors,
-})=> {
+}) => {
   const nodes = useFlowStore((state) => state.nodes);
   const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
   const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
   const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
-    console.log("uniqueInputsComponents", { chatInputAdded, webhookInputAdded });
+    console.log("uniqueInputsComponents", {
+      chatInputAdded,
+      webhookInputAdded,
+    });
     return {
       chatInput: chatInputAdded,
       webhookInput: webhookInputAdded,
@@ -106,11 +109,7 @@ const UniqueInputsDraggableComponent = ({
   }, [chatInputAdded, webhookInputAdded]);
 
   return (
-    <ShadTooltip
-      content={currentItem.display_name}
-      side="right"
-      key={idx}
-    >
+    <ShadTooltip content={currentItem.display_name} side="right" key={idx}>
       <SidebarDraggableComponent
         sectionName={item.name}
         apiClass={currentItem}

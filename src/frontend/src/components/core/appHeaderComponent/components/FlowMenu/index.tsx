@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -152,8 +158,11 @@ export const MenuBar = React.memo((): JSX.Element => {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { value } = e.target;
       const flows = useFlowsManagerStore.getState().flows;
-      const flowNames = flows?.map(flow => flow.name).filter(name => name !== currentFlowName) ?? [];
-      
+      const flowNames =
+        flows
+          ?.map((flow) => flow.name)
+          .filter((name) => name !== currentFlowName) ?? [];
+
       const invalid = flowNames.includes(value);
       setIsInvalidName(invalid);
       setFlowName(value);

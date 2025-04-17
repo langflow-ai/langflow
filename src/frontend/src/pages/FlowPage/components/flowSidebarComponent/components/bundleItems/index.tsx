@@ -32,12 +32,14 @@ export const BundleItem = memo(
     const handleOpenChange = useCallback(
       (isOpen: boolean) => {
         setOpenCategories((prev: string[]) =>
-          isOpen ? [...prev, item.name] : prev.filter((cat) => cat !== item.name),
+          isOpen
+            ? [...prev, item.name]
+            : prev.filter((cat) => cat !== item.name),
         );
       },
       [item.name, setOpenCategories],
     );
-  
+
     return (
       <Disclosure key={item.name} open={isOpen} onOpenChange={handleOpenChange}>
         <SidebarMenuItem>

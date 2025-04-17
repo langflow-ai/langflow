@@ -4,7 +4,7 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
-import { memo, useMemo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { SidebarGroupProps } from "../../types";
 import { BundleItem } from "../bundleItems";
 
@@ -21,7 +21,6 @@ export const MemoizedSidebarGroup = memo(
     openCategories,
     setOpenCategories,
   }: SidebarGroupProps) => {
-
     const sortedBundles = useMemo(() => {
       return BUNDLES.toSorted((a, b) => {
         const referenceArray = search !== "" ? sortedCategories : BUNDLES;
