@@ -69,7 +69,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2)
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."

@@ -401,13 +401,19 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
     title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
     info_text = (
-        "Collaborate and contribute: "
-        ":star2:[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] • "
-        ":speech_balloon:[bold][link=https://discord.com/invite/EqksyE2EX9]Join Discord[/link][/bold]"
+        ":star2: GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
+        ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
-        "We collect anonymous usage data to improve Langflow.\n"
-        "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        (
+            "We collect anonymous usage data to improve Langflow.\n"
+            "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        )
+        if os.getenv("DO_NOT_TRACK", os.getenv("LANGFLOW_DO_NOT_TRACK", "False")).lower() != "true"
+        else (
+            "We are [bold]not[/bold] collecting anonymous usage data to improve Langflow.\n"
+            "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
+        )
     )
     access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{host}:{port}]{protocol}://{host}:{port}[/link]"
 
