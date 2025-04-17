@@ -43,7 +43,9 @@ export type TableComponentType = {
 export type ToolsComponentType = {
   description: string;
   title: string;
-  icon: string;
+  icon?: string;
+  button_description?: string;
+  isAction?: boolean;
 };
 
 export type FloatComponentType = {
