@@ -1,0 +1,120 @@
+name: Update OpenAPI Spec
+
+on:
+  schedule:
+    - cron: "0 20 * * 1" # Monday 4pm EST
+  workflow_dispatch:     # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-openapi-updates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Check if there is already an open pull request
+        id: check_pull_request
+        run: |
+          if [[ -n $(gh pr list --state open --repo ${{ github.repository }} | grep "docs: OpenAPI spec") ]]; then
+            echo "There is already an open PR with updates to the OpenAPI spec. Merge or close that PR first. Skipping."
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Langflow container and get OpenAPI spec
+        if: steps.check_pull_request.outputs.pr_exists != 'true'
+        run: |
+          # Start the container in the background
+          docker run -d --name langflow -p 7860:7860 langflowai/langflow:latest
+
+          # Wait for the service to be ready (adjust timeout as needed)
+          echo "Waiting for Langflow to start..."
+          timeout=60
+          elapsed=0
+          while ! curl -s http://localhost:7860/health > /dev/null; do
+            sleep 2
+            elapsed=$((elapsed+2))
+            if [ "$elapsed" -ge "$timeout" ]; then
+              echo "Timed out waiting for Langflow to start"
+              exit 1
+            fi
+            echo "Still waiting... ($elapsed seconds)"
+          done
+
+          # Get the OpenAPI spec and save to file
+          echo "Fetching OpenAPI spec..."
+          curl -s http://localhost:7860/openapi.json > new_openapi.json
+
+          # Verify file was created
+          ls -la new_openapi.json
+
+          # stop the container when done
+          docker stop langflow
+
+      - name: Compare OpenAPI files
+        if: steps.check_pull_request.outputs.pr_exists != 'true'
+        id: compare
+        run: |
+          # Extract versions
+          NEW_VERSION=$(jq -r '.info.version' new_openapi.json)
+          CURRENT_VERSION=$(jq -r '.info.version' docs/openapi.json)
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "New version: $NEW_VERSION"
+
+          # Compare file content (normalize by sorting keys)
+          jq --sort-keys . new_openapi.json > sorted_new.json
+          jq --sort-keys . docs/openapi.json > sorted_current.json
+
+          if ! cmp -s sorted_new.json sorted_current.json; then
+            echo "OpenAPI spec content has changed."
+
+            # Compare versions (assuming semantic versioning)
+            if [ "$(printf '%s\n' "$CURRENT_VERSION" "$NEW_VERSION" | sort -V | tail -n1)" == "$NEW_VERSION" ] && [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
+              echo "New version detected. Creating PR."
+              echo "NEEDS_UPDATE=true" >> $GITHUB_ENV
+              echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+              echo "UPDATE_REASON=version upgraded from $CURRENT_VERSION to $NEW_VERSION" >> $GITHUB_ENV
+            else
+              echo "File content changed but version remains the same. Creating PR."
+              echo "NEEDS_UPDATE=true" >> $GITHUB_ENV
+              echo "NEW_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+              echo "UPDATE_REASON=content updated without version change" >> $GITHUB_ENV
+            fi
+
+            cat new_openapi.json | jq > docs/openapi.json
+          else
+            echo "No changes detected in OpenAPI spec content."
+            echo "NEEDS_UPDATE=false" >> $GITHUB_ENV
+          fi
+
+          # Clean up
+          rm new_openapi.json sorted_new.json sorted_current.json
+
+      - name: Create Pull Request
+        if: env.NEEDS_UPDATE == 'true' && steps.check_pull_request.outputs.pr_exists != 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: OpenAPI spec ${{ env.UPDATE_REASON }}"
+          title: "docs: OpenAPI spec ${{ env.UPDATE_REASON }}"
+          body: |
+            This PR updates the OpenAPI spec.
+
+            Update reason: ${{ env.UPDATE_REASON }}
+            Version: ${{ env.NEW_VERSION }}
+          branch: update-openapi-spec
+          branch-suffix: timestamp
+          delete-branch: true
+          reviewers: mendonk

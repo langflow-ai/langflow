@@ -3,6 +3,8 @@ title: Tools
 slug: /components-tools
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Tool components in Langflow
 
 Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
@@ -24,6 +26,25 @@ The [simple agent starter project](/starter-projects-simple-agent) uses URL and 
 To make a component into a tool that an agent can use, enable **Tool mode** in the component. Enabling **Tool mode** modifies a component input to accept calls from an agent.
 If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
 For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
+
+## arXiv
+
+This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_query | Search Query | The search query for arXiv papers (for example, `quantum computing`) |
+| search_type | Search Field | The field to search in |
+| max_results | Max Results | Maximum number of results to return |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| papers | Papers | List of retrieved arXiv papers |
+
 
 ## Astra DB Tool
 
@@ -49,7 +70,7 @@ The Data output is primarily used when directly querying Astra DB, while the Too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[`Data`] | A list of [Data](/configuration-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
+| Data | List[`Data`] | A list of [Data](/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
 
 
@@ -79,7 +100,7 @@ The main difference between this tool and the **Astra DB Tool** is that this too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of [Data](/configuration-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the number_of_results parameter. |
+| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
 ## Bing Search API
@@ -110,7 +131,7 @@ This component creates a tool for performing basic arithmetic operations on a gi
 
 | Name       | Type   | Description                                                        |
 |------------|--------|--------------------------------------------------------------------|
-| expression | String | The arithmetic expression to evaluate (e.g., `4*4*(33/22)+12-20`). |
+| expression | String | The arithmetic expression to evaluate (for example, `4*4*(33/22)+12-20`). |
 
 ### Outputs
 
@@ -141,6 +162,43 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 | optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
 | reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
 
+## DuckDuckGo search
+
+This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Search Query | The search query to execute with DuckDuckGo. |
+| max_results | Max Results | The maximum number of search results to return. Default: `5`. |
+| max_snippet_length | Max Snippet Length | The maximum length of each result snippet. Default: `100`.|
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | [Data](/concepts-objects#data-object) | List of search results as Data objects containing snippets and full content. |
+| text | Text | Search results formatted as a single text string. |
+
+## Exa Search
+
+This component provides an [https://exa.ai/](Exa Search) toolkit for search and content retrieval.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| metaphor_api_key | Exa Search API Key | API key for Exa Search (entered as a password) |
+| use_autoprompt | Use Autoprompt | Whether to use autoprompt feature (default: true) |
+| search_num_results | Search Number of Results | Number of results to return for search (default: 5) |
+| similar_num_results | Similar Number of Results | Number of similar results to return (default: 5) |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| tools | Tools | List of search tools provided by the toolkit |
 ## Glean Search API
 
 This component allows you to call the Glean Search API.
@@ -163,6 +221,10 @@ This component allows you to call the Glean Search API.
 | tool    | Tool      | Glean Search tool for use in LangChain|
 
 ## Google Search API
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component allows you to call the Google Search API.
 
@@ -201,6 +263,82 @@ This component allows you to call the Serper.dev Google Search API.
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
+
+## MCP server
+
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools.
+
+In addition to being an MCP client that can leverage MCP servers, Langflow is also an MCP server that exposes flows as tools through the `/api/v1/mcp/sse` API endpoint. For more information, see [MCP integrations](/integrations-mcp).
+
+To use the MCP server component with an agent component, follow these steps:
+
+1. Add the MCP server component to your workflow.
+2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+
+```bash
+uvx mcp-server-fetch
+```
+
+`uvx` is included with `uv` in the Langflow package.
+To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+
+3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+4. In the **Tool** field, select the server tool you want the component to use.
+The available fields change based on the selected tool.
+For information on the parameters, see the MCP server's documentation.
+5. In the MCP server component, enable **Tool mode**.
+Connect the MCP server component's **Toolset** port to an **Agent** component's **Tools** port.
+
+The flow looks similar to this:
+![MCP server component](/img/mcp-server-component.png)
+
+6. Open the **Playground**.
+Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
+This confirms the MCP server is connected, and its tools are being used in Langflow.
+
+For more information, see [MCP integrations](/integrations-mcp).
+
+### MCP Server-Sent Events (SSE) mode
+
+1. In the **MCP Server** component, select **SSE**.
+A default address appears in the **MCP SSE URL** field.
+2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+The default value is `http://localhost:7860/api/v1/mcp/sse`.
+3. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
+4. Click the **Tools** field.
+All of your flows are listed as tools.
+5. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
+The flow looks like this:
+![MCP server component](/img/mcp-server-component-sse.png)
+6. Open the **Playground** and chat with your tool.
+The agent chooses the correct tool based on your query.
+
+### Inputs
+
+| Name    | Type   | Description                                |
+|---------|--------|--------------------------------------------|
+| command | String | MCP command (default: `uvx mcp-sse-shim@latest`) |
+
+### Outputs
+
+| Name  | Type      | Description                               |
+|-------|-----------|-------------------------------------------|
+| tools | List[Tool]| List of tools exposed by the MCP server   |
+
+## MCP Tools (stdio)
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
+
+
+## MCP Tools (SSE)
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
+
 ## Python Code Structured Tool
 
 This component creates a structured tool from Python code using a dataclass.
@@ -225,6 +363,10 @@ The component dynamically updates its configuration based on the provided Python
 | result_tool  | Tool  │ Structured tool created from the Python code |
 
 ## Python REPL Tool
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
@@ -281,6 +423,10 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 
 ## Search API
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
 For more information, see the [SearchAPI documentation](https://www.searchapi.io/docs/google).
@@ -320,7 +466,56 @@ This component creates a tool for searching using the Serp API.
 | results | List[Data]| List of search results                      |
 | tool    | Tool      | Serp API search tool for use in LangChain   |
 
+## Tavily AI Search
+
+This component performs searches using the Tavily AI search engine, which is optimized for LLMs and RAG applications.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| api_key | Tavily API Key | Your Tavily API Key. |
+| query | Search Query | The search query you want to execute with Tavily. |
+| search_depth | Search Depth | The depth of the search. |
+| topic | Search Topic | The category of the search. |
+| max_results | Max Results | The maximum number of search results to return. |
+| include_images | Include Images | Include a list of query-related images in the response. |
+| include_answer | Include Answer | Include a short answer to original query. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results as a list of Data objects. |
+| text | Text | The search results formatted as a text string. |
+
+## Wikidata
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
+This component performs a search using the Wikidata API.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Query | The text query for similarity search on Wikidata. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results from Wikidata API as a list of Data objects. |
+| text | Message | The search results formatted as a text message. |
+
+
 ## Wikipedia API
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component creates a tool for searching and retrieving information from Wikipedia.
 
@@ -372,3 +567,5 @@ This component does not have any input parameters.
 | Name | Type | Description                                  |
 |------|------|----------------------------------------------|
 | tool | Tool | Yahoo Finance News tool for use in LangChain |
+
+

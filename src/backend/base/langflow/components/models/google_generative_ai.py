@@ -70,6 +70,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="tool_model_enabled",
             display_name="Tool Model Enabled",
             info="Whether to use the tool model.",
+            value=False,
         ),
     ]
 
@@ -128,7 +129,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         return model_ids
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 if len(self.api_key) == 0:
                     ids = GOOGLE_GENERATIVE_AI_MODELS

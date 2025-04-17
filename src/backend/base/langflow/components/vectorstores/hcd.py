@@ -194,16 +194,14 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         if not isinstance(self.embedding, dict):
             embedding_dict = {"embedding": self.embedding}
         else:
-            from astrapy.info import CollectionVectorServiceOptions
+            from astrapy.info import VectorServiceOptions
 
             dict_options = self.embedding.get("collection_vector_service_options", {})
             dict_options["authentication"] = {
                 k: v for k, v in dict_options.get("authentication", {}).items() if k and v
             }
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
-            embedding_dict = {
-                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options)
-            }
+            embedding_dict = {"collection_vector_service_options": VectorServiceOptions.from_dict(dict_options)}
             collection_embedding_api_key = self.embedding.get("collection_embedding_api_key")
             if collection_embedding_api_key:
                 embedding_dict["collection_embedding_api_key"] = collection_embedding_api_key
@@ -242,6 +240,9 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store) -> None:
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

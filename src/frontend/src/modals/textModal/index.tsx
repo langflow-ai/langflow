@@ -5,8 +5,6 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
 import { useState } from "react";
-import "react18-json-view/src/dark.css";
-import "react18-json-view/src/style.css";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import BaseModal from "../baseModal";
@@ -26,8 +24,18 @@ export default function TextModal({
   const [open, setOpen] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
 
+  const handleEscapeKeyDown = (event: KeyboardEvent) => {
+    setOpen(false);
+    event.stopPropagation();
+  };
+
   return (
-    <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
+    <BaseModal
+      size="medium-h-full"
+      open={open}
+      setOpen={setOpen}
+      onEscapeKeyDown={handleEscapeKeyDown}
+    >
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header description={""}>
         <span className="pr-2">View Text</span>
@@ -44,6 +52,7 @@ export default function TextModal({
               readonly={!editable}
               onChange={(text) => setInternalValue(text)}
               value={internalValue}
+              resizable={false}
               left={false}
             />
           </div>

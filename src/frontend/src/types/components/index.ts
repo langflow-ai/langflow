@@ -47,20 +47,27 @@ export type InputComponentType = {
   nodeStyle?: boolean;
   isToolMode?: boolean;
   popoverWidth?: string;
+  commandWidth?: string;
+  blockAddNewGlobalVariable?: boolean;
+  hasRefreshButton?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
   isLoading?: boolean;
   value: string;
   combobox?: boolean;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
   optionsMetaData?: any[];
   onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
-  name?: string;
+  name: string;
   dialogInputs?: any;
+  toggle?: boolean;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -100,6 +107,8 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  showHiddenOutputs?: boolean;
+  hidden?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -143,9 +152,9 @@ export type DisclosureComponentType = {
   isChild?: boolean;
   button: {
     title: string;
-    Icon: React.ElementType;
+    icon: string;
     buttons?: {
-      Icon: ReactElement;
+      icon: string;
       title: string;
       onClick: (event?: React.MouseEvent) => void;
     }[];
@@ -421,7 +430,29 @@ export type UserInputType = {
 export type ApiKeyType = {
   children: ReactElement;
   data?: any;
-  onCloseModal: () => void;
+  onCloseModal?: () => void;
+  modalProps?: {
+    title?: string;
+    description?: string | ReactElement | HTMLElement;
+    inputLabel?: string | ReactElement | HTMLElement | ReactNode;
+    inputPlaceholder?: string;
+    buttonText?: string;
+    generatedKeyMessage?: string | ReactElement | HTMLElement;
+    showIcon?: boolean;
+    size?:
+      | "x-small"
+      | "smaller"
+      | "small"
+      | "medium"
+      | "medium-tall"
+      | "large"
+      | "three-cards"
+      | "large-thin"
+      | "large-h-full"
+      | "templates"
+      | "small-h-full"
+      | "medium-h-full";
+  };
 };
 
 export type StoreApiKeyType = {
@@ -505,7 +536,6 @@ export type ChatInputType = {
   inputRef: {
     current: any;
   };
-  lockChat: boolean;
   noInput: boolean;
   sendMessage: ({
     repeat,
@@ -514,6 +544,7 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => void;
+  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {
@@ -574,7 +605,8 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
+  clampDescription?: number;
 };
 
 export type codeAreaModalPropsType = {
@@ -593,15 +625,14 @@ export type codeAreaModalPropsType = {
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
-  lockChat: boolean;
   lastMessage: boolean;
-  setLockChat: (lock: boolean) => void;
   updateChat: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type genericModalPropsType = {
@@ -643,6 +674,18 @@ export type textModalPropsType = {
   changeVisibility?: () => void;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  onCloseModal?: () => void;
+};
+export type queryModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  title: string;
+  description: string;
+  placeholder?: string;
+  disabled?: boolean;
+  children?: ReactNode;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {
@@ -658,6 +701,7 @@ export type IOModalPropsType = {
   isPlayground?: boolean;
   cleanOnClose?: boolean;
   canvasOpen?: boolean;
+  playgroundPage?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -765,6 +809,7 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
+  sidebarOpen: boolean;
   sendMessage: ({
     repeat,
     files,
@@ -772,11 +817,10 @@ export type chatViewProps = {
     repeat: number;
     files?: string[];
   }) => void;
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type IOFileInputProps = {
@@ -794,15 +838,11 @@ export type toolbarSelectItemProps = {
 };
 
 export type clearChatPropsType = {
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   setChatHistory: (chatHistory: ChatMessageType) => void;
   method: string;
 };
 
 export type handleSelectPropsType = {
   event: string;
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   setChatHistory: (chatHistory: ChatMessageType) => void;
 };

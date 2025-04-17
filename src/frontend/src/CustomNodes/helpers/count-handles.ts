@@ -9,8 +9,14 @@ export function countHandlesFn(data: NodeDataType): number {
     )
     .map((templateCamp) => {
       const { template } = data.node!;
-      if (template[templateCamp]?.input_types) return true;
+      if (template[templateCamp]?.tool_mode && data.node?.tool_mode)
+        return false;
       if (!template[templateCamp]?.show) return false;
+      if (
+        template[templateCamp]?.input_types &&
+        template[templateCamp]?.input_types.length > 0
+      )
+        return true;
       switch (template[templateCamp]?.type) {
         case "str":
         case "bool":
@@ -18,8 +24,10 @@ export function countHandlesFn(data: NodeDataType): number {
         case "code":
         case "prompt":
         case "file":
+        case "table":
         case "int":
           return false;
+
         default:
           return true;
       }

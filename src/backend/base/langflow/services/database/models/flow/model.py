@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime, timezone
+from enum import Enum
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
@@ -15,19 +16,22 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
-from sqlalchemy import Text, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema import Data
 
 if TYPE_CHECKING:
-    from langflow.services.database.models import TransactionTable
     from langflow.services.database.models.folder import Folder
-    from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
-    from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 HEX_COLOR_LENGTH = 7
+
+
+class AccessTypeEnum(str, Enum):
+    PRIVATE = "PRIVATE"
+    PUBLIC = "PUBLIC"
 
 
 class FlowBase(SQLModel):
@@ -43,6 +47,18 @@ class FlowBase(SQLModel):
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
+    access_type: AccessTypeEnum = Field(
+        default=AccessTypeEnum.PRIVATE,
+        sa_column=Column(
+            SQLEnum(
+                AccessTypeEnum,
+                name="access_type_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            server_default=text("'PRIVATE'"),
+        ),
+    )
 
     @field_validator("endpoint_name")
     @classmethod
@@ -169,10 +185,8 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
-    messages: list["MessageTable"] = Relationship(back_populates="flow")
-    transactions: list["TransactionTable"] = Relationship(back_populates="flow")
-    vertex_builds: list["VertexBuildTable"] = Relationship(back_populates="flow")
 
     def to_data(self):
         serialized = self.model_dump()
@@ -194,12 +208,14 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 class FlowCreate(FlowBase):
     user_id: UUID | None = None
     folder_id: UUID | None = None
+    fs_path: str | None = None
 
 
 class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+    tags: list[str] | None = Field(None, description="The tags of the flow")
 
 
 class FlowHeader(BaseModel):
@@ -215,6 +231,8 @@ class FlowHeader(BaseModel):
     endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
     description: str | None = Field(None, description="A description of the flow")
     data: dict | None = Field(None, description="The data of the component, if is_component is True")
+    access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
+    tags: list[str] | None = Field(None, description="The tags of the flow")
 
     @field_validator("data", mode="before")
     @classmethod
@@ -231,6 +249,8 @@ class FlowUpdate(SQLModel):
     folder_id: UUID | None = None
     endpoint_name: str | None = None
     locked: bool | None = None
+    access_type: AccessTypeEnum | None = None
+    fs_path: str | None = None
 
     @field_validator("endpoint_name")
     @classmethod

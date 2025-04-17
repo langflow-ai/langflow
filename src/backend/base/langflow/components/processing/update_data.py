@@ -27,6 +27,7 @@ class UpdateDataComponent(Component):
             display_name="Data",
             info="The record to update.",
             is_list=True,  # Changed to True to handle list of Data objects
+            required=True,
         ),
         IntInput(
             name="number_of_fields",
