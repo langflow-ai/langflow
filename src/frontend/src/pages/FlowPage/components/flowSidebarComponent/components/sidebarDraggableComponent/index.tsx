@@ -2,7 +2,7 @@ import { convertTestName } from "@/components/common/storeCardComponent/utils/co
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -97,6 +97,7 @@ export const SidebarDraggableComponent = forwardRef(
     const handleKeyDown = (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        e.stopPropagation();
         addComponent(apiClass, itemName);
       }
     };
@@ -123,6 +124,7 @@ export const SidebarDraggableComponent = forwardRef(
             tabIndex={0}
             onKeyDown={handleKeyDown}
             className="m-[1px] rounded-md outline-none ring-ring focus-visible:ring-1"
+            data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
               data-testid={sectionName + display_name}

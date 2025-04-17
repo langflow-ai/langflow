@@ -1,3 +1,4 @@
+import { EventDeliveryType } from "@/constants/enums";
 import { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
@@ -15,8 +16,16 @@ export type UtilityStoreType = {
   setTags: (tags: Tag[]) => void;
   featureFlags: Record<string, any>;
   setFeatureFlags: (featureFlags: Record<string, any>) => void;
+  webhookPollingInterval: number;
+  setWebhookPollingInterval: (webhookPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
   dismissAll: boolean;
   setDismissAll: (dismissAll: boolean) => void;
+  currentSessionId: string;
+  setCurrentSessionId: (sessionId: string) => void;
+  setClientId: (clientId: string) => void;
+  clientId: string;
+  eventDelivery: EventDeliveryType;
+  setEventDelivery: (eventDelivery: EventDeliveryType) => void;
 };

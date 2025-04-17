@@ -1,11 +1,10 @@
 from langflow.custom import Component
 from langflow.io import (
+    BoolInput,
     DataInput,
-    IntInput,
     MultilineInput,
     Output,
     SecretStrInput,
-    StrInput,
 )
 from langflow.schema import Data
 
@@ -15,7 +14,6 @@ class FirecrawlScrapeApi(Component):
     description: str = "Firecrawl Scrape API."
     name = "FirecrawlScrapeApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/scrape"
 
     inputs = [
@@ -33,60 +31,43 @@ class FirecrawlScrapeApi(Component):
             info="The URL to scrape.",
             tool_mode=True,
         ),
-        IntInput(
-            name="timeout",
-            display_name="Timeout",
-            info="Timeout in milliseconds for the request.",
-            default=30000,
-            advanced=True,
-        ),
-        IntInput(
-            name="waitFor",
-            display_name="Wait For",
-            info="Time in milliseconds to wait for dynamic content to load.",
-            default=1000,
-            advanced=True,
-        ),
         DataInput(
             name="scrapeOptions",
             display_name="Scrape Options",
             info="The page options to send with the request.",
             advanced=True,
         ),
-        DataInput(  # https://docs.firecrawl.dev/features/extract
-            name="extractorOptions",
-            display_name="Extractor Options",
-            info="The extractor options to send with the request.",
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout in seconds for the request.",
+            default=300,
+            advanced=True,
+        ),
+        BoolInput(
+            name="ignoreSitemap",
+            display_name="Ignore Sitemap",
+            info="Skip sitemap.xml discovery for URL extraction.",
+            default=False,
             advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="crawl"),
+        Output(display_name="Data", name="data", method="scrape"),
     ]
-    
-    timeout: int = 30000
-    waitFor: int = 1000
 
-    def crawl(self) -> Data:
+    def scrape(self) -> Data:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        params = {
-            "timeout": self.timeout,
-            "waitFor": self.waitFor,
-        }
-        
+        params = {}
+
         if self.scrapeOptions:
             params.update(self.scrapeOptions.__dict__["data"])
-        
-        if self.extractorOptions:
-            extract_options = self.extractorOptions.__dict__["data"]
-            if extract_options:
-                params["extract"] = extract_options
 
         app = FirecrawlApp(api_key=self.api_key)
         scrape_result = app.scrape_url(self.url, params=params)

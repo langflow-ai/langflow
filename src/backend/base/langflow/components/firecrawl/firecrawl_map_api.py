@@ -1,12 +1,8 @@
 from langflow.custom import Component
 from langflow.io import (
-    BoolInput,
-    DataInput,
-    IntInput,
     MultilineInput,
     Output,
     SecretStrInput,
-    StrInput,
 )
 from langflow.schema import Data
 
@@ -60,46 +56,23 @@ class FirecrawlMapApi(Component):
             default=False,
             advanced=True,
         ),
-        BoolInput(
-            name="includeSubdomains",
-            display_name="Include Subdomains",
-            info="Include URLs from subdomains in results.",
-            default=False,
-            advanced=True,
-        ),
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="map_url"),
+        Output(display_name="Data", name="data", method="map"),
     ]
-    
-    limit: int = 50
-    search: str | None = None
-    ignoreSitemap: bool = False
-    sitemapOnly: bool = False
-    includeSubdomains: bool = False
 
-    def map_url(self) -> Data:
+    def map(self) -> Data:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        # Build parameters for API request
         params = {
             "limit": self.limit,
-            "ignoreSitemap": self.ignoreSitemap,
-            "sitemapOnly": self.sitemapOnly,
-            "includeSubdomains": self.includeSubdomains,
         }
-        
-        if self.search:
-            params["search"] = self.search
-        
-        # Ensure API key is stripped of any whitespace
-        cleaned_api_key = self.api_key.strip() if self.api_key else ""
-        
-        app = FirecrawlApp(api_key=cleaned_api_key)
-        results = app.map_url(self.url, params=params)
-        return Data(data=results) 
+
+        app = FirecrawlApp(api_key=self.api_key)
+        map_result = app.map_url(self.url, params=params)
+        return Data(data=map_result)

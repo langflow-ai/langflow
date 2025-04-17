@@ -17,7 +17,7 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
@@ -572,9 +572,13 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
+            fitViewOptions={{
+              minZoom: 0.2,
+              maxZoom: 8,
+            }}
             className="theme-attribution"
-            minZoom={0.01}
-            maxZoom={8}
+            minZoom={0.2}
+            maxZoom={3}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}

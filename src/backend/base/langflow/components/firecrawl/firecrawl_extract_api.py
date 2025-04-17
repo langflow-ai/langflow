@@ -4,7 +4,6 @@ from langflow.custom import Component
 from langflow.io import (
     BoolInput,
     DataInput,
-    IntInput,
     MultilineInput,
     Output,
     SecretStrInput,
@@ -14,7 +13,7 @@ from langflow.schema import Data
 
 class FirecrawlExtractApi(Component):
     display_name: str = "FirecrawlExtractApi"
-    description: str = "Firecrawl Extract API for structured data extraction from websites."
+    description: str = "Firecrawl Extract API."
     name = "FirecrawlExtractApi"
 
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/extract"
@@ -46,7 +45,6 @@ class FirecrawlExtractApi(Component):
             display_name="Schema",
             required=False,
             info="Schema to define the structure of the extracted data.",
-            advanced=True,
         ),
         BoolInput(
             name="enable_web_search",
@@ -99,9 +97,6 @@ class FirecrawlExtractApi(Component):
             msg = "API key is required"
             raise ValueError(msg)
 
-        # Strip whitespace from API key
-        cleaned_api_key = self.api_key.strip() if self.api_key else ""
-
         # Validate URLs
         if not self.urls:
             msg = "URLs are required"
@@ -118,7 +113,7 @@ class FirecrawlExtractApi(Component):
             msg = "Prompt is required"
             raise ValueError(msg)
 
-        # Get the prompt text
+        # Get the prompt text (handling both string and multiline input)
         prompt_text = self.prompt.strip()
 
         # Enhance the prompt to encourage comprehensive extraction
@@ -126,7 +121,6 @@ class FirecrawlExtractApi(Component):
         if "schema" not in prompt_text.lower():
             enhanced_prompt = f"{prompt_text}. Please extract all instances in a comprehensive, structured format."
 
-        # Build parameters for API request
         params = {
             "prompt": enhanced_prompt,
             "enableWebSearch": self.enable_web_search,
@@ -140,25 +134,18 @@ class FirecrawlExtractApi(Component):
             try:
                 if isinstance(self.schema, dict) and "type" in self.schema:
                     params["schema"] = self.schema
-                elif hasattr(self.schema, "__dict__") and hasattr(self.schema.__dict__, "data"):
-                    params["schema"] = self.schema.__dict__["data"]
+                elif hasattr(self.schema, "dict") and "type" in self.schema.dict():
+                    params["schema"] = self.schema.dict()
                 else:
-                    logger.warning("Schema provided but format is not recognized. Skipping schema.")
+                    # Skip invalid schema without raising an error
+                    pass
             except Exception as e:
-                logger.warning(f"Invalid schema format: {e!s}. Proceeding without schema.")
+                logger.error(f"Invalid schema: {e!s}")
 
         try:
-            # Create Firecrawl client and extract data
-            app = FirecrawlApp(api_key=cleaned_api_key)
+            app = FirecrawlApp(api_key=self.api_key)
             extract_result = app.extract(urls, params=params)
             return Data(data=extract_result)
         except Exception as e:
-            error_message = str(e)
-            if "401" in error_message:
-                msg = f"Authentication failed: Please check your Firecrawl API key. Error: {error_message}"
-            elif "403" in error_message:
-                msg = f"Authorization failed: Your API key may not have permission to use this feature. Error: {error_message}"
-            else:
-                msg = f"Error during extraction: {error_message}"
-            logger.error(msg)
+            msg = f"Error during extraction: {e!s}"
             raise ValueError(msg) from e

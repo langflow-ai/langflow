@@ -2,11 +2,15 @@ import requests
 from loguru import logger
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.groq_constants import GROQ_MODELS
+from langflow.base.models.groq_constants import (
+    GROQ_MODELS,
+    TOOL_CALLING_UNSUPPORTED_GROQ_MODELS,
+    UNSUPPORTED_GROQ_MODELS,
+)
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 
 
 class GroqModel(LCModelComponent):
@@ -34,18 +38,13 @@ class GroqModel(LCModelComponent):
             info="The maximum number of tokens to generate.",
             advanced=True,
         ),
-        FloatInput(
-            name="temperature",
-            display_name="Temperature",
-            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
-            value=0.1,
-        ),
         SliderInput(
             name="temperature",
             display_name="Temperature",
             value=0.1,
             info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
         IntInput(
             name="n",
@@ -83,7 +82,9 @@ class GroqModel(LCModelComponent):
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
-            model_ids = [model["id"] for model in model_list.get("data", [])]
+            model_ids = [
+                model["id"] for model in model_list.get("data", []) if model["id"] not in UNSUPPORTED_GROQ_MODELS
+            ]
         except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = GROQ_MODELS
@@ -99,13 +100,13 @@ class GroqModel(LCModelComponent):
                     api_key=self.api_key,
                     base_url=self.base_url,
                 )
-                if not self.supports_tool_calling(model_with_tool):
+                if not self.supports_tool_calling(model_with_tool) or model in TOOL_CALLING_UNSUPPORTED_GROQ_MODELS:
                     model_ids.remove(model)
             return model_ids
         return model_ids
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 if len(self.api_key) != 0:
                     try:

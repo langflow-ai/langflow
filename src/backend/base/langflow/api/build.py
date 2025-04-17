@@ -13,6 +13,7 @@ from sqlmodel import select
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
 from langflow.api.utils import (
     CurrentActiveUser,
+    EventDeliveryType,
     build_graph_from_data,
     build_graph_from_db,
     format_elapsed_time,
@@ -34,7 +35,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
-from langflow.services.job_queue.service import JobQueueService
+from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 
@@ -50,6 +51,7 @@ async def start_flow_build(
     log_builds: bool,
     current_user: CurrentActiveUser,
     queue_service: JobQueueService,
+    flow_name: str | None = None,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -70,6 +72,7 @@ async def start_flow_build(
             start_component_id=start_component_id,
             log_builds=log_builds,
             current_user=current_user,
+            flow_name=flow_name,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -82,13 +85,14 @@ async def get_flow_events_response(
     *,
     job_id: str,
     queue_service: JobQueueService,
-    stream: bool = True,
+    event_delivery: EventDeliveryType,
 ):
     """Get events for a specific build job, either as a stream or single event."""
     try:
-        main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
-        if stream:
+        main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
+        if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
             if event_task is None:
+                logger.error(f"No event task found for job {job_id}")
                 raise HTTPException(status_code=404, detail="No event task found for job")
             return await create_flow_response(
                 queue=main_queue,
@@ -97,17 +101,30 @@ async def get_flow_events_response(
             )
 
         # Polling mode - get exactly one event
-        _, value, _ = await main_queue.get()
-        if value is None:
-            # End of stream, trigger end event
-            if event_task is not None:
-                event_task.cancel()
-            event_manager.on_end(data={})
+        try:
+            _, value, _ = await main_queue.get()
+            if value is None:
+                # End of stream, trigger end event
+                if event_task is not None:
+                    event_task.cancel()
+                event_manager.on_end(data={})
 
-        return JSONResponse({"event": value.decode("utf-8") if value else None})
+            return JSONResponse({"event": value.decode("utf-8") if value else None})
+        except asyncio.CancelledError as exc:
+            logger.info(f"Event polling was cancelled for job {job_id}")
+            raise HTTPException(status_code=499, detail="Event polling was cancelled") from exc
+        except asyncio.TimeoutError as exc:
+            logger.warning(f"Timeout while waiting for events for job {job_id}")
+            raise HTTPException(status_code=408, detail="Timeout while waiting for events") from exc
 
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except JobQueueNotFoundError as exc:
+        logger.error(f"Job not found: {job_id}. Error: {exc!s}")
+        raise HTTPException(status_code=404, detail=f"Job not found: {exc!s}") from exc
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        logger.exception(f"Unexpected error processing flow events for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc!s}") from exc
 
 
 async def create_flow_response(
@@ -154,6 +171,7 @@ async def generate_flow_events(
     start_component_id: str | None,
     log_builds: bool,
     current_user: CurrentActiveUser,
+    flow_name: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -175,13 +193,10 @@ async def generate_flow_events(
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
-                graph = await create_graph(fresh_session, flow_id_str)
+                graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
             graph.validate_stream()
             first_layer = sort_vertices(graph)
-
-            if inputs is not None and getattr(inputs, "session", None) is not None:
-                graph.session_id = inputs.session
 
             for vertex_id in first_layer:
                 graph.run_manager.add_to_vertices_being_run(vertex_id)
@@ -217,18 +232,31 @@ async def generate_flow_events(
             ),
         )
 
-    async def create_graph(fresh_session, flow_id_str: str) -> Graph:
-        if not data:
-            return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+    async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None) -> Graph:
+        if inputs is not None and getattr(inputs, "session", None) is not None:
+            effective_session_id = inputs.session
+        else:
+            effective_session_id = flow_id_str
 
-        result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-        flow_name = result.first()
+        if not data:
+            return await build_graph_from_db(
+                flow_id=flow_id,
+                session=fresh_session,
+                chat_service=chat_service,
+                user_id=str(current_user.id),
+                session_id=effective_session_id,
+            )
+
+        if not flow_name:
+            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+            flow_name = result.first()
 
         return await build_graph_from_data(
             flow_id=flow_id_str,
             payload=data.model_dump(),
             user_id=str(current_user.id),
             flow_name=flow_name,
+            session_id=effective_session_id,
         )
 
     def sort_vertices(graph: Graph) -> list[str]:
@@ -280,7 +308,7 @@ async def generate_flow_events(
                 outputs = {output_label: OutputValue(message=message, type="error")}
                 result_data_response = ResultDataResponse(results={}, outputs=outputs)
                 artifacts = {}
-                background_tasks.add_task(graph.end_all_traces, error=exc)
+                background_tasks.add_task(graph.end_all_traces_in_context(error=exc))
 
             result_data_response.message = artifacts
 
@@ -314,7 +342,7 @@ async def generate_flow_events(
                 next_runnable_vertices = [graph.stop_vertex]
 
             if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
-                background_tasks.add_task(graph.end_all_traces)
+                background_tasks.add_task(graph.end_all_traces_in_context())
 
             build_response = VertexBuildResponse(
                 inactivated_vertices=list(set(inactivated_vertices)),
@@ -365,7 +393,7 @@ async def generate_flow_events(
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
-            logger.exception(exc)
+            logger.error(f"Build cancelled: {exc}")
             raise
 
         # send built event or error event
@@ -410,7 +438,7 @@ async def generate_flow_events(
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
-        background_tasks.add_task(graph.end_all_traces)
+        background_tasks.add_task(graph.end_all_traces_in_context())
         raise
     except Exception as e:
         logger.error(f"Error building vertices: {e}")
@@ -424,5 +452,63 @@ async def generate_flow_events(
         )
         event_manager.on_error(data=error_message.data)
         raise
+
     event_manager.on_end(data={})
+    await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))
+
+
+async def cancel_flow_build(
+    *,
+    job_id: str,
+    queue_service: JobQueueService,
+) -> bool:
+    """Cancel an ongoing flow build job.
+
+    Args:
+        job_id: The unique identifier of the job to cancel
+        queue_service: The service managing job queues
+
+    Returns:
+        True if the job was successfully canceled or doesn't need cancellation
+        False if the cancellation failed
+
+    Raises:
+        ValueError: If the job doesn't exist
+        asyncio.CancelledError: If the task cancellation failed
+    """
+    # Get the event task and event manager for the job
+    _, _, event_task, _ = queue_service.get_queue_data(job_id)
+
+    if event_task is None:
+        logger.warning(f"No event task found for job_id {job_id}")
+        return True  # Nothing to cancel is still a success
+
+    if event_task.done():
+        logger.info(f"Task for job_id {job_id} is already completed")
+        return True  # Nothing to cancel is still a success
+
+    # Store the task reference to check status after cleanup
+    task_before_cleanup = event_task
+
+    try:
+        # Perform cleanup using the queue service
+        await queue_service.cleanup_job(job_id)
+    except asyncio.CancelledError:
+        # Check if the task was actually cancelled
+        if task_before_cleanup.cancelled():
+            logger.info(f"Successfully cancelled flow build for job_id {job_id} (CancelledError caught)")
+            return True
+        # If the task wasn't cancelled, re-raise the exception
+        logger.error(f"CancelledError caught but task for job_id {job_id} was not cancelled")
+        raise
+
+    # If no exception was raised, verify that the task was actually cancelled
+    # The task should be done (cancelled) after cleanup
+    if task_before_cleanup.cancelled():
+        logger.info(f"Successfully cancelled flow build for job_id {job_id}")
+        return True
+
+    # If we get here, the task wasn't cancelled properly
+    logger.error(f"Failed to cancel flow build for job_id {job_id}, task is still running")
+    return False
