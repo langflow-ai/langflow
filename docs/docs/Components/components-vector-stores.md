@@ -344,20 +344,12 @@ The **Local DB** component is Langflow's enhanced version of Chroma DB.
 It  that adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
 
 Local DB includes **Ingest** and **Retrieve** modes.
-The **Ingest** mode works similarly to [ChromaDB](#chroma-db).
 
-The **Retrieve** mode can be used to query your **Chroma DB** collections.
+The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your database to the Langflow cache directory. The Langflow cache directory location is specified in `LANGFLOW_CONFIG_DIR`. For more information, see [Environment variables](/environment-variables).
 
-![ChromaDB receiving split text](/img/component-chroma-db.png)
+The **Retrieve** mode can query your **Chroma DB** collections.
 
-This description highlights the key Langflow-specific features:
-
-Dual-mode operation (Ingest/Retrieve)
-Automatic collection management
-Built-in persistence in Langflow's cache
-Simplified interface compared to standard Chroma DB
-No server setup required
-
+![Local DB retrieving vectors](/img/component-chroma-db.png)
 
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
 
