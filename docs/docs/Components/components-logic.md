@@ -39,7 +39,7 @@ It includes code examples of REST and gRPC implementations to demonstrate integr
 This component routes messages by comparing two strings.
 It evaluates a condition by comparing two text inputs using the specified operator and routes the message to `true_result` or `false_result`.
 
-The operator looks for single strings based on your defined [Operator behavior](#operator-behavior), but it can also search for multiple words by regex matching.
+The operator looks for single strings based on your defined [operator behavior](#operator-behavior), but it can also search for multiple words by regex matching.
 
 To use the **Conditional router** component to check incoming messages with regex matching, do the following:
 
@@ -49,7 +49,7 @@ To use the **Conditional router** component to check incoming messages with rege
 * In the **Operator** field, enter `regex`. The component looks for the strings `urgent`, `warning`, and `caution`. For more operators, see [Operator behavior](#operator-behavior).
 * In the **Message** field, enter `New Message Detected`. This field is optional. The message is sent to both the **True** and **False** ports.
 The component is now set up to send a `New Message Detected` message out of its **True** port if it matches any of the strings.
-If no strings are detected, it sends a message out the **False** port.
+If no strings are detected, it sends a message out of the **False** port.
 3. Create two identical flows to process the messages. Connect an **Open AI** component, a **Prompt**, and a **Chat Output** component together.
 4. Connect one chain to the **If-Else** component's **True** port, and one chain to the **False** port.
 
@@ -68,7 +68,7 @@ When a match is not found:
 Send a message that a new message has been received and added to the backlog.
 ```
 7. Open the **Playground**.
-Send the flow some messages. Your messages route differently based on the if-else component's evaluation.
+8. Send the flow some messages. Your messages route differently based on the if-else component's evaluation.
 ```
 User
 A new user was created.
@@ -232,7 +232,7 @@ This component is particularly useful in workflows that require conditional rout
 
 | Name          | Type     | Description                                                                       |
 |---------------|----------|-----------------------------------------------------------------------------------|
-| data_input    | Data     | The Data object or list of Data objects to process. Can handle both single items and lists. |
+| data_input    | Data     | The Data object or list of Data objects to process. This input can handle both single items and lists. |
 | key_name      | String   | The name of the key in the Data object to check.                                  |
 | operator      | Dropdown | The operator to apply. Options: "equals", "not equals", "contains", "starts with", "ends with", "boolean validator". Default: "equals". |
 | compare_value | String   | The value to compare against. Not shown/used when operator is "boolean validator". |
@@ -244,7 +244,7 @@ This component is particularly useful in workflows that require conditional rout
 | true_output  | Data/List   | Output when the condition is met.                    |
 | false_output | Data/List   | Output when the condition is not met.                |
 
-### Operator Behavior
+### Operator behavior
 
 - **equals**: Exact match comparison between the key's value and compare_value
 - **not equals**: Inverse of exact match
@@ -256,7 +256,7 @@ This component is particularly useful in workflows that require conditional rout
   - Strings: "true", "1", "yes", "y", "on" (case-insensitive)
   - Any other value is converted using Python's `bool()` function
 
-### List Processing
+### List processing
 
 The following actions occur when processing a list of Data objects:
 - Each object in the list is evaluated individually
