@@ -106,7 +106,6 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       >
         <div className="flex h-full w-full flex-col xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
-
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
             <div className="flex h-full flex-col justify-start">
               <HeaderComponent
@@ -182,7 +181,6 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
               )}
             </div>
           </div>
-
           {(flowType === "flows" || flowType === "components") &&
             !isLoading &&
             !isEmptyFolder &&

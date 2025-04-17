@@ -1,11 +1,22 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import useTheme from "@/customization/hooks/use-custom-theme";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
 import SyntaxHighlighter from "react-syntax-highlighter";
 
 const McpServerTab = () => {
   const [selectedMode, setSelectedMode] = useState<string>("Cursor");
+  const isDarkMode = useTheme().dark;
+
+  const syntaxHighlighterStyle = {
+    "hljs-string": {
+      color: isDarkMode ? "hsla(158, 64%, 52%, 1)" : "#059669", // Accent Green
+    },
+    "hljs-attr": {
+      color: isDarkMode ? "hsla(329, 86%, 70%, 1)" : "#DB2777", // Accent Pink
+    },
+  };
 
   const MCP_SERVER_EXAMPLE = {
     Cursor: `{
@@ -122,7 +133,7 @@ const McpServerTab = () => {
                   key={item.name}
                   className={`flex flex-row items-center gap-2 text-nowrap border-b border-border ${
                     selectedMode === item.name
-                      ? "border-b-2 border-white font-bold"
+                      ? "border-b-2 border-black font-bold dark:border-white"
                       : "text-muted-foreground hover:text-foreground"
                   } border-r border-r-border px-3 py-2 text-[13px]`}
                   onClick={() => setSelectedMode(item.name)}
@@ -138,14 +149,7 @@ const McpServerTab = () => {
               <div className="w-full border-b border-border" />
             </div>
             <SyntaxHighlighter
-              style={{
-                "hljs-string": {
-                  color: "hsla(158, 64%, 52%, 1)", // Accent Green
-                },
-                "hljs-attr": {
-                  color: "hsla(329, 86%, 70%, 1)", // Accent Pink
-                },
-              }}
+              style={syntaxHighlighterStyle}
               CodeTag={({ children }) => (
                 <div className="relative rounded-lg bg-background text-[13px]">
                   {selectedMode === "Cursor" && (
