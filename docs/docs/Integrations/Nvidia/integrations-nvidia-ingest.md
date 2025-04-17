@@ -3,15 +3,15 @@ title:  Integrate NVIDIA Retriever Extraction with Langflow
 slug: /integrations-nvidia-ingest
 ---
 
+:::note
+NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extraction.
+:::
+
 The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
 The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation.
 
 The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
-
-:::note
-NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extraction.
-:::
 
 ## Prerequisites
 
