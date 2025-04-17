@@ -725,7 +725,7 @@ To create a Langflow API key and export it as an environment variable, see [Expo
 Upload a file to your user account. The file can be used across multiple flows.
 
 The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
-Replace **FILE_NAME** with the uploaded file name.
+Replace **FILE_NAME.EXTENSION** with the uploaded file name and its extension.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
@@ -735,7 +735,7 @@ curl -X POST \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
-  -F "file=@FILE_NAME.txt"
+  -F "file=@FILE_NAME.EXTENSION"
 ```
 
   </TabItem>
@@ -744,7 +744,7 @@ curl -X POST \
 ```json
 {
   "id": "c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
-  "name": "FILE_NAME",
+  "name": "FILE_NAME.EXTENSION",
   "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt",
   "size": 1234,
   "provider": null
