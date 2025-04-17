@@ -234,14 +234,25 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 [tool.pytest.ini_options]
 timeout = 120
-tiemout_method = "thread"
+timeout_method = "thread"
+timeout_func_only = false
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+
+# Silence noisy warnings:
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+    "ignore::sqlalchemy.exc.SAWarning",
+    "ignore:An API key is required for the hosted NIM.:UserWarning",
+    "ignore::pydantic._internal._config.PydanticDeprecatedSince20",
+]
+
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
 markers = ["async_test", "api_key_required"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

@@ -290,7 +290,7 @@ class TelemetryService(Service):
                         access_log=False,
                         timeout_keep_alive=5,
                     )
-                except Exception as e:  # noqa: BLE001
+                except BaseException as e:  # catch Exception *and* SystemExit  # noqa: BLE001
                     logger.exception(f"Failed to start Prometheus metrics server on {host}:{port}: {e}")
                     # Reset the flag if the server fails to start
                     self._metrics_server_started = False
