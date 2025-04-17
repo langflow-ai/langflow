@@ -108,6 +108,12 @@ Prior to Langflow 1.1, this component was known as the Chat Memory component.
 
 This component retrieves and manages chat messages from Langflow tables or an external memory.
 
+In this example, the **Message Store** component stores the complete chat history in local Langflow, which the **Message History** component retrieves as context for the LLM to answer each question.
+
+![Message store and history components](/img/component-message-history-message-store.png)
+
+For more on configuring memory in Langflow, see [Memory](/memory).
+
 ### Inputs
 
 | Name | Display Name | Info |
@@ -132,7 +138,11 @@ This component retrieves and manages chat messages from Langflow tables or an ex
 
 This component stores chat messages or text into Langflow tables or an external memory.
 
-It provides flexibility in managing message storage and retrieval within a chat system.
+In this example, the **Message Store** component stores the complete chat history, which the **Message History** component retrieves as context for the LLM to answer each question.
+
+![Message store and history components](/img/component-message-history-message-store.png)
+
+For more on configuring memory in Langflow, see [Memory](/memory).
 
 ### Inputs
 
