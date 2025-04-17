@@ -939,7 +939,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
         template["03_region"]["options"] = self.map_cloud_providers()[env][cloud_provider]["regions"]
 
-        # Reset the the 03_region value if it's not in the new options
+        # Reset the 03_region value if it's not in the new options
         if template["03_region"]["value"] not in template["03_region"]["options"]:
             template["03_region"]["value"] = None
 
