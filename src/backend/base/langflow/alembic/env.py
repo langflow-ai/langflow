@@ -18,12 +18,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
-
+target_metadata.naming_convention = NAMING_CONVENTION
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -49,7 +56,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True,
-        prepare_threshold=None
+        prepare_threshold=None,
     )
 
     with context.begin_transaction():
@@ -73,10 +80,7 @@ def _sqlite_do_begin(conn):
 
 def _do_run_migrations(connection):
     context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        render_as_batch=True,
-        prepare_threshold=None
+        connection=connection, target_metadata=target_metadata, render_as_batch=True, prepare_threshold=None
     )
 
     with context.begin_transaction():

@@ -1,15 +1,8 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import PlaygroundButton from "@/components/core/flowToolbarComponent/components/playground-button";
-import {
-  ENABLE_API,
-  ENABLE_LANGFLOW_STORE,
-  ENABLE_PUBLISH,
-} from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { Panel } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import ApiModal from "../../../modals/apiModal";
 import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";
 import { useShortcutsStore } from "../../../stores/shortcuts";
@@ -122,66 +115,10 @@ export default function FlowToolbar(): JSX.Element {
       <Panel className="!m-2" position="top-right">
         <div
           className={cn(
-            "hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
-            ENABLE_PUBLISH ? "h-11" : "",
+            "hover:shadow-round-btn-shadow flex h-11 items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
           )}
         >
-          {ENABLE_PUBLISH ? (
-            <FlowToolbarOptions />
-          ) : (
-            <div className="flex gap-1.5">
-              <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
-                <PlaygroundButton
-                  hasIO={hasIO}
-                  open={open}
-                  setOpen={setOpen}
-                  canvasOpen
-                />
-              </div>
-              {ENABLE_API && (
-                <>
-                  <div
-                    className="flex cursor-pointer items-center gap-2"
-                    data-testid="api_button_modal"
-                    id="api_button_modal"
-                  >
-                    {currentFlow && currentFlow.data && (
-                      <ApiModal
-                        flow={currentFlow}
-                        open={openCodeModal}
-                        setOpen={setOpenCodeModal}
-                      >
-                        <div
-                          className={classNames(
-                            "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
-                          )}
-                        >
-                          <ForwardedIconComponent
-                            name="Code2"
-                            className={"h-4 w-4"}
-                          />
-                          <span className="hidden md:block">API</span>
-                        </div>
-                      </ApiModal>
-                    )}
-                  </div>
-                </>
-              )}
-              {ENABLE_LANGFLOW_STORE && (
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`side-bar-button ${
-                      !hasApiKey || !validApiKey || !hasStore
-                        ? "cursor-not-allowed"
-                        : "cursor-pointer"
-                    }`}
-                  >
-                    {ModalMemo}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <FlowToolbarOptions />
         </div>
       </Panel>
     </>

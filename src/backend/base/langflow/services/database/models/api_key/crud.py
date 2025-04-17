@@ -10,8 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models import User
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -68,7 +67,7 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 async def update_total_uses(api_key_id: UUID):
     """Update the total uses and last used at."""
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         new_api_key = await session.get(ApiKey, api_key_id)
         if new_api_key is None:
             msg = "API Key not found"

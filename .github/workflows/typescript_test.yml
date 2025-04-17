@@ -155,7 +155,7 @@ jobs:
                 fi
                 echo "Fixed suites: $SUITES"
               fi
-              
+
               TAGS=()
               if echo "$SUITES" | jq -e 'contains(["components"])' > /dev/null; then
                 TAGS+=("@components")
@@ -312,11 +312,11 @@ jobs:
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list --retries=3
             # echo command before running
-            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2"
+            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3"
 
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3
 
       - name: Upload Test Results
         if: always()

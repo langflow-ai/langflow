@@ -33,5 +33,5 @@ def downgrade() -> None:
         if migration.column_exists(table_name='flow', column_name='access_type', conn=conn):
             batch_op.drop_column('access_type')
 
-    access_type_enum = sa.EnuM('PRIVATE', 'PUBLIC', name='access_type_enum')
+    access_type_enum = sa.Enum('PRIVATE', 'PUBLIC', name='access_type_enum')
     access_type_enum.drop(conn, checkfirst=True)

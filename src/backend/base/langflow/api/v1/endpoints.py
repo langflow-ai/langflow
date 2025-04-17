@@ -748,8 +748,6 @@ async def custom_component_update(
 @router.get("/config", response_model=ConfigResponse)
 async def get_config():
     try:
-        from langflow.services.deps import get_settings_service
-
         settings_service: SettingsService = get_settings_service()
 
         return {

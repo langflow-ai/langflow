@@ -1,9 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -39,6 +36,7 @@ export default function ChatView({
   focusChat,
   closeChat,
   playgroundPage,
+  sidebarOpen,
 }: chatViewProps): JSX.Element {
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
@@ -113,12 +111,11 @@ export default function ChatView({
       setChatValueStore(
         chatInputNode.data.node.template["input_value"].value ?? "",
       );
-    } else {
-      isTabHidden ? setChatValueStore("") : null;
     }
 
     setChatHistory(finalChatHistory);
-  }, [flowPool, messages, visibleSession]);
+  }, [messages, visibleSession]);
+
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -154,7 +151,12 @@ export default function ChatView({
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
 
   const onDrop = (e) => {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND) {
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
+    e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
       e.dataTransfer.clearData();
@@ -163,11 +165,19 @@ export default function ChatView({
   };
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
-  const soundDetected = useVoiceStore((state) => state.soundDetected);
+  const isVoiceAssistantActive = useVoiceStore(
+    (state) => state.isVoiceAssistantActive,
+  );
 
   return (
     <div
-      className="flex h-full w-full flex-col rounded-md"
+      className={cn(
+        "flex h-full w-full flex-col rounded-md",
+        visibleSession ? "h-[95%]" : "h-full",
+        sidebarOpen &&
+          !isVoiceAssistantActive &&
+          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
+      )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}

@@ -12,3 +12,4 @@ export const ENABLE_FILE_MANAGEMENT = true;
 export const ENABLE_PUBLISH = true;
 export const ENABLE_WIDGET = true;
 export const ENABLE_VOICE_ASSISTANT = true;
+export const ENABLE_IMAGE_ON_PLAYGROUND = true;

@@ -67,18 +67,15 @@ export default function IOModal({
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
-  setPlaygroundPage(!!playgroundPage);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
   const flowName = useFlowStore((state) => state.currentFlow?.name);
-  const PlaygroundTitle =
-    playgroundPage && ENABLE_PUBLISH && flowName ? flowName : "Playground";
+  const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -158,11 +155,7 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
-  const config = useGetConfig();
-
-  function shouldStreamEvents() {
-    return config.data?.event_delivery === EventDeliveryType.STREAMING;
-  }
+  const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
 
   const sendMessage = useCallback(
     async ({
@@ -181,7 +174,7 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
-          stream: shouldStreamEvents(),
+          eventDelivery: eventDeliveryConfig,
         }).catch((err) => {
           console.error(err);
         });

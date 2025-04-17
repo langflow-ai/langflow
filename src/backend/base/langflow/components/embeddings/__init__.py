@@ -1,5 +1,4 @@
 from .aiml import AIMLEmbeddingsComponent
-from .amazon_bedrock import AmazonBedrockEmbeddingsComponent
 from .astra_vectorize import AstraVectorizeComponent
 from .azure_openai import AzureOpenAIEmbeddingsComponent
 from .cloudflare import CloudflareWorkersAIEmbeddingsComponent
@@ -14,10 +13,10 @@ from .openai import OpenAIEmbeddingsComponent
 from .similarity import EmbeddingSimilarityComponent
 from .text_embedder import TextEmbedderComponent
 from .vertexai import VertexAIEmbeddingsComponent
+from .watsonx import WatsonxEmbeddingsComponent
 
 __all__ = [
     "AIMLEmbeddingsComponent",
-    "AmazonBedrockEmbeddingsComponent",
     "AstraVectorizeComponent",
     "AzureOpenAIEmbeddingsComponent",
     "CloudflareWorkersAIEmbeddingsComponent",
@@ -32,4 +31,5 @@ __all__ = [
     "OpenAIEmbeddingsComponent",
     "TextEmbedderComponent",
     "VertexAIEmbeddingsComponent",
+    "WatsonxEmbeddingsComponent",
 ]

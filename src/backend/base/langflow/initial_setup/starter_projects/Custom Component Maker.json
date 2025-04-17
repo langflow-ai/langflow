@@ -1444,9 +1444,7 @@
                 "display_name": "Anthropic API Key",
                 "dynamic": false,
                 "info": "Your Anthropic API key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,

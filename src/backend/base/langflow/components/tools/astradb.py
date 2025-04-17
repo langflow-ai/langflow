@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
+from astrapy.admin import parse_api_endpoint
 from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool, Tool
 
@@ -195,7 +196,8 @@ class AstraDBToolComponent(LCToolComponent):
             return self._cached_collection
 
         try:
-            cached_client = DataAPIClient(self.token)
+            environment = parse_api_endpoint(self.api_endpoint).environment
+            cached_client = DataAPIClient(self.token, environment=environment)
             cached_db = cached_client.get_database(self.api_endpoint, keyspace=self.keyspace)
             self._cached_collection = cached_db.get_collection(self.collection_name)
         except Exception as e:

@@ -25,7 +25,7 @@ export const URLs = {
   SIDEBAR_CATEGORIES: `sidebar_categories`,
   ALL: `all`,
   VOICE: `voice`,
-  PUBLIC_FLOW: `/flows/public_flow`,
+  PUBLIC_FLOW: `flows/public_flow`,
 } as const;
 
 export function getURL(

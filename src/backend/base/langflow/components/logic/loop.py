@@ -105,7 +105,7 @@ class LoopComponent(Component):
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
 
         # Check if loop input is provided and append to aggregated list
-        if self.data is not None and not isinstance(self.data, str) and len(aggregated) <= len(data_list):
-            aggregated.append(self.data)
+        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):
+            aggregated.append(self.item)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated

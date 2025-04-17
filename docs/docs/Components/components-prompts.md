@@ -23,14 +23,14 @@ This prompt creates a "personality" for your LLM's chat interactions, but it doe
 
 To modify the prompt template, in the **Prompt** component, click the **Template** field. For example, the `{context}` variable gives the LLM model access to embedded vector data to return better answers.
 
-```plain
+```text
 Given the context
 {context}
 Answer the question
 {user_question}
 ```
 
-When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/tutorials-sequential-agent).
+When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/sequential-agent).
 
 ### Inputs
 

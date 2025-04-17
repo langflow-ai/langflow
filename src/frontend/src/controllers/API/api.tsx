@@ -6,7 +6,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { BuildStatus } from "../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
@@ -263,6 +263,7 @@ export type StreamingRequestParams = {
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
   buildController: AbortController;
+  eventDeliveryConfig?: EventDeliveryType;
 };
 
 async function performStreamingRequest({

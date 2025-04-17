@@ -2,7 +2,7 @@ import { convertTestName } from "@/components/common/storeCardComponent/utils/co
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,

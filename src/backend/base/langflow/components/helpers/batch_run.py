@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import operator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+import toml  # type: ignore[import-untyped]
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import (
-    BoolInput,
-    DataFrameInput,
-    HandleInput,
-    MessageTextInput,
-    MultilineInput,
-    Output,
-)
+from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
@@ -22,11 +15,7 @@ if TYPE_CHECKING:
 
 class BatchRunComponent(Component):
     display_name = "Batch Run"
-    description = (
-        "Runs a language model over each row of a DataFrame's text column and returns a new "
-        "DataFrame with three columns: '**text_input**' (the original text),  "
-        "'**model_response**' (the model's response),and '**batch_index**' (the processing order)."
-    )
+    description = "Runs an LLM over each row of a DataFrame's column. If no column is set, the entire row is passed."
     icon = "List"
     beta = True
 
@@ -40,7 +29,7 @@ class BatchRunComponent(Component):
         ),
         MultilineInput(
             name="system_message",
-            display_name="System Message",
+            display_name="Instructions",
             info="Multi-line system instruction for all rows in the DataFrame.",
             required=False,
         ),
@@ -53,16 +42,26 @@ class BatchRunComponent(Component):
         MessageTextInput(
             name="column_name",
             display_name="Column Name",
-            info="The name of the DataFrame column to treat as text messages. Default='text'.",
-            value="text",
-            required=True,
+            info=(
+                "The name of the DataFrame column to treat as text messages. "
+                "If empty, all columns will be formatted in TOML."
+            ),
+            required=False,
+            advanced=False,
+        ),
+        MessageTextInput(
+            name="output_column_name",
+            display_name="Output Column Name",
+            info="Name of the column where the model's response will be stored.",
+            value="model_response",
+            required=False,
             advanced=True,
         ),
         BoolInput(
             name="enable_metadata",
             display_name="Enable Metadata",
             info="If True, add metadata to the output DataFrame.",
-            value=True,
+            value=False,
             required=False,
             advanced=True,
         ),
@@ -70,20 +69,26 @@ class BatchRunComponent(Component):
 
     outputs = [
         Output(
-            display_name="Batch Results",
+            display_name="DataFrame",
             name="batch_results",
             method="run_batch",
-            info="A DataFrame with columns: 'text_input', 'model_response', 'batch_index', and 'metadata'.",
+            info="A DataFrame with all original columns plus the model's response column.",
         ),
     ]
 
-    def _create_base_row(self, text_input: str = "", model_response: str = "", batch_index: int = -1) -> dict[str, Any]:
-        """Create a base row with optional metadata."""
-        return {
-            "text_input": text_input,
-            "model_response": model_response,
-            "batch_index": batch_index,
-        }
+    def _format_row_as_toml(self, row: dict[str, Any]) -> str:
+        """Convert a dictionary (row) into a TOML-formatted string."""
+        formatted_dict = {str(col): {"value": str(val)} for col, val in row.items()}
+        return toml.dumps(formatted_dict)
+
+    def _create_base_row(
+        self, original_row: dict[str, Any], model_response: str = "", batch_index: int = -1
+    ) -> dict[str, Any]:
+        """Create a base row with original columns and additional metadata."""
+        row = original_row.copy()
+        row[self.output_column_name] = model_response
+        row["batch_index"] = batch_index
+        return row
 
     def _add_metadata(
         self, row: dict[str, Any], *, success: bool = True, system_msg: str = "", error: str | None = None
@@ -95,8 +100,8 @@ class BatchRunComponent(Component):
         if success:
             row["metadata"] = {
                 "has_system_message": bool(system_msg),
-                "input_length": len(row["text_input"]),
-                "response_length": len(row["model_response"]),
+                "input_length": len(row.get("text_input", "")),
+                "response_length": len(row[self.output_column_name]),
                 "processing_status": "success",
             }
         else:
@@ -110,10 +115,10 @@ class BatchRunComponent(Component):
 
         Returns:
             DataFrame: A new DataFrame containing:
-                - text_input: The original input text
-                - model_response: The model's response
-                - batch_index: The processing order
-                - metadata: Additional processing information
+                - All original columns
+                - The model's response column (customizable name)
+                - 'batch_index' column for processing order
+                - 'metadata' (optional)
 
         Raises:
             ValueError: If the specified column is not found in the DataFrame
@@ -122,22 +127,27 @@ class BatchRunComponent(Component):
         model: Runnable = self.model
         system_msg = self.system_message or ""
         df: DataFrame = self.df
-        col_name = self.column_name or "text"
+        col_name = self.column_name or ""
 
         # Validate inputs first
         if not isinstance(df, DataFrame):
             msg = f"Expected DataFrame input, got {type(df)}"
             raise TypeError(msg)
 
-        if col_name not in df.columns:
+        if col_name and col_name not in df.columns:
             msg = f"Column '{col_name}' not found in the DataFrame. Available columns: {', '.join(df.columns)}"
             raise ValueError(msg)
 
         try:
-            # Convert the specified column to a list of strings
-            user_texts = df[col_name].astype(str).tolist()
-            total_rows = len(user_texts)
+            # Determine text input for each row
+            if col_name:
+                user_texts = df[col_name].astype(str).tolist()
+            else:
+                user_texts = [
+                    self._format_row_as_toml(cast(dict[str, Any], row)) for row in df.to_dict(orient="records")
+                ]
 
+            total_rows = len(user_texts)
             logger.info(f"Processing {total_rows} rows with batch run")
 
             # Prepare the batch of conversations
@@ -156,26 +166,26 @@ class BatchRunComponent(Component):
                     "callbacks": self.get_langchain_callbacks(),
                 }
             )
-
             # Process batches and track progress
-            responses_with_idx = [
-                (idx, response)
-                for idx, response in zip(
-                    range(len(conversations)), await model.abatch(list(conversations)), strict=True
+            responses_with_idx = list(
+                zip(
+                    range(len(conversations)),
+                    await model.abatch(list(conversations)),
+                    strict=True,
                 )
-            ]
+            )
 
             # Sort by index to maintain order
-            responses_with_idx.sort(key=operator.itemgetter(0))
+            responses_with_idx.sort(key=lambda x: x[0])
 
             # Build the final data with enhanced metadata
             rows: list[dict[str, Any]] = []
-            for idx, response in responses_with_idx:
-                resp_text = response.content if hasattr(response, "content") else str(response)
+            for idx, (original_row, response) in enumerate(
+                zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
+            ):
+                response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
                 row = self._create_base_row(
-                    text_input=user_texts[idx],
-                    model_response=resp_text,
-                    batch_index=idx,
+                    cast(dict[str, Any], original_row), model_response=response_text, batch_index=idx
                 )
                 self._add_metadata(row, success=True, system_msg=system_msg)
                 rows.append(row)
@@ -190,6 +200,6 @@ class BatchRunComponent(Component):
         except (KeyError, AttributeError) as e:
             # Handle data structure and attribute access errors
             logger.error(f"Data processing error: {e!s}")
-            error_row = self._create_base_row()
+            error_row = self._create_base_row({col: "" for col in df.columns}, model_response="", batch_index=-1)
             self._add_metadata(error_row, success=False, error=str(e))
             return DataFrame([error_row])
