@@ -52,7 +52,7 @@ async def api_key_security(
             warnings.warn(
                 (
                     "In v1.5, the default behavior of AUTO_LOGIN authentication will change to require a valid API key"
-                    " or JWT. If you integrate with Langflow prior to v1.5, make sure to update your code to pass an "
+                    " or JWT. If you integrated with Langflow prior to v1.5, make sure to update your code to pass an "
                     "API key or JWT when authenticating with protected endpoints."
                 ),
                 DeprecationWarning,
