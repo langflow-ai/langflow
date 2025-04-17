@@ -7,6 +7,7 @@ import copy
 import json
 import queue
 import threading
+import traceback
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
@@ -38,7 +39,7 @@ from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.logging.logger import LogConfig, configure
 from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import INPUT_FIELD_NAME, InputType
+from langflow.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
@@ -1549,7 +1550,7 @@ class Graph:
                         set_cache=chat_service.set_cache,
                         event_manager=event_manager,
                     ),
-                    name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
+                    name=f"{vertex.id} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
                 tasks.append(task)
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
@@ -1595,16 +1596,76 @@ class Graph:
                 await set_cache_coro(data=self, lock=lock)
         return next_runnable_vertices
 
+    async def _log_vertex_build_from_exception(self, vertex_id: str, result: Exception) -> None:
+        """Log a vertex build failure caused by an exception.
+
+        This method handles formatting and logging errors that occur during vertex building.
+        It creates appropriate error output structures and logs the build failure.
+
+        Args:
+            vertex_id: The ID of the vertex that failed to build
+            result: The exception that caused the build failure
+
+        Returns:
+            None
+
+        Side effects:
+            - Logs the exception details
+            - Creates error output structures
+            - Calls log_vertex_build to record the failure
+        """
+        from langflow.api.utils import format_exception_message
+
+        if isinstance(result, ComponentBuildError):
+            params = result.message
+            tb = result.formatted_traceback
+        else:
+            tb = traceback.format_exc()
+            logger.exception("Error building Component")
+            params = format_exception_message(result)
+        message = {"errorMessage": params, "stackTrace": tb}
+        vertex = self.get_vertex(vertex_id)
+        output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
+        outputs = {output_label: OutputValue(message=message, type="error")}
+        result_data_response = {
+            "results": {},
+            "outputs": outputs,
+            "logs": {},
+            "message": {},
+            "artifacts": {},
+            "timedelta": None,
+            "duration": None,
+            "used_frozen_result": False,
+        }
+
+        await log_vertex_build(
+            flow_id=self.flow_id or "",
+            vertex_id=vertex_id or "errors",
+            valid=False,
+            params=params,
+            data=result_data_response,
+            artifacts={},
+        )
+
     async def _execute_tasks(self, tasks: list[asyncio.Task], lock: asyncio.Lock) -> list[str]:
-        """Executes tasks in parallel, handling exceptions for each task."""
+        """Executes tasks in parallel, handling exceptions for each task.
+
+        Args:
+            tasks: List of tasks to execute
+            lock: Async lock for synchronization
+        """
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
+            vertex_id = tasks[i].get_name().split(" ")[0]
+
             if isinstance(result, Exception):
                 logger.error(f"Task {task_name} failed with exception: {result}")
+                await self._log_vertex_build_from_exception(vertex_id, result)
+
                 # Cancel all remaining tasks
                 for t in tasks[i + 1 :]:
                     t.cancel()
