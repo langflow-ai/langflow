@@ -102,11 +102,7 @@ class ArizePhoenixTracer(BaseTracer):
         arize_collector_endpoint = os.getenv("ARIZE_COLLECTOR_ENDPOINT", "https://otlp.arize.com")
         enable_arize_tracing = bool(arize_api_key and arize_space_id)
         arize_endpoint = f"{arize_collector_endpoint}/v1"
-        arize_headers = {
-            "api_key": arize_api_key,
-            "space_id": arize_space_id,
-            "authorization": f"Bearer {arize_api_key}",
-        }
+        os.environ["OTEL_EXPORTER_OTLP_TRACES_HEADERS"] = f"api_key={arize_api_key},space_id={arize_space_id}"
 
         # Phoenix Config
         phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
@@ -122,27 +118,28 @@ class ArizePhoenixTracer(BaseTracer):
             return False
 
         try:
-            from phoenix.otel import (
-                PROJECT_NAME,
-                BatchSpanProcessor,
-                GRPCSpanExporter,
-                HTTPSpanExporter,
-                Resource,
-                SimpleSpanProcessor,
-                TracerProvider,
+            from openinference.instrumentation import TracerProvider
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+                OTLPSpanExporter as GRPCSpanExporter,
             )
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter as HTTPSpanExporter,
+            )
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+            from phoenix.otel import PROJECT_NAME
 
             name_without_space = self.flow_name.replace(" ", "-")
             project_name = self.project_name if name_without_space == "None" else name_without_space
             attributes = {PROJECT_NAME: project_name, "model_id": project_name}
             resource = Resource.create(attributes=attributes)
-            tracer_provider = TracerProvider(resource=resource, verbose=False)
+            tracer_provider = TracerProvider(resource=resource)
             span_processor = BatchSpanProcessor if arize_phoenix_batch else SimpleSpanProcessor
 
             if enable_arize_tracing:
                 tracer_provider.add_span_processor(
                     span_processor=span_processor(
-                        span_exporter=GRPCSpanExporter(endpoint=arize_endpoint, headers=arize_headers),
+                        span_exporter=GRPCSpanExporter(endpoint=arize_endpoint),
                     )
                 )
 
@@ -245,8 +242,7 @@ class ArizePhoenixTracer(BaseTracer):
             self._convert_to_arize_phoenix_types({log.get("name"): log for log in logs_dicts}) if logs else {}
         )
         if processed_logs:
-            for key, value in processed_logs.items():
-                child_span.set_attribute(f"logs.{key}", value)
+            child_span.set_attribute("logs", self._safe_json_dumps(processed_logs))
 
         self._set_span_status(child_span, error)
         child_span.end(end_time=self._get_current_timestamp())
