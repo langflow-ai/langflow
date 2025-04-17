@@ -35,7 +35,7 @@ NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extrac
 
 ## Use the NVIDIA Retriever Extraction component in a flow
 
-The **NVIDIA Retriever Extraction** component accepts **Message** inputs and outputs **Data**. The component calls a NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
+The **NVIDIA Retriever Extraction** component accepts **Message** inputs and outputs **Data**. The component calls an NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
 
 To use the NVIDIA Retriever Extraction component in your flow, follow these steps:
 1. In the component library, click the **NVIDIA Retriever Extraction** component, and then drag it onto the canvas.
