@@ -289,7 +289,7 @@ class ComposioBaseComponent(Component):
 
     @property
     def enabled_tools(self):
-        if not hasattr(self, "action") or not self.action:
+        if not hasattr(self, "action") or not self.action or not isinstance(self.action, list):
             return list(self._default_tools)
         return list(self._default_tools.union(action["name"].replace(" ", "-") for action in self.action))
 
