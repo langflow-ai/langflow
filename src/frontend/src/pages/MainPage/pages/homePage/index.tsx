@@ -15,7 +15,7 @@ import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import EmptyFolder from "../emptyFolder";
-import McpServerTab from "./McpServerTab";
+import McpServerTab from "./components/McpServerTab";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
