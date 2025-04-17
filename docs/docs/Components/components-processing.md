@@ -395,9 +395,9 @@ This component converts and extracts JSON fields using JQ queries.
 This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
 
 1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
-This example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
+The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
 
-![Two save to file component connected to a webhook](/img/component-save-to-file.png)
+![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
 
 2. In the **Save to File** component's **Input Type** field, select the expected input type.
 This example expects **Data** from the **Webhook**.
