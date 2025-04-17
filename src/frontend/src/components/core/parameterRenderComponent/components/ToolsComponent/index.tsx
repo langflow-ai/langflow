@@ -13,6 +13,8 @@ export default function ToolsComponent({
   editNode = false,
   id = "",
   handleOnNewValue,
+  isAction = false,
+  button_description,
   title,
   icon,
   disabled = false,
@@ -40,6 +42,7 @@ export default function ToolsComponent({
       <ToolsModal
         open={isModalOpen}
         setOpen={setIsModalOpen}
+        isAction={isAction}
         description={description}
         rows={value}
         handleOnNewValue={handleOnNewValue}
@@ -55,7 +58,7 @@ export default function ToolsComponent({
             variant={"ghost"}
             size={"iconMd"}
             className={cn(
-              "hit-area-icon absolute -top-8 right-0 font-semibold text-muted-foreground group-hover:text-primary",
+              "absolute -top-8 right-0 font-semibold text-muted-foreground group-hover:text-primary",
             )}
             data-testid="button_open_actions"
             onClick={() => setIsModalOpen(true)}
@@ -65,6 +68,7 @@ export default function ToolsComponent({
               className="icon-size"
               strokeWidth={ICON_STROKE_WIDTH}
             />
+            {button_description}
           </Button>
         )}
         {visibleActions.length > 0 && (

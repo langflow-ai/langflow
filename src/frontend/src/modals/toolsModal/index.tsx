@@ -19,7 +19,8 @@ interface ToolsModalProps {
   }[];
   handleOnNewValue: handleOnNewValueType;
   title: string;
-  icon: string;
+  icon?: string;
+  isAction?: boolean;
 }
 
 const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
@@ -31,6 +32,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
       title,
       icon,
       open,
+      isAction = false,
       setOpen,
       ...props
     }: ToolsModalProps,
@@ -55,10 +57,9 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
       >
         <BaseModal.Header>
           <div className="flex w-full flex-row items-center border-b border-border px-4 py-3">
-            <ForwardedIconComponent
-              name={icon ?? "Table"}
-              className="mr-2 h-6 w-6"
-            />
+            {icon && (
+              <ForwardedIconComponent name={icon} className="mr-2 h-6 w-6" />
+            )}
             <div>{title}</div>
           </div>
         </BaseModal.Header>
@@ -67,6 +68,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
             <SidebarProvider width="20rem" defaultOpen={false}>
               <ToolsTable
                 rows={rows}
+                isAction={isAction}
                 data={data}
                 setData={setData}
                 open={open}

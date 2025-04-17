@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
   TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Sidebar,
@@ -18,6 +19,7 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TableOptionsTypeAPI } from "@/types/api";
 import { ToolsModalProps } from "@/types/components";
 import { parseString } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
@@ -34,6 +36,7 @@ export default function ToolsTable({
   rows,
   data,
   setData,
+  isAction,
   open,
   handleOnNewValue,
 }: {
@@ -42,6 +45,7 @@ export default function ToolsTable({
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
+  isAction: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
@@ -99,7 +103,7 @@ export default function ToolsTable({
   const columnDefs: ColDef[] = [
     {
       field: "name",
-      headerName: "Name",
+      headerName: isAction ? "Flow" : "Name",
       flex: 1,
       valueGetter: (params) => params.data.name,
       valueParser: (params) =>
@@ -107,7 +111,7 @@ export default function ToolsTable({
     },
     {
       field: "tags",
-      headerName: "Slug",
+      headerName: isAction ? "Action" : "Slug",
       flex: 2,
       resizable: false,
       valueGetter: (params) => params.data.tags.join(", "),
@@ -216,7 +220,7 @@ export default function ToolsTable({
                         className="text-sm font-medium"
                         htmlFor="sidebar-name-input"
                       >
-                        Tool Name
+                        {isAction ? "Flow Name" : "Tool Name"}
                       </label>
                       <Input
                         id="sidebar-name-input"
@@ -229,12 +233,41 @@ export default function ToolsTable({
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label
-                        className="text-sm font-medium"
-                        htmlFor="sidebar-desc-input"
-                      >
-                        Tool Description
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label
+                          className="text-sm font-medium"
+                          htmlFor="sidebar-desc-input"
+                        >
+                          {isAction ? "Flow Description" : "Tool Description"}
+                        </label>
+                        <Button
+                          unstyled
+                          onClick={() => {
+                            setSidebarDescription(
+                              focusedRow.display_description,
+                            );
+                          }}
+                          disabled={
+                            sidebarDescription ===
+                              focusedRow.display_description ||
+                            !focusedRow.description
+                          }
+                          size="iconMd"
+                          className="group/rotate-icon"
+                        >
+                          <ForwardedIconComponent
+                            name="RotateCcw"
+                            className={cn(
+                              "icon-size",
+                              sidebarDescription !==
+                                focusedRow.display_description
+                                ? "text-muted-foreground hover:text-primary"
+                                : "text-input",
+                            )}
+                          />
+                        </Button>
+                      </div>
+
                       <Textarea
                         id="sidebar-desc-input"
                         value={sidebarDescription}
