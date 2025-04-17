@@ -559,6 +559,11 @@ You can upload a file to Langflow one time, and use it with multiple flows.
 
 ## Files/V1 endpoints
 
+Use the `/files` endpoint to add or delete files between your local machine and Langflow.
+
+* In `v1/files`, files are organized by `flow_id`.
+* In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
+
 ### Upload file (v1)
 
 Upload a file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
