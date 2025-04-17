@@ -112,7 +112,6 @@ class FiTracer(BaseTracer):
             try:
                 project_type = ProjectType(project_type_str)
             except ValueError:
-                print(f"Invalid project type: {project_type_str}, defaulting to OBSERVE")
                 project_type = ProjectType.OBSERVE
 
             register_params = {
