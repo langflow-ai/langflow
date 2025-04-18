@@ -3,11 +3,13 @@ from langflow.inputs import DataInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.field_typing.range_spec import RangeSpec
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from twelvelabs import TwelveLabs
 import time
 import os
 from tenacity import retry, stop_after_attempt, wait_exponential
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 class PegasusIndexVideo(Component):
     """Indexes videos using Twelve Labs Pegasus API and adds the video ID to metadata."""
@@ -50,30 +52,38 @@ class PegasusIndexVideo(Component):
         self.log(status_msg)
 
     @retry(
-        stop=stop_after_attempt(5), # Increased retries
-        wait=wait_exponential(multiplier=1, min=5, max=60), # Adjusted wait time
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=5, max=60),
         reraise=True
     )
+    def _check_task_status(
+        self, 
+        client: TwelveLabs, 
+        task_id: str, 
+        video_path: str,
+    ) -> Dict[str, Any]:
+        """Check task status once"""
+        task = client.task.retrieve(id=task_id)
+        self.on_task_update(task, video_path)
+        return task
+
     def _wait_for_task_completion(
         self, 
         client: TwelveLabs, 
         task_id: str, 
         video_path: str,
-        max_retries: int = 120, # e.g., 120 retries * 10s = 20 minutes timeout
-        sleep_time: int = 10 # Check every 10 seconds
+        max_retries: int = 120,
+        sleep_time: int = 10
     ) -> Dict[str, Any]:
         """Wait for task completion with timeout and improved error handling"""
         retries = 0
         consecutive_errors = 0
-        max_consecutive_errors = 5 # Allow more consecutive errors before failing
+        max_consecutive_errors = 5
         
         while retries < max_retries:
             try:
                 self.log(f"Checking task status for {os.path.basename(video_path)} (attempt {retries + 1})")
-                task = client.task.retrieve(id=task_id)
-                consecutive_errors = 0  # Reset error counter on success
-                
-                self.on_task_update(task, video_path) # Use callback for status update
+                task = self._check_task_status(client, task_id, video_path)
 
                 if task.status == "ready":
                     self.log(f"Indexing for {os.path.basename(video_path)} completed successfully!")
@@ -91,7 +101,7 @@ class PegasusIndexVideo(Component):
                 retries += 1
                 elapsed_time = retries * sleep_time
                 status_msg = f"Indexing {os.path.basename(video_path)}... {elapsed_time}s elapsed"
-                self.status = status_msg # Update overall component status
+                self.status = status_msg
                 
             except Exception as e:
                 consecutive_errors += 1
@@ -101,14 +111,25 @@ class PegasusIndexVideo(Component):
                 if consecutive_errors >= max_consecutive_errors:
                     raise Exception(f"Too many consecutive errors checking task status for {os.path.basename(video_path)}: {error_msg}")
                 
-                # Wait longer before retrying after an error
-                time.sleep(sleep_time * (2 ** consecutive_errors)) # Exponential backoff for errors
-                continue # Retry the loop
+                time.sleep(sleep_time * (2 ** consecutive_errors))
+                continue
         
         timeout_msg = f"Timeout waiting for indexing of {os.path.basename(video_path)} after {max_retries * sleep_time} seconds"
         self.log(timeout_msg, "ERROR")
         raise TimeoutError(timeout_msg)
 
+    def _upload_video(self, client: TwelveLabs, video_path: str, index_id: str) -> str:
+        """Upload a single video and return its task ID"""
+        with open(video_path, 'rb') as video_file:
+            self.log(f"Uploading {os.path.basename(video_path)} to index {index_id}...")
+            task = client.task.create(
+                index_id=index_id,
+                file=video_file,
+                language="en"
+            )
+            task_id = task.id
+            self.log(f"Upload complete for {os.path.basename(video_path)}. Task ID: {task_id}")
+            return task_id
 
     def index_videos(self) -> List[Data]:
         """Indexes each video and adds the video_id to its metadata."""
@@ -141,6 +162,8 @@ class PegasusIndexVideo(Component):
             self.log(f"Failed to create Twelve Labs index: {str(e)}", "ERROR")
             raise
 
+        # First, validate all videos and create a list of valid ones
+        valid_videos: List[Tuple[Data, str]] = []
         for video_data_item in self.videodata:
             if not isinstance(video_data_item, Data):
                 self.log(f"Skipping invalid data item: {video_data_item}", "WARNING")
@@ -148,8 +171,8 @@ class PegasusIndexVideo(Component):
 
             video_info = video_data_item.data
             if not isinstance(video_info, dict):
-                 self.log(f"Skipping item with invalid data structure: {video_info}", "WARNING")
-                 continue
+                self.log(f"Skipping item with invalid data structure: {video_info}", "WARNING")
+                continue
 
             video_path = video_info.get('text')
             if not video_path or not isinstance(video_path, str):
@@ -160,53 +183,60 @@ class PegasusIndexVideo(Component):
                 self.log(f"Video file not found, skipping: {video_path}", "ERROR")
                 continue
             
-            self.log(f"Processing video: {video_path}")
-            
+            valid_videos.append((video_data_item, video_path))
+
+        if not valid_videos:
+            self.log("No valid videos to process.", "WARNING")
+            return []
+
+        # Upload all videos first and collect their task IDs
+        upload_tasks: List[Tuple[Data, str, str]] = []  # (data_item, video_path, task_id)
+        for data_item, video_path in valid_videos:
             try:
-                with open(video_path, 'rb') as video_file:
-                    self.log(f"Uploading {os.path.basename(video_path)} to index {index_id}...")
-                    task = client.task.create(
-                        index_id=index_id,
-                        file=video_file,
-                        language="en" # Optional: Specify language
-                    )
-                    task_id = task.id
-                    self.log(f"Upload complete for {os.path.basename(video_path)}. Task ID: {task_id}")
-
-                # Wait for processing to complete
-                self.status = f"Waiting for indexing of {os.path.basename(video_path)}..."
-                completed_task = self._wait_for_task_completion(client, task_id, video_path)
-                
-                if completed_task.status == "ready":
-                    video_id = completed_task.video_id
-                    self.log(f"Video {os.path.basename(video_path)} indexed successfully. Video ID: {video_id}")
-                    
-                    # Add video_id to the metadata
-                    if 'metadata' not in video_info:
-                        video_info['metadata'] = {}
-                    elif not isinstance(video_info['metadata'], dict):
-                         self.log(f"Warning: Overwriting non-dict metadata for {video_path}", "WARNING")
-                         video_info['metadata'] = {}
-
-                    video_info['metadata']['video_id'] = video_id
-                    video_info['metadata']['index_id'] = index_id # Also add index ID for reference
-                    
-                    # Create a new Data object with updated data
-                    updated_data_item = Data(data=video_info)
-                    indexed_data_list.append(updated_data_item)
-                else:
-                     self.log(f"Indexing failed for {video_path} with status {completed_task.status}", "ERROR")
-                     # Optionally, append the original item or skip it
-                     # indexed_data_list.append(video_data_item) # Append original if needed
-
-            except FileNotFoundError:
-                 self.log(f"Error: File not found during processing: {video_path}", "ERROR")
+                task_id = self._upload_video(client, video_path, index_id)
+                upload_tasks.append((data_item, video_path, task_id))
             except Exception as e:
-                self.log(f"Error processing video {video_path}: {str(e)}", "ERROR")
-                # Optionally, decide how to handle errors (e.g., skip the video, raise exception)
+                self.log(f"Failed to upload {video_path}: {str(e)}", "ERROR")
+                continue
+
+        # Now check all tasks in parallel using a thread pool
+        with ThreadPoolExecutor(max_workers=min(10, len(upload_tasks))) as executor:
+            futures = []
+            for data_item, video_path, task_id in upload_tasks:
+                future = executor.submit(
+                    self._wait_for_task_completion,
+                    client,
+                    task_id,
+                    video_path
+                )
+                futures.append((data_item, video_path, future))
+
+            # Process results as they complete
+            for data_item, video_path, future in futures:
+                try:
+                    completed_task = future.result()
+                    if completed_task.status == "ready":
+                        video_id = completed_task.video_id
+                        self.log(f"Video {os.path.basename(video_path)} indexed successfully. Video ID: {video_id}")
+                        
+                        # Add video_id to the metadata
+                        video_info = data_item.data
+                        if 'metadata' not in video_info:
+                            video_info['metadata'] = {}
+                        elif not isinstance(video_info['metadata'], dict):
+                            self.log(f"Warning: Overwriting non-dict metadata for {video_path}", "WARNING")
+                            video_info['metadata'] = {}
+
+                        video_info['metadata']['video_id'] = video_id
+                        video_info['metadata']['index_id'] = index_id
+                        
+                        updated_data_item = Data(data=video_info)
+                        indexed_data_list.append(updated_data_item)
+                except Exception as e:
+                    self.log(f"Failed to process {video_path}: {str(e)}", "ERROR")
 
         if not indexed_data_list:
-             self.log("No videos were successfully indexed.", "WARNING")
+            self.log("No videos were successfully indexed.", "WARNING")
         
         self.status = f"Finished indexing {len(indexed_data_list)}/{len(self.videodata)} videos."
         return indexed_data_list
