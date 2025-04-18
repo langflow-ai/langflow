@@ -101,7 +101,11 @@ class ConditionalRouterComponent(Component):
             self.update_ctx({f"{self._id}_iteration": self.ctx.get(f"{self._id}_iteration", 0) + 1})
             self.__iteration_updated = True
             if self.ctx.get(f"{self._id}_iteration", 0) >= self.max_iterations and route_to_stop == self.default_route:
-                route_to_stop = "true_result" if route_to_stop == "false_result" else "false_result"
+                if route_to_stop == "false_result":
+                    route_to_stop, route_to_activate = "true_result", "false_result"
+                else:
+                    route_to_stop, route_to_activate = "false_result", "true_result"
+                self.graph.mark_branch(self._vertex.id, "ACTIVE", route_to_activate)
             self.stop(route_to_stop)
 
     def true_response(self) -> Message:
