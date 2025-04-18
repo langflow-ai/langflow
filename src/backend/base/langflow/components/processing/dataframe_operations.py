@@ -2,6 +2,7 @@ from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import DataFrame
 
+
 class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
     description = "Perform various operations on a DataFrame."
@@ -18,7 +19,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
-        "Convert to Data List"
+        "Convert to Data List",
     ]
 
     inputs = [
@@ -113,7 +114,7 @@ class DataFrameOperationsComponent(Component):
             name="data",
             method="to_data",
             info="Converted DataFrame to list of data objects.",
-        )      
+        ),
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
@@ -183,7 +184,7 @@ class DataFrameOperationsComponent(Component):
             return self.replace_values(dataframe_copy)
         if operation == "Convert to Data List":
             return DataFrame(dataframe_copy)
-            
+
         raise ValueError(f"Unsupported operation: {operation}")
 
     # Existing methods
@@ -226,6 +227,6 @@ class DataFrameOperationsComponent(Component):
             records = df.to_dict(orient="records")
             return [Data(data=row) for row in records]
         except Exception as e:
-            self.status = f"Error converting to Data: {str(e)}"
+            self.status = f"Error converting to Data: {e!s}"
             self.log(self.status)
             return [Data(data={"error": str(e)})]
