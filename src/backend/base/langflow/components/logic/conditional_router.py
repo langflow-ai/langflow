@@ -105,7 +105,8 @@ class ConditionalRouterComponent(Component):
                     route_to_stop, route_to_activate = "true_result", "false_result"
                 else:
                     route_to_stop, route_to_activate = "false_result", "true_result"
-                self.graph.mark_branch(self._vertex.id, "ACTIVE", route_to_activate)
+                if self._vertex:
+                    self.graph.mark_branch(self._vertex.id, "ACTIVE", route_to_activate)
             self.stop(route_to_stop)
 
     def true_response(self) -> Message:
