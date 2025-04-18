@@ -40,6 +40,7 @@ import { GmailIcon } from "@/icons/gmail";
 import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
+import { GooglemeetIcon } from "@/icons/googlemeet";
 import {
   GradientInfinity,
   GradientSave,
@@ -155,6 +156,7 @@ export const eagerIconsMapping = {
   Google: GoogleIcon,
   GoogleDrive: GoogleDriveIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
+  GoogleMeet: GooglemeetIcon,
   Gmail: GmailIcon,
   GradientInfinity: GradientInfinity,
   GradientSave: GradientSave,
