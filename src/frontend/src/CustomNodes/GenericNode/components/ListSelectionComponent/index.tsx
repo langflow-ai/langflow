@@ -88,8 +88,8 @@ const ListItem = ({
     >
       <div className="flex w-full items-center gap-2">
         {item.icon && (
-          <div>
-            <ForwardedIconComponent name={item.icon} className="mr-2 h-4 w-4" />
+          <div className="flex h-5 w-5 items-center justify-start">
+            <ForwardedIconComponent name={item.icon} className="h-4 w-4" />
           </div>
         )}
         <div className="flex w-full flex-col truncate">

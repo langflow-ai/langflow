@@ -1,10 +1,10 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { GradientSave } from "@/icons/GradientSparkles";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
-import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { lucideIcons } from "../icons/lucideIcons";
 
 export const BG_NOISE =
@@ -450,10 +450,7 @@ export const eagerLoadedIconsMap = {
   BotMessageSquareIcon: BotMessageSquareIcon,
   "sticky-note": lucideIcons.StickyNote,
 
-  // React icons
-  FaApple: FaApple,
-  FaDiscord: FaDiscord,
-  FaGithub: FaGithub,
+  // React icon
   TwitterLogoIcon: TwitterLogoIcon,
 
   // All Lucide Icons
@@ -467,6 +464,10 @@ export const getNodeIcon = async (name: string) => {
   // Always check eagerly loaded icons first
   if (eagerLoadedIconsMap[iconName || name]) {
     return eagerLoadedIconsMap[iconName || name];
+  }
+
+  if (isFontAwesomeIcon(iconName || name)) {
+    return fontAwesomeIcons[iconName || name];
   }
 
   const iconMappings = await iconMappingsPromise;
@@ -500,6 +501,7 @@ export const iconExists = async (name: string): Promise<boolean> => {
 
   return !!(
     eagerLoadedIconsMap[iconName] ||
+    isFontAwesomeIcon(iconName) ||
     iconMappings[iconName] ||
     dynamicIconImports[getLucideIconName(iconName)]
   );
