@@ -1,11 +1,13 @@
 import logging
 import re
 
+import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
+from langflow.inputs.inputs import TableInput
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
@@ -75,6 +77,44 @@ class URLComponent(Component):
             value="Text",
             advanced=True,
         ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout for the request in seconds.",
+            value=600,
+            required=False,
+            advanced=True,
+        ),
+        TableInput(
+            name="headers",
+            display_name="Headers",
+            info="The headers to send with the request as a dictionary.",
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
+            ],
+            value=[
+                {
+                    "key": "User-Agent",
+                    "value": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/115.0.0.0 Safari/537.36"
+                    ),
+                }
+            ],
+            advanced=True,
+            input_types=["DataFrame"],
+        ),
     ]
 
     outputs = [
@@ -118,18 +158,29 @@ class URLComponent(Component):
                 logger.info(msg)
 
                 extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+                headers_dict = {header["key"]: header["value"] for header in self.headers}
                 loader = RecursiveUrlLoader(
                     url=processed_url,
                     max_depth=self.max_depth,
                     prevent_outside=self.prevent_outside,
                     use_async=self.use_async,
                     extractor=extractor,
+                    timeout=self.timeout,
+                    headers=headers_dict,
                 )
 
-                docs = loader.load()
-                msg = f"Found {len(docs)} documents from {processed_url}"
-                logger.info(msg)
-                all_docs.extend(docs)
+                try:
+                    docs = loader.load()
+                    if not docs:
+                        msg = f"No documents found for {processed_url}"
+                        logger.warning(msg)
+                    else:
+                        msg = f"Found {len(docs)} documents from {processed_url}"
+                        logger.info(msg)
+                        all_docs.extend(docs)
+                except requests.exceptions.RequestException as e:
+                    msg = f"Error loading documents from {processed_url}: {e}"
+                    logger.exception(msg)
 
             data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
             self.status = data
