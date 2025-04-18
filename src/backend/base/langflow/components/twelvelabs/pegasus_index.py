@@ -1,9 +1,9 @@
 from langflow.custom import Component
-from langflow.inputs import DataInput, SecretStrInput
+from langflow.inputs import DataInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.field_typing.range_spec import RangeSpec
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 from twelvelabs import TwelveLabs
 import time
 import os
@@ -33,6 +33,18 @@ class PegasusIndexVideo(Component):
             info="Enter your Twelve Labs API Key.",
             required=True
         ),
+        StrInput(
+            name="index_name",
+            display_name="Index Name",
+            info="Name of the index to use. If the index doesn't exist, it will be created.",
+            required=False
+        ),
+        StrInput(
+            name="index_id",
+            display_name="Index ID",
+            info="ID of an existing index to use. If provided, index_name will be ignored.",
+            required=False
+        ),
     ]
 
     outputs = [
@@ -44,6 +56,49 @@ class PegasusIndexVideo(Component):
             is_list=True
         ),
     ]
+
+    def _get_or_create_index(self, client: TwelveLabs) -> Tuple[str, str]:
+        """Get existing index or create new one. Returns (index_id, index_name)"""
+        
+        # First check if index_id is provided and valid
+        if hasattr(self, 'index_id') and self.index_id:
+            try:
+                index = client.index.retrieve(id=self.index_id)
+                self.log(f"Found existing index with ID: {self.index_id}")
+                return self.index_id, index.name
+            except Exception as e:
+                self.log(f"Error retrieving index with ID {self.index_id}: {str(e)}", "WARNING")
+                if not hasattr(self, 'index_name') or not self.index_name:
+                    raise ValueError("Invalid index ID provided and no index name specified for fallback.")
+
+        # If index_name is provided, try to find it
+        if hasattr(self, 'index_name') and self.index_name:
+            try:
+                # List all indexes and find by name
+                indexes = client.index.list()
+                for idx in indexes:
+                    if idx.name == self.index_name:
+                        self.log(f"Found existing index: {self.index_name} (ID: {idx.id})")
+                        return idx.id, idx.name
+                
+                # If we get here, index wasn't found - create it
+                self.log(f"Creating new index: {self.index_name}")
+                index = client.index.create(
+                    name=self.index_name,
+                    models=[
+                        {
+                            "name": "pegasus1.2",
+                            "options": ["visual","audio"]
+                        }
+                    ]
+                )
+                return index.id, index.name
+            except Exception as e:
+                self.log(f"Error with index name {self.index_name}: {str(e)}", "ERROR")
+                raise
+
+        # If we get here, neither index_id nor index_name was provided
+        raise ValueError("Either index_name or index_id must be provided")
 
     def on_task_update(self, task, video_path):
         """Callback for task status updates"""
@@ -140,26 +195,18 @@ class PegasusIndexVideo(Component):
         if not self.api_key:
             raise ValueError("Twelve Labs API Key is required.")
 
+        if not (hasattr(self, 'index_name') and self.index_name) and not (hasattr(self, 'index_id') and self.index_id):
+            raise ValueError("Either index_name or index_id must be provided")
+
         client = TwelveLabs(api_key=self.api_key)
         indexed_data_list = []
         
-        # Create a single index for this component run
+        # Get or create the index
         try:
-            index_name = f"langflow-index-{int(time.time())}"
-            self.log(f"Creating index: {index_name}")
-            index = client.index.create(
-                name=index_name,
-                models=[
-                    {
-                        "name": "pegasus1.2",
-                        "options": ["visual","audio"]
-                    }
-                ]
-            )
-            index_id = index.id
-            self.log(f"Created index {index_name} with ID: {index_id}")
+            index_id, index_name = self._get_or_create_index(client)
+            self.log(f"Using index: {index_name} (ID: {index_id})")
         except Exception as e:
-            self.log(f"Failed to create Twelve Labs index: {str(e)}", "ERROR")
+            self.log(f"Failed to get/create Twelve Labs index: {str(e)}", "ERROR")
             raise
 
         # First, validate all videos and create a list of valid ones
@@ -227,8 +274,11 @@ class PegasusIndexVideo(Component):
                             self.log(f"Warning: Overwriting non-dict metadata for {video_path}", "WARNING")
                             video_info['metadata'] = {}
 
-                        video_info['metadata']['video_id'] = video_id
-                        video_info['metadata']['index_id'] = index_id
+                        video_info['metadata'].update({
+                            'video_id': video_id,
+                            'index_id': index_id,
+                            'index_name': index_name
+                        })
                         
                         updated_data_item = Data(data=video_info)
                         indexed_data_list.append(updated_data_item)
