@@ -3,7 +3,7 @@ import importlib
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.custom import Component
-from langflow.io import CodeInput, Output, StrInput
+from langflow.io import Output, StrInput
 from langflow.schema import Data
 
 
@@ -23,7 +23,7 @@ class PythonREPLComponent(Component):
             value="math,pandas",
             required=True,
         ),
-        CodeInput(
+        MultilineInput(
             name="python_code",
             display_name="Python Code",
             info="The Python code to execute. Only modules specified in Global Imports can be used.",
