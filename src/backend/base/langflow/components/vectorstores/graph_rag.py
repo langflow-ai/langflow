@@ -49,13 +49,6 @@ class GraphRAGComponent(LCVectorStoreComponent):
 
     inputs = [
         HandleInput(
-            name="embedding_model",
-            display_name="Embedding Model",
-            input_types=["Embeddings"],
-            info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
-            required=False,
-        ),
-        HandleInput(
             name="vector_store",
             display_name="Vector Store Connection",
             input_types=["VectorStore"],
