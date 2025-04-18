@@ -60,7 +60,7 @@ export const ThemeButtons = () => {
         data-testid="menu_light_button"
         id="menu_light_button"
       >
-        <ForwardedIconComponent name="Sun" className="w-4" />
+        <ForwardedIconComponent strokeWidth={2} name="Sun" className="w-4" />
       </Button>
 
       {/* Dark Theme Button */}
@@ -68,14 +68,14 @@ export const ThemeButtons = () => {
         unstyled
         className={`relative z-10 mx-1 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "dark"
-            ? "text-background dark:hover:bg-purple-400"
-            : "text-foreground hover:bg-purple-400 hover:text-background"
+            ? "bg-indigo-foreground text-primary hover:bg-indigo-foreground"
+            : "text-foreground hover:bg-indigo-foreground hover:text-background"
         }`}
         onClick={() => handleThemeChange("dark")}
         data-testid="menu_dark_button"
         id="menu_dark_button"
       >
-        <ForwardedIconComponent name="Moon" className="w-4" />
+        <ForwardedIconComponent strokeWidth={2} name="Moon" className="w-4" />
       </Button>
 
       {/* System Theme Button */}
@@ -90,7 +90,11 @@ export const ThemeButtons = () => {
         data-testid="menu_system_button"
         id="menu_system_button"
       >
-        <ForwardedIconComponent name="Monitor" className="w-4" />
+        <ForwardedIconComponent
+          name="Monitor"
+          className="w-4"
+          strokeWidth={2}
+        />
       </Button>
     </div>
   );

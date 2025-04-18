@@ -309,6 +309,7 @@ const config = {
         "slider-input-border": "var(--slider-input-border)",
         "zinc-foreground": "hsl(var(--zinc-foreground))",
         "red-foreground": "hsl(var(--red-foreground))",
+        "indigo-foreground": "hsl(var(--indigo-foreground))",
       },
       borderRadius: {
         lg: `var(--radius)`,

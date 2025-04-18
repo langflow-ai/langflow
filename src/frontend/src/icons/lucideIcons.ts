@@ -231,6 +231,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { TwitterXIcon } from "./Twitter X";
 
 // Create a map of eagerly loaded Lucide icons
 export const lucideIcons = {
@@ -464,4 +465,5 @@ export const lucideIcons = {
   Zap,
   ZoomIn,
   ZoomOut,
+  TwitterXIcon,
 };
