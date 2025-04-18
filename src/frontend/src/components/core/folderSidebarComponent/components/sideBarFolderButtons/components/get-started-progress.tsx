@@ -45,7 +45,14 @@ export const GetStartedProgress: FC<{
       hasFlowsCount = 33;
     }
 
-    return Math.round((completedSteps / totalSteps) * 100) + hasFlowsCount;
+    const percentage =
+      Math.round((completedSteps / totalSteps) * 100) + hasFlowsCount;
+
+    if (percentage > 100) {
+      return 100;
+    }
+
+    return percentage;
   }, [userData?.optins, isGithubStarredChild, isDiscordJoinedChild, hasFlows]);
 
   const handleUserTrack = (key: string) => {
