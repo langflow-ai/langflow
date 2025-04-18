@@ -68,17 +68,12 @@ test(
 
     await page.getByTestId("tab_1_sse").click();
 
-    await page.waitForSelector(
-      '[data-testid="anchor-popover-anchor-input-sse_url"]',
-      {
-        state: "visible",
-        timeout: 30000,
-      },
-    );
+    await page.waitForSelector('[data-testid="textarea_str_sse_url"]', {
+      state: "visible",
+      timeout: 30000,
+    });
 
-    let sseURLCount = await page
-      .getByTestId("anchor-popover-anchor-input-sse_url")
-      .count();
+    let sseURLCount = await page.getByTestId("textarea_str_sse_url").count();
 
     expect(sseURLCount).toBeGreaterThan(0);
 
@@ -122,17 +117,12 @@ test(
 
     await page.getByTestId("tab_1_sse").click();
 
-    await page.waitForSelector(
-      '[data-testid="anchor-popover-anchor-input-sse_url"]',
-      {
-        state: "visible",
-        timeout: 30000,
-      },
-    );
+    await page.waitForSelector('[data-testid="textarea_str_sse_url"]', {
+      state: "visible",
+      timeout: 30000,
+    });
 
-    sseURLCount = await page
-      .getByTestId("anchor-popover-anchor-input-sse_url")
-      .count();
+    sseURLCount = await page.getByTestId("textarea_str_sse_url").count();
 
     expect(sseURLCount).toBeGreaterThan(0);
 

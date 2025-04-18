@@ -8,7 +8,9 @@ import { Input } from "../../../../ui/input";
 import { InputProps, TextAreaComponentType } from "../../types";
 
 const BACKEND_URL = "BACKEND_URL";
+const MCP_SSE_VALUE = "MCP_SSE";
 const URL_WEBHOOK = `${window.location.protocol}//${window.location.host}/api/v1/webhook/`;
+const URL_MCP_SSE = `${window.location.protocol}//${window.location.host}/api/v1/mcp/sse`;
 
 const inputClasses = {
   base: ({ isFocused }: { isFocused: boolean }) =>
@@ -60,15 +62,16 @@ export default function CopyFieldAreaComponent({
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const isValueToReplace = value === BACKEND_URL;
+  const isValueToReplace = value === BACKEND_URL || value === MCP_SSE_VALUE;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const endpointName = currentFlow?.endpoint_name ?? "";
 
   const valueToRender = useMemo(() => {
-    if (isValueToReplace) {
-      const urlWebhook = `${URL_WEBHOOK}${endpointName}`;
-      return isValueToReplace ? urlWebhook : value;
+    if (value === BACKEND_URL) {
+      return `${URL_WEBHOOK}${endpointName}`;
+    } else if (value === MCP_SSE_VALUE) {
+      return `${URL_MCP_SSE}`;
     }
     return value;
   }, [value, endpointName]);

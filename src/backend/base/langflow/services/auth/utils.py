@@ -49,8 +49,19 @@ async def api_key_security(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Missing first superuser credentials",
                 )
-
-            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+            warnings.warn(
+                (
+                    "In v1.5, the default behavior of AUTO_LOGIN authentication will change to require a valid API key"
+                    " or JWT. If you integrated with Langflow prior to v1.5, make sure to update your code to pass an "
+                    "API key or JWT when authenticating with protected endpoints."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if query_param or header_param:
+                result = await check_key(db, query_param or header_param)
+            else:
+                result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
 
         elif not query_param and not header_param:
             raise HTTPException(
