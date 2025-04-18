@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Any
 
 import httpx
@@ -16,9 +17,47 @@ from langflow.custom import Component
 from langflow.inputs import DropdownInput
 from langflow.inputs.inputs import InputTypes
 from langflow.io import MessageTextInput, Output, TabInput
-from langflow.io.schema import schema_to_langflow_inputs
+from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema import Message
+
+
+def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
+    """If any key looks nested (contains a dot or “[index]”), rebuild the.
+
+    full nested structure; otherwise return flat as is.
+    """
+    # Quick check: do we have any nested keys?
+    if not any(re.search(r"\.|\[\d+\]", key) for key in flat):
+        return flat
+
+    # Otherwise, unflatten into dicts/lists
+    nested: dict[str, Any] = {}
+    array_re = re.compile(r"^(.+)\[(\d+)\]$")
+
+    for key, val in flat.items():
+        parts = key.split(".")
+        cur = nested
+        for i, part in enumerate(parts):
+            m = array_re.match(part)
+            # Array segment?
+            if m:
+                name, idx = m.group(1), int(m.group(2))
+                lst = cur.setdefault(name, [])
+                # Ensure list is big enough
+                while len(lst) <= idx:
+                    lst.append({})
+                if i == len(parts) - 1:
+                    lst[idx] = val
+                else:
+                    cur = lst[idx]
+            # Normal object key
+            elif i == len(parts) - 1:
+                cur[part] = val
+            else:
+                cur = cur.setdefault(part, {})
+
+    return nested
 
 
 class MCPToolsComponent(Component):
@@ -136,7 +175,8 @@ class MCPToolsComponent(Component):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            input_schema = create_input_schema_from_json_schema(tool_obj.inputSchema)
+            flat_schema = flatten_schema(tool_obj.inputSchema)
+            input_schema = create_input_schema_from_json_schema(flat_schema)
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
                 raise ValueError(msg)
@@ -253,8 +293,10 @@ class MCPToolsComponent(Component):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                input_schema = schema_to_langflow_inputs(create_input_schema_from_json_schema(tool.inputSchema))
-                inputs[tool.name] = input_schema
+                flat_schema = flatten_schema(tool.inputSchema)
+                input_schema = create_input_schema_from_json_schema(flat_schema)
+                langflow_inputs = schema_to_langflow_inputs(input_schema)
+                inputs[tool.name] = langflow_inputs
             except (AttributeError, ValueError, TypeError, KeyError) as e:
                 msg = f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}"
                 logger.exception(msg)
@@ -327,7 +369,6 @@ class MCPToolsComponent(Component):
                     msg = f"Error processing schema input {schema_input}: {e!s}"
                     logger.exception(msg)
                     continue
-
         except ValueError as e:
             msg = f"Schema validation error for tool {tool_name}: {e!s}"
             logger.exception(msg)
@@ -350,7 +391,11 @@ class MCPToolsComponent(Component):
                     value = getattr(self, arg.name, None)
                     if value:
                         kwargs[arg.name] = value
-                output = await exec_tool.coroutine(**kwargs)
+
+                unflattened_kwargs = maybe_unflatten_dict(kwargs)
+
+                output = await exec_tool.coroutine(**unflattened_kwargs)
+
                 return Message(text=output.content[len(output.content) - 1].text)
             return Message(text="You must select a tool", error=True)
         except Exception as e:
