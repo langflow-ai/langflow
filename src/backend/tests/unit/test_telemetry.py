@@ -85,6 +85,28 @@ def opentelemetry_instance() -> OpenTelemetry:
     return OpenTelemetry()
 
 
+def test_is_test_environment():
+    """Test that is_test_environment correctly identifies test environment."""
+    assert TelemetryService.is_test_environment() is True
+
+
+def test_start_metrics_server_skips_in_test_env(
+    fixture_telemetry_service: TelemetryService, fixture_uvicorn_run: MockUvicornRun
+) -> None:
+    """Test that the metrics server doesn't actually start in test environment."""
+    # Start the metrics server
+    fixture_telemetry_service.start_metrics_server()
+
+    # Allow the thread to potentially start and run
+    time.sleep(0.5)
+
+    # Check that uvicorn.run was NOT called due to test environment detection
+    assert fixture_uvicorn_run.call_count == 0
+
+    # Flag should still be set to avoid repeated attempts
+    assert fixture_telemetry_service._metrics_server_started is True
+
+
 def test_init(fixture_opentelemetry_instance):
     assert isinstance(fixture_opentelemetry_instance, OpenTelemetry)
     assert len(fixture_opentelemetry_instance._metrics) > 1
@@ -282,7 +304,7 @@ def test_start_metrics_server_starts_thread(
 ) -> None:
     """Test that the metrics server starts and calls uvicorn run with expected args."""
     # Start the metrics server
-    fixture_telemetry_service.start_metrics_server()
+    fixture_telemetry_service.start_metrics_server(bypass_test_check=True)
 
     # Allow the thread to start and run
     time.sleep(0.5)
@@ -302,7 +324,7 @@ def test_start_metrics_server_is_idempotent(
 ) -> None:
     """Test that calling start_metrics_server() multiple times doesn't start multiple servers."""
     # Start the server for the first time
-    fixture_telemetry_service.start_metrics_server()
+    fixture_telemetry_service.start_metrics_server(bypass_test_check=True)
     time.sleep(0.5)
 
     # Check initial call count
@@ -310,7 +332,7 @@ def test_start_metrics_server_is_idempotent(
     assert first_call_count == 1
 
     # Try calling it again
-    fixture_telemetry_service.start_metrics_server()
+    fixture_telemetry_service.start_metrics_server(bypass_test_check=True)
     time.sleep(0.5)
 
     # Verify that uvicorn.run wasn't called again
@@ -335,7 +357,7 @@ def test_metrics_server_thread_named_correctly(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("threading.Thread", mock_thread)
 
     service = TelemetryService(settings_service=MockSettingsService())
-    service.start_metrics_server()
+    service.start_metrics_server(bypass_test_check=True)
 
     # Assert the thread name used
     assert "PrometheusMetricsServer" in started_threads
@@ -353,7 +375,7 @@ def test_metrics_server_respects_env(monkeypatch: pytest.MonkeyPatch, fixture_uv
     service = TelemetryService(settings_service=MockSettingsService(), uvicorn_run=fixture_uvicorn_run)
 
     # Start the server
-    service.start_metrics_server()
+    service.start_metrics_server(bypass_test_check=True)
     time.sleep(0.5)
 
     # Check that our environment variables were used
@@ -377,7 +399,7 @@ def test_metrics_server_thread_is_daemon(monkeypatch: pytest.MonkeyPatch) -> Non
 
     # Create and start the service
     service = TelemetryService(settings_service=MockSettingsService(), uvicorn_run=mock_uvicorn)
-    service.start_metrics_server()
+    service.start_metrics_server(bypass_test_check=True)
 
     # Look for the thread with the name we expect
     metrics_thread = next(
@@ -396,7 +418,7 @@ def test_start_metrics_server_with_custom_parameters(fixture_uvicorn_run: MockUv
 
     # Use custom parameters
     custom_thread_name = "CustomMetricsThread"
-    service.start_metrics_server(thread_name=custom_thread_name, daemon=False)
+    service.start_metrics_server(thread_name=custom_thread_name, daemon=False, bypass_test_check=True)
 
     # Check thread properties
     assert service._metrics_thread is not None
@@ -407,7 +429,7 @@ def test_start_metrics_server_with_custom_parameters(fixture_uvicorn_run: MockUv
 def test_stop_metrics_server(fixture_telemetry_service: TelemetryService) -> None:
     """Test that stop_metrics_server properly sets flags and events."""
     # Start the server
-    fixture_telemetry_service.start_metrics_server()
+    fixture_telemetry_service.start_metrics_server(bypass_test_check=True)
     time.sleep(0.5)
 
     # Check initial state
@@ -442,7 +464,7 @@ def test_on_error_callback_called() -> None:
     service = TelemetryService(settings_service=MockSettingsService(), uvicorn_run=mock_uvicorn_error)
 
     # Start the server with our callback
-    service.start_metrics_server(on_error=on_error_callback)
+    service.start_metrics_server(on_error=on_error_callback, bypass_test_check=True)
     time.sleep(0.5)  # Give thread time to run
 
     # Check that callback was called with the exception
@@ -470,7 +492,7 @@ def test_port_check_prevents_start_on_used_port(
     service = TelemetryService(settings_service=MockSettingsService(), uvicorn_run=fixture_uvicorn_run)
 
     # Start the server
-    service.start_metrics_server()
+    service.start_metrics_server(bypass_test_check=True)
     time.sleep(0.5)
 
     # Verify that uvicorn.run was not called due to port check

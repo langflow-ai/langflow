@@ -4,6 +4,7 @@ import asyncio
 import os
 import platform
 import socket
+import sys
 import threading
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -222,11 +223,21 @@ class TelemetryService(Service):
 
         await self.stop()
 
+    @classmethod
+    def is_test_environment(cls) -> bool:
+        """Check if we're running in a test environment.
+
+        Returns:
+            bool: True if running in a test environment, False otherwise.
+        """
+        return "pytest" in sys.modules or os.environ.get("TESTING") == "True"
+
     def start_metrics_server(
         self,
         thread_name: str = "PrometheusMetricsServer",
         daemon: bool = True,  # noqa: FBT001, FBT002
         on_error: Callable[[Exception], None] | None = None,
+        bypass_test_check: bool = False,  # Add this parameter  # noqa: FBT001, FBT002
     ) -> None:
         """Start Prometheus metrics server on a separate port if configured.
 
@@ -239,6 +250,9 @@ class TelemetryService(Service):
             daemon: Whether the server thread is a daemon (default: True)
             on_error: Optional callback to notify on server startup failure
                     Function signature: callback(exception)
+            bypass_test_check: Whether to bypass test environment detection (default: False).
+                            This should only be used in specific test cases that
+                            explicitly need to verify server functionality.
 
         Implementation details:
             - Uses thread lock to prevent race conditions when multiple threads try to start the server
@@ -246,11 +260,20 @@ class TelemetryService(Service):
             - Sets flag before starting thread to prevent race conditions
             - Provides configurable thread properties for better control
             - Supports error notification through callback
+            - Avoids starting the actual server in test environments to prevent
+                port conflicts and race conditions during parallel test execution
         """
         with self._metrics_server_lock:  # Thread safety lock
             # Early exit if already started (flag check)
             if self._metrics_server_started:
                 logger.debug("Prometheus metrics server already marked as started. Skipping start.")
+                return
+
+            # Check if we're in a test environment (unless bypass_test_check is True)
+            # This helps prevent port conflicts and resource issues during parallel testing
+            if not bypass_test_check and self.is_test_environment():
+                logger.debug("Test environment detected. Skipping metrics server startup.")
+                self._metrics_server_started = True
                 return
 
             # Check if thread exists and is running (thread check)
