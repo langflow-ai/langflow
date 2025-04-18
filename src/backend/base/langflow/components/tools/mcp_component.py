@@ -432,5 +432,6 @@ class MCPToolsComponent(Component):
         if self.mode == "SSE" and self.sse_url is None:
             msg = "SSE URL is not set"
             raise ValueError(msg)
-        return await self.update_tools()
-        # return self.tools
+        if not self._tool_cache:
+            return await self.update_tools()
+        return list(self._tool_cache.values())
