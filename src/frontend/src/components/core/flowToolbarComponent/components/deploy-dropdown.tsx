@@ -116,6 +116,27 @@ export default function PublishDropdown() {
               <span>API access</span>
             </div>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => {
+              window.open("/mcp", "_blank");
+            }}
+          >
+            <div
+              className="group-hover:bg-accent"
+              data-testid="api-access-item"
+            >
+              <IconComponent
+                name="Mcp"
+                className={`${groupStyle} icon-size mr-2 fill-muted-foreground group-hover:fill-white`}
+              />
+              <span>MCP Server</span>
+              <IconComponent
+                name="ExternalLink"
+                className={`${groupStyle} icon-size ml-auto hidden group-hover:block`}
+              />
+            </div>
+          </DropdownMenuItem>
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
