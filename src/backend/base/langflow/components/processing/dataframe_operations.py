@@ -2,7 +2,6 @@ from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import DataFrame
 
-
 class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
     description = "Perform various operations on a DataFrame."
@@ -19,6 +18,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
+        "Convert to Data List"
     ]
 
     inputs = [
@@ -107,7 +107,13 @@ class DataFrameOperationsComponent(Component):
             name="output",
             method="perform_operation",
             info="The resulting DataFrame after the operation.",
-        )
+        ),
+        Output(
+            display_name="Data",
+            name="data",
+            method="to_data",
+            info="Converted DataFrame to list of data objects.",
+        )      
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
@@ -175,9 +181,10 @@ class DataFrameOperationsComponent(Component):
             return self.tail(dataframe_copy)
         if operation == "Replace Value":
             return self.replace_values(dataframe_copy)
-        msg = f"Unsupported operation: {operation}"
-
-        raise ValueError(msg)
+        if operation == "Convert to Data List":
+            return DataFrame(dataframe_copy)
+            
+        raise ValueError(f"Unsupported operation: {operation}")
 
     # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
@@ -210,3 +217,15 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
+
+    def to_data(self) -> list[Data]:
+        if self.operation != "Convert to Data List":
+            return []
+        try:
+            df = self.df.copy()
+            records = df.to_dict(orient="records")
+            return [Data(data=row) for row in records]
+        except Exception as e:
+            self.status = f"Error converting to Data: {str(e)}"
+            self.log(self.status)
+            return [Data(data={"error": str(e)})]
