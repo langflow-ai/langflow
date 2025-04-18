@@ -1,10 +1,51 @@
 import asyncio
+import logging
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.components.tools.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+# Add a basic configuration to the root logger for debugging tests
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)", stream=sys.stdout
+)
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_resources():
+    """Fixture to clean up resources after each test."""
+    # Create a new event loop to reset state between tests
+    old_loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        yield
+    finally:
+        logging.debug("Starting cleanup of resources")
+
+        # Get all tasks in the current loop
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        if tasks:
+            logging.debug("Cancelling %d pending tasks", len(tasks))
+            for task in tasks:
+                logging.debug("Cancelling task: %s", task.get_name())
+                task.cancel()
+
+            # Force gather with a short timeout
+            try:
+                await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=1.0)
+            except asyncio.TimeoutError:
+                logging.debug("Timeout waiting for tasks to cancel, forcing shutdown")
+
+        # Force close the event loop
+        loop.close()
+        asyncio.set_event_loop(old_loop)
+
+        logging.debug("Resource cleanup completed")
 
 
 class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
@@ -76,6 +117,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
 
     async def test_update_build_config_mode_change(self, component_class, default_kwargs):
         """Test build config updates when mode changes."""
+        logging.debug("Starting test_update_build_config_mode_change")
         component = component_class(**default_kwargs)
         build_config = {
             "command": {"show": False, "value": "uvx mcp-server-fetch"},
@@ -85,17 +127,20 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         }
 
         # Test switching to Stdio mode
+        logging.debug("Testing switch to Stdio mode")
         updated_config = await component.update_build_config(build_config, "Stdio", "mode")
         assert updated_config["command"]["show"] is True
         assert updated_config["sse_url"]["show"] is False
 
         # Test switching to SSE mode
+        logging.debug("Testing switch to SSE mode")
         updated_config = await component.update_build_config(build_config, "SSE", "mode")
         assert updated_config["command"]["show"] is False
         assert updated_config["sse_url"]["show"] is True
 
         # Test tool options are updated
         assert "options" in updated_config["tool"]
+        logging.debug("Completed test_update_build_config_mode_change")
 
     @patch("langflow.components.tools.mcp_component.create_tool_coroutine")
     async def test_build_output(self, mock_create_coroutine, component_class, default_kwargs, mock_tool):
@@ -122,7 +167,9 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         mock_input.name = "test_param"
         with patch.object(component, "get_inputs_for_all_tools") as mock_get_inputs:
             mock_get_inputs.return_value = {"test_tool": [mock_input]}
+            logging.debug("test_build_output: about to call component.build_output()")
             output = await component.build_output()
+            logging.debug("test_build_output: component.build_output() returned: %s", output)
 
             assert output.text == "Test response"
             # Verify the mocks were called correctly
@@ -249,15 +296,19 @@ class TestMCPSseClient:
 
     async def test_connect_timeout(self, sse_client):
         """Test connection timeout handling."""
+        logging.debug("test_connect_timeout: original max_retries=%s", sse_client.max_retries)
         # Set max_retries to 1 to avoid multiple retry attempts
         sse_client.max_retries = 1
+        logging.debug("test_connect_timeout: set max_retries=1")
 
+        logging.debug("test_connect_timeout: entering patch context for connect_to_server timeout")
         with (
             patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"),
             patch.object(sse_client, "validate_url", return_value=(True, "")),  # Mock URL validation
             patch.object(sse_client, "_connect_with_timeout") as mock_connect,
         ):
             mock_connect.side_effect = asyncio.TimeoutError()
+            logging.debug("test_connect_timeout: _connect_with_timeout side_effect set to TimeoutError")
 
             # Expect ConnectionError instead of TimeoutError
             with pytest.raises(
