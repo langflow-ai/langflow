@@ -85,8 +85,8 @@ const SidebarProvider = React.forwardRef<
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
-      return setOpen((open) => !open);
-    }, [setOpen, open]);
+      return setOpen(prev => !prev);
+    }, [setOpen]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
@@ -275,6 +275,11 @@ const SidebarTrigger = React.forwardRef<
 >(({ className, onClick, ...props }, ref) => {
   const { toggleSidebar } = useSidebar();
 
+  const handleClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    toggleSidebar();
+  }, [onClick, toggleSidebar]);
+
   return (
     <Button
       ref={ref}
@@ -282,10 +287,7 @@ const SidebarTrigger = React.forwardRef<
       variant="ghost"
       size="icon"
       className={cn("h-7 w-7 text-muted-foreground", className)}
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar();
-      }}
+      onClick={handleClick}
       {...props}
     >
       {props.children ? (
@@ -444,7 +446,7 @@ const SidebarGroup = React.forwardRef<
 });
 SidebarGroup.displayName = "SidebarGroup";
 
-const SidebarGroupLabel = React.forwardRef<
+const SidebarGroupLabel = React.memo(React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & { asChild?: boolean }
 >(({ className, asChild = false, ...props }, ref) => {
@@ -462,7 +464,7 @@ const SidebarGroupLabel = React.forwardRef<
       {...props}
     />
   );
-});
+}));
 SidebarGroupLabel.displayName = "SidebarGroupLabel";
 
 const SidebarGroupAction = React.forwardRef<
