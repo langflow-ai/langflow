@@ -1,4 +1,5 @@
 import logging
+import time
 from collections import deque
 
 import pytest
@@ -27,8 +28,9 @@ def test_graph(caplog: pytest.LogCaptureFixture):
     graph.add_component(chat_input)
     graph.add_component(chat_output)
     caplog.clear()
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING, logger="langflow.graph.graph.base"):
         graph.prepare()
+        time.sleep(0.1)  # Give logging a moment to capture
         assert "Graph has vertices but no edges" in caplog.text
 
 
