@@ -1,3 +1,8 @@
+import base64
+import io
+
+import pandas as pd
+
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import DataFrame
@@ -19,6 +24,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
+        "Base64",
     ]
 
     inputs = [
@@ -175,6 +181,8 @@ class DataFrameOperationsComponent(Component):
             return self.tail(dataframe_copy)
         if operation == "Replace Value":
             return self.replace_values(dataframe_copy)
+        if operation == "Base64":
+            return self.convert_dataframe_to_base64(dataframe_copy)
         msg = f"Unsupported operation: {operation}"
 
         raise ValueError(msg)
@@ -210,3 +218,32 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
+
+    def convert_dataframe_to_base64(self, df: DataFrame) -> DataFrame:
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            msg = "Could not import matplotlib. Please install it with `pip install matplotlib`."
+            raise ImportError(msg) from e
+
+        fig = None
+        try:
+            df_copy = pd.DataFrame(df).copy()
+            fig, ax = plt.subplots(figsize=(len(df_copy.columns) * 1.2, len(df_copy) * 0.5))
+            ax.axis("tight")
+            ax.axis("off")
+            ax.table(cellText=df_copy.values, colLabels=df_copy.columns, loc="center")
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+            buf.seek(0)
+
+            base64_image = base64.b64encode(buf.read()).decode("utf-8")
+            return DataFrame(pd.DataFrame({"base64_image": [base64_image]}))
+        except Exception as e:  # noqa: BLE001
+            self.status = f"Error: {e!s}"
+            return DataFrame(pd.DataFrame({"error": [str(e)]}))
+        finally:
+            # Ensure the figure is always closed, even if an exception occurs
+            if fig is not None:
+                plt.close(fig)
