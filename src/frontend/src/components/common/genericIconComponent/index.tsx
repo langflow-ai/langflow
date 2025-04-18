@@ -101,7 +101,19 @@ export const ForwardedIconComponent = memo(
                 }
               />
             ) : (
-              <div className={className}>{TargetIcon}</div>
+              <div
+                className={className}
+                style={style}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              >
+                {TargetIcon}
+              </div>
             )}
           </ErrorBoundary>
         </Suspense>
