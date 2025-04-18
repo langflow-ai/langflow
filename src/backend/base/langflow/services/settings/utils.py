@@ -38,3 +38,21 @@ def write_secret_to_file(path: Path, value: str) -> None:
 
 def read_secret_from_file(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def write_version_to_file(path: Path, value: str) -> None:
+    """Write the version to a file."""
+    if not path.exists():
+        path.touch()
+    path.write_text(value, encoding="utf-8")
+    try:
+        set_secure_permissions(path)
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to set version permissions on secret key")
+
+
+def read_version_from_file(path: Path) -> str:
+    """Read the version from a file."""
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
