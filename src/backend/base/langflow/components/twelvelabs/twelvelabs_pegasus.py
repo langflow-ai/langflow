@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import DataInput, SecretStrInput, MessageInput, MultilineInput, SliderInput, BoolInput, IntInput
+from langflow.inputs import DataInput, SecretStrInput, MessageInput, MultilineInput, SliderInput, BoolInput, IntInput, StrInput
 from langflow.io import Output
 from langflow.schema.message import Message
 from langflow.field_typing.range_spec import RangeSpec
@@ -34,6 +34,18 @@ class TwelveLabsPegasus(Component):
             name="video_id",
             display_name="Pegasus Video ID",
             info="Enter a Video ID for a previously indexed video.",
+        ),
+        StrInput(
+            name="index_name",
+            display_name="Index Name",
+            info="Name of the index to use. If the index doesn't exist, it will be created.",
+            required=False
+        ),
+        StrInput(
+            name="index_id",
+            display_name="Index ID",
+            info="ID of an existing index to use. If provided, index_name will be ignored.",
+            required=False
         ),
         MultilineInput(
             name="message",
@@ -71,6 +83,64 @@ class TwelveLabsPegasus(Component):
         self._index_id = None
         self._task_id = None
 
+    def _get_or_create_index(self, client: TwelveLabs) -> Tuple[str, str]:
+        """Get existing index or create new one. Returns (index_id, index_name)"""
+        
+        # First check if index_id is provided and valid
+        if hasattr(self, 'index_id') and self.index_id:
+            try:
+                index = client.index.retrieve(id=self.index_id)
+                self.log(f"Found existing index with ID: {self.index_id}")
+                return self.index_id, index.name
+            except Exception as e:
+                self.log(f"Error retrieving index with ID {self.index_id}: {str(e)}", "WARNING")
+                if not hasattr(self, 'index_name') or not self.index_name:
+                    raise ValueError("Invalid index ID provided and no index name specified for fallback.")
+
+        # If index_name is provided, try to find it
+        if hasattr(self, 'index_name') and self.index_name:
+            try:
+                # List all indexes and find by name
+                indexes = client.index.list()
+                for idx in indexes:
+                    if idx.name == self.index_name:
+                        self.log(f"Found existing index: {self.index_name} (ID: {idx.id})")
+                        return idx.id, idx.name
+                
+                # If we get here, index wasn't found - create it
+                self.log(f"Creating new index: {self.index_name}")
+                index = client.index.create(
+                    name=self.index_name,
+                    models=[
+                        {
+                            "name": "pegasus1.2",
+                            "options": ["visual","audio"]
+                        }
+                    ]
+                )
+                return index.id, index.name
+            except Exception as e:
+                self.log(f"Error with index name {self.index_name}: {str(e)}", "ERROR")
+                raise
+
+        # If neither is provided, create a new index with timestamp
+        try:
+            index_name = f"index_{int(time.time())}"
+            self.log(f"Creating new index: {index_name}")
+            index = client.index.create(
+                name=index_name,
+                models=[
+                    {
+                        "name": "pegasus1.2",
+                        "options": ["visual","audio"]
+                    }
+                ]
+            )
+            return index.id, index.name
+        except Exception as e:
+            self.log(f"Failed to create new index: {str(e)}", "ERROR")
+            raise
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
@@ -88,7 +158,7 @@ class TwelveLabsPegasus(Component):
         self, 
         client: TwelveLabs, 
         task_id: str, 
-        max_retries: int = 120,  # Increased from 60 to 120
+        max_retries: int = 120,
         sleep_time: int = 5
     ) -> Dict[str, Any]:
         """Wait for task completion with timeout and improved error handling"""
@@ -128,7 +198,6 @@ class TwelveLabsPegasus(Component):
                 if consecutive_errors >= max_consecutive_errors:
                     raise Exception(f"Too many consecutive errors: {error_msg}")
                 
-                # Wait before retrying after an error
                 time.sleep(sleep_time * 2)
                 continue
         
@@ -159,7 +228,6 @@ class TwelveLabsPegasus(Component):
             
             probe_data = json.loads(result.stdout)
             
-            # Check if we have a video stream
             has_video = any(
                 stream.get('codec_type') == 'video' 
                 for stream in probe_data.get('streams', [])
@@ -193,10 +261,8 @@ class TwelveLabsPegasus(Component):
                 
                 client = TwelveLabs(api_key=self.api_key)
                 
-                # Get message text from either string or Message object
                 message_text = self.message.text if hasattr(self.message, 'text') else self.message
                 
-            
                 self.status = f"Processing query (w/ video ID): {self._video_id} {message_text} "
                 self.log(self.status)
                 
@@ -220,16 +286,17 @@ class TwelveLabsPegasus(Component):
 
             client = TwelveLabs(api_key=self.api_key)
 
-            # Create index and process video
-            index = client.index.create(
-                name=f"index_{int(time.time())}",
-                models=[{"type": "visual", "name": "pegasus1.2", "options": ["visual","audio"]}]
-            )
-            self._index_id = index.id
+            # Get or create index
+            try:
+                index_id, index_name = self._get_or_create_index(client)
+                self.log(f"Using index: {index_name} (ID: {index_id})")
+                self._index_id = index_id
+            except Exception as e:
+                return Message(text=f"Failed to get/create index: {str(e)}")
 
             with open(video_path, 'rb') as video_file:
                 task = client.task.create(
-                    index_id=index.id,
+                    index_id=self._index_id,
                     file=video_file
                 )
             self._task_id = task.id
@@ -245,13 +312,11 @@ class TwelveLabsPegasus(Component):
 
             # Generate response if message provided
             if self.message:
-                # Get message text from either string or Message object
                 message_text = self.message.text if hasattr(self.message, 'text') else self.message
                 
                 self.status = f"Processing query: {message_text}"
                 self.log(self.status)
 
-                
                 response = client.generate.text(
                     video_id=self._video_id,
                     prompt=message_text,
