@@ -102,7 +102,8 @@ class ArizePhoenixTracer(BaseTracer):
         arize_collector_endpoint = os.getenv("ARIZE_COLLECTOR_ENDPOINT", "https://otlp.arize.com")
         enable_arize_tracing = bool(arize_api_key and arize_space_id)
         arize_endpoint = f"{arize_collector_endpoint}/v1"
-        os.environ["OTEL_EXPORTER_OTLP_TRACES_HEADERS"] = f"api_key={arize_api_key},space_id={arize_space_id}"
+        if enable_arize_tracing:
+            os.environ["OTEL_EXPORTER_OTLP_TRACES_HEADERS"] = f"api_key={arize_api_key},space_id={arize_space_id}"
 
         # Phoenix Config
         phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
