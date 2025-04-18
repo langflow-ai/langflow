@@ -19,7 +19,6 @@ from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
 from rich import box
-from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -395,25 +394,32 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     if notices:
         notices.append(f"Run '{pip_command}' to update.")
 
-    styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
+    [f"[bold]{notice}[/bold]" for notice in notices if notice]
     styled_package_name = stylize_text(
         package_name, package_name, is_prerelease=any("pre-release" in notice for notice in notices)
     )
 
-    title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
+    title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
     info_text = (
-        "Collaborate, and contribute at our "
-        "[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+        ":star2: GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
+        ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
-        "We collect anonymous usage data to improve Langflow.\n"
-        "You can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        (
+            "We collect anonymous usage data to improve Langflow.\n"
+            "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        )
+        if os.getenv("DO_NOT_TRACK", os.getenv("LANGFLOW_DO_NOT_TRACK", "False")).lower() != "true"
+        else (
+            "We are [bold]not[/bold] collecting anonymous usage data to improve Langflow.\n"
+            "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
+        )
     )
-    access_link = f"Access [link={protocol}://{host}:{port}]{protocol}://{host}:{port}[/link]"
+    access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{host}:{port}]{protocol}://{host}:{port}[/link]"
 
-    panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
-    panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
-    rprint(panel)
+    message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
+
+    console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
 
 
 def run_langflow(host, port, log_level, options, app) -> None:
