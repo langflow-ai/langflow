@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
+import pandas as pd
 from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
-import pandas as pd
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
@@ -125,18 +125,17 @@ async def log_transaction(
             else:
                 return
         inputs = _vertex_to_primitive_dict(source)
-        
+
         # Convert the result to a serializable format
         if source.result:
             try:
                 result_dict = json.loads(source.result.model_dump_json())
-                # Check for DataFrame in the result and convert to dict
                 for key, value in result_dict.items():
                     if isinstance(value, pd.DataFrame):
                         result_dict[key] = value.to_dict()
                 outputs = result_dict
-            except Exception as e:
-                logger.warning(f"Error serializing result: {str(e)}")
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Error serializing result: {e!s}")
                 outputs = None
         else:
             outputs = None
