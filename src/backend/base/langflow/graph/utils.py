@@ -124,12 +124,27 @@ async def log_transaction(
             else:
                 return
         inputs = _vertex_to_primitive_dict(source)
+        
+        # Convert the result to a serializable format
+        if source.result:
+            try:
+                result_dict = json.loads(source.result.model_dump_json())
+                # Check for DataFrame in the result and convert to dict
+                for key, value in result_dict.items():
+                    if hasattr(value, '__class__') and value.__class__.__name__ == 'DataFrame':
+                        result_dict[key] = value.to_dict()
+                outputs = result_dict
+            except Exception as e:
+                logger.warning(f"Error serializing result: {str(e)}")
+                outputs = None
+        else:
+            outputs = None
+
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
             inputs=inputs,
-            # ugly hack to get the model dump with weird datatypes
-            outputs=json.loads(source.result.model_dump_json()) if source.result else None,
+            outputs=outputs,
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
@@ -139,8 +154,8 @@ async def log_transaction(
                 inserted = await crud_log_transaction(session, transaction)
                 if inserted:
                     logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception:  # noqa: BLE001
-        logger.error("Error logging transaction")
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Error logging transaction: {str(exc)}")
 
 
 async def log_vertex_build(
