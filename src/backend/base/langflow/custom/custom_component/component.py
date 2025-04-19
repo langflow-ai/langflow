@@ -97,6 +97,7 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    _output_required_inputs_cache: ClassVar[dict[str, dict[str, list[str]]]] = {}
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
@@ -524,21 +525,60 @@ class Component(CustomComponent):
         output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
-        for output in self.outputs:
-            if not output.method:
-                continue
-            method = getattr(self, output.method, None)
-            if not method or not callable(method):
-                continue
-            try:
-                source_code = inspect.getsource(method)
-                ast_tree = ast.parse(dedent(source_code))
-            except Exception:  # noqa: BLE001
-                ast_tree = ast.parse(dedent(self._code or ""))
+        """Analyze component methods to determine which inputs are required by each output.
 
-            visitor = RequiredInputsVisitor(self._inputs)
-            visitor.visit(ast_tree)
-            output.required_inputs = sorted(visitor.required_inputs)
+        This method identifies which input fields are required by each output method.
+        Results are cached to avoid repeated analysis.
+        """
+        # Use the class name as a cache key - simpler and avoids file access
+        cache_key = self.__class__.__name__
+
+        # Check if we have cached results for this class
+        if cache_key in self.__class__._output_required_inputs_cache:
+            cached_results = self.__class__._output_required_inputs_cache[cache_key]
+            # Apply cached required inputs to the outputs
+            for output in self._outputs_map.values():
+                if output.method and output.method in cached_results:
+                    output.required_inputs = cached_results[output.method]
+            return
+
+        # If not cached, we'll need to perform the analysis
+        method_dependencies = {}
+
+        # Skip inspect.getsource completely and use the code we already have
+        # This avoids any file system access
+        if self._code:
+            try:
+                ast_tree = ast.parse(dedent(self._code))
+
+                # Analyze all methods at once to avoid repeated parsing
+                for output in self._outputs_map.values():
+                    if not output.method:
+                        continue
+
+                    # Use the visitor on the full AST but focus on this method
+                    visitor = RequiredInputsVisitor(self._inputs, target_method=output.method)
+                    visitor.visit(ast_tree)
+
+                    # Store the sorted list of required inputs for this method
+                    required_inputs = sorted(visitor.required_inputs)
+                    output.required_inputs = required_inputs
+
+                    # Add to our method_dependencies map for caching
+                    method_dependencies[output.method] = required_inputs
+
+                # Store in cache for future instances
+                self.__class__._output_required_inputs_cache[cache_key] = method_dependencies
+            except SyntaxError:
+                # If parsing fails, we'll just set empty requirements
+                for output in self._outputs_map.values():
+                    if output.method:
+                        output.required_inputs = []
+        else:
+            # If no code is available, set empty requirements
+            for output in self._outputs_map.values():
+                if output.method:
+                    output.required_inputs = []
 
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
