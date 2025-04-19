@@ -352,6 +352,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1319,6 +1320,11 @@
                 "display_name": "Combined Text",
                 "method": "combine_texts",
                 "name": "combined_text",
+                "required_inputs": [
+                  "delimiter",
+                  "text1",
+                  "text2"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1475,6 +1481,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1778,6 +1785,11 @@
                 "display_name": "Combined Text",
                 "method": "combine_texts",
                 "name": "combined_text",
+                "required_inputs": [
+                  "delimiter",
+                  "text1",
+                  "text2"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2272,7 +2284,12 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "api_key"
+                  "api_key",
+                  "base_url",
+                  "max_tokens",
+                  "model_name",
+                  "temperature",
+                  "top_p"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,

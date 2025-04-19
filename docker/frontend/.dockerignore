@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Development files
+**/.vscode
+**/.idea
+**/.DS_Store
+**/Thumbs.db
+**/.env*
+!**/.env.example
+
+# Test files
+src/frontend/tests
+src/frontend/test-results
+src/frontend/playwright-report
+src/frontend/coverage
+docker/frontend/tests
+
+# Documentation not needed for build
+**/LICENSE
+**/CHANGELOG.md
+**/docs
+
+# Docker files (prevent recursion)
+**/docker-compose*
+
+# Log files
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/*.log
+
+# OS specific files
+**/.DS_Store
+**/.directory
+**/.Trash-*
+
+# Misc development config files
+**/.editorconfig
+**/.eslintrc*
+**/.prettierrc*
+**/.babelrc*
+**/jest.config*

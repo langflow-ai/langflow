@@ -277,3 +277,5 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
+
+.codspeed/

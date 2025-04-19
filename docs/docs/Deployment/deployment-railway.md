@@ -9,7 +9,7 @@ This guide explains how to deploy Langflow on [Railway](https://railway.app/), a
 
    [![Deploy on Railway](/logos/railway-deploy.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
-2. Click **Deploy Now**. 
+2. Click **Deploy Now**.
 Railway automatically does the following:
    - Sets up the infrastructure.
    - Deploys Langflow.

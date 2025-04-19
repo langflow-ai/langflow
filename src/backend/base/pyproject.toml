@@ -62,7 +62,6 @@ dependencies = [
     "opentelemetry-sdk>=1.25.0,<2.0.0",
     "opentelemetry-exporter-prometheus>=0.46b0,<1.0.0",
     "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
-    "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "setuptools>=70,<76.0.0",
     "nanoid>=2.0.0,<3.0.0",

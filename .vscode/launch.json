@@ -25,7 +25,9 @@
       "justMyCode": false,
       "env": {
         "LANGFLOW_LOG_LEVEL": "debug",
-        "LANGFLOW_PROMETHEUS_PORT": "9090"
+        "LANGFLOW_PROMETHEUS_PORT": "9090",
+        "LANGFLOW_AUTO_LOGIN": "True",
+        "LANGFLOW_PROMETHEUS_ENABLED": "True",
       },
       "envFile": "${workspaceFolder}/.env"
     },

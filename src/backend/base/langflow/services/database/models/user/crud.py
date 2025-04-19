@@ -11,16 +11,59 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.services.database.models.user.model import User, UserUpdate
 
 
-async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
-    stmt = select(User).where(User.username == username)
+async def get_user_by_username(db: AsyncSession, username: str, include_deleted: bool = False) -> User | None:  # noqa: FBT001, FBT002
+    """Get a user by username.
+
+    Args:
+        db: The database session
+        username: The username to look up
+        include_deleted: Whether to include soft-deleted users
+
+    Returns:
+        The user or None if not found
+    """
+    if include_deleted:
+        stmt = select(User).where(User.username == username)
+    else:
+        stmt = select(User).where(User.username == username, User.is_deleted == False)  # noqa: E712
     return (await db.exec(stmt)).first()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
+async def get_user_by_id(db: AsyncSession, user_id: UUID, include_deleted: bool = False) -> User | None:  # noqa: FBT001, FBT002
+    """Get a user by ID.
+
+    Args:
+        db: The database session
+        user_id: The user ID to look up
+        include_deleted: Whether to include soft-deleted users
+
+    Returns:
+        The user or None if not found
+    """
     if isinstance(user_id, str):
         user_id = UUID(user_id)
-    stmt = select(User).where(User.id == user_id)
+
+    if include_deleted:
+        stmt = select(User).where(User.id == user_id)
+    else:
+        stmt = select(User).where(User.id == user_id, User.is_deleted == False)  # noqa: E712
     return (await db.exec(stmt)).first()
+
+
+async def soft_delete_user(db: AsyncSession, user: User) -> User:
+    """Soft delete a user.
+
+    Args:
+        db: The database session
+        user: The user to soft delete
+
+    Returns:
+        The updated user
+    """
+    user.is_deleted = True
+    user.deleted_at = datetime.now(timezone.utc)
+    update_data = UserUpdate(is_deleted=True, deleted_at=datetime.now(timezone.utc))
+    return await update_user(user, update_data, db)
 
 
 async def update_user(user_db: User | None, user: UserUpdate, db: AsyncSession) -> User:

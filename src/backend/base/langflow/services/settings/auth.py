@@ -50,6 +50,24 @@ class AuthSettings(BaseSettings):
     COOKIE_DOMAIN: str | None = None
     """The domain attribute of the cookies. If None, the domain is not set."""
 
+    # Keycloak settings
+    KEYCLOAK_ENABLED: bool = False
+    """Whether to enable Keycloak authentication."""
+    KEYCLOAK_SERVER_URL: str = ""
+    """Keycloak server url"""
+    KEYCLOAK_REALM: str = ""
+    """Redirect URI"""
+    KEYCLOAK_CLIENT_ID: str = ""
+    """The client ID to use for Keycloak authentication."""
+    KEYCLOAK_CLIENT_SECRET: SecretStr | None = None
+    """The client secret to use for Keycloak authentication. Only needed for confidential clients."""
+    KEYCLOAK_REDIRECT_URI: str | None = None
+    """The URI used for redirects."""
+    KEYCLOAK_ADMIN_ROLE: str = ""
+    """The Keycloak role that maps to Langflow admin/superuser."""
+    KEYCLOAK_FORCE_SSO: bool = False
+    """Whether to force SSO login only (hide username/password form)."""
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
@@ -108,3 +126,30 @@ class AuthSettings(BaseSettings):
                 logger.debug("Saved secret key")
 
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()
+
+    @field_validator("KEYCLOAK_CLIENT_SECRET")
+    @classmethod
+    def validate_keycloak_client_secret(cls, value, info):
+        """Validate that client secret is provided when Keycloak is enabled."""
+        keycloak_enabled = info.data.get("KEYCLOAK_ENABLED", False)
+
+        if keycloak_enabled and not value:
+            logger.warning(
+                "Keycloak is enabled but no client secret is provided. "
+                "This might cause authentication issues if your client is configured as confidential."
+            )
+
+        return value
+
+    @field_validator("KEYCLOAK_SERVER_URL")
+    @classmethod
+    def validate_keycloak_server_url(cls, value, info):
+        """Validate that server URL is provided when Keycloak is enabled."""
+        keycloak_enabled = info.data.get("KEYCLOAK_ENABLED", False)
+
+        if keycloak_enabled and not value:
+            logger.warning(
+                "Keycloak is enabled but no server URL is provided. This will cause authentication failures."
+            )
+
+        return value
