@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
+import pandas as pd
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
@@ -131,7 +132,7 @@ async def log_transaction(
                 result_dict = json.loads(source.result.model_dump_json())
                 # Check for DataFrame in the result and convert to dict
                 for key, value in result_dict.items():
-                    if hasattr(value, '__class__') and value.__class__.__name__ == 'DataFrame':
+                    if isinstance(value, pd.DataFrame):
                         result_dict[key] = value.to_dict()
                 outputs = result_dict
             except Exception as e:
