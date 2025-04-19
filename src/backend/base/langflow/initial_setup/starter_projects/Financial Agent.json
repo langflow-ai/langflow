@@ -6,92 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "CombineText",
-            "id": "CombineText-dCAaM",
-            "name": "combined_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text2",
-            "id": "CombineText-ISv3t",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-CombineText-dCAaM{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-dCAaMœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-ISv3t{œfieldNameœ:œtext2œ,œidœ:œCombineText-ISv3tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "CombineText-dCAaM",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-dCAaMœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-ISv3t",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-ISv3tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-NNfah",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text1",
-            "id": "CombineText-ISv3t",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-NNfah{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NNfahœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-ISv3t{œfieldNameœ:œtext1œ,œidœ:œCombineText-ISv3tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-NNfah",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NNfahœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-ISv3t",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-ISv3tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CombineText",
-            "id": "CombineText-ISv3t",
-            "name": "combined_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "SambaNovaModel-GCQ9I",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-CombineText-ISv3t{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-ISv3tœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-GCQ9I{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-GCQ9Iœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "CombineText-ISv3t",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-ISv3tœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-GCQ9I",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-GCQ9Iœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-GCQ9I",
+            "id": "SambaNovaModel-xrxwy",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-rLXo6",
+            "id": "ChatOutput-o90sI",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-GCQ9I{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-GCQ9Iœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rLXo6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rLXo6œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-xrxwy{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-xrxwyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-o90sI{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-o90sIœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-GCQ9I",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-GCQ9Iœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-rLXo6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rLXo6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-xrxwy",
+        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-xrxwyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-o90sI",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-o90sIœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-NNfah",
+            "id": "ChatInput-3LGwC",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,47 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-YFcBS",
+            "id": "Agent-dJhhP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-NNfah{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NNfahœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-YFcBS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YFcBSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-3LGwC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3LGwCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dJhhP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dJhhPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-NNfah",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NNfahœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-YFcBS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-YFcBSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-YFcBS",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text2",
-            "id": "CombineText-dCAaM",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-YFcBS{œdataTypeœ:œAgentœ,œidœ:œAgent-YFcBSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-dCAaM{œfieldNameœ:œtext2œ,œidœ:œCombineText-dCAaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-YFcBS",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-YFcBSœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-dCAaM",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-dCAaMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-3LGwC",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3LGwCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-dJhhP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-dJhhPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-Epf58",
+            "id": "TavilySearchComponent-mhlb1",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-YFcBS",
+            "id": "Agent-dJhhP",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-Epf58{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-Epf58œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-YFcBS{œfieldNameœ:œtoolsœ,œidœ:œAgent-YFcBSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-mhlb1{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-mhlb1œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dJhhP{œfieldNameœ:œtoolsœ,œidœ:œAgent-dJhhPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-Epf58",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-Epf58œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-YFcBS",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-YFcBSœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-mhlb1",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-mhlb1œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-dJhhP",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-dJhhPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -205,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-GlCo0",
+            "id": "URL-CnHS6",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -213,19 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-VPh4g",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-GlCo0{œdataTypeœ:œURLœ,œidœ:œURL-GlCo0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y0wyL{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y0wyLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-CnHS6{œdataTypeœ:œURLœ,œidœ:œURL-CnHS6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-VPh4g{œfieldNameœ:œtoolsœ,œidœ:œAgent-VPh4gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-GlCo0",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-GlCo0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Y0wyL",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Y0wyLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-CnHS6",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-CnHS6œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-VPh4g",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-VPh4gœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -233,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-LLwst",
+            "id": "YfinanceComponent-6g0oy",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -241,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-VPh4g",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-LLwst{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-LLwstœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y0wyL{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y0wyLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-6g0oy{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-6g0oyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-VPh4g{œfieldNameœ:œtoolsœ,œidœ:œAgent-VPh4gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-LLwst",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-LLwstœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Y0wyL",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Y0wyLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-6g0oy",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-6g0oyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-VPh4g",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-VPh4gœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -261,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-NNfah",
+            "id": "ChatInput-3LGwC",
             "name": "message",
             "output_types": [
               "Message"
@@ -269,53 +157,160 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-VPh4g",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-NNfah{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NNfahœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Y0wyL{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Y0wyLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-3LGwC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3LGwCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-VPh4g{œfieldNameœ:œinput_valueœ,œidœ:œAgent-VPh4gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-NNfah",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NNfahœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Y0wyL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Y0wyLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-3LGwC",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3LGwCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-VPh4g",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-VPh4gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-VPh4g",
             "name": "response",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "text1",
-            "id": "CombineText-dCAaM",
+            "fieldName": "first_text",
+            "id": "Prompt-35Sox",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Y0wyL{œdataTypeœ:œAgentœ,œidœ:œAgent-Y0wyLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-dCAaM{œfieldNameœ:œtext1œ,œidœ:œCombineText-dCAaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__Agent-VPh4g{œdataTypeœ:œAgentœ,œidœ:œAgent-VPh4gœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-35Sox{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-35Soxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Y0wyL",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Y0wyLœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-dCAaM",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-dCAaMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-VPh4g",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-VPh4gœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-35Sox",
+        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-35Soxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-dJhhP",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "second_text",
+            "id": "Prompt-35Sox",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Agent-dJhhP{œdataTypeœ:œAgentœ,œidœ:œAgent-dJhhPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-35Sox{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-35Soxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-dJhhP",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-dJhhPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-35Sox",
+        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-35Soxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-35Sox",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "second_text",
+            "id": "Prompt-Rrcfy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Prompt-35Sox{œdataTypeœ:œPromptœ,œidœ:œPrompt-35Soxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Prompt-Rrcfy{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-Rrcfyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-35Sox",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-35Soxœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Rrcfy",
+        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-Rrcfyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-3LGwC",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "first_text",
+            "id": "Prompt-Rrcfy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ChatInput-3LGwC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3LGwCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Rrcfy{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-Rrcfyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-3LGwC",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3LGwCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Rrcfy",
+        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-Rrcfyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-Rrcfy",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "SambaNovaModel-xrxwy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Prompt-Rrcfy{œdataTypeœ:œPromptœ,œidœ:œPrompt-Rrcfyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-xrxwy{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-xrxwyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-Rrcfy",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Rrcfyœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SambaNovaModel-xrxwy",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-xrxwyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-NNfah",
+          "id": "ChatInput-3LGwC",
           "node": {
             "base_classes": [
               "Message"
@@ -610,7 +605,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-NNfah",
+        "id": "ChatInput-3LGwC",
         "measured": {
           "height": 66,
           "width": 192
@@ -624,7 +619,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-Epf58",
+          "id": "TavilySearchComponent-mhlb1",
           "node": {
             "base_classes": [
               "Data",
@@ -659,7 +654,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "hidden": null,
+                "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
                 "required_inputs": null,
@@ -683,7 +678,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -691,7 +686,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -978,7 +973,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-Epf58",
+        "id": "TavilySearchComponent-mhlb1",
         "measured": {
           "height": 437,
           "width": 320
@@ -994,7 +989,7 @@
         "data": {
           "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
           "display_name": "Yahoo Finance",
-          "id": "YfinanceComponent-LLwst",
+          "id": "YfinanceComponent-6g0oy",
           "node": {
             "base_classes": [
               "Data",
@@ -1024,7 +1019,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "hidden": null,
+                "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
                 "options": null,
@@ -1274,7 +1269,7 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-LLwst",
+        "id": "YfinanceComponent-6g0oy",
         "measured": {
           "height": 519,
           "width": 320
@@ -1288,157 +1283,7 @@
       },
       {
         "data": {
-          "id": "CombineText-dCAaM",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Concatenate two text sources into a single text chunk using a specified delimiter.",
-            "display_name": "Combine Text",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "text1",
-              "text2",
-              "delimiter"
-            ],
-            "frozen": false,
-            "icon": "merge",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Combined Text",
-                "method": "combine_texts",
-                "name": "combined_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass CombineTextComponent(Component):\n    display_name = \"Combine Text\"\n    description = \"Concatenate two text sources into a single text chunk using a specified delimiter.\"\n    icon = \"merge\"\n    name = \"CombineText\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"text1\",\n            display_name=\"First Text\",\n            info=\"The first text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"text2\",\n            display_name=\"Second Text\",\n            info=\"The second text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"delimiter\",\n            display_name=\"Delimiter\",\n            info=\"A string used to separate the two text inputs. Defaults to a whitespace.\",\n            value=\" \",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Combined Text\", name=\"combined_text\", method=\"combine_texts\"),\n    ]\n\n    def combine_texts(self) -> Message:\n        combined = self.delimiter.join([self.text1, self.text2])\n        self.status = combined\n        return Message(text=combined)\n"
-              },
-              "delimiter": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Delimiter",
-                "dynamic": false,
-                "info": "A string used to separate the two text inputs. Defaults to a whitespace.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "delimiter",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": " \\n\\n"
-              },
-              "text1": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "First Text",
-                "dynamic": false,
-                "info": "The first text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text1",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "text2": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Second Text",
-                "dynamic": false,
-                "info": "The second text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text2",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "CombineText"
-        },
-        "dragging": false,
-        "id": "CombineText-dCAaM",
-        "measured": {
-          "height": 415,
-          "width": 320
-        },
-        "position": {
-          "x": 340.2356972211369,
-          "y": 402.33351464112826
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-rLXo6",
+          "id": "ChatOutput-o90sI",
           "node": {
             "base_classes": [
               "Message"
@@ -1733,7 +1578,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-rLXo6",
+        "id": "ChatOutput-o90sI",
         "measured": {
           "height": 66,
           "width": 192
@@ -1747,157 +1592,7 @@
       },
       {
         "data": {
-          "id": "CombineText-ISv3t",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Concatenate two text sources into a single text chunk using a specified delimiter.",
-            "display_name": "Combine Text",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "text1",
-              "text2",
-              "delimiter"
-            ],
-            "frozen": false,
-            "icon": "merge",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Combined Text",
-                "method": "combine_texts",
-                "name": "combined_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass CombineTextComponent(Component):\n    display_name = \"Combine Text\"\n    description = \"Concatenate two text sources into a single text chunk using a specified delimiter.\"\n    icon = \"merge\"\n    name = \"CombineText\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"text1\",\n            display_name=\"First Text\",\n            info=\"The first text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"text2\",\n            display_name=\"Second Text\",\n            info=\"The second text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"delimiter\",\n            display_name=\"Delimiter\",\n            info=\"A string used to separate the two text inputs. Defaults to a whitespace.\",\n            value=\" \",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Combined Text\", name=\"combined_text\", method=\"combine_texts\"),\n    ]\n\n    def combine_texts(self) -> Message:\n        combined = self.delimiter.join([self.text1, self.text2])\n        self.status = combined\n        return Message(text=combined)\n"
-              },
-              "delimiter": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Delimiter",
-                "dynamic": false,
-                "info": "A string used to separate the two text inputs. Defaults to a whitespace.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "delimiter",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\\n\\nContext: \\n"
-              },
-              "text1": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "First Text",
-                "dynamic": false,
-                "info": "The first text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text1",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "text2": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Second Text",
-                "dynamic": false,
-                "info": "The second text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text2",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "CombineText"
-        },
-        "dragging": false,
-        "id": "CombineText-ISv3t",
-        "measured": {
-          "height": 415,
-          "width": 320
-        },
-        "position": {
-          "x": 738.8545176038866,
-          "y": 179.6359034027769
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "URL-GlCo0",
+          "id": "URL-CnHS6",
           "node": {
             "base_classes": [
               "Data",
@@ -2176,7 +1871,7 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-GlCo0",
+        "id": "URL-CnHS6",
         "measured": {
           "height": 590,
           "width": 320
@@ -2190,7 +1885,7 @@
       },
       {
         "data": {
-          "id": "note-bb2m8",
+          "id": "note-S7zus",
           "node": {
             "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [SambaNova API key](https://cloud.sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components and **SambaNova** component, add your SambaNova API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Tavily Search** component, add your **Tavily API key**.\n4. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
@@ -2203,7 +1898,7 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-bb2m8",
+        "id": "note-S7zus",
         "measured": {
           "height": 630,
           "width": 479
@@ -2219,7 +1914,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-GCQ9I",
+          "id": "SambaNovaModel-xrxwy",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2292,7 +1987,7 @@
                 "dynamic": false,
                 "info": "The Sambanova API Key to use for the Sambanova model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2300,7 +1995,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "SAMBANOVA_API_KEY"
+                "value": ""
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -2520,7 +2215,7 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-GCQ9I",
+        "id": "SambaNovaModel-xrxwy",
         "measured": {
           "height": 525,
           "width": 320
@@ -2534,7 +2229,7 @@
       },
       {
         "data": {
-          "id": "Agent-YFcBS",
+          "id": "Agent-dJhhP",
           "node": {
             "base_classes": [
               "Message"
@@ -2588,7 +2283,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
+                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "required_inputs": null,
@@ -2717,7 +2412,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2725,7 +2420,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "SAMBANOVA_API_KEY"
+                "value": ""
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -3171,7 +2866,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-YFcBS",
+        "id": "Agent-dJhhP",
         "measured": {
           "height": 624,
           "width": 320
@@ -3185,7 +2880,7 @@
       },
       {
         "data": {
-          "id": "Agent-Y0wyL",
+          "id": "Agent-VPh4g",
           "node": {
             "base_classes": [
               "Message"
@@ -3239,7 +2934,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
+                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "required_inputs": null,
@@ -3368,7 +3063,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3376,7 +3071,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "SAMBANOVA_API_KEY"
+                "value": ""
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -3822,7 +3517,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Y0wyL",
+        "id": "Agent-VPh4g",
         "measured": {
           "height": 624,
           "width": 320
@@ -3833,19 +3528,371 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-35Sox",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "first_text",
+                "second_text"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": null,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "first_text": {
+                "advanced": false,
+                "display_name": "first_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "first_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "second_text": {
+                "advanced": false,
+                "display_name": "second_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "second_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "{first_text} \\n\\n\n{second_text}"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-35Sox",
+        "measured": {
+          "height": 433,
+          "width": 320
+        },
+        "position": {
+          "x": 363.96874256661516,
+          "y": 420.69943255589567
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-Rrcfy",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "first_text",
+                "second_text"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": null,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "first_text": {
+                "advanced": false,
+                "display_name": "first_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "first_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "second_text": {
+                "advanced": false,
+                "display_name": "second_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "second_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "{first_text} \\n\\n\n{second_text}"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-Rrcfy",
+        "measured": {
+          "height": 433,
+          "width": 320
+        },
+        "position": {
+          "x": 767.2407006972445,
+          "y": 115.92884832779234
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 536.943459370574,
-      "y": 444.80519922988594,
-      "zoom": 0.42993669283720065
+      "x": 289.9389060027373,
+      "y": 214.7118605705939,
+      "zoom": 0.6329643482266742
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
-  "id": "4f89d881-2ec0-41ac-9c66-865119b0853d",
+  "id": "a3040ec9-8742-4990-bc16-7e783f8d56d9",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.3.4",
   "name": "Financial Agent",
   "tags": [
     "assistants",
