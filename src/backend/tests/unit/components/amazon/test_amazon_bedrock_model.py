@@ -28,10 +28,10 @@ class TestAmazonBedrockComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         frontend_node = component.to_frontend_node()
         node_data = frontend_node["data"]["node"]
-        
+
         # Check if temperature parameter exists and has correct values
         assert "temperature" in node_data
         assert node_data["temperature"]["value"] == 0.1
         assert node_data["temperature"]["range_spec"]["min"] == 0
         assert node_data["temperature"]["range_spec"]["max"] == 1
-        assert node_data["temperature"]["range_spec"]["step"] == 0.01 
+        assert node_data["temperature"]["range_spec"]["step"] == 0.01
