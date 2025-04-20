@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -54,8 +55,8 @@ class TestAmazonBedrockComponent(ComponentTestBaseWithoutClient):
             with pytest.raises(ValueError, match="Temperature must be between 0 and 1"):
                 component.build_model()
 
-    @patch('boto3.Session')
-    @patch('langchain_aws.ChatBedrock')
+    @patch("boto3.Session")
+    @patch("langchain_aws.ChatBedrock")
     def test_build_model_with_credentials(self, mock_chat_bedrock, mock_session, component_class):
         mock_session_instance = MagicMock()
         mock_session.return_value = mock_session_instance
@@ -73,7 +74,7 @@ class TestAmazonBedrockComponent(ComponentTestBaseWithoutClient):
             model_id="anthropic.claude-v2",
             temperature=0.7,
             endpoint_url="https://custom-endpoint.aws",
-            stream=True
+            stream=True,
         )
 
         # Call build_model
@@ -81,16 +82,12 @@ class TestAmazonBedrockComponent(ComponentTestBaseWithoutClient):
 
         # Verify boto3.Session was called with correct credentials
         mock_session.assert_called_once_with(
-            aws_access_key_id="test_key",
-            aws_secret_access_key="test_secret",
-            aws_session_token="test_token"
+            aws_access_key_id="test_key", aws_secret_access_key="test_secret", aws_session_token="test_token"
         )
 
         # Verify client was created with correct parameters
         mock_session_instance.client.assert_called_once_with(
-            "bedrock-runtime",
-            endpoint_url="https://custom-endpoint.aws",
-            region_name="us-west-2"
+            "bedrock-runtime", endpoint_url="https://custom-endpoint.aws", region_name="us-west-2"
         )
 
         # Verify ChatBedrock was created with correct parameters
@@ -106,42 +103,37 @@ class TestAmazonBedrockComponent(ComponentTestBaseWithoutClient):
 
     def test_build_model_with_profile(self, component_class, mock_session):
         mock_session_class, _ = mock_session
-        
+
         component = component_class(
-            credentials_profile_name="test_profile",
-            temperature=0.5,
-            model_id="anthropic.claude-v2"
+            credentials_profile_name="test_profile", temperature=0.5, model_id="anthropic.claude-v2"
         )
-        
+
         component.build_model()
-        
+
         # Verify session was created with profile
         mock_session_class.assert_called_once_with(profile_name="test_profile")
 
     def test_build_model_no_credentials(self, component_class, mock_session):
         mock_session_class, _ = mock_session
-        
-        component = component_class(
-            temperature=0.5,
-            model_id="anthropic.claude-v2"
-        )
-        
+
+        component = component_class(temperature=0.5, model_id="anthropic.claude-v2")
+
         component.build_model()
-        
+
         # Verify session was created without credentials
         mock_session_class.assert_called_once_with()
 
     def test_model_kwargs_merging(self, component_class, mock_session, mock_chat_bedrock):
         mock_chat_class, _ = mock_chat_bedrock
-        
+
         component = component_class(
             model_kwargs={"top_p": 0.9, "temperature": 0.8},  # This temperature should be overridden
             temperature=0.5,  # This should take precedence
-            model_id="anthropic.claude-v2"
+            model_id="anthropic.claude-v2",
         )
-        
+
         component.build_model()
-        
+
         # Verify model_kwargs were merged correctly
         call_kwargs = mock_chat_class.call_args.kwargs
         assert call_kwargs["model_kwargs"]["temperature"] == 0.5  # Component temperature takes precedence
