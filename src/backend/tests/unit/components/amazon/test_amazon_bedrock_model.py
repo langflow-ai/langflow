@@ -1,5 +1,6 @@
 import pytest
 from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

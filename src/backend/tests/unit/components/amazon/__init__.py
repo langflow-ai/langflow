@@ -1,1 +1,1 @@
-"""Amazon components tests.""" 
+"""Amazon components tests."""
