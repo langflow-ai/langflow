@@ -1,7 +1,8 @@
 from langflow.base.models.aws_constants import AWS_REGIONS, AWS_MODEL_IDs
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageTextInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs import MessageTextInput, SecretStrInput, SliderInput
 from langflow.io import DictInput, DropdownInput
 
 
@@ -74,6 +75,14 @@ class AmazonBedrockComponent(LCModelComponent):
             advanced=True,
             info="The URL of the Bedrock endpoint to use.",
         ),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            info="Controls the randomness of the output. Lower values make the model more deterministic.",
+            value=0.1,
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -110,11 +119,15 @@ class AmazonBedrockComponent(LCModelComponent):
 
         boto3_client = session.client("bedrock-runtime", **client_params)
         try:
+            model_kwargs = self.model_kwargs or {}
+            if hasattr(self, "temperature") and self.temperature is not None:
+                model_kwargs["temperature"] = self.temperature
+
             output = ChatBedrock(
                 client=boto3_client,
                 model_id=self.model_id,
                 region_name=self.region_name,
-                model_kwargs=self.model_kwargs,
+                model_kwargs=model_kwargs,
                 endpoint_url=self.endpoint_url,
                 streaming=self.stream,
             )
