@@ -174,7 +174,7 @@ mkdir -p src/backend/base/langflow/components/vectorstores
 
 3. Place your modified `astradb_graph.py` file in the `/vectorstores` directory.
 
-4. Create a new file named `Dockerfile` in your `langflow-custom` directory and copy the Dockerfile contents shown above into it.
+4. Create a new file named `Dockerfile` in your `langflow-custom` directory, and then copy the Dockerfile contents shown above into it.
 
 5. Build and run the image:
 ```bash
