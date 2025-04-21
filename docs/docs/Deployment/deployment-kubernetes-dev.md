@@ -1,5 +1,5 @@
 ---
-title: Deploy the Langflow Development Environment on Kubernetes
+title: Deploy the Langflow development environment on Kubernetes
 slug: /deployment-kubernetes-dev
 ---
 
