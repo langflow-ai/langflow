@@ -37,8 +37,8 @@ It is recommended to deploy and run two separate environments for Langflow, with
 
 ![Langflow Environments](/img/langflow-env.png)
 
-* **The Langflow Development environment** must include the Integrated Development Environment (IDE) for full experience of Langflow, optimized for prototyping and testing new flows.
-* **The Langflow Production environment** executes the flow logic in production and productionizes Langflow flows as standalone services.
+* **The Langflow development environment** must include the Integrated Development Environment (IDE) for the full experience of Langflow, optimized for prototyping and testing new flows.
+* **The Langflow production environment** executes the flow logic in production and enables Langflow flows as standalone services.
 
 ## Why is it important to have separate deployments?
 
