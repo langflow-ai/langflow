@@ -65,9 +65,9 @@ kubectl port-forward -n langflow svc/langflow-service-backend 7860:7860
 kubectl port-forward -n langflow svc/langflow-service 8080:8080
 ```
 
-Now you can access:
-- The Langflow API at `http://localhost:7860`
-- The Langflow UI at `http://localhost:8080`
+Now you can do the following:
+- Access the Langflow API at `http://localhost:7860`.
+- Access the Langflow UI at `http://localhost:8080`.
 
 ### Configure the Langflow version
 
