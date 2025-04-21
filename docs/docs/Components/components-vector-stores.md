@@ -341,7 +341,7 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 
 The **Local DB** component is Langflow's enhanced version of Chroma DB.
 
-It  that adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
+The component adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
 
 Local DB includes **Ingest** and **Retrieve** modes.
 
