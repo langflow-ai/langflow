@@ -35,7 +35,7 @@ A typical Langflow deployment includes:
 It is recommended to deploy and run two separate environments for Langflow, with one environment reserved for Development use and another for Production use.
 
 
-![Langflow Environments](/img/langflow-env.png)
+![Langflow environments](/img/langflow-env.png)
 
 * **The Langflow development environment** must include the Integrated Development Environment (IDE) for the full experience of Langflow, optimized for prototyping and testing new flows.
 * **The Langflow production environment** executes the flow logic in production and enables Langflow flows as standalone services.
