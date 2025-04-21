@@ -32,7 +32,7 @@ A typical Langflow deployment includes:
 
 ## Environment isolation
 
-It is recommended to deploy and run two separate environments for Langflow, with one environment reserved for Development use and another for Production use.
+It is recommended to deploy and run two separate environments for Langflow, with one environment reserved for development use and another for production use.
 
 
 ![Langflow environments](/img/langflow-env.png)
