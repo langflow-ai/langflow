@@ -17,10 +17,8 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
 
     display_name: str = "GitHub"
     description: str = "GitHub API"
-    name = "GithubAPI"
     icon = "Github"
     documentation: str = "https://docs.composio.dev"
-    app_name = "github"
 
     # GitHub-specific actions
     _actions_data: dict = {
