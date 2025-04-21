@@ -6,7 +6,7 @@ slug: /deployment-kubernetes-dev
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The [Langflow IDE(Integrated Development Environment)](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
+The [Langflow Integrated Development Environment (IDE)](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
 ### Prerequisites
 
