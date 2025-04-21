@@ -90,13 +90,13 @@ An example flow is available in the [Langflow Helm Charts](https://github.com/la
 
 1. Create a project directory:
 
-```shell
+```bash
 mkdir langflow-custom && cd langflow-custom
 ```
 
 2. Download the example flow or include your flow's `.JSON` file in the `langflow-custom` directory.
 
-```shell
+```bash
 wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json
 ```
 
@@ -115,7 +115,7 @@ The `ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows` command sets the environment varia
 
 4. Build and run the image locally.
 
-```shell
+```bash
 docker build -t myuser/langflow-hello-world:1.0.0 .
 docker run -p 7860:7860 myuser/langflow-hello-world:1.0.0
 ```
@@ -123,7 +123,7 @@ docker run -p 7860:7860 myuser/langflow-hello-world:1.0.0
 5. Build and push the image to Docker Hub.
    Replace `myuser` with your Docker Hub username.
 
-```shell
+```bash
 docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
@@ -159,15 +159,16 @@ EXPOSE 7860
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
 ```
 
-To use this custom Dockerfile:
+To use this custom Dockerfile, do the following:
 
 1. Create a directory for your custom Langflow setup:
-```shell
+```bash
 mkdir langflow-custom && cd langflow-custom
 ```
 
-2. Create the necessary directory structure for your custom code:
-```shell
+2. Create the necessary directory structure for your custom code.
+In this example, Langflow expects `astradb_graph.py` to exist in the `/vectorstores` directory, so you create a directory in that location.
+```bash
 mkdir -p src/backend/base/langflow/components/vectorstores
 ```
 
@@ -176,11 +177,9 @@ mkdir -p src/backend/base/langflow/components/vectorstores
 4. Create a new file named `Dockerfile` in your `langflow-custom` directory and copy the Dockerfile contents shown above into it.
 
 5. Build and run the image:
-```shell
+```bash
 docker build -t myuser/langflow-custom:1.0.0 .
 docker run -p 7860:7860 myuser/langflow-custom:1.0.0
 ```
 
-This approach can be adapted for any other components or custom code you want to add to Langflow. Just modify the file paths and component names accordingly.
-
-Note: When customizing Langflow components, make sure your modifications are compatible with the version of Langflow you're using. Breaking changes in the component interface might cause issues.
+This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.
