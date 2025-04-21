@@ -104,6 +104,12 @@ const McpServerTab = () => {
     }`,
   };
 
+  const copyToClipboard = () => {
+    navigator.clipboard
+      .writeText(MCP_SERVER_EXAMPLE[selectedMode])
+      .catch((err) => console.error("Failed to copy text: ", err));
+  };
+
   return (
     <div>
       <div className="text-md -mt-2 pb-2 font-bold">MCP Server</div>
@@ -186,6 +192,7 @@ const McpServerTab = () => {
                       "absolute right-4 top-4 h-4 w-4 text-muted-foreground hover:text-foreground",
                       selectedMode === "Cursor" && "top-[15px]",
                     )}
+                    onClick={copyToClipboard}
                   >
                     <ForwardedIconComponent
                       name="copy"
