@@ -19,6 +19,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
     description: str = "GitHub API"
     icon = "Github"
     documentation: str = "https://docs.composio.dev"
+    app_name = "github"
 
     # GitHub-specific actions
     _actions_data: dict = {
@@ -130,19 +131,6 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         "GITHUB_CREATE_A_PULL_REQUEST_draft",
         "GITHUB_LIST_BRANCHES-protected",
     }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._default_tools = {
-            self.sanitize_action_name("GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER").replace(" ", "-"),
-            self.sanitize_action_name("GITHUB_CREATE_A_PULL_REQUEST").replace(" ", "-"),
-        }
-        # Build the action maps right away
-        self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
-        self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
-        self._sanitized_names = {
-            action: self._name_sanitizer.sub("-", self.sanitize_action_name(action)) for action in self._actions_data
-        }
 
     inputs = [
         *ComposioBaseComponent._base_inputs,
@@ -644,3 +632,9 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return super().update_build_config(build_config, field_value, field_name)
+
+    def set_default_tools(self):
+        self._default_tools = {
+            self.sanitize_action_name("GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER").replace(" ", "-"),
+            self.sanitize_action_name("GITHUB_CREATE_A_PULL_REQUEST").replace(" ", "-"),
+        }
