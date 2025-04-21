@@ -129,7 +129,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
     _bool_variables = {
         "GITHUB_CREATE_A_PULL_REQUEST_maintainer_can_modify",
         "GITHUB_CREATE_A_PULL_REQUEST_draft",
-        "GITHUB_LIST_BRANCHES-protected",
+        "GITHUB_LIST_BRANCHES_protected",
     }
 
     inputs = [
@@ -241,7 +241,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
             advanced=True,
         ),
         IntInput(
-            name="GITHUB_LIST_PULL_REQUESTS-per_page",
+            name="GITHUB_LIST_PULL_REQUESTS_per_page",
             display_name="Per Page",
             info="The number of results per page (max 100)",
             show=False,
@@ -379,7 +379,6 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
             display_name="Labels",
             info="A list of comma separated label names. Example: `bug,ui,@high`",
             show=False,
-            is_list=True,
             advanced=True,
         ),
         MessageTextInput(
@@ -406,7 +405,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
             advanced=True,
         ),
         IntInput(
-            name="GITHUB_LIST_REPOSITORY_ISSUES-per_page",
+            name="GITHUB_LIST_REPOSITORY_ISSUES_per_page",
             display_name="Per Page",
             info="The number of results per page (max 100)",
             show=False,
@@ -589,7 +588,15 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
                     if value is None or value == "":
                         continue
 
-                    if field in ["GITHUB_CREATE_AN_ISSUE_labels", "GITHUB_CREATE_AN_ISSUE_assignees"] and value:
+                    if (
+                        field
+                        in [
+                            "GITHUB_CREATE_AN_ISSUE_labels",
+                            "GITHUB_CREATE_AN_ISSUE_assignees",
+                            "GITHUB_LIST_REPOSITORY_ISSUES_labels",
+                        ]
+                        and value
+                    ):  # noqa: E501
                         value = [item.strip() for item in value.split(",")]
 
                     if field in self._bool_variables:
@@ -623,6 +630,8 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
             ):
                 msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
+            if isinstance(result_data.get("details"), list):
+                return result_data.get("details")
             return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
