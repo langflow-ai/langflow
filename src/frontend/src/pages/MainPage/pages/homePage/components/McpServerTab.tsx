@@ -184,7 +184,7 @@ const McpServerTab = () => {
                     size="icon"
                     className={cn(
                       "absolute right-4 top-4 h-4 w-4 text-muted-foreground hover:text-foreground",
-                      selectedMode === "Cursor" && "top-[65px]",
+                      selectedMode === "Cursor" && "top-[15px]",
                     )}
                   >
                     <ForwardedIconComponent
