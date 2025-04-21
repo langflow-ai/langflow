@@ -3,6 +3,8 @@ title: Inputs and outputs
 slug: /components-io
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Input and output components in Langflow
 
 Input and output components define where data enters and exits your flow.
@@ -131,18 +133,19 @@ The output does not appear in the **Playground**.
 
 ## Chat components example flow
 
-To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or send the [Message](/concepts-objects#message) type.
+1. To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or send the [Message](/concepts-objects#message) type.
 
-For this example, connect a **Chat Input** component to an **OpenAI** model component's **Input** port, and then connect the **OpenAI** model component's **Output** port to the **Chat Output** component.
+For this example, connect a **Chat Input** component to an **OpenAI** model component's **Input** port, and then connect the **OpenAI** model component's **Message** port to the **Chat Output** component.
+
+2. In the **OpenAI** model component, in the **OpenAI API Key** field, add your **OpenAI API key**.
 
 The flow looks like this:
 
-![Chat input and output connected to openai model](/img/component-chat-io.png)
+![Chat input and output components connected to an openai model](/img/component-chat-io.png)
 
-1. To send a message to your flow, open the **Playground**, and then enter a message.
-2. The **OpenAI** model component responds.
+3. To send a message to your flow, open the **Playground**, and then enter a message.
+The **OpenAI** model component responds.
 Optionally, in the **OpenAI** model component, enter a **System Message** to control the model's response.
-3. Close the **Playground**.
 4. In the Langflow UI, click your flow name, and then click **Logs**.
 The **Logs** pane opens.
 Here, you can inspect your component logs.
@@ -164,7 +167,7 @@ Click **Outputs** to view the sent message:
     }
   ],
 ```
-6. Your second message was sent by the **OpenAI** model component to the **Chat Output** component.
+8. Your second message was sent by the **OpenAI** model component to the **Chat Output** component.
 This is the raw text output of the model's response.
 The **Chat Output** component accepts this text as input and presents it as a formatted message.
 Click **Outputs** to view the sent message:
@@ -215,11 +218,12 @@ curl --request POST \
 }'
 ```
 The custom `session_id` value starts a new chat session between your client and the Langflow server, and can be useful in keeping conversations and AI context separate.
-5. Send the message.
+
+5. Send the POST request.
 Your request is answered.
 6. Navigate to the **Playground**.
 A new chat session called `docker-question-on-m1` has appeared, using your unique `session_id`.
-7. To modify additional parameters for your **Chat Input** and **Chat Output** components, click **Publish**, and then click **API access**.
+7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Publish**, and then click **API access**.
 8. Click **Tweaks** to modify parameters in the component's `data` object.
 For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
 ```text
@@ -238,4 +242,5 @@ curl --request POST \
 }'
 ```
 
-
+To confirm your command is using the tweak, navigate to the **Logs** pane and view the request from the **Chat Input** component.
+The value for `should_store_message` is `false`.
