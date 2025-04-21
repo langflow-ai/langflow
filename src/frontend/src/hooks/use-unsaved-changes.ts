@@ -10,9 +10,5 @@ export function useUnsavedChanges() {
     return false;
   }
 
-  if ((currentFlow?.data?.nodes?.length ?? 0) > 0) {
-    return false;
-  }
-
   return customStringify(currentFlow) !== customStringify(savedFlow);
 }
