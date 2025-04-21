@@ -154,7 +154,7 @@ langflow:
 ```
 
 :::note
-If your flow relies on shared state (e.g. builtin chat memory), you need to set up a shared database when scaling horizontally.
+If your flow relies on shared state, such as built-in chat memory, you need to set up a shared database when scaling horizontally.
 :::
 
 For more examples of `langflow-ide` deployment, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/langflow-ide).
