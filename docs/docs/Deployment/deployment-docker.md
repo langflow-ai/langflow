@@ -129,3 +129,56 @@ docker push myuser/langflow-hello-world:1.0.0
 ```
 
 To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#deploy-the-langflow-runtime).
+
+## Customize the Langflow Docker image with your own code
+
+You can customize the Langflow Docker image by adding your own code or modifying existing components.
+
+This example Dockerfile demonstrates how to customize Langflow by replacing the `astradb_graph.py` component, but the pattern can be adapted for any other components or custom code.
+
+```dockerfile
+FROM langflowai/langflow:latest
+# Set working directory
+WORKDIR /app
+# Copy your modified astradb_graph.py file
+COPY src/backend/base/langflow/components/vectorstores/astradb_graph.py /tmp/astradb_graph.py
+# Find the site-packages directory where langflow is installed
+RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
+# Replace the file in the site-packages location
+RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
+    echo "Site packages at: $SITE_PACKAGES" && \
+    mkdir -p "$SITE_PACKAGES/langflow/components/vectorstores" && \
+    cp /tmp/astradb_graph.py "$SITE_PACKAGES/langflow/components/vectorstores/"
+# Clear Python cache in the site-packages directory only
+RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
+    find "$SITE_PACKAGES" -name "*.pyc" -delete && \
+    find "$SITE_PACKAGES" -name "__pycache__" -type d -exec rm -rf {} +
+# Expose the default Langflow port
+EXPOSE 7860
+# Command to run Langflow
+CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
+```
+
+To use this custom Dockerfile:
+
+1. Create a directory for your custom Langflow setup:
+```shell
+mkdir langflow-custom && cd langflow-custom
+```
+
+2. Create the necessary directory structure for your custom code:
+```shell
+mkdir -p src/backend/base/langflow/components/vectorstores
+```
+
+3. Place your modified `astradb_graph.py` file in the appropriate directory.
+
+4. Build and run the image:
+```shell
+docker build -t myuser/langflow-custom:1.0.0 .
+docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+```
+
+This approach can be adapted for any other components or custom code you want to add to Langflow. Just modify the file paths and component names accordingly.
+
+Note: When customizing Langflow components, make sure your modifications are compatible with the version of Langflow you're using. Breaking changes in the component interface might cause issues.
