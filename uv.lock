@@ -395,7 +395,7 @@ wheels = [
 
 [[package]]
 name = "astra-assistants"
-version = "2.2.11"
+version = "2.2.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -410,9 +410,9 @@ dependencies = [
     { name = "tree-sitter" },
     { name = "tree-sitter-python" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/c5/8e0685e2e886802027bc3510142f536c3d5c8e6b4f5d72d11a6ed42c9da6/astra_assistants-2.2.11.tar.gz", hash = "sha256:580c080bd722bbf4c26517e6c3bc2ca4f7dffb6a02853d28705a75643c4e2083", size = 66264 }
+sdist = { url = "https://files.pythonhosted.org/packages/39/59/b9cb94dc9ea9fe8d978d2710c45e83c4e6ba179f3c4447022e23f51d01dd/astra_assistants-2.2.12.tar.gz", hash = "sha256:1b26331e7bebeccac4929b168ec2179a3c09496a2715d2b3e702317af2549b27", size = 66278 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/85/8ea7ab5b09aab9d1274642b50495b820124a24f6d91c5ce559c268336176/astra_assistants-2.2.11-py3-none-any.whl", hash = "sha256:202bc27b31f41c3541a4676b1b8bc2f87581153bb2919aae903f3ffd682ed6e9", size = 78559 },
+    { url = "https://files.pythonhosted.org/packages/8e/4c/4b9769885fb74c30dd80d40e8cab03aaa1bc9d075b2d727ab07c8adf5887/astra_assistants-2.2.12-py3-none-any.whl", hash = "sha256:126cda7b40028a76c12fec63a1268b47cc3cc95a4b270165e67fe9e35d59f77f", size = 78578 },
 ]
 
 [package.optional-dependencies]
@@ -424,18 +424,19 @@ tools = [
 
 [[package]]
 name = "astrapy"
-version = "1.5.2"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
     { name = "httpx", extra = ["http2"] },
     { name = "pymongo" },
     { name = "toml" },
+    { name = "typing-extensions" },
     { name = "uuid6" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/29/cc/5996efd0598b97d44699f04b5c025080fb1665f30794010f06543f3322a7/astrapy-1.5.2.tar.gz", hash = "sha256:eaf703628b0d03891ae7c391ef04ff3aec1005837fdfa47c19f2ed4478c45a4a", size = 163233 }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/c9/5c9488664f99f2b9738d8e4823f8a0474897f39a17c0676430f548834adb/astrapy-2.0.1.tar.gz", hash = "sha256:3a35ebd7af5c24f0abe400f9b2778dc5e8812c78ae247f97704be27e6cb9dc5a", size = 252460 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/48/684c270724bc3f8d12714556d201aa4610623da919505a6a09e56f50ef6a/astrapy-1.5.2-py3-none-any.whl", hash = "sha256:598b86de723727a11ec43e1c7fe682ecb42d63d37a94165fb08de41c20103f56", size = 177128 },
+    { url = "https://files.pythonhosted.org/packages/90/6d/1481615ec3b97e1b8c9058c43c804e02612642d5114a26812894e42fb9b4/astrapy-2.0.1-py3-none-any.whl", hash = "sha256:4fa37f2955e7543a29e78565833de0dc8e39316ccc2f66263a4665b5871b7739", size = 300495 },
 ]
 
 [[package]]
@@ -2010,7 +2011,7 @@ wheels = [
 
 [[package]]
 name = "e2b"
-version = "1.1.0"
+version = "1.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -2021,23 +2022,23 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/23/de/d051c7f6d762e2f743a4d5efebe6b30181c866bb499ec99ac06d3897ff6e/e2b-1.1.0.tar.gz", hash = "sha256:bd054fbaa9baed48919500ba853bdb72c750b04e0bac8365bde75cdfbdf80d18", size = 45977 }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/cc/811bf0d20aefdecb72905068107e33728c353e3deedbb6daeae355a40504/e2b-1.3.3.tar.gz", hash = "sha256:b0afb2e3b8edaade44a50d40dbf8934cbd9e2bc3c1c214ce11dbfd9e1d6815b0", size = 51402 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/da/c0aea566943a85ab8660e1dd69668769c5a092ae69e957b682000fb63bde/e2b-1.1.0-py3-none-any.whl", hash = "sha256:5d99c675e155cf124f457d77f91c4cb32b286d241ca6cd37ac8d6c0711fc272e", size = 83132 },
+    { url = "https://files.pythonhosted.org/packages/9d/5b/5826c80e4de1a99bdde3a10995bf56c7c7d779fb58476c93fa542a626f40/e2b-1.3.3-py3-none-any.whl", hash = "sha256:1f851345fd22abc1f16fb82197e88786909323edfd140a7a17b8a6ed4bd4ef03", size = 96021 },
 ]
 
 [[package]]
 name = "e2b-code-interpreter"
-version = "1.1.1"
+version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "e2b" },
     { name = "httpx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/a0/aa992090fc02ea7eeafce9b4fc122546c8dd81e85810c0d06bfd4c29a6a2/e2b_code_interpreter-1.1.1.tar.gz", hash = "sha256:b13091f75fc127ad3a268b8746e5da996c6734f432e606fcd4f3897a5b1c2bf0", size = 9288 }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/16/93bd4581fac26f57ae4dba209a127893901636e3dc25db9dea037d9b1952/e2b_code_interpreter-1.2.0.tar.gz", hash = "sha256:9e02d043ab5986232a684018d718014bd5038b421b04a8726952094ef0387e78", size = 9288 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/40/dcdc47d039dd85e74df2532a01e9d47031fbfdfdc20c0b2de4e42b557271/e2b_code_interpreter-1.1.1-py3-none-any.whl", hash = "sha256:f56450b192456f24df89b9159d1067d50c7133d587ab12116144638969409578", size = 12049 },
+    { url = "https://files.pythonhosted.org/packages/ff/c3/90880b4d9714ce703b794890b12727cb76330b33d3d08c11387bf6720c51/e2b_code_interpreter-1.2.0-py3-none-any.whl", hash = "sha256:4f94ba29eceada30ec7d379f76b243d69b76da6b67324b986778743346446505", size = 12048 },
 ]
 
 [[package]]
@@ -4110,16 +4111,16 @@ wheels = [
 
 [[package]]
 name = "langchain-astradb"
-version = "0.5.3"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astrapy" },
     { name = "langchain-community" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/0e/6fc78ecc3af34cd044f97c5fd14ebde318920cdb9d2a0106e1ec194c42c9/langchain_astradb-0.5.3.tar.gz", hash = "sha256:c9b05d6288d645416c9e867cb86d90d8ff15a679f50941dd59ffdf18d7dc1d27", size = 52093 }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/3c/e8cd9e7a091e5c9f459856b6f7270ae56f8b84ccf953c16506f3f0c3a276/langchain_astradb-0.6.0.tar.gz", hash = "sha256:5254a85923aa3b0a5850277aa467c3a281f6bafd9b6e1454de6c66c4062ad6d8", size = 64975 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/93/469c6ef15198148df9309c7426a657c457d63e24ebb4af7182f49b5949d5/langchain_astradb-0.5.3-py3-none-any.whl", hash = "sha256:42b1baf690270d160caf90b6cbdb82e43e4ab224f3b2b6ffcb57bcd7d23bf265", size = 58672 },
+    { url = "https://files.pythonhosted.org/packages/88/d3/b540e6639d8e4f0907c6b9c9226e8f92756bfaeff6b5be58eadb2aed3a72/langchain_astradb-0.6.0-py3-none-any.whl", hash = "sha256:dc5886b29e50f24d6ab5356fdda6aa8b3e5b8c718e2493c8f263d9ecef42d9b4", size = 69654 },
 ]
 
 [[package]]
@@ -4517,7 +4518,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.3.2"
+version = "1.3.4"
 source = { editable = "." }
 dependencies = [
     { name = "ag2" },
@@ -4709,7 +4710,7 @@ requires-dist = [
     { name = "apify-client", specifier = ">=1.8.1" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
-    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.11" },
+    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.12" },
     { name = "atlassian-python-api", specifier = "==3.41.16" },
     { name = "beautifulsoup4", specifier = "==4.12.3" },
     { name = "boto3", specifier = "==1.34.162" },
@@ -4742,7 +4743,7 @@ requires-dist = [
     { name = "kubernetes", specifier = "==31.0.0" },
     { name = "langchain", specifier = "==0.3.10" },
     { name = "langchain-anthropic", specifier = "==0.3.0" },
-    { name = "langchain-astradb", specifier = "==0.5.3" },
+    { name = "langchain-astradb", specifier = "~=0.6.0" },
     { name = "langchain-aws", specifier = "==0.2.7" },
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
@@ -4875,7 +4876,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.3.2"
+version = "0.3.4"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
