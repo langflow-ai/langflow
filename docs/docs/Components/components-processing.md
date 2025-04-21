@@ -494,7 +494,7 @@ This component splits text into chunks based on specified criteria.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_inputs | Input Documents | The data to split.The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
+| data_inputs | Input Documents | The data to split. The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
 | chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
 | chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
 | separator | Separator | The character to split on. Default: `newline`. |
