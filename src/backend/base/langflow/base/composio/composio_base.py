@@ -117,12 +117,12 @@ class ComposioBaseComponent(Component):
 
     def _build_wrapper(self) -> ComposioToolSet:
         """Build the Composio toolset wrapper."""
+        api_key = self.api_key
+        if not api_key:
+            msg = "Composio API Key is required"
+            raise ValueError(msg)
         try:
-            if not self.api_key:
-                msg = "Composio API Key is required"
-                raise ValueError(msg)
-            return ComposioToolSet(api_key=self.api_key)
-
+            return ComposioToolSet(api_key=api_key)
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
             msg = "Please provide a valid Composio API Key in the component settings"
@@ -130,37 +130,31 @@ class ComposioBaseComponent(Component):
 
     def show_hide_fields(self, build_config: dict, field_value: Any):
         """Optimized field visibility updates by only modifying show values."""
+        all_fields = self._all_fields
+        bool_variables = self._bool_variables
+
         if not field_value:
-            for field in self._all_fields:
+            for field in all_fields:
                 build_config[field]["show"] = False
-                if field in self._bool_variables:
-                    build_config[field]["value"] = False
-                else:
-                    build_config[field]["value"] = ""
+                build_config[field]["value"] = False if field in bool_variables else ""
             return
 
-        action_key = None
-        if isinstance(field_value, list) and field_value:
-            action_key = self.desanitize_action_name(field_value[0]["name"])
-        else:
-            action_key = field_value
-
+        action_key = field_value[0]["name"] if isinstance(field_value, list) and field_value else field_value
         fields_to_show = self._get_action_fields(action_key)
 
-        for field in self._all_fields:
+        for field in all_fields:
             should_show = field in fields_to_show
-            if build_config[field]["show"] != should_show:
-                build_config[field]["show"] = should_show
+            build_config_field = build_config[field]
+            if build_config_field["show"] != should_show:
+                build_config_field["show"] = should_show
                 if not should_show:
-                    if field in self._bool_variables:
-                        build_config[field]["value"] = False
-                    else:
-                        build_config[field]["value"] = ""
+                    build_config_field["value"] = False if field in bool_variables else ""
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Optimized build config updates."""
         if field_name == "tool_mode":
-            build_config["action"]["show"] = not field_value
+            build_config_action = build_config["action"]
+            build_config_action["show"] = not field_value
             for field in self._all_fields:
                 build_config[field]["show"] = False
             return build_config
@@ -169,13 +163,18 @@ class ComposioBaseComponent(Component):
             self.show_hide_fields(build_config, field_value)
             if build_config["auth_link"]["value"] == "validated":
                 return build_config
-        if field_name == "api_key" and len(field_value) == 0:
+        elif field_name == "api_key" and not field_value:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
-            build_config["action"]["options"] = []
-            build_config["action"]["helper_text"] = "Please connect before selecting actions."
-            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+            build_config["action"].update(
+                {
+                    "options": [],
+                    "helper_text": "Please connect before selecting actions.",
+                    "helper_text_metadata": {"variant": "destructive"},
+                }
+            )
             return build_config
+
         if not hasattr(self, "api_key") or not self.api_key:
             return build_config
 
@@ -197,10 +196,8 @@ class ComposioBaseComponent(Component):
 
             try:
                 entity.get_connection(app=self.app_name)
-                build_config["auth_link"]["value"] = "validated"
-                build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                build_config["action"]["helper_text"] = None
-                build_config["action"]["helper_text_metadata"] = {}
+                build_config["auth_link"].update({"value": "validated", "auth_tooltip": "Disconnect"})
+                build_config["action"].update({"helper_text": None, "helper_text_metadata": {}})
             except NoItemsFound:
                 auth_scheme = self._get_auth_scheme(self.app_name)
                 if auth_scheme and auth_scheme.auth_mode == "OAUTH2":
@@ -208,46 +205,53 @@ class ComposioBaseComponent(Component):
                         build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
                     except (ValueError, ConnectionError, ApiKeyError) as e:
-                        build_config["auth_link"]["value"] = "disabled"
-                        build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
+                        build_config["auth_link"].update({"value": "disabled", "auth_tooltip": f"Error: {e!s}"})
                         logger.error(f"Error checking auth status: {e}")
 
         except (ValueError, ConnectionError) as e:
-            build_config["auth_link"]["value"] = "error"
-            build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
+            build_config["auth_link"].update({"value": "error", "auth_tooltip": f"Error: {e!s}"})
             logger.error(f"Error checking auth status: {e}")
         except ApiKeyError as e:
-            build_config["auth_link"]["value"] = ""
-            build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
-            build_config["action"]["options"] = []
-            build_config["action"]["value"] = ""
-            build_config["action"]["helper_text"] = "Please connect before selecting actions."
-            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+            build_config["auth_link"].update({"value": "", "auth_tooltip": "Please provide a valid Composio API Key."})
+            build_config["action"].update(
+                {
+                    "options": [],
+                    "value": "",
+                    "helper_text": "Please connect before selecting actions.",
+                    "helper_text_metadata": {"variant": "destructive"},
+                }
+            )
             logger.error(f"Error checking auth status: {e}")
 
         # Handle disconnection
-        if field_name == "auth_link" and field_value == "disconnect":
-            try:
-                for field in self._all_fields:
-                    build_config[field]["show"] = False
-                toolset = self._build_wrapper()
-                entity = toolset.client.get_entity(id=self.entity_id)
-                self.disconnect_connection(entity, self.app_name)
-                build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
-                build_config["auth_link"]["auth_tooltip"] = "Connect"
-                build_config["action"]["helper_text"] = "Please connect before selecting actions."
-                build_config["action"]["helper_text_metadata"] = {
-                    "variant": "destructive",
-                }
-                build_config["action"]["options"] = []
-                build_config["action"]["value"] = ""
-            except (ValueError, ConnectionError, ApiKeyError) as e:
-                build_config["auth_link"]["value"] = "error"
-                build_config["auth_link"]["auth_tooltip"] = f"Failed to disconnect from the app: {e}"
-                logger.error(f"Error disconnecting: {e}")
-        if field_name == "auth_link" and field_value == "validated":
-            build_config["action"]["helper_text"] = ""
-            build_config["action"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
+        if field_name == "auth_link":
+            if field_value == "disconnect":
+                try:
+                    for field in self._all_fields:
+                        build_config[field]["show"] = False
+                    toolset = self._build_wrapper()
+                    entity = toolset.client.get_entity(id=self.entity_id)
+                    self.disconnect_connection(entity, self.app_name)
+                    build_config["auth_link"].update(
+                        {"value": self._initiate_default_connection(entity, self.app_name), "auth_tooltip": "Connect"}
+                    )
+                    build_config["action"].update(
+                        {
+                            "helper_text": "Please connect before selecting actions.",
+                            "helper_text_metadata": {"variant": "destructive"},
+                            "options": [],
+                            "value": "",
+                        }
+                    )
+                except (ValueError, ConnectionError, ApiKeyError) as e:
+                    build_config["auth_link"].update(
+                        {"value": "error", "auth_tooltip": f"Failed to disconnect from the app: {e}"}
+                    )
+                    logger.error(f"Error disconnecting: {e}")
+            elif field_value == "validated":
+                build_config["action"].update(
+                    {"helper_text": "", "helper_text_metadata": {"icon": "Check", "variant": "success"}}
+                )
 
         return build_config
 
@@ -261,15 +265,14 @@ class ComposioBaseComponent(Component):
             return None
 
     def _initiate_default_connection(self, entity: Any, app: str) -> str:
+        """Initiate a default connection to the app."""
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
         return connection.redirectUrl
 
     def disconnect_connection(self, entity: Any, app: str) -> None:
         """Disconnect a Composio connection."""
         try:
-            # Get the connection first
             connection = entity.get_connection(app=app)
-            # Delete the connection using the integrations collection
             entity.client.integrations.remove(id=connection.integrationId)
         except Exception as e:
             logger.error(f"Error disconnecting from {app}: {e}")
