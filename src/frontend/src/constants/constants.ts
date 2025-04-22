@@ -1069,3 +1069,5 @@ export const OPENAI_VOICES = [
 export const DEFAULT_POLLING_INTERVAL = 5000;
 export const DEFAULT_TIMEOUT = 30000;
 export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
+
+export const UUID_PARSING_ERROR = "uuid_parsing";
