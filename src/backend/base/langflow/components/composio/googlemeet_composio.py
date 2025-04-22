@@ -22,106 +22,92 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
     _actions_data: dict = {
         "GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID": {
             "display_name": "Get Transcripts By Conference Record ID",
-            "action_fields": ["GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id"],
+            "action_fields": ["GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID_conferenceRecord_id"],
         },
         "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET": {
             "display_name": "Get Conference Record By Space Name, Meeting Code, Start Time, End Time",
             "action_fields": [
-                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-space_name",
-                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-meeting_code",
-                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-start_time",
-                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-end_time",
+                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_space_name",
+                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_meeting_code",
+                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_start_time",
+                "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_end_time",
             ],
         },
         "GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID": {
             "display_name": "Get Recordings By Conference Record ID",
-            "action_fields": ["GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id"],
+            "action_fields": ["GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID_conferenceRecord_id"],
         },
         "GOOGLEMEET_CREATE_MEET": {
             "display_name": "Create Meet",
-            "action_fields": ["GOOGLEMEET_CREATE_MEET-access_type", "GOOGLEMEET_CREATE_MEET-entry_point_access"],
+            "action_fields": ["GOOGLEMEET_CREATE_MEET_access_type", "GOOGLEMEET_CREATE_MEET_entry_point_access"],
         },
         "GOOGLEMEET_GET_MEET": {
             "display_name": "Get Meet Details",
-            "action_fields": ["GOOGLEMEET_GET_MEET-space_name"],
+            "action_fields": ["GOOGLEMEET_GET_MEET_space_name"],
         },
     }
 
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._default_tools = {
-            self.sanitize_action_name("GOOGLEMEET_CREATE_MEET").replace(" ", "-"),
-            self.sanitize_action_name("GOOGLEMEET_GET_MEET").replace(" ", "-"),
-        }
-        # Build the action maps right away
-        self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
-        self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
-        self._sanitized_names = {
-            action: self._name_sanitizer.sub("-", self.sanitize_action_name(action)) for action in self._actions_data
-        }
-
     # Combine base inputs with Google Meet specific inputs
     inputs = [
         *ComposioBaseComponent._base_inputs,
         MessageTextInput(
-            name="GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id",
+            name="GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID_conferenceRecord_id",
             display_name="Conference Record Id",
             info="The unique identifier for the conference record.",
             show=False,
             required=True,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID-conferenceRecord_id",
+            name="GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID_conferenceRecord_id",
             display_name="Conference Record Id",
             info="The unique identifier for the conference record.",
             show=False,
             required=True,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_CREATE_MEET-access_type",
+            name="GOOGLEMEET_CREATE_MEET_access_type",
             display_name="Access Type",
             info="The type of access to the Google Meet space. Values include: 'OPEN','TRUSTED','RESTRICTED','ACCESS_TYPE_UNSPECIFIED'.",  # noqa: E501
             show=False,
             advanced=True,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_CREATE_MEET-entry_point_access",
+            name="GOOGLEMEET_CREATE_MEET_entry_point_access",
             display_name="Entry Point Access",
             info="The entry point for the Google Meet space. Values include: 'ENTRY_POINT_ACCESS_UNSPECIFIED', 'ALL', 'CREATOR_APP_ONLY'.",  # noqa: E501
             show=False,
             advanced=True,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_GET_MEET-space_name",
+            name="GOOGLEMEET_GET_MEET_space_name",
             display_name="Space Name",
             info="The unique identifier for the Google Meet space.",
             show=False,
             required=True,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-space_name",
+            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_space_name",
             display_name="Space Name",
             info="The name of the Google Meet space.",
             show=False,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-meeting_code",
+            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_meeting_code",
             display_name="Meeting Code",
             info="The meeting code of the Google Meet space.",
             show=False,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-start_time",
+            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_start_time",
             display_name="Start Time",
             info="The start time of the meeting.",
             show=False,
             advanced=True,
         ),
         MessageTextInput(
-            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET-end_time",
+            name="GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET_end_time",
             display_name="End Time",
             info="The end time of the meeting.",
             show=False,
@@ -152,7 +138,7 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
                     if value is None or value == "":
                         continue
 
-                    param_name = field.split("-", 1)[1] if "-" in field else field
+                    param_name = field.replace(action_key + "_", "")
                     params[param_name] = value
 
             result = toolset.execute_action(
@@ -184,3 +170,9 @@ class ComposioGooglemeetAPIComponent(ComposioBaseComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return super().update_build_config(build_config, field_value, field_name)
+
+    def set_default_tools(self):
+        self._default_tools = {
+            self.sanitize_action_name("GOOGLEMEET_CREATE_MEET").replace(" ", "-"),
+            self.sanitize_action_name("GOOGLEMEET_GET_MEET").replace(" ", "-"),
+        }
