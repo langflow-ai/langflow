@@ -556,7 +556,6 @@ async def read_basic_examples(
 # Add a Pydantic model for MCP settings update and get
 
 
-
 @router.get("/{flow_id}/mcp", response_model=MCPSettings, status_code=200)
 async def get_flow_mcp_settings(
     *,
@@ -633,8 +632,6 @@ async def update_flow_mcp_settings(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-
 
 
 @router.patch("/batch/mcp", response_model=list[MCPSettings], status_code=200)
