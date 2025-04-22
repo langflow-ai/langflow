@@ -141,7 +141,7 @@ For this example, connect a **Chat Input** component to an **OpenAI** model comp
 
 The flow looks like this:
 
-![Chat input and output components connected to an openai model](/img/component-chat-io.png)
+![Chat input and output components connected to an OpenAI model](/img/component-chat-io.png)
 
 3. To send a message to your flow, open the **Playground**, and then enter a message.
 The **OpenAI** model component responds.
