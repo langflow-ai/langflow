@@ -30,7 +30,7 @@ test(
     }
 
     await expect(emptyButton).toBeVisible();
-    await expect(page.getByTestId("empty_page_title")).toBeVisible();
+    await expect(page.getByTestId("mainpage_title")).toBeVisible();
     await expect(page.getByTestId("empty_page_description")).toBeVisible();
     await expect(page.getByTestId("empty_page_github_button")).toBeVisible();
     await expect(page.getByTestId("empty_page_discord_button")).toBeVisible();
@@ -51,7 +51,7 @@ test(
 
     await newPageGithub.close();
 
-    await expect(page.getByTestId("empty_page_title")).toBeVisible();
+    await expect(page.getByTestId("mainpage_title")).toBeVisible();
     await expect(page.getByTestId("empty_page_description")).toBeVisible();
 
     await page.getByTestId("new_project_btn_empty_page").click();
@@ -149,7 +149,7 @@ test(
     }
 
     await expect(emptyButton).toBeVisible();
-    await expect(page.getByTestId("empty_page_title")).toBeVisible();
+    await expect(page.getByTestId("mainpage_title")).toBeVisible();
     await expect(page.getByTestId("empty_page_description")).toBeVisible();
     await expect(page.getByTestId("empty_page_github_button")).toBeVisible();
     await expect(page.getByTestId("empty_page_discord_button")).toBeVisible();
@@ -170,7 +170,7 @@ test(
 
     await newPageGithub.close();
 
-    await expect(page.getByTestId("empty_page_title")).toBeVisible();
+    await expect(page.getByTestId("mainpage_title")).toBeVisible();
     await expect(page.getByTestId("empty_page_description")).toBeVisible();
 
     await page.getByTestId("new_project_btn_empty_page").click();

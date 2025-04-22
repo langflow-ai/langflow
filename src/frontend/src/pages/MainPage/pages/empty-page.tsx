@@ -87,7 +87,7 @@ export const EmptyPageCommunity = ({
                 />
               </div>
               <span
-                data-testid="empty_page_title"
+                data-testid="mainpage_title"
                 className="z-50 text-center text-2xl font-semibold text-foreground"
               >
                 {EMPTY_PAGE_TITLE}
