@@ -69,7 +69,7 @@ test(
     if (countEmptyButton > 0) {
       await addFlowToTestOnEmptyLangflow(page);
     }
-    await page.getByTestId("upload-folder-button").last().click();
+    await page.getByTestId("upload-project-button").last().click();
   },
 );
 
