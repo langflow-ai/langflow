@@ -1,4 +1,4 @@
-import logging
+from langflow.logging import logger
 
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_community.utilities import SQLDatabase
