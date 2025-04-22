@@ -99,6 +99,7 @@ class TestGmailComponent(ComponentTestBaseWithoutClient):
         # For this specific test, we need to customize the action_data to handle results field
         component._actions_data = {
             "GMAIL_FETCH_EMAILS": {
+                "display_name": "Fetch Emails",
                 "action_fields": ["max_results", "query"],
                 "result_field": "messages",
                 "get_result_field": True,
