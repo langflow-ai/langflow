@@ -81,7 +81,9 @@ async def create_project(
             await session.commit()
 
         if project.flows_list:
-            update_statement_flows = update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+            update_statement_flows = (
+                update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)
+            )  # type: ignore[attr-defined]
             await session.exec(update_statement_flows)
             await session.commit()
 
@@ -344,4 +346,4 @@ async def upload_file(
         flow.user_id = current_user.id
         flow.folder_id = new_project.id
 
-    return await create_flows(session=session, flow_list=flow_list, current_user=current_user) 
+    return await create_flows(session=session, flow_list=flow_list, current_user=current_user)

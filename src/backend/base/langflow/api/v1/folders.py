@@ -22,38 +22,27 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
-async def create_folder_redirect(
-    *,
-    session: DbSession,
-    folder: FolderCreate,
-    current_user: CurrentActiveUser,
-):
-    """Redirect to the projects endpoint"""
+async def create_folder_redirect():
+    """Redirect to the projects endpoint."""
     return RedirectResponse(url="/api/v1/projects/", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
-async def read_folders_redirect(
-    *,
-    session: DbSession,
-    current_user: CurrentActiveUser,
-):
-    """Redirect to the projects endpoint"""
+async def read_folders_redirect():
+    """Redirect to the projects endpoint."""
     return RedirectResponse(url="/api/v1/projects/", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
 async def read_folder_redirect(
     *,
-    session: DbSession,
     folder_id: UUID,
-    current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
 ):
-    """Redirect to the projects endpoint"""
+    """Redirect to the projects endpoint."""
     redirect_url = f"/api/v1/projects/{folder_id}"
     params_list = []
     if is_component:
@@ -76,45 +65,33 @@ async def read_folder_redirect(
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
 async def update_folder_redirect(
     *,
-    session: DbSession,
     folder_id: UUID,
-    folder: FolderUpdate,
-    current_user: CurrentActiveUser,
 ):
-    """Redirect to the projects endpoint"""
+    """Redirect to the projects endpoint."""
     return RedirectResponse(url=f"/api/v1/projects/{folder_id}", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
 @router.delete("/{folder_id}", status_code=204)
 async def delete_folder_redirect(
     *,
-    session: DbSession,
     folder_id: UUID,
-    current_user: CurrentActiveUser,
 ):
-    """Redirect to the projects endpoint"""
+    """Redirect to the projects endpoint."""
     return RedirectResponse(url=f"/api/v1/projects/{folder_id}", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
 @router.get("/download/{folder_id}", status_code=200)
 async def download_file_redirect(
     *,
-    session: DbSession,
     folder_id: UUID,
-    current_user: CurrentActiveUser,
 ):
-    """Redirect to the projects endpoint"""
+    """Redirect to the projects endpoint."""
     return RedirectResponse(
         url=f"/api/v1/projects/download/{folder_id}", status_code=status.HTTP_307_TEMPORARY_REDIRECT
     )
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
-async def upload_file_redirect(
-    *,
-    session: DbSession,
-    file: Annotated[UploadFile, File(...)],
-    current_user: CurrentActiveUser,
-):
-    """Redirect to the projects endpoint"""
+async def upload_file_redirect():
+    """Redirect to the projects endpoint."""
     return RedirectResponse(url="/api/v1/projects/upload/", status_code=status.HTTP_307_TEMPORARY_REDIRECT)

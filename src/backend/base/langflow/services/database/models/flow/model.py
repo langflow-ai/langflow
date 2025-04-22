@@ -48,8 +48,14 @@ class FlowBase(SQLModel):
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
     mcp_enabled: bool | None = Field(default=False, nullable=True, description="Can be exposed in the MCP server")
-    action_name: str | None = Field(default=None, nullable=True, description="The name of the action associated with the flow")
-    action_description: str | None = Field(default=None, sa_column=Column(Text, nullable=True), description="The description of the action associated with the flow")
+    action_name: str | None = Field(
+        default=None, nullable=True, description="The name of the action associated with the flow"
+    )
+    action_description: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+        description="The description of the action associated with the flow",
+    )
     access_type: AccessTypeEnum = Field(
         default=AccessTypeEnum.PRIVATE,
         sa_column=Column(

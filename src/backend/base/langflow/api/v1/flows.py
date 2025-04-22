@@ -24,6 +24,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
+from langflow.services.database.models import BatchMCPSettingsUpdate, MCPSettings
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
@@ -549,4 +550,170 @@ async def read_basic_examples(
         return compress_response(flows)
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# Add a Pydantic model for MCP settings update and get
+
+
+
+@router.get("/{flow_id}/mcp", response_model=MCPSettings, status_code=200)
+async def get_flow_mcp_settings(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Get the MCP settings of a flow."""
+    try:
+        flow = await _read_flow(
+            session=session,
+            flow_id=flow_id,
+            user_id=current_user.id,
+            settings_service=get_settings_service(),
+        )
+
+        if not flow:
+            raise HTTPException(status_code=404, detail="Flow not found")
+
+        mcp_settings = MCPSettings(
+            mcp_enabled=flow.mcp_enabled,
+            action_name=flow.action_name,
+            action_description=flow.action_description,
+        )
+
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return mcp_settings
+
+
+@router.patch("/{flow_id}/mcp", response_model=MCPSettings, status_code=200)
+async def update_flow_mcp_settings(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    mcp_settings: MCPSettings,
+    current_user: CurrentActiveUser,
+):
+    """Update the MCP settings of a flow."""
+    try:
+        flow = await _read_flow(
+            session=session,
+            flow_id=flow_id,
+            user_id=current_user.id,
+            settings_service=get_settings_service(),
+        )
+
+        if not flow:
+            raise HTTPException(status_code=404, detail="Flow not found")
+
+        update_data = mcp_settings.model_dump(exclude_unset=True, exclude_none=True)
+
+        for key, value in update_data.items():
+            setattr(flow, key, value)
+
+        flow.updated_at = datetime.now(timezone.utc)
+
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+
+        # Also update flow in filesystem if it has a path
+        await _save_flow_to_fs(flow)
+
+        return MCPSettings(
+            mcp_enabled=flow.mcp_enabled,
+            action_name=flow.action_name,
+            action_description=flow.action_description,
+        )
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+
+
+@router.patch("/batch/mcp", response_model=list[MCPSettings], status_code=200)
+async def batch_update_flow_mcp_settings(
+    *,
+    session: DbSession,
+    batch_update: BatchMCPSettingsUpdate,
+    current_user: CurrentActiveUser,
+):
+    """Update the MCP settings of multiple flows at once."""
+    settings_service = get_settings_service()
+    updated_flows = []
+
+    try:
+        for flow_id in batch_update.flow_ids:
+            flow = await _read_flow(
+                session=session,
+                flow_id=flow_id,
+                user_id=current_user.id,
+                settings_service=settings_service,
+            )
+
+            if not flow:
+                continue  # Skip flows that don't exist or user doesn't have access to
+
+            update_data = batch_update.mcp_settings.model_dump(exclude_unset=True, exclude_none=True)
+
+            for key, value in update_data.items():
+                setattr(flow, key, value)
+
+            flow.updated_at = datetime.now(timezone.utc)
+            session.add(flow)
+
+            updated_flows.append(flow)
+
+        await session.commit()
+
+        # Also update flows in filesystem
+        for flow in updated_flows:
+            await session.refresh(flow)
+            await _save_flow_to_fs(flow)
+
+        return [
+            MCPSettings(
+                mcp_enabled=flow.mcp_enabled,
+                action_name=flow.action_name,
+                action_description=flow.action_description,
+            )
+            for flow in updated_flows
+        ]
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/mcp_enabled", response_model=list[FlowRead], status_code=200)
+async def get_mcp_enabled_flows(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Get all flows that are enabled for MCP."""
+    try:
+        auth_settings = get_settings_service().auth_settings
+
+        if auth_settings.AUTO_LOGIN:
+            stmt = select(Flow).where(
+                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
+            )
+        else:
+            stmt = select(Flow).where(Flow.user_id == current_user.id)
+
+        # Filter for MCP-enabled flows
+        stmt = stmt.where(Flow.mcp_enabled == True)  # noqa: E712
+
+        flows = (await session.exec(stmt)).all()
+        return validate_is_component(flows)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e

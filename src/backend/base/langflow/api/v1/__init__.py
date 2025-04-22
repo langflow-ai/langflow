@@ -6,6 +6,7 @@ from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
+from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
@@ -23,6 +24,7 @@ __all__ = [
     "flows_router",
     "folders_router",
     "login_router",
+    "mcp_projects_router",
     "mcp_router",
     "monitor_router",
     "projects_router",

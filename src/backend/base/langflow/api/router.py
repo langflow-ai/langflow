@@ -8,10 +8,11 @@ from langflow.api.v1 import (
     files_router,
     flows_router,
     folders_router,
-    projects_router,
     login_router,
+    mcp_projects_router,
     mcp_router,
     monitor_router,
+    projects_router,
     starter_projects_router,
     store_router,
     users_router,
@@ -49,6 +50,7 @@ router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_router)
+router_v1.include_router(mcp_projects_router)
 
 router_v2.include_router(files_router_v2)
 
