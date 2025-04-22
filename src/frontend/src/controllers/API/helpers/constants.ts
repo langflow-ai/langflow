@@ -17,7 +17,7 @@ export const URLs = {
   BUILD: `build`,
   CUSTOM_COMPONENT: `custom_component`,
   FLOWS: `flows`,
-  FOLDERS: `folders`,
+  FOLDERS: `projects`,
   VARIABLES: `variables`,
   VALIDATE: `validate`,
   CONFIG: `config`,
@@ -27,6 +27,8 @@ export const URLs = {
   VOICE: `voice`,
   PUBLIC_FLOW: `flows/public_flow`,
 } as const;
+
+// IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
 
 export function getURL(
   key: keyof typeof URLs,
