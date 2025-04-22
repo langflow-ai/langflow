@@ -3,6 +3,8 @@ title: Embeddings
 slug: /components-embedding-models
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Embeddings models in Langflow
 
 Embeddings models convert text into numerical vectors. These embeddings capture semantic meaning of the input text, and allow LLMs to understand context.
@@ -343,9 +345,24 @@ This component generates embeddings using [NVIDIA models](https://docs.nvidia.co
 |------|------|-------------|
 | embeddings | Embeddings | NVIDIAEmbeddings instance for generating embeddings |
 
-## Ollama Embeddings
+## Ollama embeddings
 
 This component generates embeddings using [Ollama models](https://ollama.com/).
+
+For a list of Ollama embeddings models, see the [Ollama documentation](https://ollama.com/search?c=embedding).
+
+To use this component in a flow, connect Langflow to your locally running Ollama server and select an embeddings model.
+
+1. In the Ollama component, in the **Ollama Base URL** field, enter the address for your locally running Ollama server.
+This value is set as the `OLLAMA_HOST` environment variable in Ollama. The default base URL is `http://127.0.0.1:11434`.
+2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
+4. Connect the **Ollama** embeddings component to a flow.
+For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma) vector store to generate embeddings for split text.
+
+![Ollama embeddings connected to Chroma DB](/img/component-ollama-embeddings-chromadb.png)
+
+For more information, see the [Ollama documentation](https://ollama.com/).
 
 ### Inputs
 
