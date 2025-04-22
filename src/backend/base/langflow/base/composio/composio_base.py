@@ -38,7 +38,6 @@ class ComposioBaseComponent(Component):
             name="api_key",
             display_name="Composio API Key",
             required=True,
-            info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
             value="COMPOSIO_API_KEY",
         ),
@@ -53,12 +52,11 @@ class ComposioBaseComponent(Component):
             placeholder="Select action",
             options=[],
             value="disabled",
-            info="Select action to pass to the agent",
             helper_text="Please connect before selecting actions.",
             helper_text_metadata={"variant": "destructive"},
             show=True,
+            required=False,
             real_time_refresh=True,
-            required=True,
             limit=1,
         ),
     ]
@@ -93,7 +91,7 @@ class ComposioBaseComponent(Component):
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""
-        if not self._display_to_key_map:
+        if not self._display_to_key_map or not self._key_to_display_map:
             self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
             self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
             self._sanitized_names = {
@@ -287,14 +285,19 @@ class ComposioBaseComponent(Component):
     async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
         toolset = self._build_wrapper()
+        self.set_default_tools()
         return self.configure_tools(toolset)
 
     @property
     def enabled_tools(self):
-        if not hasattr(self, "action") or not self.action:
+        if not hasattr(self, "action") or not self.action or not isinstance(self.action, list):
             return list(self._default_tools)
         return list(self._default_tools.union(action["name"].replace(" ", "-") for action in self.action))
 
     @abstractmethod
     def execute_action(self) -> list[dict]:
         """Execute action and return response as Message."""
+
+    @abstractmethod
+    def set_default_tools(self):
+        """Set the default tools."""
