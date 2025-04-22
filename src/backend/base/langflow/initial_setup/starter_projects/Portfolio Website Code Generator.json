@@ -1714,7 +1714,7 @@
                     "type": "dict"
                   },
                   {
-                    "description": "skills mentioned in the resume.comma seperated.",
+                    "description": "skills mentioned in the resume. Comma separated.",
                     "multiple": "False",
                     "name": "skills",
                     "type": "list"
