@@ -12,7 +12,9 @@ export const OutputParameter = ({
   types,
   selected,
   showNode,
+  showHiddenOutputs,
   isToolMode,
+  hidden,
 }) => {
   const id = useMemo(
     () => ({
@@ -36,6 +38,7 @@ export const OutputParameter = ({
 
   return (
     <NodeOutputField
+      hidden={hidden}
       index={idx}
       lastOutput={lastOutput}
       selected={selected}
@@ -51,6 +54,7 @@ export const OutputParameter = ({
       outputName={output.name}
       colorName={colorNames}
       isToolMode={isToolMode}
+      showHiddenOutputs={showHiddenOutputs}
     />
   );
 };

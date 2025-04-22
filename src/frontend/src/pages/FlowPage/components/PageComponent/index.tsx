@@ -17,7 +17,7 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
@@ -30,7 +30,6 @@ import {
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
-  SelectionMode,
 } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
@@ -571,9 +570,7 @@ export default function Page({
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
-            selectionMode={SelectionMode.Partial}
             deleteKeyCode={[]}
-            multiSelectionKeyCode={["Shift"]}
             fitView={isEmptyFlow.current ? false : true}
             fitViewOptions={{
               minZoom: 0.2,
@@ -582,9 +579,9 @@ export default function Page({
             className="theme-attribution"
             minZoom={0.2}
             maxZoom={3}
-            panOnDrag={[1, 2]}
-            panOnScroll={!view}
-            selectionOnDrag={!view}
+            zoomOnScroll={!view}
+            zoomOnPinch={!view}
+            panOnDrag={!view}
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}

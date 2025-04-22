@@ -658,6 +658,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "sortableList",
   "connect",
   "auth",
+  "query",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
