@@ -56,6 +56,7 @@ For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon
 | Name                   | Type         | Description                                                                         |
 |------------------------|--------------|-------------------------------------------------------------------------------------|
 | model_id               | String       | The ID of the Amazon Bedrock model to use. Options include various models.         |
+| temperature            | Float        | Controls randomness in the output. Range: 0-1. Default: 0.1. Lower values make the model more deterministic. |
 | aws_access_key         | SecretString | AWS Access Key for authentication.                                                   |
 | aws_secret_key         | SecretString | AWS Secret Key for authentication.                                                   |
 | credentials_profile_name | String    | Name of the AWS credentials profile to use (advanced).                              |
