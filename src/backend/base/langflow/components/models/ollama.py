@@ -24,7 +24,7 @@ class ChatOllamaComponent(LCModelComponent):
     JSON_MODELS_KEY = "models"
     JSON_NAME_KEY = "name"
     JSON_CAPABILITIES_KEY = "capabilities"
-    EMBEDDING_CAPABILITY = "embedding"
+    DESIRED_CAPABILITY = "completion"
 
     inputs = [
         MessageTextInput(
@@ -236,12 +236,10 @@ class ChatOllamaComponent(LCModelComponent):
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_non_embedding_models(
-                    self.base_url, tool_model_enabled
-                )
+                build_config["model_name"]["options"] = await self.get_models(self.base_url, tool_model_enabled)
             elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_non_embedding_models(
+                build_config["model_name"]["options"] = await self.get_models(
                     build_config["base_url"].get("value", ""), tool_model_enabled
                 )
             else:
@@ -258,7 +256,7 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    async def get_non_embedding_models(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
+    async def get_models(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
         """Fetches a list of models from the Ollama API that do not have the "embedding" capability.
 
         Args:
@@ -303,7 +301,7 @@ class ChatOllamaComponent(LCModelComponent):
                     capabilities = show_response.json().get(self.JSON_CAPABILITIES_KEY, [])
                     logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
 
-                    if self.EMBEDDING_CAPABILITY not in capabilities:
+                    if self.DESIRED_CAPABILITY in capabilities:
                         model_ids.append(model_name)
 
         except (httpx.RequestError, ValueError) as e:
