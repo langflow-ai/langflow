@@ -175,6 +175,8 @@ In this example, the data is loaded into **Chroma DB**.
 
 ![Loop CSV parser](/img/component-loop-csv.png)
 
+Follow along with this step-by-step video guide for creating this flow and adding agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
+
 ### Inputs
 
 | Name | Type      | Description                                          |
