@@ -395,7 +395,6 @@ async def test_handle_on_chain_end_with_empty_return_values():
 async def test_handle_on_tool_start():
     """Test handle_on_tool_start event."""
     send_message = AsyncMock(side_effect=lambda message: message)
-    tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
@@ -410,13 +409,13 @@ async def test_handle_on_tool_start():
         "start_time": 0,
     }
 
-    updated_message, start_time = await handle_on_tool_start(event, agent_message, tool_blocks_map, send_message, 0.0)
+    updated_message, start_time = await handle_on_tool_start(event, agent_message, send_message, 0.0)
 
     assert len(updated_message.content_blocks) == 1
     assert len(updated_message.content_blocks[0].contents) > 0
     tool_key = f"{event['name']}_{event['run_id']}"
     tool_content = updated_message.content_blocks[0].contents[-1]
-    assert tool_content == tool_blocks_map.get(tool_key)
+    assert tool_content.tool_key == tool_key
     assert isinstance(tool_content, ToolContent)
     assert tool_content.name == "test_tool"
     assert tool_content.tool_input == {"query": "tool input"}
@@ -427,7 +426,6 @@ async def test_handle_on_tool_start():
 async def test_handle_on_tool_end():
     """Test handle_on_tool_end event."""
     send_message = AsyncMock(side_effect=lambda message: message)
-    tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
@@ -441,7 +439,7 @@ async def test_handle_on_tool_end():
         "run_id": "test_run",
         "data": {"input": {"query": "tool input"}},
     }
-    agent_message, _ = await handle_on_tool_start(start_event, agent_message, tool_blocks_map, send_message, 0.0)
+    agent_message, _ = await handle_on_tool_start(start_event, agent_message, send_message, 0.0)
 
     end_event = {
         "event": "on_tool_end",
@@ -451,7 +449,7 @@ async def test_handle_on_tool_end():
         "start_time": 0,
     }
 
-    updated_message, start_time = await handle_on_tool_end(end_event, agent_message, tool_blocks_map, send_message, 0.0)
+    updated_message, start_time = await handle_on_tool_end(end_event, agent_message, send_message, 0.0)
 
     f"{end_event['name']}_{end_event['run_id']}"
     tool_content = updated_message.content_blocks[0].contents[-1]
@@ -464,7 +462,6 @@ async def test_handle_on_tool_end():
 async def test_handle_on_tool_error():
     """Test handle_on_tool_error event."""
     send_message = AsyncMock(side_effect=lambda message: message)
-    tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
@@ -478,7 +475,7 @@ async def test_handle_on_tool_error():
         "run_id": "test_run",
         "data": {"input": {"query": "tool input"}},
     }
-    agent_message, _ = await handle_on_tool_start(start_event, agent_message, tool_blocks_map, send_message, 0.0)
+    agent_message, _ = await handle_on_tool_start(start_event, agent_message, send_message, 0.0)
 
     error_event = {
         "event": "on_tool_error",
@@ -489,7 +486,7 @@ async def test_handle_on_tool_error():
     }
 
     updated_message, start_time = await handle_on_tool_error(
-        error_event, agent_message, tool_blocks_map, send_message, 0.0
+        error_event, agent_message, send_message, 0.0
     )
 
     tool_content = updated_message.content_blocks[0].contents[-1]

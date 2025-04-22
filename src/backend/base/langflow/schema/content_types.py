@@ -81,6 +81,7 @@ class CodeContent(BaseContent):
 class ToolContent(BaseContent):
     """Content type for tool start content."""
 
+    tool_key: str | None = None
     model_config = ConfigDict(populate_by_name=True)
 
     type: Literal["tool_use"] = Field(default="tool_use")
