@@ -2,15 +2,23 @@ import logging
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
+from contextvars import ContextVar
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from mcp import types
+from mcp.server import NotificationOptions, Server
+from mcp.server.sse import SseServerTransport
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+import asyncio
+from anyio import BrokenResourceError
 
 from langflow.api.v1.mcp import (
     handle_mcp_errors,
     server,
+    get_mcp_config,
+    current_user_ctx,
 )
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
@@ -20,6 +28,20 @@ from langflow.services.deps import get_db_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
+
+# Create a context variable to store the current project
+current_project_ctx = ContextVar("current_project_ctx", default=None)
+
+# Create a mapping of project-specific SSE transports
+project_sse_transports = {}
+
+
+def get_project_sse(project_id: UUID) -> SseServerTransport:
+    """Get or create an SSE transport for a specific project."""
+    project_id_str = str(project_id)
+    if project_id_str not in project_sse_transports:
+        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
+    return project_sse_transports[project_id_str]
 
 
 @router.get("/{project_id}", response_model=list[dict])
@@ -84,6 +106,136 @@ async def list_project_tools(
     return tools
 
 
+# Project-specific MCP server instance for handling project-specific tools
+class ProjectMCPServer:
+    def __init__(self, project_id: UUID):
+        self.project_id = project_id
+        self.server = Server(f"langflow-mcp-project-{project_id}")
+
+        # Register handlers that filter by project
+        @self.server.list_tools()
+        @handle_mcp_errors
+        async def handle_list_project_tools():
+            """Handle listing tools for this specific project."""
+            tools = []
+            try:
+                db_service = get_db_service()
+                async with db_service.with_session() as session:
+                    # Get flows with mcp_enabled flag set to True and in this project
+                    flows = (
+                        await session.exec(
+                            select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
+                        )
+                    ).all()
+
+                    for flow in flows:
+                        if flow.user_id is None:
+                            continue
+
+                        # Use action_name if available, otherwise construct from flow name
+                        name = flow.action_name or "_".join(flow.name.lower().split())
+
+                        # Use action_description if available, otherwise use defaults
+                        description = flow.action_description or (
+                            flow.description if flow.description else f"Tool generated from flow: {name}"
+                        )
+
+                        tool = types.Tool(
+                            name=name,
+                            description=description,
+                            inputSchema=json_schema_from_flow(flow),
+                        )
+                        tools.append(tool)
+            except Exception as e:
+                msg = f"Error in listing project tools: {e!s}"
+                logger.exception(msg)
+                raise
+            return tools
+
+        # Delegate other handlers to the main MCP server
+        self.server.list_prompts = server.list_prompts
+        self.server.list_resources = server.list_resources
+        self.server.read_resource = server.read_resource
+        self.server.call_tool = server.call_tool
+
+
+# Cache of project MCP servers
+project_mcp_servers = {}
+
+
+def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
+    """Get or create an MCP server for a specific project."""
+    project_id_str = str(project_id)
+    if project_id_str not in project_mcp_servers:
+        project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
+    return project_mcp_servers[project_id_str]
+
+
+@router.get("/{project_id}/sse", response_class=StreamingResponse)
+async def handle_project_sse(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Handle SSE connections for a specific project."""
+    # Verify project exists and user has access
+    db_service = get_db_service()
+    async with db_service.with_session() as session:
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    # Get project-specific SSE transport and MCP server
+    sse = get_project_sse(project_id)
+    project_server = get_project_mcp_server(project_id)
+
+    # Set context variables
+    user_token = current_user_ctx.set(current_user)
+    project_token = current_project_ctx.set(project_id)
+
+    try:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+            try:
+                logger.debug(f"Starting SSE connection for project {project_id}")
+
+                notification_options = NotificationOptions(
+                    prompts_changed=True, resources_changed=True, tools_changed=True
+                )
+                init_options = project_server.server.create_initialization_options(notification_options)
+
+                try:
+                    await project_server.server.run(streams[0], streams[1], init_options)
+                except Exception as exc:
+                    logger.exception(f"Error in project MCP: {exc}")
+            except BrokenResourceError:
+                logger.info("Client disconnected from project SSE connection")
+            except asyncio.CancelledError:
+                logger.info("Project SSE connection was cancelled")
+                raise
+            except Exception as e:
+                logger.exception(f"Error in project MCP: {e}")
+                raise
+    finally:
+        current_user_ctx.reset(user_token)
+        current_project_ctx.reset(project_token)
+
+    return StreamingResponse(content=[], media_type="text/event-stream")
+
+
+@router.post("/{project_id}/")
+async def handle_project_messages(project_id: UUID, request: Request):
+    """Handle POST messages for a project-specific MCP server."""
+    sse = get_project_sse(project_id)
+    try:
+        await sse.handle_post_message(request.scope, request.receive, request._send)
+    except BrokenResourceError as e:
+        logger.info(f"Project MCP Server disconnected for project {project_id}")
+        raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
+
+
 # Replace the existing list_tools handler in the MCP server
 @server.list_tools()
 @handle_mcp_errors
@@ -119,7 +271,6 @@ async def handle_list_tools_with_projects():
         logger.exception(msg)
         raise
     return tools
-
 
 
 @router.patch("/{project_id}/mcp", status_code=200)
