@@ -6,7 +6,7 @@ from httpx import AsyncClient
 @pytest.fixture
 def basic_case():
     return {
-        "name": "New Folder",
+        "name": "New Project",
         "description": "",
         "flows_list": [],
         "components_list": [],
