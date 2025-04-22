@@ -55,8 +55,9 @@ def update_input_types(build_config: dotdict) -> dotdict:
 
 def set_field_display(build_config: dotdict, field: str, is_visible: bool | None = None) -> dotdict:
     """Set whether a field should be displayed in the UI."""
-    if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
-        build_config[field]["show"] = is_visible
+    field_config = build_config.get(field)
+    if field_config and isinstance(field_config, dict):
+        field_config["show"] = is_visible
     return build_config
 
 
