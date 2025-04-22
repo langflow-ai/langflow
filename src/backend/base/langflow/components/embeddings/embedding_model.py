@@ -58,7 +58,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         IntInput(
             name="dimensions",
             display_name="Dimensions",
-            info="The number of dimensions the resulting output embeddings should have. Only supported by certain models.",  # noqa: E501
+            info="The number of dimensions the resulting output embeddings should have.",
             advanced=True,
         ),
         IntInput(name="chunk_size", display_name="Chunk Size", advanced=True, value=1000),
