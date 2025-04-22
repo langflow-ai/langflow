@@ -71,7 +71,8 @@ class LangFlowRunner:
     @staticmethod
     async def create_graph_from_flow(session_id: str, flow_dict: dict):
         graph = await aload_flow_from_json(flow=flow_dict, disable_logs=False)
-        graph.flow_id = session_id
+        graph.flow_id = flow_dict["id"]
+        graph.session_id = session_id
         return graph
 
     @staticmethod
