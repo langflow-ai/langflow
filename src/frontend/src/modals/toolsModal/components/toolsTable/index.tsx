@@ -165,19 +165,6 @@ export default function ToolsTable({
             columnDefs={columnDefs}
             rowData={data}
             quickFilterText={searchQuery}
-            stopEditingWhenCellsLoseFocus={true}
-            editable={[
-              {
-                field: "name",
-                editableCell: true,
-                onUpdate: () => {},
-              },
-              {
-                field: "description",
-                editableCell: true,
-                onUpdate: () => {},
-              },
-            ]}
             ref={agGrid}
             rowSelection="multiple"
             suppressRowClickSelection={true}
