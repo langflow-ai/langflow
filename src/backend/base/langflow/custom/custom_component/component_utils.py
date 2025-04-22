@@ -1,6 +1,6 @@
 from typing import Any
 
-from langflow.utils.util import dotdict
+from langflow.schema.dotdict import dotdict
 
 DEFAULT_FIELDS = ["code", "_type"]
 
@@ -112,6 +112,21 @@ def merge_build_configs(base_config: dotdict, override_config: dotdict) -> dotdi
     return result
 
 
-def set_current_fields(build_config: dotdict, action_fields: dict[str, list[str]], selected_action: str, default_fields: list[str] = DEFAULT_FIELDS) -> dotdict:
+def set_current_fields(
+    build_config: dotdict,
+    action_fields: dict[str, list[str]],
+    selected_action: str,
+    default_fields: list[str] = DEFAULT_FIELDS,
+) -> dotdict:
     """Set the current fields for a selected action."""
-    
+    # action_fields = {action1: [field1, field2], action2: [field3, field4]}
+    # we need to show asction of one field and disable the rest
+    if selected_action in action_fields:
+        for field in action_fields[selected_action]:
+            set_field_display(build_config=build_config, field=field, is_visible=True)
+        for field in action_fields[selected_action]:
+            set_field_display(build_config=build_config, field=field, is_visible=False)
+    if default_fields is not None:
+        for field in default_fields:
+            set_field_display(build_config=build_config, field=field, is_visible=True)
+    return build_config
