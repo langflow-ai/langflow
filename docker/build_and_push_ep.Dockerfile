@@ -73,6 +73,9 @@ RUN apt-get update \
         git \
         # Add PostgreSQL client libraries
         libpq5 \
+        gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
