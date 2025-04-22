@@ -1,4 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import logoDarkPng from "@/assets/logo_dark.png";
+import logoLightPng from "@/assets/logo_light.png";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { Button } from "@/components/ui/button";
 import { DotBackgroundDemo } from "@/components/ui/dot-background";
@@ -68,28 +70,25 @@ export const EmptyPageCommunity = ({
         <div className="m-0 h-full w-full bg-background p-0">
           <div className="z-50 flex h-full w-full flex-col items-center justify-center gap-6">
             <div className="z-50 flex flex-col items-center gap-3">
-              {/* <BackgroundGradient
-                className="flex h-20 w-20 items-center justify-center rounded-lg border-[1px] bg-background dark:bg-background"
-                borderColor="#C661B8"
-                borderRadius="10px"
-                animate={true}
-              > */}
-
-              <EnhancedBeamEffect
-                className="h-20 w-20 rounded-lg border-[1px] bg-background shadow-[0_0_10px_rgba(198,97,184,0.3)] transition-all duration-300 dark:bg-background"
-                primaryColor="#C661B8"
-                secondaryColor="#C661B8"
-                size={170}
-              >
-                <LangflowLogo
-                  data-testid="empty_page_logo"
-                  className="h-8 w-8"
+              <div className="z-50 dark:hidden">
+                <img
+                  src={logoLightPng}
+                  alt="Langflow Logo Light"
+                  data-testid="empty_page_logo_light"
+                  className=""
                 />
-              </EnhancedBeamEffect>
-              {/* </BackgroundGradient> */}
+              </div>
+              <div className="z-50 hidden dark:block">
+                <img
+                  src={logoDarkPng}
+                  alt="Langflow Logo Dark"
+                  data-testid="empty_page_logo_dark"
+                  className=""
+                />
+              </div>
               <span
                 data-testid="empty_page_title"
-                className="z-50 mt-4 text-2xl font-semibold text-foreground"
+                className="z-50 text-2xl font-semibold text-foreground"
               >
                 {EMPTY_PAGE_TITLE}
               </span>
@@ -144,10 +143,10 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_discord_button"
               >
-                <div className="hover:border-discord-color relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_10px_rgba(88,101,242,0.25)]">
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-discord-color hover:shadow-[0_4px_10px_rgba(88,101,242,0.25)]">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
-                      <FaDiscord className="text-discord-color h-6 w-6" />
+                      <FaDiscord className="h-6 w-6 text-discord-color" />
                       <div>
                         <span className="font-semibold">Discord</span>
                         <span className="ml-2 font-mono text-muted-foreground">
