@@ -485,9 +485,7 @@ async def test_handle_on_tool_error():
         "start_time": 0,
     }
 
-    updated_message, start_time = await handle_on_tool_error(
-        error_event, agent_message, send_message, 0.0
-    )
+    updated_message, start_time = await handle_on_tool_error(error_event, agent_message, send_message, 0.0)
 
     tool_content = updated_message.content_blocks[0].contents[-1]
     assert tool_content.name == "test_tool"

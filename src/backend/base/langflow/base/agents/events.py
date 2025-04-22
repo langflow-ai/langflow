@@ -163,8 +163,11 @@ async def handle_on_tool_end(
 
     if not (agent_message.content_blocks and agent_message.content_blocks[0].contents):
         return agent_message, start_time
-    tool_content_list = [item for item in agent_message.content_blocks[0].contents if
-                         hasattr(item, 'tool_key') and item.tool_key == tool_key]
+    tool_content_list = [
+        item
+        for item in agent_message.content_blocks[0].contents
+        if hasattr(item, "tool_key") and item.tool_key == tool_key
+    ]
     tool_content = tool_content_list[0] if len(tool_content_list) > 0 else None
 
     if tool_content and isinstance(tool_content, ToolContent):
@@ -191,8 +194,11 @@ async def handle_on_tool_error(
 
     if not (agent_message.content_blocks and agent_message.content_blocks[0].contents):
         return agent_message, start_time
-    tool_content_list = [item for item in agent_message.content_blocks[0].contents if
-                         hasattr(item, 'tool_key') and item.tool_key == tool_key]
+    tool_content_list = [
+        item
+        for item in agent_message.content_blocks[0].contents
+        if hasattr(item, "tool_key") and item.tool_key == tool_key
+    ]
     tool_content = tool_content_list[0] if len(tool_content_list) > 0 else None
 
     if tool_content and isinstance(tool_content, ToolContent):
@@ -276,9 +282,7 @@ async def process_agent_events(
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-                agent_message, start_time = await tool_handler(
-                    event, agent_message, send_message_method, start_time
-                )
+                agent_message, start_time = await tool_handler(event, agent_message, send_message_method, start_time)
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
                 agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
