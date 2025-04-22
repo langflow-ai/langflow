@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.3.2"
+    "version": "1.3.4"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -104,7 +104,7 @@
           "Chat"
         ],
         "summary": "Build Flow",
-        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    settings_service: Settings service\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
         "operationId": "build_flow_api_v1_build__flow_id__flow_post",
         "security": [
           {
@@ -185,6 +185,15 @@
               ],
               "title": "Flow Name"
             }
+          },
+          {
+            "name": "event_delivery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "polling"
+            }
           }
         ],
         "requestBody": {
@@ -237,13 +246,12 @@
             }
           },
           {
-            "name": "stream",
+            "name": "event_delivery",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Stream"
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "streaming"
             }
           }
         ],
@@ -439,7 +447,7 @@
           "Chat"
         ],
         "summary": "Build Public Tmp",
-        "description": "Build a public flow without requiring authentication.\n\nThis endpoint is specifically for public flows that don't require authentication.\nIt uses a client_id cookie to create a deterministic flow ID for tracking purposes.\n\nThe endpoint:\n1. Verifies the requested flow is marked as public in the database\n2. Creates a deterministic UUID based on client_id and flow_id\n3. Uses the flow owner's permissions to build the flow\n\nRequirements:\n- The flow must be marked as PUBLIC in the database\n- The request must include a client_id cookie\n\nArgs:\n    flow_id: UUID of the public flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    flow_name: Optional name for the flow\n    request: FastAPI request object (needed for cookie access)\n    queue_service: Queue service for job management\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build a public flow without requiring authentication.\n\nThis endpoint is specifically for public flows that don't require authentication.\nIt uses a client_id cookie to create a deterministic flow ID for tracking purposes.\n\nThe endpoint:\n1. Verifies the requested flow is marked as public in the database\n2. Creates a deterministic UUID based on client_id and flow_id\n3. Uses the flow owner's permissions to build the flow\n\nRequirements:\n- The flow must be marked as PUBLIC in the database\n- The request must include a client_id cookie\n\nArgs:\n    flow_id: UUID of the public flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    flow_name: Optional name for the flow\n    request: FastAPI request object (needed for cookie access)\n    queue_service: Queue service for job management\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
         "operationId": "build_public_tmp_api_v1_build_public_tmp__flow_id__flow_post",
         "parameters": [
           {
@@ -515,6 +523,15 @@
                 }
               ],
               "title": "Flow Name"
+            }
+          },
+          {
+            "name": "event_delivery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "polling"
             }
           }
         ],
@@ -4615,6 +4632,123 @@
         }
       }
     },
+    "/api/v2/files/": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "List Files",
+        "description": "List the files available to the current user.",
+        "operationId": "list_files_api_v2_files__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
+                  },
+                  "type": "array",
+                  "title": "Response List Files Api V2 Files  Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Upload User File",
+        "description": "Upload a file for the current user and track it in the database.",
+        "operationId": "upload_user_file_api_v2_files__post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_user_file_api_v2_files__post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Delete All Files",
+        "description": "Delete all files for the current user.",
+        "operationId": "delete_all_files_api_v2_files__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
     "/api/v2/files": {
       "get": {
         "tags": [
@@ -5546,6 +5680,20 @@
         ],
         "title": "Body_upload_file_api_v1_folders_upload__post"
       },
+      "Body_upload_user_file_api_v2_files__post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_user_file_api_v2_files__post"
+      },
       "Body_upload_user_file_api_v2_files_post": {
         "properties": {
           "file": {
@@ -6010,6 +6158,15 @@
           "stackTrace"
         ],
         "title": "ErrorLog"
+      },
+      "EventDeliveryType": {
+        "type": "string",
+        "enum": [
+          "streaming",
+          "direct",
+          "polling"
+        ],
+        "title": "EventDeliveryType"
       },
       "FeatureFlags": {
         "properties": {
