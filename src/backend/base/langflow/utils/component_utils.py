@@ -120,7 +120,7 @@ def set_current_fields(
 ) -> dotdict:
     """Set the current fields for a selected action."""
     # action_fields = {action1: [field1, field2], action2: [field3, field4]}
-    # we need to show asction of one field and disable the rest
+    # we need to show action of one field and disable the rest
     if selected_action in action_fields:
         for field in action_fields[selected_action]:
             set_field_display(build_config=build_config, field=field, is_visible=True)
