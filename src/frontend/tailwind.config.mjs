@@ -310,6 +310,7 @@ const config = {
         "zinc-foreground": "hsl(var(--zinc-foreground))",
         "red-foreground": "hsl(var(--red-foreground))",
         "indigo-foreground": "hsl(var(--indigo-foreground))",
+        "discord-color": "var(--discord-color)",
       },
       borderRadius: {
         lg: `var(--radius)`,

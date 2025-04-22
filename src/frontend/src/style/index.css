@@ -69,6 +69,7 @@
     --round-btn-shadow: #00000063;
     --ice: #31a3cc;
     --selected: #2196f3;
+    --discord-color: #5765f2;
 
     --error-background: #fef2f2;
     --error-foreground: #991b1b;
@@ -345,6 +346,8 @@
     --hover: #1a202e;
     --disabled-run: #6366f1;
     --selected: #0369a1;
+    --discord-color: #5765f2;
+
 
     --filter-foreground: #eef2ff;
     --filter-background: #4e46e599;

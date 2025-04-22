@@ -9,6 +9,7 @@ import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { formatNumber } from "@/utils/utils";
+import { ExternalLink } from "lucide-react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { HiArrowRight } from "react-icons/hi";
 import { useShallow } from "zustand/react/shallow";
@@ -26,10 +27,8 @@ const EMPTY_PAGE_DRAG_AND_DROP_TEXT =
 const EMPTY_PAGE_FOLDER_DESCRIPTION = "Empty folder";
 const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = <>+&nbsp; Create first flow</>;
 
-const ARROW_DISCORD_ICON_CLASS =
-  "absolute right-4 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
-const ARROW_GITHUB_ICON_CLASS =
-  "absolute right-4 top-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
+const EXTERNAL_LINK_ICON_CLASS =
+  "absolute right-6 top-[35px] h-4 w-4 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 
 export const EmptyPageCommunity = ({
   setOpenModal,
@@ -77,9 +76,10 @@ export const EmptyPageCommunity = ({
               > */}
 
               <EnhancedBeamEffect
-                className="h-20 w-20 rounded-lg border-[1px] bg-background shadow-[0_0_10px_rgba(198,97,184,0.3)] transition-all duration-300 hover:shadow-[0_0_20px_rgba(198,97,184,0.7)] hover:brightness-110 dark:bg-background"
+                className="h-20 w-20 rounded-lg border-[1px] bg-background shadow-[0_0_10px_rgba(198,97,184,0.3)] transition-all duration-300 dark:bg-background"
                 primaryColor="#C661B8"
                 secondaryColor="#C661B8"
+                size={170}
               >
                 <LangflowLogo
                   data-testid="empty_page_logo"
@@ -104,7 +104,7 @@ export const EmptyPageCommunity = ({
               </span>
             </div>
 
-            <div className="flex w-full max-w-[480px] flex-col gap-8">
+            <div className="flex w-full max-w-[510px] flex-col gap-8">
               <Button
                 unstyled
                 className="group h-[84px]"
@@ -114,7 +114,7 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_github_button"
               >
-                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4">
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent-pink-foreground hover:shadow-[0_4px_10px_rgba(198,97,184,0.25)]">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
                       <FaGithub className="h-6 w-6" />
@@ -131,7 +131,7 @@ export const EmptyPageCommunity = ({
                       </span>
                     </div>
                   </div>
-                  <HiArrowRight className={ARROW_GITHUB_ICON_CLASS} />
+                  <ExternalLink className={EXTERNAL_LINK_ICON_CLASS} />
                 </div>
               </Button>
 
@@ -144,10 +144,10 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_discord_button"
               >
-                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4">
+                <div className="hover:border-discord-color relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_10px_rgba(88,101,242,0.25)]">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
-                      <FaDiscord className="h-6 w-6 text-[#5765F2]" />
+                      <FaDiscord className="text-discord-color h-6 w-6" />
                       <div>
                         <span className="font-semibold">Discord</span>
                         <span className="ml-2 font-mono text-muted-foreground">
@@ -161,13 +161,13 @@ export const EmptyPageCommunity = ({
                       </span>
                     </div>
                   </div>
-                  <HiArrowRight className={ARROW_DISCORD_ICON_CLASS} />
+                  <ExternalLink className={EXTERNAL_LINK_ICON_CLASS} />
                 </div>
               </Button>
 
               <Button
                 variant="default"
-                className="z-10 m-auto h-10 w-full max-w-[155px] rounded-lg font-bold"
+                className="z-10 m-auto h-10 w-full max-w-[155px] rounded-lg font-bold transition-all duration-300"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
