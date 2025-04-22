@@ -8,7 +8,6 @@ from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
 
-logger = logging.getLogger(__name__)
 
 
 class SQLComponent(ComponentWithCache):
