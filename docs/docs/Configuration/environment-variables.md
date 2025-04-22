@@ -122,7 +122,7 @@ On startup, Langflow imports the environment variables from your `.env` file, as
 ## Precedence {#precedence}
 
 Environment variables [defined in the .env file](#configure-variables-env-file) take precedence over those [set in your terminal](#configure-variables-terminal).
-That means, if you happen to set the same environment variable in both your terminal and your `.env` file, Langflow adopts the value from the the `.env` file.
+That means, if you happen to set the same environment variable in both your terminal and your `.env` file, Langflow adopts the value from the `.env` file.
 
 :::info[CLI precedence]
 [Langflow CLI options](./configuration-cli.md) override the value of corresponding environment variables defined in the `.env` file as well as any environment variables set in your terminal.
