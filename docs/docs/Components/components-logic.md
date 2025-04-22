@@ -218,7 +218,7 @@ Your flow should now look like this:
 
 ## Legacy components
 
-Legacy components are no longer in active development but are backward compatible.
+Legacy components are available to use but no longer supported.
 
 ### Data Conditional Router
 
