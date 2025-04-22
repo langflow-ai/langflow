@@ -88,14 +88,14 @@ export const EmptyPageCommunity = ({
               </div>
               <span
                 data-testid="empty_page_title"
-                className="z-50 text-2xl font-semibold text-foreground"
+                className="z-50 text-center text-2xl font-semibold text-foreground"
               >
                 {EMPTY_PAGE_TITLE}
               </span>
 
               <span
                 data-testid="empty_page_description"
-                className="z-50 text-[14px] text-secondary-foreground"
+                className="z-50 text-center text-[14px] text-secondary-foreground"
               >
                 {folders?.length > 1
                   ? EMPTY_PAGE_FOLDER_DESCRIPTION
@@ -103,10 +103,10 @@ export const EmptyPageCommunity = ({
               </span>
             </div>
 
-            <div className="flex w-full max-w-[510px] flex-col gap-8">
+            <div className="flex w-full max-w-[510px] flex-col gap-12 sm:gap-8">
               <Button
                 unstyled
-                className="group h-[84px]"
+                className="group mx-3 h-[84px] sm:mx-0"
                 onClick={() => {
                   handleUserTrack("github_starred")();
                   window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
@@ -136,7 +136,7 @@ export const EmptyPageCommunity = ({
 
               <Button
                 unstyled
-                className="group h-[84px]"
+                className="group mx-3 h-[84px] sm:mx-0"
                 onClick={() => {
                   handleUserTrack("discord_joined")();
                   window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
