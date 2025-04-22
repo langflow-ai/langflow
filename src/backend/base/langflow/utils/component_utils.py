@@ -22,11 +22,18 @@ def add_fields(build_config: dotdict, fields: dict[str, Any]) -> dotdict:
 
 def delete_fields(build_config: dotdict, fields: dict[str, Any] | list[str]) -> dotdict:
     """Delete specified fields from build_config."""
+    # Convert fields to list of keys if it is a dictionary
     if isinstance(fields, dict):
-        fields = list(fields.keys())
+        fields = fields.keys()
 
-    for field in fields:
-        build_config.pop(field, None)
+    # Convert to a list just once if fields comes from a dictionary
+    fields_list = list(fields)
+
+    # Optimize the loop by reducing repeated function calls
+    pop = build_config.pop
+    for field in fields_list:
+        pop(field, None)
+
     return build_config
 
 
