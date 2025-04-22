@@ -1,13 +1,11 @@
-from langflow.logging import logger
-
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_community.utilities import SQLDatabase
 
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import MessageTextInput, Output
+from langflow.logging import logger
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
-
 
 
 class SQLComponent(ComponentWithCache):
