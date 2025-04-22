@@ -20,6 +20,7 @@ class DataFrameOperationsComponent(Component):
         "Sort",
         "Tail",
         "Convert to Data List",
+        "Base64",
     ]
 
     inputs = [
@@ -184,6 +185,8 @@ class DataFrameOperationsComponent(Component):
             return self.replace_values(dataframe_copy)
         if operation == "Convert to Data List":
             return DataFrame(dataframe_copy)
+        if operation == "Base64":
+            return self.convert_dataframe_to_base64(dataframe_copy)
 
         raise ValueError(f"Unsupported operation: {operation}")
 
@@ -230,3 +233,22 @@ class DataFrameOperationsComponent(Component):
             self.status = f"Error converting to Data: {e!s}"
             self.log(self.status)
             return [Data(data={"error": str(e)})]
+
+    def convert_dataframe_to_base64(self, df: DataFrame) -> DataFrame:
+        try:
+            df = pd.DataFrame(df).copy()
+            fig, ax = plt.subplots(figsize=(len(df.columns) * 1.2, len(df) * 0.5))
+            ax.axis("tight")
+            ax.axis("off")
+            ax.table(cellText=df.values, colLabels=df.columns, loc='center')
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
+            plt.close(fig)
+            buf.seek(0)
+            base64_image = base64.b64encode(buf.read()).decode('utf-8')
+            return DataFrame(pd.DataFrame({"base64_image": [base64_image]}))
+        except Exception as e:
+            self.status = f"Error: {str(e)}"
+            return DataFrame(pd.DataFrame({"error": [str(e)]}))
+            
+            
