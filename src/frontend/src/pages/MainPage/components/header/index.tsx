@@ -3,6 +3,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  DEFAULT_FOLDER,
+  DEFAULT_FOLDER_DEPRECATED,
+} from "@/constants/constants";
 import { ENABLE_MCP } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
@@ -83,7 +87,7 @@ const HeaderComponent = ({
             </SidebarTrigger>
           </div>
         </div>
-        {folderName}
+        {folderName === DEFAULT_FOLDER_DEPRECATED ? DEFAULT_FOLDER : folderName}
       </div>
       {!isEmptyFolder && (
         <>

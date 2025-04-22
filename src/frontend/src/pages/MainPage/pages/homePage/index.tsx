@@ -154,7 +154,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     )
                   ) : flowType === "flows" ? (
                     <div className="pt-2 text-center text-sm text-secondary-foreground">
-                      No flows in this folder.{" "}
+                      No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
                         className="cursor-pointer underline"

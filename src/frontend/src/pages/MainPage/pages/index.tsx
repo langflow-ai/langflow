@@ -39,14 +39,14 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: "Folder deleted successfully.",
+            title: "Project deleted successfully.",
           });
           navigate("/all");
         },
         onError: (err) => {
           console.error(err);
           setErrorData({
-            title: "Error deleting folder.",
+            title: "Error deleting project.",
           });
         },
       },

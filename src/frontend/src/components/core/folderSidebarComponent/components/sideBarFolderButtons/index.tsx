@@ -11,6 +11,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  DEFAULT_FOLDER,
+  DEFAULT_FOLDER_DEPRECATED,
+} from "@/constants/constants";
+import {
   usePatchFolders,
   usePostFolders,
   usePostUploadFolders,
@@ -138,13 +142,13 @@ const SideBarFoldersButtonsComponent = ({
               {
                 onSuccess: () => {
                   setSuccessData({
-                    title: "Folder uploaded successfully.",
+                    title: "Project uploaded successfully.",
                   });
                 },
                 onError: (err) => {
                   console.log(err);
                   setErrorData({
-                    title: `Error on uploading your folder, try dragging it into an existing folder.`,
+                    title: `Error on uploading your project, try dragging it into an existing project.`,
                     list: [err["response"]["data"]["message"]],
                   });
                 },
@@ -184,11 +188,11 @@ const SideBarFoldersButtonsComponent = ({
           link.remove();
           window.URL.revokeObjectURL(url);
 
-          track("Folder Exported", { folderId: id });
+          track("Project Exported", { folderId: id });
         },
-        onError: () => {
+        onError: (e) => {
           setErrorData({
-            title: `An error occurred while downloading folder.`,
+            title: `An error occurred while downloading your project.`,
           });
         },
       },
@@ -199,14 +203,14 @@ const SideBarFoldersButtonsComponent = ({
     mutateAddFolder(
       {
         data: {
-          name: "New Folder",
+          name: "New Project",
           parent_id: null,
           description: "",
         },
       },
       {
         onSuccess: (folder) => {
-          track("Create New Folder");
+          track("Create New Project");
           handleChangeFolder!(folder.id);
         },
       },
@@ -284,7 +288,7 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDoubleClick = (event, item) => {
-    if (item.name === "My Projects") {
+    if (item.name === DEFAULT_FOLDER_DEPRECATED) {
       return;
     }
 
@@ -346,7 +350,7 @@ const SideBarFoldersButtonsComponent = ({
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
-      data-testid="folder-sidebar"
+      data-testid="project-sidebar"
     >
       <SidebarHeader className="p-4">
         <HeaderButtons
@@ -410,7 +414,9 @@ const SideBarFoldersButtonsComponent = ({
                                 />
                               ) : (
                                 <span className="block w-0 grow truncate text-[13px] opacity-100">
-                                  {item.name}
+                                  {item.name === DEFAULT_FOLDER_DEPRECATED
+                                    ? DEFAULT_FOLDER
+                                    : item.name}
                                 </span>
                               )}
                             </div>
