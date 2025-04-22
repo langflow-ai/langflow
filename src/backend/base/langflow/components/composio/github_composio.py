@@ -144,7 +144,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_CREATE_AN_ISSUE_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -199,7 +199,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_LIST_PULL_REQUESTS_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -266,7 +266,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_CREATE_A_PULL_REQUEST_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -334,7 +334,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_LIST_REPOSITORY_ISSUES_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -430,7 +430,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_LIST_BRANCHES_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -466,7 +466,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive.",
             show=False,
             required=True,
         ),
@@ -480,7 +480,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_GET_A_PULL_REQUEST_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -501,7 +501,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="GITHUB_LIST_COMMITS_repo",
             display_name="Repo",
-            info="The name of the repository without the `.git` extension. The name is not case sensitive. ",
+            info="The name of the repository. The name is not case sensitive. ",
             show=False,
             required=True,
         ),
@@ -596,7 +596,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
                             "GITHUB_LIST_REPOSITORY_ISSUES_labels",
                         ]
                         and value
-                    ):  # noqa: E501
+                    ):
                         value = [item.strip() for item in value.split(",")]
 
                     if field in self._bool_variables:
