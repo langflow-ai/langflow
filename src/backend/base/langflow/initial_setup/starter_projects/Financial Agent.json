@@ -2291,9 +2291,7 @@
                 "display_name": "Sambanova API Key",
                 "dynamic": false,
                 "info": "The Sambanova API Key to use for the Sambanova model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
