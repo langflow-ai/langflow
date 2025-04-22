@@ -169,8 +169,7 @@ class TestMaritalkModelComponent(ComponentTestBaseWithClient):
         """Test build_model method."""
         # Create component with all parameters
         full_kwargs = {
-            "model_name": "sabia-3",
-            "api_key": "test-key",
+            **default_kwargs,
             "temperature": 0.7,
             "max_tokens": 512,
             "system_message": "You are a helpful assistant.",
