@@ -144,10 +144,10 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_discord_button"
               >
-                <div className="hover:border-discord-color relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_10px_rgba(88,101,242,0.25)]">
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-discord-color hover:shadow-[0_4px_10px_rgba(88,101,242,0.25)]">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
-                      <FaDiscord className="text-discord-color h-6 w-6" />
+                      <FaDiscord className="h-6 w-6 text-discord-color" />
                       <div>
                         <span className="font-semibold">Discord</span>
                         <span className="ml-2 font-mono text-muted-foreground">
