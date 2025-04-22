@@ -774,6 +774,8 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
             ):
                 msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
+            if action_key == "GOOGLECALENDAR_GET_CURRENT_DATE_TIME":
+                return result_data
             return result_data[next(iter(result_data))]
         except Exception as e:
             logger.error(f"Error executing action: {e}")
