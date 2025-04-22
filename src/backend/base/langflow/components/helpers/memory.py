@@ -88,8 +88,10 @@ class MemoryComponent(Component):
             memory_name = type(self.memory).__name__
             err_msg = f"External Memory object ({memory_name}) must have 'aget_messages' method."
             raise AttributeError(err_msg)
-
-        if self.memory:
+        # Check if n_messages is None or 0
+        if n_messages == 0:
+            stored = []
+        elif self.memory:
             # override session_id
             self.memory.session_id = session_id
 
