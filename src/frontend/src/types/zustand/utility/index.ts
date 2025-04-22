@@ -1,3 +1,4 @@
+import { EventDeliveryType } from "@/constants/enums";
 import { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
@@ -25,4 +26,6 @@ export type UtilityStoreType = {
   setCurrentSessionId: (sessionId: string) => void;
   setClientId: (clientId: string) => void;
   clientId: string;
+  eventDelivery: EventDeliveryType;
+  setEventDelivery: (eventDelivery: EventDeliveryType) => void;
 };

@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
@@ -33,7 +33,7 @@ const SortableListItem = memo(
     <li
       className={cn(
         "inline-flex h-12 w-full items-center gap-2 text-sm font-medium text-gray-800",
-        limit === 1 ? "h-10 rounded-md bg-muted" : "group cursor-grab",
+        limit === 1 ? "h-6 rounded-md bg-muted" : "group cursor-grab",
       )}
     >
       {limit !== 1 && (
@@ -52,8 +52,8 @@ const SortableListItem = memo(
 
         <span
           className={cn(
-            "truncate text-primary",
-            limit === 1 ? "max-w-56 pl-3" : "max-w-48",
+            "truncate text-muted-foreground",
+            limit === 1 ? "max-w-56 pl-2" : "max-w-48",
           )}
         >
           {data.name}
@@ -63,9 +63,9 @@ const SortableListItem = memo(
         size="icon"
         variant={limit !== 1 ? "outline" : "ghost"}
         className={cn(
-          "ml-auto h-7 w-7 opacity-0 transition-opacity duration-200",
+          "ml-auto h-6 w-6 opacity-0 transition-opacity duration-200",
           limit === 1
-            ? "group pr-3 opacity-100"
+            ? "group pr-1 opacity-100"
             : "hover:border hover:border-destructive hover:bg-transparent hover:opacity-100",
         )}
         onClick={onRemove}
@@ -118,8 +118,23 @@ const SortableListComponent = ({
   }, []);
 
   const handleOpenListSelectionDialog = useCallback(() => {
-    setOpen(true);
-  }, []);
+    if (helperText) {
+      setShowHelperText(true);
+    } else {
+      setOpen(true);
+    }
+  }, [helperText]);
+
+  const [showHelperText, setShowHelperText] = useState(false);
+
+  useEffect(() => {
+    if (!helperText) {
+      setShowHelperText(false);
+    }
+    if (helperText && open) {
+      setOpen(false);
+    }
+  }, [helperText, open]);
 
   return (
     <div className="flex w-full flex-col">
@@ -131,6 +146,7 @@ const SortableListComponent = ({
             role="combobox"
             onClick={handleOpenListSelectionDialog}
             className="dropdown-component-outline input-edit-node w-full py-2"
+            data-testid="button_open_list_selection"
           >
             <div className={cn("flex items-center text-sm font-semibold")}>
               {placeholder}
@@ -159,7 +175,7 @@ const SortableListComponent = ({
         </div>
       )}
 
-      {helperText && (
+      {helperText && showHelperText && (
         <div className="pt-2">
           <HelperTextComponent
             helperText={helperText}
@@ -176,6 +192,7 @@ const SortableListComponent = ({
         selectedList={listData}
         options={options}
         limit={limit}
+        {...baseInputProps}
       />
     </div>
   );

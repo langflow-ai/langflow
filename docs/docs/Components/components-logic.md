@@ -22,7 +22,7 @@ This is represented in Langflow by connecting the Parse Data component's **Data 
 ![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
 
 The output will look similar to this:
-```plain
+```text
 Document Summary
 Total Pages Processed
 Total Pages: 2
@@ -160,6 +160,22 @@ This component listens for a notification and retrieves its associated state.
 ## Loop
 
 This component iterates over a list of [Data](/concepts-objects#data-object) objects, outputting one item at a time and aggregating results from loop inputs.
+
+In this example, the **Loop** component iterates over a CSV file through the **Item** port until there are no rows left to process. Then, the **Loop** component performs the actions connected to the **Done** port, which in this case is loading the structured data into **Chroma DB**.
+
+Think of it this way: the **Item** port forms the "main" loop that repeats until a "complete" condition is reached.
+
+1. The **Loop** component accepts **Data** from the **Load CSV** component, and outputs the data from the **Item** port.
+2. Each CSV row is converted to a **Message** and processed into structured data with the **Structured Output** component.
+The dotted line connected from the **Structured Output** component's **Looping** port tells you where the loop begins again.
+3. The **Loop** component repeatedly extracts rows by **Text Key** until there are no more rows to extract.
+
+Once all items are processed, the action connected to the **Done** port is performed.
+In this example, the data is loaded into **Chroma DB**.
+
+![Loop CSV parser](/img/component-loop-csv.png)
+
+Follow along with this step-by-step video guide for creating this flow and adding agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 
 ### Inputs
 
