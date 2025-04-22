@@ -1148,7 +1148,7 @@
             "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Load and retrive data from specified URLs.",
+            "description": "Load and retrieve data from specified URLs.",
             "display_name": "URL",
             "documentation": "",
             "edited": false,
