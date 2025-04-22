@@ -72,9 +72,9 @@ export default function CardsWrapComponent({
       onDragLeave={dragLeave}
       onDrop={onDrop}
       className={cn(
-        "z-10 h-full w-full",
+        "h-full w-full",
         isDragging
-          ? "mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
+          ? "z-10 mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
           : "",
       )}
     >
