@@ -57,6 +57,10 @@ export default function ToolsTable({
 
   const { setOpen: setSidebarOpen } = useSidebar();
 
+  const getRowId = useMemo(() => {
+    return (params: any) => params.data.display_name ?? params.data.name;
+  }, []);
+
   useEffect(() => {
     const initialData = cloneDeep(rows);
     setData(initialData);
@@ -69,7 +73,13 @@ export default function ToolsTable({
     const filter = initialData.filter((row) => row.status === true);
     if (agGrid.current) {
       agGrid.current?.api?.forEachNode((node) => {
-        if (filter.some((row) => row.name === node.data.name)) {
+        if (
+          filter.some(
+            (row) =>
+              (row.display_name ?? row.name) ===
+              (node.data.display_name ?? node.data.name),
+          )
+        ) {
           node.setSelected(true);
         } else {
           node.setSelected(false);
@@ -82,7 +92,11 @@ export default function ToolsTable({
     if (!open && selectedRows) {
       handleOnNewValue({
         value: data.map((row) =>
-          selectedRows?.some((selected) => selected.name === row.name)
+          selectedRows?.some(
+            (selected) =>
+              (selected.display_name ?? selected.name) ===
+              (row.display_name ?? row.name),
+          )
             ? { ...row, status: true }
             : { ...row, status: false },
         ),
@@ -137,15 +151,22 @@ export default function ToolsTable({
   ) => {
     if (!focusedRow) return;
 
-    const updatedData = data.map((row) => {
-      if (row.name === focusedRow.name) {
-        return { ...row, [field]: value };
-      }
-      return row;
-    });
+    const originalName = focusedRow.display_name;
 
-    setData(updatedData);
     setFocusedRow((prev) => (prev ? { ...prev, [field]: value } : null));
+
+    if (agGrid.current) {
+      const updatedRow = { ...focusedRow, [field]: value };
+
+      agGrid.current.api.applyTransaction({
+        update: [updatedRow],
+      });
+
+      const updatedData = data.map((row) =>
+        (row.display_name ?? row.name) === originalName ? updatedRow : row,
+      );
+      setData(updatedData);
+    }
   };
 
   return (
@@ -179,6 +200,7 @@ export default function ToolsTable({
               setFocusedRow(event.data);
               setSidebarOpen(true);
             }}
+            getRowId={getRowId}
           />
         </div>
       </main>
