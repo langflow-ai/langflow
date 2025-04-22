@@ -50,7 +50,7 @@ This component concatenates two text sources into a single text chunk using a sp
 
 | Name | Display Name | Info |
 |------|--------------|------|
-|message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
+| message | Message |A [Message](/concepts-objects#message-object) object containing the combined text.
 
 
 ## Create data
@@ -397,7 +397,7 @@ This component saves [DataFrames, Data, or Messages](/concepts-objects) to vario
 1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
 The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
 
-![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
+![Two Save to File components connected to a webhook](/img/component-save-to-file.png)
 
 2. In the **Save to File** component's **Input Type** field, select the expected input type.
 This example expects **Data** from the **Webhook**.
@@ -494,7 +494,7 @@ This component splits text into chunks based on specified criteria.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_inputs | Input Documents | The data to split.The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
+| data_inputs | Input Documents | The data to split. The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
 | chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
 | chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
 | separator | Separator | The character to split on. Default: `newline`. |
