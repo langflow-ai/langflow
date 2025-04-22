@@ -500,6 +500,26 @@ This component converts and extracts JSON fields using JQ queries.
 |------|--------------|------|
 | filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
 
+## Regex extractor
+
+This component extracts patterns from text using regular expressions. It can be used to find and extract specific patterns or information from text data.
+
+To use this component in a flow:
+
+1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
+
+![Regex extractor connected to url component](/img/component-url-regex.png)
+
+2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
+This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
+```
+In the news\s*\n(.*?)(?=\n\n)
+```
+
+Result:
+```
+Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
+```
 
 ## Save to File
 
@@ -562,6 +582,8 @@ For `Message` inputs, the component can create:
 
 | Name | Display Name | Info |
 |------|--------------|------|
+| input_text | Input Text | The text to analyze and extract patterns from. |
+| pattern | Regex Pattern | The regular expression pattern to match in the text. |
 | input_type | Input Type | Select the type of input to save.|
 | df | DataFrame | The DataFrame to save. |
 | data | Data | The Data object to save. |
@@ -573,8 +595,9 @@ For `Message` inputs, the component can create:
 
 | Name | Display Name | Info |
 |------|--------------|------|
+| data | Data | List of extracted matches as [Data](/concepts-objects#data-object) objects. |
+| text | Message | The extracted matches formatted as a [Message](/concepts-objects#message-object) object. |
 | confirmation | Confirmation | Confirmation message after saving the file. |
-
 
 ## Select data
 

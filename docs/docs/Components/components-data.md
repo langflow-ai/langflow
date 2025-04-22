@@ -3,6 +3,8 @@ title: Data
 slug: /components-data
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Data components in Langflow
 
 Data components load data from a source into your flow.
@@ -26,6 +28,49 @@ In this example of a document ingestion pipeline, the URL component outputs raw 
 
 This component makes HTTP requests using URLs or cURL commands.
 
+1. To use this component in a flow, connect the **Data** output to a component that accepts the input.
+For example, connect the **API Request** component to a **Chat Output** component.
+
+![API request into a chat output component](/img/component-api-request-chat-output.png)
+
+2. In the API component's **URLs** field, enter the endpoint for your request.
+This example uses `https://dummy-json.mock.beeceptor.com/posts`, which is a list of technology blog posts.
+
+3. In the **Method** field, enter the type of request.
+This example uses GET to retrieve a list of blog posts.
+The component also supports POST, PATCH, PUT, and DELETE.
+
+4. Optionally, enable the **Use cURL** button to create a field for pasting curl requests.
+The equivalent call in this example is `curl -v https://dummy-json.mock.beeceptor.com/posts`.
+
+5. Click **Playground**, and then click **Run Flow**.
+Your request returns a list of blog posts in the `result` field.
+
+### Filter API request data
+
+The **API Request** component retrieved a list of JSON objects in the `result` field.
+For this example, you will use the **Lambda Filter** to extract the desired data nested within the `result` field.
+
+1. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+2. In the **Groq** model component, add your **Groq** API key.
+3. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+For this example, enter:
+```
+I want to explode the result column out into a Data object
+```
+:::tip
+Avoid punctuation in the **Instructions** field, as it can cause errors.
+:::
+4. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
+5. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The result is a structured DataFrame.
+```text
+| userId | id | title | body | link | comment_count |
+|---|----|-------|------|------|---------------|
+| 1 | 1 | Introduction to Artificial Intelligence | Learn the basics of AI ...| https://example.com/article1 | 8 |
+| 2 | 2 | Web Development with React | Build modern web applications ...| https://example.com/article2 | 12 |
+```
+
 ### Inputs
 
 | Name | Display Name | Info |
@@ -46,8 +91,8 @@ This component makes HTTP requests using URLs or cURL commands.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The result of the API requests. |
-
+| data | Data | The result of the API requests. Returns a Data object containing source URL and results.  |
+| dataframe | DataFrame | Converts the API response data into a tabular DataFrame format. |
 
 ## Directory
 
@@ -238,6 +283,40 @@ This component executes SQL queries on a specified database.
 
 This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.
 
+1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
+For example, connect the **URL** component to a **Chat Output** component.
+
+![URL request into a chat output component](/img/component-url.png)
+
+2. In the URL component's **URLs** field, enter the URL for your request.
+This example uses `langflow.org`.
+
+3. Optionally, in the **Max Depth** field, enter how many pages away from the initial URL you want to crawl.
+Select `1` to crawl only the page specified in the **URLs** field.
+Select `2` to crawl all pages linked from that page.
+The component crawls by link traversal, not by URL path depth.
+
+4. Click **Playground**, and then click **Run Flow**.
+The text contents of the URL are returned to the Playground as a structured DataFrame.
+
+5. In the **URL** component, change the output port to **Message**, and then run the flow again.
+The text contents of the URL are returned as unstructured raw text, which you can extract patterns from with the **Regex Extractor** tool.
+
+6. Connect the **URL** component to a **Regex Extractor** and **Chat Output**.
+
+![Regex extractor connected to url component](/img/component-url-regex.png)
+
+7. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
+This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`.
+```
+In the news\s*\n(.*?)(?=\n\n)
+```
+
+Result:
+```
+Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
+```
+
 ### Inputs
 
 | Name | Display Name | Info |
@@ -253,7 +332,7 @@ This component fetches content from one or more URLs, processes the content, and
 |------|--------------|------|
 | data | Data | List of [Data](/concepts-objects) objects containing fetched content and metadata. |
 | text | Text | Fetched content as formatted text, with applied separators and cleaning. |
-| dataframe | DataFrame | Content formatted as a [Data](/concepts-objects#dataframe-object) object. |
+| dataframe | DataFrame | Content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
 
 ## Webhook
 
