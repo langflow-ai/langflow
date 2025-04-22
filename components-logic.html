@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.77070d65.css">
-<script src="/assets/js/runtime~main.1451ad1d.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.4392c3ab.js" defer="defer"></script>
 <script src="/assets/js/main.02f855e6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -110,6 +110,18 @@ Instead, use the <a href="/components-logic#run-flow">Run flow component</a></p>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>output</td><td>Data</td><td>The state associated with the notification.</td></tr></tbody></table>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="loop">Loop<a href="#loop" class="hash-link" aria-label="Direct link to Loop" title="Direct link to Loop">​</a></h2>
 <p>This component iterates over a list of <a href="/concepts-objects#data-object">Data</a> objects, outputting one item at a time and aggregating results from loop inputs.</p>
+<p>In this example, the <strong>Loop</strong> component iterates over a CSV file through the <strong>Item</strong> port until there are no rows left to process. Then, the <strong>Loop</strong> component performs the actions connected to the <strong>Done</strong> port, which in this case is loading the structured data into <strong>Chroma DB</strong>.</p>
+<p>Think of it this way: the <strong>Item</strong> port forms the &quot;main&quot; loop that repeats until a &quot;complete&quot; condition is reached.</p>
+<ol>
+<li>The <strong>Loop</strong> component accepts <strong>Data</strong> from the <strong>Load CSV</strong> component, and outputs the data from the <strong>Item</strong> port.</li>
+<li>Each CSV row is converted to a <strong>Message</strong> and processed into structured data with the <strong>Structured Output</strong> component.
+The dotted line connected from the <strong>Structured Output</strong> component&#x27;s <strong>Looping</strong> port tells you where the loop begins again.</li>
+<li>The <strong>Loop</strong> component repeatedly extracts rows by <strong>Text Key</strong> until there are no more rows to extract.</li>
+</ol>
+<p>Once all items are processed, the action connected to the <strong>Done</strong> port is performed.
+In this example, the data is loaded into <strong>Chroma DB</strong>.</p>
+<p><img decoding="async" loading="lazy" alt="Loop CSV parser" src="/assets/images/component-loop-csv-5e6704f4f2b8d511b70336ff3ddc1328.png" width="3008" height="3172" class="img_ev3q"></p>
+<p>Follow along with this step-by-step video guide for creating this flow and adding agentic RAG: <a href="https://www.youtube.com/watch?v=9Wx7WODSKTo" target="_blank" rel="noopener noreferrer">Mastering the Loop Component &amp; Agentic RAG in Langflow</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="inputs-4">Inputs<a href="#inputs-4" class="hash-link" aria-label="Direct link to Inputs" title="Direct link to Inputs">​</a></h3>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>data</td><td>Data/List</td><td>The initial list of Data objects to iterate over.</td></tr></tbody></table>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="outputs-4">Outputs<a href="#outputs-4" class="hash-link" aria-label="Direct link to Outputs" title="Direct link to Outputs">​</a></h3>
