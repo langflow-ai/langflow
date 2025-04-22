@@ -47,6 +47,9 @@ class FlowBase(SQLModel):
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
+    mcp_enabled: bool | None = Field(default=False, nullable=True, description="Can be exposed in the MCP server")
+    action_name: str | None = Field(default=None, nullable=True, description="The name of the action associated with the flow")
+    action_description: str | None = Field(default=None, sa_column=Column(Text, nullable=True), description="The description of the action associated with the flow")
     access_type: AccessTypeEnum = Field(
         default=AccessTypeEnum.PRIVATE,
         sa_column=Column(
@@ -233,6 +236,9 @@ class FlowHeader(BaseModel):
     data: dict | None = Field(None, description="The data of the component, if is_component is True")
     access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
+    mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
+    action_name: str | None = Field(None, description="The name of the action associated with the flow")
+    action_description: str | None = Field(None, description="The description of the action associated with the flow")
 
     @field_validator("data", mode="before")
     @classmethod
@@ -248,7 +254,9 @@ class FlowUpdate(SQLModel):
     data: dict | None = None
     folder_id: UUID | None = None
     endpoint_name: str | None = None
-    locked: bool | None = None
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
     access_type: AccessTypeEnum | None = None
     fs_path: str | None = None
 
