@@ -167,7 +167,7 @@ Click **Outputs** to view the sent message:
     }
   ],
 ```
-8. Your second message was sent by the **OpenAI** model component to the **Chat Output** component.
+6. Your second message was sent by the **OpenAI** model component to the **Chat Output** component.
 This is the raw text output of the model's response.
 The **Chat Output** component accepts this text as input and presents it as a formatted message.
 Click **Outputs** to view the sent message:
