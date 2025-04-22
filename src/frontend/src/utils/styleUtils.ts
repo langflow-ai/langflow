@@ -421,6 +421,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ScrapeGraphMarkdownifyApi: "ScrapeGraph",
   Unlink: "UnlinkIcon",
   note: "StickyNote",
+  TwitterXIcon: "TwitterXIcon",
 };
 
 export const getLucideIconName = (name: string): string => {

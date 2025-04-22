@@ -74,8 +74,6 @@ const RenderInputParameters = ({
     return keyMap;
   }, [templateFields, data.id, data.node?.template]);
 
-  console.log({ data });
-
   const renderInputParameter = templateFields.map(
     (templateField: string, idx) => {
       const template = data.node?.template[templateField];

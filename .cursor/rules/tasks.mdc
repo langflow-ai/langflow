@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Concise Task Management Protocol - Sequential Mode
+
+## File Creation
+- Filename: `YYYYMMDD_HHMMSS_task_name.md` 
+- IMPORTANT: Always include a descriptive task name after the timestamp (e.g., `20250404_135621_api_integration.md`)
+- Never create files with timestamp only
+- Store in `tasks/` directory
+
+## Task Structure
+
+```
+# Task: [Task Name]
+**Status**: [Not Started | In Progress | Completed]
+
+## Analysis
+- [ ] Requirements
+  - [ ] Subtask 1
+- [ ] Challenges
+- [ ] Dependencies
+
+## Plan
+- [ ] Step 1: [Description]
+  - [ ] Subtask 1.1
+- [ ] Step 2: [Description]
+
+## Execution
+- [ ] Implementation 1
+  - [ ] Details
+- [ ] Implementation 2
+  - [ ] Files modified: [files]
+
+## Summary
+- [ ] Files modified: `filename.ext` (lines X-Y)
+- [ ] Dependencies added/changed
+- [ ] Edge cases considered
+- [ ] Known limitations
+- [ ] Future impact points
+```
+
+## Execution Rules
+- Execute one subtask at a time in sequence
+- Update the task file after EACH subtask is completed
+- Mark completed subtasks with [x] as they are finished
+- Update main task status throughout execution
+- Document work incrementally, not all at once
+- Never proceed to the next section until all subtasks in the current section are completed and marked
