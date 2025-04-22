@@ -91,15 +91,19 @@ export default function ToolsTable({
   useEffect(() => {
     if (!open && selectedRows) {
       handleOnNewValue({
-        value: data.map((row) =>
-          selectedRows?.some(
+        value: data.map((row) => {
+          const processedValue = parseString(row.name, [
+            "snake_case",
+            "no_blank",
+          ]);
+          return selectedRows?.some(
             (selected) =>
               (selected.display_name ?? selected.name) ===
               (row.display_name ?? row.name),
           )
-            ? { ...row, status: true }
-            : { ...row, status: false },
-        ),
+            ? { ...row, status: true, name: processedValue }
+            : { ...row, status: false, name: processedValue };
+        }),
       });
     }
   }, [open]);
@@ -119,9 +123,6 @@ export default function ToolsTable({
       field: "name",
       headerName: isAction ? "Flow" : "Name",
       flex: 1,
-      valueGetter: (params) => params.data.name,
-      valueParser: (params) =>
-        parseString(params.newValue, ["snake_case", "no_blank"]),
     },
     {
       field: "tags",
