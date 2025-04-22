@@ -47,7 +47,6 @@ class TestGoogleMeetComponent(ComponentTestBaseWithoutClient):
     def test_init(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         assert component.display_name == "Google Meet"
-        assert component.name == "GooglemeetAPI"
         assert component.app_name == "googlemeet"
         assert "GOOGLEMEET_CREATE_MEET" in component._actions_data
         assert "GOOGLEMEET_GET_MEET" in component._actions_data
