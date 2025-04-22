@@ -3,7 +3,7 @@ title: Processing
 slug: /components-processing
 ---
 
-# Processing components in Langflow
+import Icon from "@site/src/components/icon";
 
 Processing components process and transform data within a flow.
 
@@ -298,12 +298,43 @@ This component formats `DataFrame` or `Data` objects into text using templates, 
 
 To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
 
+To use the **Parser** component with a **Structured Output** component, do the following:
+
+1. Connect a **Structured Output** component's **DataFrame** output to the **Parser** component's **DataFrame** input.
+2. Connect the **File** component to the **Structured Output** component's **Message** input.
+3. Connect the **OpenAI** model component's **Language Model** output to the **Structured Output** component's **Language Model** input.
+
+The flow looks like this:
+
+![A parser component connected to OpenAI and structured output](/img/component-parser.png)
+
+4. In the **Structured Output** component, click **Open Table**.
+This opens a pane for structuring your table.
+The table contains the rows **Name**, **Description**, **Type**, and **Multiple**.
+5. Create a table that maps to the data you're loading from the **File** loader.
+For example, to create a table for employees, you might have the rows `id`, `name`, and `email`, all of type `string`.
+6. In the **Template** field of the **Parser** component, enter a template for parsing the **Structured Output** component's DataFrame output into structured text.
+Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
+For example, to present a table of employees in Markdown:
+```text
+# Employee Profile
+## Personal Information
+- **Name:** {name}
+- **ID:** {id}
+- **Email:** {email}
+```
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
+8. To view your parsed text, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
+
+For an additional example of using the **Parser** component to format a DataFrame from a **Structured Output** component, see the **Market Research** template flow.
+
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| stringify | Stringify | Enable to convert input to a string instead of using a template. |
-| template | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names (e.g. `Name: {Name}`). For Data objects, use `{text}`. |
+| mode | Mode | Tab selection between "Parser" and "Stringify" modes. "Stringify" converts input to a string instead of using a template. |
+| pattern | Template | Template for formatting using variables in curly brackets. For DataFrames, use column names, such as `Name: {Name}`. For Data objects, use `{text}`. |
 | input_data | Data or DataFrame | The input to parse - accepts either a DataFrame or Data object. |
 | sep | Separator | String used to separate rows/items. Default: newline. |
 | clean_data | Clean Data | When stringify is enabled, cleans data by removing empty rows and lines. |
@@ -357,6 +388,82 @@ This component converts and extracts JSON fields using JQ queries.
 | Name | Display Name | Info |
 |------|--------------|------|
 | filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
+
+
+## Save to File
+
+This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
+
+1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
+The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
+
+![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
+
+2. In the **Save to File** component's **Input Type** field, select the expected input type.
+This example expects **Data** from the **Webhook**.
+3. In the **File Format** field, select the file type for your saved file.
+This example uses `.md` in one **Save to File** component, and `.xlsx` in another.
+4. In the **File Path** field, enter the path for your saved file.
+This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
+The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
+:::tip
+If you enter a format in the `file_path` that is not accepted, the component appends the proper format to the file.
+For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file will be saved as `./output/test.txt.csv` so the file is not corrupted.
+:::
+5. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
+    "Role": ["Developer", "Designer", "Manager"],
+    "Department": ["Engineering", "Design", "Management"]
+}'
+```
+6. In your local filesystem, open the `outputs` directory.
+You should see two files created from the data you've sent: one in `.xlsx` for structured spreadsheets, and one in Markdown.
+```text
+| Name         | Role      | Department   |
+|:-------------|:----------|:-------------|
+| Alex Cruz    | Developer | Engineering  |
+| Kalani Smith | Designer  | Design       |
+| Noam Johnson | Manager   | Management   |
+```
+
+### File input format options
+
+For `DataFrame` and `Data` inputs, the component can create:
+  - `csv`
+  - `excel`
+  - `json`
+  - `markdown`
+  - `pdf`
+
+For `Message` inputs, the component can create:
+  - `txt`
+  - `json`
+  - `markdown`
+  - `pdf`
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_type | Input Type | Select the type of input to save.|
+| df | DataFrame | The DataFrame to save. |
+| data | Data | The Data object to save. |
+| message | Message | The Message to save. |
+| file_format | File Format | Select the file format to save the input. |
+| file_path | File Path | The full file path including filename and extension. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| confirmation | Confirmation | Confirmation message after saving the file. |
+
 
 ## Select data
 

@@ -53,6 +53,8 @@ export default function Dropdown({
   name,
   dialogInputs,
   handleOnNewValue,
+  toggle,
+  hasRefreshButton,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
@@ -235,7 +237,10 @@ export default function Dropdown({
           )}
         >
           <span
-            className="flex w-full items-center gap-2 overflow-hidden"
+            className={cn(
+              "flex w-full items-center gap-2 overflow-hidden",
+              hasRefreshButton && "max-w-[11rem]",
+            )}
             data-testid={`value-dropdown-${id}`}
           >
             {optionsMetaData?.[
@@ -482,6 +487,19 @@ export default function Dropdown({
         <PopoverAnchor>{children}</PopoverAnchor>
       ) : refreshOptions || isLoading ? (
         renderLoadingButton()
+      ) : validOptions.length === 1 &&
+        toggle &&
+        !combobox &&
+        value === validOptions[0] ? (
+        <div className="flex w-full items-center gap-2 truncate">
+          {optionsMetaData?.[0]?.icon && (
+            <ForwardedIconComponent
+              name={optionsMetaData?.[0]?.icon}
+              className="h-4 w-4 flex-shrink-0"
+            />
+          )}
+          <span className="truncate text-sm">{value}</span>
+        </div>
       ) : (
         <div className="w-full truncate">{renderTriggerButton()}</div>
       )}

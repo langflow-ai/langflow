@@ -67,6 +67,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  toggle?: boolean;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -106,6 +107,8 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  showHiddenOutputs?: boolean;
+  hidden?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -149,9 +152,9 @@ export type DisclosureComponentType = {
   isChild?: boolean;
   button: {
     title: string;
-    Icon: React.ElementType;
+    icon: string;
     buttons?: {
-      Icon: ReactElement;
+      icon: string;
       title: string;
       onClick: (event?: React.MouseEvent) => void;
     }[];
