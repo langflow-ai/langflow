@@ -714,14 +714,6 @@ async def flow_as_tool_websocket(
 
                 shared_state["event_count"] = current_count + 1
 
-            # def send_event(event, loop, direction) -> None:
-            #    async def _inner():
-            #        async with send_lock:
-            #            await safe_send_json(event)
-            #            log_event(event, "↑")
-            #        log_event(event, direction)
-            #
-            #                asyncio.run_coroutine_threadsafe(_inner(), loop).result()
             def send_event(event, loop, direction) -> None:
                 thread_lock = threading.Lock()  # lives only in this function
 
