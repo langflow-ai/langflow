@@ -120,16 +120,17 @@ export default function ToolsTable({
 
   const columnDefs: ColDef[] = [
     {
-      field: "name",
+      field: isAction ? "display_name" : "name",
       headerName: isAction ? "Flow" : "Name",
       flex: 1,
     },
     {
-      field: "tags",
+      field: isAction ? "name" : "tags",
       headerName: isAction ? "Action" : "Slug",
       flex: 2,
       resizable: false,
-      valueGetter: (params) => params.data.tags.join(", "),
+      valueGetter: (params) =>
+        isAction ? params.data.name : params.data.tags.join(", "),
       cellClass: "text-muted-foreground",
     },
     {
@@ -226,12 +227,41 @@ export default function ToolsTable({
                 <SidebarGroupContent className="h-full">
                   <div className="flex h-full flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label
-                        className="text-sm font-medium"
-                        htmlFor="sidebar-name-input"
-                      >
-                        {isAction ? "Flow Name" : "Tool Name"}
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label
+                          className="text-sm font-medium"
+                          htmlFor="sidebar-name-input"
+                        >
+                          {isAction ? "Flow Name" : "Tool Name"}
+                        </label>
+                        <Button
+                          unstyled
+                          onClick={() => {
+                            setSidebarName(focusedRow.display_name);
+                            handleSidebarInputChange(
+                              "name",
+                              focusedRow.display_name,
+                            );
+                          }}
+                          disabled={
+                            sidebarDescription === focusedRow.display_name ||
+                            !focusedRow.name
+                          }
+                          size="iconMd"
+                          className="group/rotate-icon"
+                        >
+                          <ForwardedIconComponent
+                            name="RotateCcw"
+                            className={cn(
+                              "icon-size",
+                              sidebarDescription !==
+                                focusedRow.display_description
+                                ? "text-muted-foreground hover:text-primary"
+                                : "text-input",
+                            )}
+                          />
+                        </Button>
+                      </div>
                       <Input
                         id="sidebar-name-input"
                         value={sidebarName}
@@ -254,6 +284,10 @@ export default function ToolsTable({
                           unstyled
                           onClick={() => {
                             setSidebarDescription(
+                              focusedRow.display_description,
+                            );
+                            handleSidebarInputChange(
+                              "description",
                               focusedRow.display_description,
                             );
                           }}
