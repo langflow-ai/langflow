@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "should order the visualization (requires store API key)",
@@ -15,7 +16,7 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("button-store").click();
 
@@ -61,7 +62,7 @@ test(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-    await page.goto("/");
+    await awaitBootstrapTest(page);
     await page.getByTestId("button-store").click();
     await page.getByTestId("api-key-button-store").click({
       timeout: 200000,

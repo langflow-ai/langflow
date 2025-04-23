@@ -54,6 +54,13 @@ export default function AppHeader(): JSX.Element {
 
   const isEmpty = flows?.length !== examples?.length || folders?.length > 1;
 
+  const getNotificationBadge = () => {
+    const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
+    return notificationCenter
+      ? `${baseClasses} right-[8.5rem] top-[10px]`
+      : "hidden";
+  };
+
   return (
     <div
       className={`flex h-[44px] w-full items-center justify-between border-b p-6 dark:bg-background ${
@@ -129,16 +136,14 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <span
-                  className={
-                    notificationCenter
-                      ? `absolute right-[5.3rem] top-[10px] h-1 w-1 rounded-full bg-destructive`
-                      : "hidden"
-                  }
-                />
+                <span className={getNotificationBadge()} />
                 <ForwardedIconComponent
                   name="Bell"
-                  className="side-bar-button-size ml-1 h-4 w-4 text-muted-foreground"
+                  className={`side-bar-button-size ml-1 h-4 w-4 ${
+                    activeState === "notifications"
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   strokeWidth={2}
                 />
                 <span className="hidden whitespace-nowrap">Notifications</span>
@@ -150,11 +155,43 @@ export default function AppHeader(): JSX.Element {
           orientation="vertical"
           className="my-auto ml-3 h-7 dark:border-zinc-700"
         />
+        {!ENABLE_DATASTAX_LANGFLOW && (
+          <>
+            <ShadTooltip
+              content="Go to Langflow Store"
+              side="bottom"
+              styleClasses="z-10"
+            >
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  navigate("/store");
+                }}
+                data-testid="button-store"
+                unstyled
+              >
+                <ForwardedIconComponent
+                  name="Store"
+                  className={`side-bar-button-size mx-2 h-4 w-4 ${
+                    lastPath === "store"
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                />
+                <span className="hidden whitespace-nowrap">Store</span>
+              </Button>
+            </ShadTooltip>
+            <Separator
+              orientation="vertical"
+              className="my-auto h-7 dark:border-zinc-700"
+            />
+          </>
+        )}
+
         {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <ShadTooltip content="Docs" side="bottom" styleClasses="z-10">
               <Button
-                variant="ghost"
                 className="flex text-sm font-medium"
                 onClick={() =>
                   window.open(
@@ -162,32 +199,18 @@ export default function AppHeader(): JSX.Element {
                     "_blank",
                   )
                 }
+                unstyled
               >
                 <ForwardedIconComponent
                   name="book-open-text"
-                  className="side-bar-button-size h-[18px] w-[18px]"
+                  className={`side-bar-button-size mx-2 h-4 w-4 text-muted-foreground`}
                 />
                 <span className="hidden whitespace-nowrap 2xl:inline">
                   Docs
                 </span>
               </Button>
             </ShadTooltip>
-            <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
-              <Button
-                data-testid="user-profile-settings"
-                variant="ghost"
-                className="flex text-sm font-medium"
-                onClick={() => navigate("/settings")}
-              >
-                <ForwardedIconComponent
-                  name="Settings"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap 2xl:inline">
-                  Settings
-                </span>
-              </Button>
-            </ShadTooltip>
+
             <Separator
               orientation="vertical"
               className="my-auto h-7 dark:border-zinc-700"

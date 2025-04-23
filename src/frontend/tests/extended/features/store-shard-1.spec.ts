@@ -96,7 +96,7 @@ test.skip(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
+    await awaitBootstrapTest(page);
     await page.waitForTimeout(1000);
 
     await page.getByTestId("button-store").click();
