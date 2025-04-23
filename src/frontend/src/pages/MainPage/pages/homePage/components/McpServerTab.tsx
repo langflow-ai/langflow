@@ -105,7 +105,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
           <div className="flex flex-row flex-wrap gap-2 pt-2">
             <ToolsComponent
-              value={isLoading ? undefined : flowsMCPData}
+              value={flowsMCPData}
               title="MCP Server Actions"
               description="Select actions to add to this server"
               handleOnNewValue={(value) => {
