@@ -1257,6 +1257,10 @@
     @apply h-7 w-7 rounded-md;
   }
 
+  .hit-area-hover {
+    @apply transition-colors duration-200 hover:bg-muted hover:text-foreground;
+  }
+
   .node-toolbar-buttons {
     @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }

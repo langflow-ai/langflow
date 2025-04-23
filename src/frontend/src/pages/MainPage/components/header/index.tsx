@@ -103,7 +103,7 @@ const HeaderComponent = ({
                 value={debouncedSearch}
                 onChange={handleSearch}
               />
-              <div className="relative mr-2 flex rounded-lg border border-muted bg-muted">
+              <div className="relative top-[3px] mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                 {/* Sliding Indicator */}
                 <div
                   className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-background shadow-md transition-transform duration-300 ${
@@ -129,7 +129,7 @@ const HeaderComponent = ({
                     <ForwardedIconComponent
                       name={viewType === "list" ? "Menu" : "LayoutGrid"}
                       aria-hidden="true"
-                      className="h-4 w-4 group-hover:text-foreground"
+                      className="relative bottom-[1px] h-4 w-4 group-hover:text-foreground"
                     />
                   </Button>
                 ))}

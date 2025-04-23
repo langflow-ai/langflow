@@ -189,7 +189,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
     [currentFlowName],
   );
 
-  const handleNameSubmit = useCallback(() => {
+  const handleNameSubmit = useCallback(async () => {
     if (
       flowName.trim() !== "" &&
       flowName !== currentFlowName &&
@@ -203,9 +203,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
         name: flowName,
         id: currentFlowId!,
       };
-      setCurrentFlow(newFlow);
+
       saveFlow(newFlow)
         .then(() => {
+          setCurrentFlow(newFlow);
           setSuccessData({ title: "Flow name updated successfully" });
         })
         .catch((error) => {
@@ -268,7 +269,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-xs text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -313,7 +314,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <Input
                 className={cn(
-                  "h-6 w-full shrink-0 cursor-text font-semibold",
+                  "h-6 w-full shrink-0 cursor-text text-xs font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
@@ -334,7 +335,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-xs font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >

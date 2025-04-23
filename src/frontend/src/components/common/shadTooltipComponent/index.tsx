@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 
 // Extract static styles
 const BASE_TOOLTIP_CLASSES =
-  "z-[99] max-w-96 bg-tooltip text-[12px] text-tooltip-foreground";
+  "z-[99] max-w-96 bg-tooltip text-xs text-tooltip-foreground";
 
 // Memoize the tooltip content component
 const MemoizedTooltipContent = memo(
