@@ -1,57 +1,37 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
+import {
+  useGetFlowsMCP,
+  usePatchFlowsMCP,
+} from "@/controllers/API/queries/mcp";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { useFolderStore } from "@/stores/foldersStore";
+import { MCPSettingsType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
 
 const McpServerTab = () => {
   const [selectedMode, setSelectedMode] = useState<string>("Cursor");
   const isDarkMode = useTheme().dark;
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const projectId = folderId ?? myCollectionId ?? "";
 
-  const mockToolsData = [
-    {
-      name: "something",
-      display_name: "something",
-      status: true,
-      tags: ["something"],
-      description: "A sample tool",
-      display_description: "A sample tool",
-    },
-    {
-      name: "something_else",
-      display_name: "something else",
-      status: true,
-      tags: ["something_else"],
-      description: "Another sample tool",
-      display_description: "Another sample tool",
-    },
-    {
-      name: "something_other",
-      display_name: "something other",
-      status: true,
-      tags: ["something_other"],
-      description: "Yet another sample tool",
-      display_description: "Yet another sample tool",
-    },
-    {
-      name: "something_new",
-      display_name: "something new",
-      status: true,
-      tags: ["something_new"],
-      description: "A new sample tool",
-      display_description: "A new sample tool",
-    },
-    {
-      name: "something_else_again",
-      display_name: "something else again",
-      status: true,
-      tags: ["something_else_again"],
-      description: "One more sample tool",
-      display_description: "One more sample tool",
-    },
-  ];
+  const { data: flowsMCP, isLoading } = useGetFlowsMCP({ projectId });
+  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+
+  const flowsMCPData = flowsMCP?.map((flow) => ({
+    id: flow.id,
+    name: flow.action_name,
+    description: flow.action_description,
+    display_name: flow.name,
+    display_description: flow.description,
+    status: flow.mcp_enabled,
+    tags: [flow.name],
+  }));
 
   const syntaxHighlighterStyle = {
     "hljs-string": {
@@ -132,10 +112,20 @@ const McpServerTab = () => {
           </div>
           <div className="flex flex-row flex-wrap gap-2 pt-2">
             <ToolsComponent
-              value={mockToolsData}
+              value={isLoading ? undefined : flowsMCPData}
               title="MCP Server Actions"
               description="Select actions to add to this server"
-              handleOnNewValue={() => {}}
+              handleOnNewValue={(value) => {
+                const flowsMCPData: MCPSettingsType[] = value.value.map(
+                  (flow) => ({
+                    id: flow.id,
+                    action_name: flow.name,
+                    action_description: flow.description,
+                    mcp_enabled: flow.status,
+                  }),
+                );
+                patchFlowsMCP(flowsMCPData);
+              }}
               id="mcp-server-tools"
               button_description="Edit Actions"
               editNode={false}
