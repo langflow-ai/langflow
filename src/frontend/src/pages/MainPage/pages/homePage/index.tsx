@@ -135,7 +135,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "mcp" ? (
-                    <McpServerTab />
+                    <McpServerTab folderName={folderName} />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (
