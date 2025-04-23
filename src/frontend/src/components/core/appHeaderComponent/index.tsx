@@ -205,9 +205,6 @@ export default function AppHeader(): JSX.Element {
                   name="book-open-text"
                   className={`side-bar-button-size mx-2 h-4 w-4 text-muted-foreground`}
                 />
-                <span className="hidden whitespace-nowrap 2xl:inline">
-                  Docs
-                </span>
               </Button>
             </ShadTooltip>
 
