@@ -13,11 +13,11 @@ class DataOperationsComponent(Component):
     description = "Perform various operations on a Data object."
     icon = "file-json-2"
     name = "DataOperations"
-    default_keys = ["actions","data"]
+    default_keys = ["actions", "data"]
     actions_data = {"Filter": ["filter_keys", "actions"], "Evaluate": [], "Combine": []}
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=False),
+        DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
         SortableListInput(
             name="actions",
             display_name="Actions",
@@ -25,8 +25,8 @@ class DataOperationsComponent(Component):
             info="List of actions to perform on the data.",
             options=[
                 {"name": "Filter", "value": "filter", "icon": "filter"},
-                {"name": "Evaluate", "value": "evaluate", "icon": "braces"},
                 {"name": "Combine", "value": "combine", "icon": "merge"},
+                {"name": "Evaluate", "value": "evaluate", "icon": "braces"},
             ],
             real_time_refresh=True,
             limit=1,
@@ -153,7 +153,7 @@ class DataOperationsComponent(Component):
         print("evaluating data")
         return Data(**self.recursive_eval(self.get_data_dict()))
 
-    def combine_data(self) -> Data:
+    def combine_data(self, evaluate: bool | None = None) -> Data:
         print("combining data")
         if len(self.data) > 1:
             data_dicts = [data.model_dump()["data"] for data in self.data]
@@ -172,22 +172,42 @@ class DataOperationsComponent(Component):
                         combined_data[key] = (
                             [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]
                         )
-
+            if evaluate:
+                combined_data = self.recursive_eval(combined_data)
             return Data(data=combined_data)
 
         # If there's only one data object, return it as is
         return self.data[0] if self.data else None
 
+    def data_is_list(self) -> bool:
+        return len(self.data) > 1
+
+    def data_list_exception(self, operation: str):
+        msg = f"{operation} operation is not supported for multiple data objects."
+        raise ValueError(msg)
+
+    def operation_exception(self, operations: list[str]):
+        msg = f"{operations} operation is not supported in combination with each other"
+        raise ValueError(msg)
+
     def as_data(self) -> Data:
         selected_actions = [action["name"] for action in self.actions]
-        print("selected_actions", selected_actions)
         if "Filter" in selected_actions and len(selected_actions) == 1:
+            if self.data_is_list():
+                self.data_list_exception("Filter")
             return self.filter_data()
         if "Evaluate" in selected_actions and len(selected_actions) == 1:
-            print("evaluating data")
+            if self.data_is_list():
+                self.data_list_exception("Evaluate")
             return self.evaluate_data()
         if "Filter" in selected_actions and "Evaluate" in selected_actions:
+            if self.data_is_list():
+                self.data_list_exception("Filter and Evaluate")
             return self.filter_data(evaluate=True)
+        if "Evaluate" in selected_actions and "Combine" in selected_actions:
+            return self.combine_data(evaluate=True)
+        if "Filter" in selected_actions and "Combine" in selected_actions:
+            self.operation_exception(["Filter", "Combine"])
         if "Combine" in selected_actions and len(selected_actions) == 1:
             return self.combine_data()
         return None
