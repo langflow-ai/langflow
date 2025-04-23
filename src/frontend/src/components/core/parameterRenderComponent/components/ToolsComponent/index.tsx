@@ -80,7 +80,7 @@ export default function ToolsComponent({
                 size="sq"
                 className="truncate font-normal"
               >
-                <span className="truncate">{action.name.toUpperCase()}</span>
+                <span className="truncate">{action.name}</span>
               </Badge>
             ))}
             {remainingCount > 0 && (
