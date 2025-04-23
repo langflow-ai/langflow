@@ -1,3 +1,3 @@
-from .model import BatchMCPSettingsUpdate, MCPSettings, ProjectMCPSettingsUpdate
+from .model import BatchMCPSettingsUpdate, MCPSettings
 
-__all__ = ["BatchMCPSettingsUpdate", "MCPSettings", "ProjectMCPSettingsUpdate"]
+__all__ = ["BatchMCPSettingsUpdate", "MCPSettings"]
