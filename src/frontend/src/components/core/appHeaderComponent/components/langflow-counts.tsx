@@ -15,10 +15,8 @@ export const LangflowCounts = () => {
         styleClasses="z-10"
       >
         <div className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground">
-          <FaGithub className="h-[16px] w-[16px]" />
-          <span className="text-[12px] font-semibold">
-            {formatNumber(stars)}
-          </span>
+          <FaGithub className="h-4 w-4" />
+          <span className="text-xs font-semibold">{formatNumber(stars)}</span>
         </div>
       </ShadTooltip>
 
@@ -28,8 +26,8 @@ export const LangflowCounts = () => {
         styleClasses="z-10"
       >
         <div className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground">
-          <FaDiscord className="h-[16px] w-[16px]" />
-          <span className="text-[12px] font-semibold">
+          <FaDiscord className="h-4 w-4" />
+          <span className="text-xs font-semibold">
             {formatNumber(discordCount)}
           </span>
         </div>

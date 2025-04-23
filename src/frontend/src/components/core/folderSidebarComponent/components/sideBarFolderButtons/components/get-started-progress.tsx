@@ -151,7 +151,7 @@ export const GetStartedProgress: FC<{
             )}
             <span
               className={cn(
-                "text-[14px]",
+                "text-xs",
                 isGithubStarredChild && "text-muted-foreground line-through",
               )}
             >
@@ -193,7 +193,7 @@ export const GetStartedProgress: FC<{
             )}
             <span
               className={cn(
-                "text-[14px]",
+                "text-xs",
                 isDiscordJoinedChild && "text-muted-foreground line-through",
               )}
             >
@@ -223,7 +223,7 @@ export const GetStartedProgress: FC<{
                 )}
               />
             </span>
-            <span className={cn("text-[14px]", hasFlows && "line-through")}>
+            <span className={cn("text-xs", hasFlows && "line-through")}>
               Create a flow
             </span>
           </div>

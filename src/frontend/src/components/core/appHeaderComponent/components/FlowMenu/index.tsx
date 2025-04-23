@@ -143,7 +143,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div
         data-testid="menu_status_saved_flow_button"
         id="menu_status_saved_flow_button"
-        className="shrink-0 text-[12px] font-medium text-accent-emerald-foreground"
+        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
       >
         Saved
       </div>
@@ -269,7 +269,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate pr-1 text-[12px] text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-xs text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -314,7 +314,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <Input
                 className={cn(
-                  "h-6 w-full shrink-0 cursor-text text-[12px] font-semibold",
+                  "h-6 w-full shrink-0 cursor-text text-xs font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
@@ -335,7 +335,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-[12px] font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-xs font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >

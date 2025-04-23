@@ -82,7 +82,7 @@ export default function AppHeader(): JSX.Element {
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : (
-            <LangflowLogo className="h-[24px] w-[24px]" />
+            <LangflowLogo className="h-6 w-6" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
@@ -138,7 +138,7 @@ export default function AppHeader(): JSX.Element {
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"
-                    className={`side-bar-button-size h-[16px] w-[16px] ${
+                    className={`side-bar-button-size h-4 w-4 ${
                       activeState === "notifications"
                         ? "text-primary"
                         : "text-muted-foreground group-hover:text-primary"

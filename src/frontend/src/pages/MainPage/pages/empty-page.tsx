@@ -94,7 +94,7 @@ export const EmptyPageCommunity = ({
 
               <span
                 data-testid="empty_page_description"
-                className="z-50 text-center text-[14px] text-secondary-foreground"
+                className="z-50 text-center text-xs text-secondary-foreground"
               >
                 {folders?.length > 1
                   ? EMPTY_PAGE_FOLDER_DESCRIPTION
@@ -177,7 +177,7 @@ export const EmptyPageCommunity = ({
         </div>
         <p
           data-testid="empty_page_drag_and_drop_text"
-          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-[12px] text-muted-foreground"
+          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-xs text-muted-foreground"
         >
           {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>

@@ -47,7 +47,7 @@ export const AccountMenu = () => {
       <HeaderMenu>
         <HeaderMenuToggle>
           <div
-            className="h-[24px] w-[24px] rounded-lg focus-visible:outline-0"
+            className="h-6 w-6 rounded-lg focus-visible:outline-0"
             data-testid="user-profile-settings"
           >
             <ProfileIcon />
