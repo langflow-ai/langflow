@@ -55,9 +55,11 @@ def update_input_types(build_config: dotdict) -> dotdict:
 
 def set_field_display(build_config: dotdict, field: str, is_visible: bool | None = None) -> dotdict:
     """Set whether a field should be displayed in the UI."""
-    if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
-        build_config[field]["show"] = is_visible
-    return build_config
+    try:
+        if "show" in build_config[field]:
+            build_config[field]["show"] = is_visible
+    except (KeyError, TypeError):
+        pass  # If the field doesn't exist or isn't a dict, we do nothing
 
 
 def set_multiple_field_display(
@@ -67,12 +69,12 @@ def set_multiple_field_display(
     field_list: list[str] | None = None,
 ) -> dotdict:
     """Set display property for multiple fields at once."""
-    if fields is not None:
+    if fields:
         for field, visibility in fields.items():
-            build_config = set_field_display(build_config, field, visibility)
-    elif field_list is not None:
+            set_field_display(build_config, field, visibility)
+    elif field_list:
         for field in field_list:
-            build_config = set_field_display(build_config, field, is_visible)
+            set_field_display(build_config, field, is_visible)
     return build_config
 
 
@@ -92,7 +94,7 @@ def set_multiple_field_advanced(
     """Set advanced property for multiple fields at once."""
     if fields is not None:
         for field, advanced in fields.items():
-            build_config =  set_field_advanced(build_config, field, advanced)
+            build_config = set_field_advanced(build_config, field, advanced)
     elif field_list is not None:
         for field in field_list:
             build_config = set_field_advanced(build_config, field, is_advanced)
@@ -124,7 +126,7 @@ def set_current_fields(
     if selected_action in action_fields:
         for field in action_fields[selected_action]:
             build_config = set_field_display(build_config=build_config, field=field, is_visible=True)
-        for key,value in action_fields.items():
+        for key, value in action_fields.items():
             if key != selected_action:
                 for field in value:
                     build_config = set_field_display(build_config=build_config, field=field, is_visible=False)
