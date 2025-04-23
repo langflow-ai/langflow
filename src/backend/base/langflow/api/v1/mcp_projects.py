@@ -8,6 +8,7 @@ from uuid import UUID
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from langflow.services.database.models.mcp.model import MCPSettings
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -21,7 +22,7 @@ from langflow.api.v1.mcp import (
 )
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import Flow, Folder, ProjectMCPSettingsUpdate, User
+from langflow.services.database.models import Flow, Folder, User
 from langflow.services.deps import get_db_service
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-@router.get("/{project_id}", response_model=list[dict])
+@router.get("/{project_id}", response_model=list[MCPSettings])
 async def list_project_tools(
     project_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -51,7 +52,7 @@ async def list_project_tools(
     mcp_enabled_only: bool = True,
 ):
     """List all tools in a project that are enabled for MCP."""
-    tools = []
+    tools: list[MCPSettings] = []
     try:
         db_service = get_db_service()
         async with db_service.with_session() as session:
@@ -91,9 +92,12 @@ async def list_project_tools(
 
                 tool = {
                     "id": str(flow.id),
-                    "name": name,
-                    "description": description,
+                    "action_name": name,
+                    "action_description": description,
+                    "mcp_enabled": flow.mcp_enabled,
                     "inputSchema": json_schema_from_flow(flow),
+                    "name": flow.name,
+                    "description": flow.description,
                 }
                 tools.append(tool)
 
@@ -145,9 +149,8 @@ class ProjectMCPServer:
                             inputSchema=json_schema_from_flow(flow),
                         )
                         tools.append(tool)
-            except Exception as e:
-                msg = f"Error in listing project tools: {e!s}"
-                logger.exception(msg)
+            except Exception:
+                logger.exception("Error in listing project tools")
                 raise
             return tools
 
@@ -198,7 +201,7 @@ async def handle_project_sse(
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
             try:
-                logger.debug(f"Starting SSE connection for project {project_id}")
+                logger.debug("Starting SSE connection for project %s", project_id)
 
                 notification_options = NotificationOptions(
                     prompts_changed=True, resources_changed=True, tools_changed=True
@@ -207,15 +210,15 @@ async def handle_project_sse(
 
                 try:
                     await project_server.server.run(streams[0], streams[1], init_options)
-                except Exception as exc:
-                    logger.exception(f"Error in project MCP: {exc}")
+                except Exception:
+                    logger.exception("Error in project MCP")
             except BrokenResourceError:
                 logger.info("Client disconnected from project SSE connection")
             except asyncio.CancelledError:
                 logger.info("Project SSE connection was cancelled")
                 raise
-            except Exception as e:
-                logger.exception(f"Error in project MCP: {e}")
+            except Exception:
+                logger.exception("Error in project MCP")
                 raise
     finally:
         current_user_ctx.reset(user_token)
@@ -224,14 +227,14 @@ async def handle_project_sse(
     return StreamingResponse(content=[], media_type="text/event-stream")
 
 
-@router.post("/{project_id}/")
+@router.post("/{project_id}")
 async def handle_project_messages(project_id: UUID, request: Request):
     """Handle POST messages for a project-specific MCP server."""
     sse = get_project_sse(project_id)
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e:
-        logger.info(f"Project MCP Server disconnected for project {project_id}")
+        logger.info("Project MCP Server disconnected for project %s", project_id)
         raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
 
 
@@ -272,10 +275,10 @@ async def handle_list_tools_with_projects():
     return tools
 
 
-@router.patch("/{project_id}/mcp", status_code=200)
+@router.patch("/{project_id}", status_code=200)
 async def update_project_mcp_settings(
     project_id: UUID,
-    settings: ProjectMCPSettingsUpdate,
+    settings: list[MCPSettings],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Update the MCP settings of all flows in a project."""
@@ -296,22 +299,21 @@ async def update_project_mcp_settings(
 
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
+            flows_to_update = {x.id: x for x in settings}
 
             updated_flows = []
             for flow in flows:
                 if flow.user_id is None or flow.user_id != current_user.id:
                     continue
 
-                if settings.mcp_enabled is not None:
-                    flow.mcp_enabled = settings.mcp_enabled
-
-                if settings.set_action_names and not flow.action_name:
-                    flow_name = "_".join(flow.name.lower().split())
-                    flow.action_name = flow_name
-
-                flow.updated_at = datetime.now(timezone.utc)
-                session.add(flow)
-                updated_flows.append(flow)
+                if flow.id in flows_to_update:
+                    settings_to_update = flows_to_update[flow.id]
+                    flow.mcp_enabled = settings_to_update.mcp_enabled
+                    flow.action_name = settings_to_update.action_name
+                    flow.action_description = settings_to_update.action_description
+                    flow.updated_at = datetime.now(timezone.utc)
+                    session.add(flow)
+                    updated_flows.append(flow)
 
             await session.commit()
 
