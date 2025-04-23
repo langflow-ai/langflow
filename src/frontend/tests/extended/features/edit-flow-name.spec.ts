@@ -19,6 +19,8 @@ test(
 
     await page.keyboard.press("Enter");
 
+    await page.waitForTimeout(1000);
+
     let flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName);
@@ -43,6 +45,8 @@ test(
     await page.getByTestId("input-flow-name").fill(randomName2);
 
     await page.keyboard.press("Enter");
+
+    await page.waitForTimeout(1000);
 
     flowName = await page.getByTestId("input-flow-name").inputValue();
 
@@ -83,6 +87,8 @@ test(
     await page.getByTestId("input-flow-name").fill(randomName4);
 
     await page.keyboard.press("Enter");
+
+    await page.waitForTimeout(1000);
 
     flowName = await page.getByTestId("input-flow-name").inputValue();
 
