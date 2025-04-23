@@ -75,40 +75,18 @@ class NvidiaIngestComponent(BaseFileComponent):
             info="Split text into smaller chunks",
             value=True,
         ),
-        DropdownInput(
-            name="split_by",
-            display_name="Split By",
-            info="How to split into chunks ('size' splits by number of characters)",
-            options=["page", "sentence", "word", "size"],
-            value="word",  # Default value
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk size",
+            info="The number of tokens per chunk",
+            value=512,
             advanced=True,
         ),
         IntInput(
-            name="split_length",
-            display_name="Split Length",
-            info="The size of each chunk based on the 'split_by' method",
-            value=200,
-            advanced=True,
-        ),
-        IntInput(
-            name="split_overlap",
-            display_name="Split Overlap",
-            info="Number of segments (as determined by the 'split_by' method) to overlap from previous chunk",
-            value=20,
-            advanced=True,
-        ),
-        IntInput(
-            name="max_character_length",
-            display_name="Max Character Length",
-            info="Maximum number of characters in each chunk",
-            value=1000,
-            advanced=True,
-        ),
-        IntInput(
-            name="sentence_window_size",
-            display_name="Sentence Window Size",
-            info="Number of sentences to include from previous and following chunk (when split_by='sentence')",
-            value=0,
+            name="chunk_overlap",
+            display_name="Chunk Overlap",
+            info="Number of tokens to overlap from previous chunk",
+            value=150,
             advanced=True,
         ),
         BoolInput(
@@ -230,8 +208,8 @@ class NvidiaIngestComponent(BaseFileComponent):
             if self.extract_text and self.split_text:
                 ingestor = ingestor.split(
                     tokenizer="intfloat/e5-large-unsupervised",
-                    chunk_size=512,
-                    chunk_overlap=150,
+                    chunk_size=self.chunk_size,
+                    chunk_overlap=self.chunk_overlap,
                     params={"split_source_types":["PDF"]}
                 )
 
