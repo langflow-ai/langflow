@@ -16,24 +16,24 @@ class DataOperationsComponent(Component):
     description = "Perform various operations on a Data object."
     icon = "file-json-2"
     name = "DataOperations"
-    default_keys = ["actions", "data"]
+    default_keys = ["operations", "data"]
     actions_data = {
-        "Select Keys": ["select_keys_input", "actions"],
+        "Select Keys": ["select_keys_input", "operations"],
         "Literal Eval": [],
         "Combine": [],
-        "Filter Values": ["filter_values", "actions", "operator", "filter_key"],
-        "Append / Update ": ["append_update_data", "actions"],
-        "Remove Keys": ["remove_keys_input", "actions"],
-        "Rename Keys": ["rename_keys_input", "actions"],
+        "Filter Values": ["filter_values", "operations", "operator", "filter_key"],
+        "Append / Update ": ["append_update_data", "operations"],
+        "Remove Keys": ["remove_keys_input", "operations"],
+        "Rename Keys": ["rename_keys_input", "operations"],
     }
 
     inputs = [
         DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
         SortableListInput(
-            name="actions",
-            display_name="Actions",
-            placeholder="Select action",
-            info="List of actions to perform on the data.",
+            name="operations",
+            display_name="Operations",
+            placeholder="Select Operation",
+            info="List of operations to perform on the data.",
             options=[
                 {"name": "Select Keys", "icon": "lasso-select"},
                 {"name": "Literal Eval", "icon": "braces"},
@@ -328,11 +328,11 @@ class DataOperationsComponent(Component):
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on selected action."""
-        if field_name != "actions":
+        if field_name != "operations":
             return build_config
 
-        self.actions = field_value
-        selected_actions = [action["name"] for action in self.actions]
+        self.operations = field_value
+        selected_actions = [action["name"] for action in self.operations]
         action_config = {
             "Select Keys": {"is_list": False, "log_msg": "setting filter fields"},
             "Literal Eval": {"is_list": False, "log_msg": "setting evaluate fields"},
@@ -358,7 +358,7 @@ class DataOperationsComponent(Component):
                 default_fields=self.default_keys,
             )
 
-        # Handle no actions case
+        # Handle no operations case
         if not selected_actions:
             logger.info("setting default fields")
             return set_current_fields(
@@ -372,10 +372,10 @@ class DataOperationsComponent(Component):
 
     def as_data(self) -> Data:
         """Execute the selected action on the data."""
-        if not hasattr(self, "actions") or not self.actions:
+        if not hasattr(self, "operations") or not self.operations:
             return Data(data={})
 
-        selected_actions = [action["name"] for action in self.actions]
+        selected_actions = [action["name"] for action in self.operations]
         logger.info(f"selected_actions: {selected_actions}")
 
         # Only handle single action case for now
