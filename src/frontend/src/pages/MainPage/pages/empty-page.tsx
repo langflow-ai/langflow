@@ -13,7 +13,6 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { formatNumber } from "@/utils/utils";
 import { ExternalLink } from "lucide-react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
-import { HiArrowRight } from "react-icons/hi";
 import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
@@ -68,14 +67,14 @@ export const EmptyPageCommunity = ({
         onFileDrop={handleFileDrop}
       >
         <div className="m-0 h-full w-full bg-background p-0">
-          <div className="z-50 flex h-full w-full flex-col items-center justify-center gap-6">
-            <div className="z-50 flex flex-col items-center gap-3">
+          <div className="z-50 flex h-full w-full flex-col items-center justify-center gap-5">
+            <div className="z-50 flex flex-col items-center gap-2">
               <div className="z-50 dark:hidden">
                 <img
                   src={logoLightPng}
                   alt="Langflow Logo Light"
                   data-testid="empty_page_logo_light"
-                  className=""
+                  className="relative top-3"
                 />
               </div>
               <div className="z-50 hidden dark:block">
@@ -83,12 +82,12 @@ export const EmptyPageCommunity = ({
                   src={logoDarkPng}
                   alt="Langflow Logo Dark"
                   data-testid="empty_page_logo_dark"
-                  className=""
+                  className="relative top-3"
                 />
               </div>
               <span
                 data-testid="mainpage_title"
-                className="z-50 text-center text-2xl font-semibold text-foreground"
+                className="z-50 text-center font-chivo text-2xl font-semibold text-foreground"
               >
                 {EMPTY_PAGE_TITLE}
               </span>
@@ -103,7 +102,7 @@ export const EmptyPageCommunity = ({
               </span>
             </div>
 
-            <div className="flex w-full max-w-[510px] flex-col gap-12 sm:gap-8">
+            <div className="flex w-full max-w-[510px] flex-col gap-12 sm:gap-[29px]">
               <Button
                 unstyled
                 className="group mx-3 h-[84px] sm:mx-0"
@@ -113,7 +112,7 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_github_button"
               >
-                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent-pink-foreground hover:shadow-[0_4px_10px_rgba(198,97,184,0.25)]">
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:border-accent-pink-foreground">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
                       <FaGithub className="h-6 w-6" />
@@ -143,7 +142,7 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_discord_button"
               >
-                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-discord-color hover:shadow-[0_4px_10px_rgba(88,101,242,0.25)]">
+                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:border-discord-color">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
                       <FaDiscord className="h-6 w-6 text-discord-color" />
@@ -166,7 +165,7 @@ export const EmptyPageCommunity = ({
 
               <Button
                 variant="default"
-                className="z-10 m-auto h-10 w-full max-w-[155px] rounded-lg font-bold transition-all duration-300"
+                className="z-10 m-auto mt-3 h-10 w-full max-w-[155px] rounded-lg font-bold transition-all duration-300"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
@@ -178,7 +177,7 @@ export const EmptyPageCommunity = ({
         </div>
         <p
           data-testid="empty_page_drag_and_drop_text"
-          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-sm text-muted-foreground"
+          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-[12px] text-muted-foreground"
         >
           {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>
