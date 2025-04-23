@@ -6,7 +6,7 @@ from langflow.inputs import DictInput, DropdownInput, MessageTextInput, Sortable
 from langflow.io import DataInput, Output
 from langflow.logging import logger
 from langflow.schema import Data
-from langflow.utils.component_utils import set_current_fields, delete_fields, add_fields
+from langflow.utils.component_utils import set_current_fields
 
 
 class DataOperationsComponent(Component):
