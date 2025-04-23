@@ -31,7 +31,10 @@ For an example, see [Make any component a tool](/agents-tool-calling-agent-compo
 
 This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -39,18 +42,22 @@ This component searches and retrieves papers from [arXiv.org](https://arXiv.org)
 | search_type | Search Field | The field to search in |
 | max_results | Max Results | Maximum number of results to return |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | papers | Papers | List of retrieved arXiv papers |
 
+</details>
 
 ## Astra DB Tool
 
 The `Astra DB Tool` allows agents to connect to and query data from Astra DB collections.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name              | Type   | Description                                                                                                                      |
 |-------------------|--------|----------------------------------------------------------------------------------------------------------------------------------|
@@ -64,7 +71,7 @@ The `Astra DB Tool` allows agents to connect to and query data from Astra DB col
 | Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                              |
 | Limit             | String | The number of documents to return.                                                                                               |
 
-### Outputs
+**Outputs**
 
 The Data output is primarily used when directly querying Astra DB, while the Tool output is used when integrating with LangChain agents or chains.
 
@@ -73,6 +80,7 @@ The Data output is primarily used when directly querying Astra DB, while the Too
 | Data | List[`Data`] | A list of [Data](/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
 
+</details>
 
 ## Astra DB CQL Tool
 
@@ -80,7 +88,10 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 
 The main difference between this tool and the **Astra DB Tool** is that this tool is specifically designed for CQL tables and requires partition keys for querying, while also supporting clustering keys for more specific queries.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name              | Type   | Description                                                                                                                                        |
 |-------------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -96,18 +107,23 @@ The main difference between this tool and the **Astra DB Tool** is that this too
 | Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                                                |
 | Limit             | String | The number of records to return.                                                                                                                   |
 
-### Outputs
+**Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
 | Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
+</details>
+
 ## Bing Search API
 
 This component allows you to call the Bing Search API.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                   | Type         | Description                           |
 |------------------------|--------------|---------------------------------------|
@@ -116,36 +132,23 @@ This component allows you to call the Bing Search API.
 | bing_search_url        | String       | Custom Bing Search URL (optional)    |
 | k                      | Integer      | Number of search results to return    |
 
-### Outputs
+**Outputs**
 
 | Name    | Type      | Description                          |
 |---------|-----------|--------------------------------------|
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Bing Search tool for use in LangChain|
 
-## Calculator Tool
-
-This component creates a tool for performing basic arithmetic operations on a given expression.
-
-### Inputs
-
-| Name       | Type   | Description                                                        |
-|------------|--------|--------------------------------------------------------------------|
-| expression | String | The arithmetic expression to evaluate (for example, `4*4*(33/22)+12-20`). |
-
-### Outputs
-
-| Name   | Type | Description                                     |
-|--------|------|-------------------------------------------------|
-| result | Tool | Calculator tool for use in LangChain            |
-
-This component allows you to evaluate basic arithmetic expressions. It supports addition, subtraction, multiplication, division, and exponentiation. The tool uses a secure evaluation method that prevents the execution of arbitrary Python code.
+</details>
 
 ## Combinatorial Reasoner
 
 This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                   | Display Name | Description                           |
 |------------------------|--------------|---------------------------------------|
@@ -155,18 +158,23 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 | password               | Password | Password for Icosa API authentication |
 | model_name             | Model Name      | OpenAI LLM to use for reason generation|
 
-### Outputs
+**Outputs**
 
 | Name    | Display Name | Description                          |
 |---------|-----------|--------------------------------------|
 | optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
 | reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
 
+</details>
+
 ## DuckDuckGo search
 
 This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -174,18 +182,23 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 | max_results | Max Results | The maximum number of search results to return. Default: `5`. |
 | max_snippet_length | Max Snippet Length | The maximum length of each result snippet. Default: `100`.|
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | [Data](/concepts-objects#data-object) | List of search results as Data objects containing snippets and full content. |
 | text | Text | Search results formatted as a single text string. |
 
+</details>
+
 ## Exa Search
 
 This component provides an [https://exa.ai/](Exa Search) toolkit for search and content retrieval.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -194,16 +207,22 @@ This component provides an [https://exa.ai/](Exa Search) toolkit for search and 
 | search_num_results | Search Number of Results | Number of results to return for search (default: 5) |
 | similar_num_results | Similar Number of Results | Number of similar results to return (default: 5) |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | tools | Tools | List of search tools provided by the toolkit |
+
+</details>
+
 ## Glean Search API
 
 This component allows you to call the Glean Search API.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                   | Type         | Description                           |
 |------------------------|--------------|---------------------------------------|
@@ -213,42 +232,23 @@ This component allows you to call the Glean Search API.
 | page_size              | Integer      | Number of results per page (default: 10) |
 | request_options        | Dict         | Additional options for the API request (optional) |
 
-### Outputs
+**Outputs**
 
 | Name    | Type      | Description                          |
 |---------|-----------|--------------------------------------|
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Glean Search tool for use in LangChain|
 
-## Google Search API
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
-
-This component allows you to call the Google Search API.
-
-### Inputs
-
-| Name                   | Type         | Description                           |
-|------------------------|--------------|---------------------------------------|
-| google_api_key         | SecretString | Google API key for authentication     |
-| google_cse_id          | SecretString | Google Custom Search Engine ID        |
-| input_value            | String       | Search query input                    |
-| k                      | Integer      | Number of search results to return    |
-
-### Outputs
-
-| Name    | Type      | Description                          |
-|---------|-----------|--------------------------------------|
-| results | List[Data]| List of search results               |
-| tool    | Tool      | Google Search tool for use in LangChain|
+</details>
 
 ## Google Serper API
 
 This component allows you to call the Serper.dev Google Search API.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                   | Type         | Description                           |
 |------------------------|--------------|---------------------------------------|
@@ -256,13 +256,14 @@ This component allows you to call the Serper.dev Google Search API.
 | input_value            | String       | Search query input                    |
 | k                      | Integer      | Number of search results to return    |
 
-### Outputs
+**Outputs**
 
 | Name    | Type      | Description                          |
 |---------|-----------|--------------------------------------|
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
+</details>
 
 ## MCP server
 
@@ -314,38 +315,105 @@ The flow looks like this:
 6. Open the **Playground** and chat with your tool.
 The agent chooses the correct tool based on your query.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name    | Type   | Description                                |
 |---------|--------|--------------------------------------------|
 | command | String | MCP command (default: `uvx mcp-sse-shim@latest`) |
 
-### Outputs
+**Outputs**
 
 | Name  | Type      | Description                               |
 |-------|-----------|-------------------------------------------|
 | tools | List[Tool]| List of tools exposed by the MCP server   |
 
-## MCP Tools (stdio)
-:::important
-This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP server component](/components-tools#mcp-server)
-:::
+</details>
 
+## Wikidata
 
-## MCP Tools (SSE)
-:::important
-This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP server component](/components-tools#mcp-server)
-:::
+This component performs a search using the Wikidata API.
 
-## Python Code Structured Tool
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Query | The text query for similarity search on Wikidata. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results from Wikidata API as a list of Data objects. |
+| text | Message | The search results formatted as a text message. |
+
+</details>
+
+## Legacy components
+
+Legacy components are available to use but no longer supported.
+
+### Calculator Tool
+
+This component allows you to evaluate basic arithmetic expressions. It supports addition, subtraction, multiplication, division, and exponentiation.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name       | Type   | Description                                                        |
+|------------|--------|--------------------------------------------------------------------|
+| expression | String | The arithmetic expression to evaluate (for example, `4*4*(33/22)+12-20`). |
+
+**Outputs**
+
+| Name   | Type | Description                                     |
+|--------|------|-------------------------------------------------|
+| result | Tool | Calculator tool for use in LangChain            |
+
+</details>
+
+### Google Search API
+
+This component allows you to call the Google Search API.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name                   | Type         | Description                           |
+|------------------------|--------------|---------------------------------------|
+| google_api_key         | SecretString | Google API key for authentication     |
+| google_cse_id          | SecretString | Google Custom Search Engine ID        |
+| input_value            | String       | Search query input                    |
+| k                      | Integer      | Number of search results to return    |
+
+**Outputs**
+
+| Name    | Type      | Description                          |
+|---------|-----------|--------------------------------------|
+| results | List[Data]| List of search results               |
+| tool    | Tool      | Google Search tool for use in LangChain|
+
+</details>
+
+### Python Code Structured Tool
 
 This component creates a structured tool from Python code using a dataclass.
 
 The component dynamically updates its configuration based on the provided Python code, allowing for custom function arguments and descriptions.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                   | Type         | Description                           |
 |------------------------|--------------|---------------------------------------|
@@ -356,21 +424,22 @@ The component dynamically updates its configuration based on the provided Python
 | tool_function          | String       | Selected function for the tool        |
 | global_variables        | Dict         | Global variables or data for the tool |
 
-### Outputs
+**Outputs**
 
 | Name        | Type  | Description                             |
 |-------------|-------|-----------------------------------------|
 | result_tool  | Tool  │ Structured tool created from the Python code |
 
-## Python REPL Tool
+</details>
 
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
+### Python REPL Tool
 
 This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name            | Type         | Description                                             |
 |-----------------|--------------|--------------------------------------------------------|
@@ -378,17 +447,22 @@ This component creates a Python REPL (Read-Eval-Print Loop) tool for executing P
 | description     | String       | A description of the tool's functionality               |
 | global_imports  | List[String] | List of modules to import globally (default: ["math"])  |
 
-### Outputs
+**Outputs**
 
 | Name | Type | Description                                |
 |------|------|--------------------------------------------|
 | tool | Tool | Python REPL tool for use in LangChain      |
 
-## Retriever Tool
+</details>
+
+### Retriever Tool
 
 This component creates a tool for interacting with a retriever in LangChain.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name        | Type          | Description                                 |
 |-------------|---------------|---------------------------------------------|
@@ -396,42 +470,24 @@ This component creates a tool for interacting with a retriever in LangChain.
 | name        | String        | The name of the tool                        |
 | description | String        | A description of the tool's functionality   |
 
-### Outputs
+**Outputs**
 
 | Name | Type | Description                                |
 |------|------|--------------------------------------------|
 | tool | Tool | Retriever tool for use in LangChain        |
 
-## SearXNG Search Tool
+</details>
 
-This component creates a tool for searching using SearXNG, a metasearch engine.
-
-### Inputs
-
-| Name        | Type         | Description                           |
-|-------------|--------------|---------------------------------------|
-| url         | String       | The URL of the SearXNG instance       |
-| max_results | Integer      | Maximum number of results to return   |
-| categories  | List[String] | Categories to search in               |
-| language    | String       | Language for the search results       |
-
-### Outputs
-
-| Name        | Type | Description                                |
-|-------------|------|--------------------------------------------|
-| result_tool | Tool | SearXNG search tool for use in LangChain   |
-
-## Search API
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
+### Search API
 
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
 For more information, see the [SearchAPI documentation](https://www.searchapi.io/docs/google).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name           | Display Name       | Info                                                |
 |----------------|---------------------|-----------------------------------------------------|
@@ -440,86 +496,48 @@ For more information, see the [SearchAPI documentation](https://www.searchapi.io
 | input_value    | Input               | The search query or input for the API call          |
 | search_params  | Search parameters   | Additional parameters for customizing the search    |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name    | Info                                                 |
 |------|-----------------|------------------------------------------------------|
 | data | Search Results  | List of Data objects containing search results       |
 | tool | Search API Tool | A Tool object for use in LangChain workflows         |
 
-## Serp Search API
-
-This component creates a tool for searching using the Serp API.
-
-### Inputs
-
-| Name             | Type         | Description                                 |
-|------------------|--------------|---------------------------------------------|
-| serpapi_api_key  | SecretString | API key for Serp API authentication         |
-| input_value      | String       | Search query input                          |
-| search_params    | Dict         | Additional search parameters (optional)     |
-
-### Outputs
-
-| Name    | Type      | Description                                 |
-|---------|-----------|---------------------------------------------|
-| results | List[Data]| List of search results                      |
-| tool    | Tool      | Serp API search tool for use in LangChain   |
-
-## Tavily AI Search
-
-This component performs searches using the Tavily AI search engine, which is optimized for LLMs and RAG applications.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| api_key | Tavily API Key | Your Tavily API Key. |
-| query | Search Query | The search query you want to execute with Tavily. |
-| search_depth | Search Depth | The depth of the search. |
-| topic | Search Topic | The category of the search. |
-| max_results | Max Results | The maximum number of search results to return. |
-| include_images | Include Images | Include a list of query-related images in the response. |
-| include_answer | Include Answer | Include a short answer to original query. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The search results as a list of Data objects. |
-| text | Text | The search results formatted as a text string. |
-
-## Wikidata
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
-
-This component performs a search using the Wikidata API.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| query | Query | The text query for similarity search on Wikidata. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The search results from Wikidata API as a list of Data objects. |
-| text | Message | The search results formatted as a text message. |
+</details>
 
 
-## Wikipedia API
+### SearXNG Search Tool
 
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
+This component creates a tool for searching using SearXNG, a metasearch engine.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name        | Type         | Description                           |
+|-------------|--------------|---------------------------------------|
+| url         | String       | The URL of the SearXNG instance       |
+| max_results | Integer      | Maximum number of results to return   |
+| categories  | List[String] | Categories to search in               |
+| language    | String       | Language for the search results       |
+
+**Outputs**
+
+| Name        | Type | Description                                |
+|-------------|------|--------------------------------------------|
+| result_tool | Tool | SearXNG search tool for use in LangChain   |
+
+</details>
+
+### Wikipedia API
 
 This component creates a tool for searching and retrieving information from Wikipedia.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                    | Type    | Description                                                |
 |-------------------------|---------|-----------------------------------------------------------|
@@ -529,43 +547,29 @@ This component creates a tool for searching and retrieving information from Wiki
 | load_all_available_meta | Boolean | Whether to load all available metadata (advanced)          |
 | doc_content_chars_max   | Integer | Maximum number of characters for document content (advanced)|
 
-### Outputs
+**Outputs**
 
 | Name    | Type      | Description                           |
 |---------|-----------|---------------------------------------|
 | results | List[Data]| List of Wikipedia search results      |
 | tool    | Tool      | Wikipedia search tool for use in LangChain |
 
-## Wolfram Alpha API
+</details>
 
-This component creates a tool for querying the Wolfram Alpha API.
+## Deprecated components
 
-### Inputs
+Deprecated components have been replaced by newer alternatives and should not be used in new projects.
 
-| Name        | Type         | Description                    |
-|-------------|--------------|--------------------------------|
-| input_value | String       | Query input for Wolfram Alpha  |
-| app_id      | SecretString | Wolfram Alpha API App ID       |
+### MCP Tools (stdio)
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
 
-### Outputs
 
-| Name    | Type      | Description                                    |
-|---------|-----------|------------------------------------------------|
-| results | List[Data]| List containing the Wolfram Alpha API response |
-| tool    | Tool      | Wolfram Alpha API tool for use in LangChain    |
-
-## Yahoo Finance News Tool
-
-This component creates a tool for retrieving news from Yahoo Finance.
-
-### Inputs
-
-This component does not have any input parameters.
-
-### Outputs
-
-| Name | Type | Description                                  |
-|------|------|----------------------------------------------|
-| tool | Tool | Yahoo Finance News tool for use in LangChain |
-
+### MCP Tools (SSE)
+:::important
+This component is deprecated as of Langflow version 1.3.
+Instead, use the [MCP server component](/components-tools#mcp-server)
+:::
 
