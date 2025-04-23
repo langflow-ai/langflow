@@ -10,7 +10,7 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
-    // await addLegacyComponents(page);
+    await addLegacyComponents(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -43,6 +43,7 @@ test(
 
     await page
       .getByTestId("logicLoop")
+      .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 300, y: 100 },
       });
@@ -60,7 +61,7 @@ test(
         targetPosition: { x: 500, y: 100 },
       });
 
-    // Add Parser component
+    // Add Parse Data component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Parser");
     await page.waitForSelector('[data-testid="processingParser"]', {
@@ -80,15 +81,15 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
-    // await page
-    //   .getByTestId("handle-updatedata-shownode-data-right")
-    //   .nth(1)
-    //   .click();
+    await page
+      .getByTestId("handle-parsedata-shownode-data list-right")
+      .nth(1)
+      .click();
 
-    // const loopItemInput = await page
-    //   .getByTestId("handle-basicloopcomponent-shownode-item-left")
-    //   .first()
-    //   .click();
+    const loopItemInput = await page
+      .getByTestId("handle-loopcomponent-shownode-item-left")
+      .first()
+      .click();
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
@@ -110,7 +111,7 @@ test(
     // Loop Item -> Update Data
 
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-item-right")
+      .getByTestId("handle-loopcomponent-shownode-item-right")
       .first()
       .click();
     await page
@@ -124,20 +125,23 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-data-left")
+      .getByTestId("handle-loopcomponent-shownode-data-left")
       .first()
       .click();
 
-    // Loop Done -> Parser
+    // Loop Done -> Parse Data
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-done-right")
+      .getByTestId("handle-loopcomponent-shownode-done-right")
       .first()
       .click();
-    await page.getByTestId("handle-parser-shownode-data-left").first().click();
-
-    // Parser -> Chat Output
     await page
-      .getByTestId("handle-parser-shownode-message-right")
+      .getByTestId("handle-parsedata-shownode-data-left")
+      .first()
+      .click();
+
+    // Parse Data -> Chat Output
+    await page
+      .getByTestId("handle-parsedata-shownode-message-right")
       .first()
       .click();
 
@@ -192,7 +196,7 @@ test(
       timeout: 15000,
     });
 
-    // Delete the second parser used to test
+    // Delete the second parse data used to test
 
     await page.getByTestId("div-generic-node").nth(4).click();
 
@@ -207,7 +211,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-item-left")
+      .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
       .click();
 
