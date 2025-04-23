@@ -111,7 +111,7 @@ If you want to apply filters regardless of the LLM's input, use the **Static Fil
 
 ### Outputs
 
-The Data output is used when directly querying Astra DB, while the Tool output is used when integrating with agents.
+The **Data** output is used when directly querying Astra DB, while the **Tool** output is used when integrating with agents.
 
 | Name | Type | Description |
 |------|------|-------------|
