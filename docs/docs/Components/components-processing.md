@@ -34,6 +34,28 @@ This component modifies metadata of input objects. It can add new metadata, upda
 |------|--------------|------|
 | data | Data | List of Input objects, each with added metadata |
 
+## Combine data
+
+:::important
+Prior to Langflow version 1.1.3, this component was named **Merge Data**.
+:::
+
+This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of data objects to be merged. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+
 ## Combine text
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
@@ -74,31 +96,120 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 |------|--------------|------|
 | data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
 
-## Data combiner
+## Data to DataFrame
 
-:::important
-Prior to Langflow version 1.1.3, this component was named **Merge Data**.
-:::
+This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
 
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
+This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
+2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
 
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
+
+3. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Alex Cruz - Employee Profile",
+    "data": {
+        "Name": "Alex Cruz",
+        "Role": "Developer",
+        "Department": "Engineering"
+    }
+}'
+```
+
+4. In the **Playground**, view the output of your flow.
+The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
+```text
+| text                         | data                                                                    |
+|:-----------------------------|:------------------------------------------------------------------------|
+| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
+```
+
+5. Send another employee data object.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Kalani Smith - Employee Profile",
+    "data": {
+        "Name": "Kalani Smith",
+        "Role": "Designer",
+        "Department": "Design"
+    }
+}'
+```
+
+6. In the **Playground**, this request is also converted to `DataFrame`.
+```text
+| text                            | data                                                                 |
+|:--------------------------------|:---------------------------------------------------------------------|
+| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
+```
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A list of data objects to be merged. |
+| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a 'text' column. |
 
 ## DataFrame operations
 
-This component performs the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html):
+This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
+
+To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
+
+This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
+
+![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
+
+1. The **API Request** component retrieves data with only `source` and `result` fields.
+For this example, the desired data is nested within the `result` field.
+2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+3. In the **Groq** model component, add your **Groq** API key.
+4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+For this example, enter:
+```
+I want to explode the result column out into a Data object
+```
+:::tip
+Avoid punctuation in the **Instructions** field, as it can cause errors.
+:::
+5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
+6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The result is a structured DataFrame.
+```text
+id | name             | company               | username        | email                              | address           | zip
+---|------------------|----------------------|-----------------|------------------------------------|-------------------|-------
+1  | Emily Johnson    | ABC Corporation      | emily_johnson   | emily.johnson@abccorporation.com   | 123 Main St       | 12345
+2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
+```
+7. Add the **DataFrame Operations** component, and a **Chat Output** component to the flow.
+8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
+9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
+10. Click **Playground**, and then click **Run Flow**.
+The flow extracts the values from the `name` column.
+```text
+name
+Emily Johnson
+Michael Williams
+John Smith
+...
+```
+
+### Operations
+
+This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
 
 | Operation | Description | Required Inputs |
 |-----------|-------------|-----------------|
@@ -388,6 +499,105 @@ This component converts and extracts JSON fields using JQ queries.
 | Name | Display Name | Info |
 |------|--------------|------|
 | filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
+
+## Regex extractor
+
+This component extracts patterns from text using regular expressions. It can be used to find and extract specific patterns or information from text data.
+
+To use this component in a flow:
+
+1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
+
+![Regex extractor connected to url component](/img/component-url-regex.png)
+
+2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
+This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
+```
+In the news\s*\n(.*?)(?=\n\n)
+```
+
+Result:
+```
+Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
+```
+
+## Save to File
+
+This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
+
+1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
+The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
+
+![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
+
+2. In the **Save to File** component's **Input Type** field, select the expected input type.
+This example expects **Data** from the **Webhook**.
+3. In the **File Format** field, select the file type for your saved file.
+This example uses `.md` in one **Save to File** component, and `.xlsx` in another.
+4. In the **File Path** field, enter the path for your saved file.
+This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
+The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
+:::tip
+If you enter a format in the `file_path` that is not accepted, the component appends the proper format to the file.
+For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file will be saved as `./output/test.txt.csv` so the file is not corrupted.
+:::
+5. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
+    "Role": ["Developer", "Designer", "Manager"],
+    "Department": ["Engineering", "Design", "Management"]
+}'
+```
+6. In your local filesystem, open the `outputs` directory.
+You should see two files created from the data you've sent: one in `.xlsx` for structured spreadsheets, and one in Markdown.
+```text
+| Name         | Role      | Department   |
+|:-------------|:----------|:-------------|
+| Alex Cruz    | Developer | Engineering  |
+| Kalani Smith | Designer  | Design       |
+| Noam Johnson | Manager   | Management   |
+```
+
+### File input format options
+
+For `DataFrame` and `Data` inputs, the component can create:
+  - `csv`
+  - `excel`
+  - `json`
+  - `markdown`
+  - `pdf`
+
+For `Message` inputs, the component can create:
+  - `txt`
+  - `json`
+  - `markdown`
+  - `pdf`
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_text | Input Text | The text to analyze and extract patterns from. |
+| pattern | Regex Pattern | The regular expression pattern to match in the text. |
+| input_type | Input Type | Select the type of input to save.|
+| df | DataFrame | The DataFrame to save. |
+| data | Data | The Data object to save. |
+| message | Message | The Message to save. |
+| file_format | File Format | Select the file format to save the input. |
+| file_path | File Path | The full file path including filename and extension. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | List of extracted matches as [Data](/concepts-objects#data-object) objects. |
+| text | Message | The extracted matches formatted as a [Message](/concepts-objects#message-object) object. |
+| confirmation | Confirmation | Confirmation message after saving the file. |
 
 ## Select data
 
