@@ -37,10 +37,9 @@ project_sse_transports = {}
 
 def get_project_sse(project_id: UUID) -> SseServerTransport:
     """Get or create an SSE transport for a specific project."""
-    project_id_str = str(project_id)
-    if project_id_str not in project_sse_transports:
-        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
-    return project_sse_transports[project_id_str]
+    if project_id not in project_sse_transports:
+        project_sse_transports[project_id] = SseServerTransport(f"/api/v1/mcp/project/{project_id}/")
+    return project_sse_transports[project_id]
 
 
 @router.get("/{project_id}", response_model=list[dict])
