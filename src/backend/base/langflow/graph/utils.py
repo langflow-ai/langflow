@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import json
-import pandas as pd
 from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
+import json
+
+import pandas as pd
 
 from loguru import logger
 
@@ -155,7 +156,7 @@ async def log_transaction(
                 if inserted:
                     logger.debug(f"Logged transaction: {inserted.id}")
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error logging transaction: {str(exc)}")
+        logger.error(f"Error logging transaction: {exc!s}")
 
 
 async def log_vertex_build(
