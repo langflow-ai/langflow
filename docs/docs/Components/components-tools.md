@@ -53,7 +53,7 @@ This component allows agents to query data from Astra DB collections.
 To use this tool in a flow, connect it to an **Agent** component.
 The flow looks like this:
 
-![Astra DB JSON tool connected to an Agent](/img/starter-flow-simple-agent.png)
+![Astra DB JSON tool connected to an Agent](/img/component-astra-db-json-tool.png)
 
 The **Tool Name** and **Tool Description** fields are required for the Agent to decide when to use the tool.
 **Tool Name** cannot contain spaces.
