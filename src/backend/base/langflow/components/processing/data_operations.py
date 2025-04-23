@@ -1,5 +1,5 @@
 import ast
-from typing import Any
+from typing import Any, Callable, Dict, Optional
 
 from langflow.custom import Component
 from langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
@@ -225,7 +225,7 @@ class DataOperationsComponent(Component):
         """Combine multiple data objects into one."""
         logger.info("combining data")
         if not self.data_is_list():
-            return self.data[0] if self.data else None
+            return self.data[0] if self.data else Data(data={})
 
         data_dicts = [data.model_dump().get("data", data.model_dump()) for data in self.data]
         combined_data = {}
@@ -371,17 +371,19 @@ class DataOperationsComponent(Component):
     def as_data(self) -> Data:
         """Execute the selected action on the data."""
         if not hasattr(self, "actions") or not self.actions:
-            return None
+            return Data(data={})
 
         selected_actions = [action["name"] for action in self.actions]
         logger.info(f"selected_actions: {selected_actions}")
 
         # Only handle single action case for now
         if len(selected_actions) != 1:
-            return None
+            return Data(data={})
 
         action = selected_actions[0]
-        action_map = {
+
+        # Explicitly type the action_map
+        action_map: dict[str, Callable[[], Data]] = {
             "Select Keys": self.select_keys,
             "Literal Eval": self.evaluate_data,
             "Combine": self.combine_data,
@@ -391,7 +393,7 @@ class DataOperationsComponent(Component):
             "Rename Keys": self.rename_keys,
         }
 
-        handler = action_map.get(action)
+        handler: Callable[[], Data] | None = action_map.get(action)
         if handler:
             try:
                 return handler()
@@ -399,4 +401,4 @@ class DataOperationsComponent(Component):
                 logger.error(f"Error executing {action}: {e!s}")
                 raise
 
-        return None
+        return Data(data={})
