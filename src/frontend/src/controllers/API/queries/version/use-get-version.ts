@@ -7,6 +7,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface versionQueryResponse {
   version: string;
   package: string;
+  main_version: string;
 }
 
 export const useGetVersionQuery: useQueryFunctionType<
@@ -22,7 +23,9 @@ export const useGetVersionQuery: useQueryFunctionType<
   const responseFn = async () => {
     const { data } = await getVersionFn();
     const refreshVersion = useDarkStore.getState().refreshVersion;
+    const refreshLatestVersion = useDarkStore.getState().refreshLatestVersion;
     refreshVersion(data.version);
+    refreshLatestVersion(data.main_version);
     return data;
   };
 
