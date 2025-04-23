@@ -1,11 +1,13 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
+  DATASTAX_DOCS_URL,
   DISCORD_URL,
   DOCS_URL,
   GITHUB_URL,
   TWITTER_URL,
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
@@ -45,7 +47,7 @@ export const AccountMenu = () => {
       <HeaderMenu>
         <HeaderMenuToggle>
           <div
-            className="h-7 w-7 rounded-lg focus-visible:outline-0"
+            className="h-[24px] w-[24px] rounded-lg focus-visible:outline-0"
             data-testid="user-profile-settings"
           >
             <ProfileIcon />
@@ -107,7 +109,10 @@ export const AccountMenu = () => {
                   </HeaderMenuItemButton>
                 </div>
               )}
-              <HeaderMenuItemLink newPage href={DOCS_URL}>
+              <HeaderMenuItemLink
+                newPage
+                href={ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL}
+              >
                 <span data-testid="menu_docs_button" id="menu_docs_button">
                   Docs
                 </span>

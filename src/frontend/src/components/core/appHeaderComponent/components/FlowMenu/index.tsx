@@ -81,9 +81,12 @@ export const MenuBar = memo((): JSX.Element => {
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
+  const currentFlowManagerStore = useFlowsManagerStore(
+    (state) => state.currentFlow,
+  );
+  const currentFlowStore = useFlowStore((state) => state.currentFlow);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
-  const flows = useFlowsManagerStore((state) => state.flows);
 
   useGetRefreshFlowsQuery(
     {
@@ -132,7 +135,7 @@ export const MenuBar = memo((): JSX.Element => {
       <div
         data-testid="menu_status_saved_flow_button"
         id="menu_status_saved_flow_button"
-        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
+        className="shrink-0 text-[12px] font-medium text-accent-emerald-foreground"
       >
         Saved
       </div>
@@ -158,6 +161,7 @@ export const MenuBar = memo((): JSX.Element => {
           .filter((name) => name !== currentFlowName) ?? [];
 
       const invalid = flowNames.includes(value);
+
       setIsInvalidName(invalid);
       setFlowName(value);
     },
@@ -178,7 +182,7 @@ export const MenuBar = memo((): JSX.Element => {
     [currentFlowName],
   );
 
-  const handleNameSubmit = useCallback(() => {
+  const handleNameSubmit = useCallback(async () => {
     if (
       flowName.trim() !== "" &&
       flowName !== currentFlowName &&
@@ -193,6 +197,11 @@ export const MenuBar = memo((): JSX.Element => {
         id: currentFlowId!,
       };
       setCurrentFlow(newFlow);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      console.log("newFlow", newFlow);
+      console.log("currentFlowManagerStore", currentFlowManagerStore);
+      console.log("currentFlowStore", currentFlowStore);
+
       saveFlow(newFlow)
         .then(() => {
           setSuccessData({ title: "Flow name updated successfully" });
@@ -257,7 +266,7 @@ export const MenuBar = memo((): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-[12px] text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -302,7 +311,7 @@ export const MenuBar = memo((): JSX.Element => {
             >
               <Input
                 className={cn(
-                  "h-6 w-full shrink-0 cursor-text font-semibold",
+                  "h-6 w-full shrink-0 cursor-text text-[12px] font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
@@ -323,7 +332,7 @@ export const MenuBar = memo((): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-[12px] font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
