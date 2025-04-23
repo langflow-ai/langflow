@@ -32,7 +32,6 @@ const HeaderComponent = ({
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
-  const navigate = useNavigate();
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
