@@ -187,8 +187,7 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 
 ## Combinatorial Reasoner
 
-This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
-
+This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. For more information, see [Icosa Computing](https://www.icosacomputing.com/).
 ### Inputs
 
 | Name                   | Display Name | Description                           |
