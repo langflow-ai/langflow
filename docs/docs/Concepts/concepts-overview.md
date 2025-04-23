@@ -38,7 +38,7 @@ If you're new to Langflow, it's OK to feel a bit lost at first. We’ll take you
 
 Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [Publish pane](#publish-pane) are available in the upper right corner.
 
-![](/img/workspace.png)
+![Empty langflow workspace](/img/workspace.png)
 
 ## Workspace
 
@@ -47,9 +47,9 @@ The **workspace** is where you create AI applications by connecting and running 
 The workspace controls allow you to adjust your view and lock your flows in place.
 
 * Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
-* To access the [Settings](#settings) menu, click <Icon name="Settings" aria-label="Gear icon" /> **Settings**.
+* To access the [Settings](#settings) menu, click your profile icon, and then select **Settings**.
 
-This menu contains configuration for **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
+This menu contains configuration for **Global Variables**, **Langflow API keys**, **Shortcuts**, and **Messages**.
 
 ## Components
 
@@ -106,25 +106,17 @@ To modify the location of your log file:
 
 An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
-## Projects and folders
+## Projects
 
 The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
 
 ![](/img/my-projects.png)
 
-**My Projects** is the default folder where all new projects and components are initially stored.
+**My Projects** is the default space where all new projects and components are initially stored.
 
-Projects, folders, and flows are exchanged as JSON objects.
+To create a new project, click the <Icon name="Plus" aria-label="Plus icon" />.
 
-* To create a new folder, click 📁 **New Folder**.
-
-* To rename a folder, double-click the folder name.
-
-* To download a folder, click 📥 **Download**.
-
-* To upload a folder, click 📤 **Upload**. The default maximum file upload size is 100 MB.
-
-* To move a flow or component, drag and drop it into the desired folder.
+To upload a flow to your project, click the <Icon name="Upload" aria-label="Upload icon" />.
 
 ## File management
 
@@ -137,7 +129,7 @@ For more on managing your files, see [Manage files](/concepts-file-management).
 The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace.
 
 * **New**: Create a new flow from scratch.
-* **Settings**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
+* **Edit Details**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
 * **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
 * **Import**: Import a flow or component from a JSON file into the workspace.
 * **Export**: Export the current flow as a JSON file.
@@ -147,7 +139,7 @@ The dropdown menu labeled with the project name offers several management and cu
 
 ## Settings
 
-Click <Icon name="Settings" aria-label="Gear icon" /> **Settings** to access **Global variables**, **Langflow API**, **Shortcuts**, and **Messages**.
+Click <Icon name="Settings" aria-label="Gear icon"/> **Settings** to access **Global variables**, **Langflow API keys**, **Shortcuts**, and **Messages**.
 
 
 
