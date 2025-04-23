@@ -208,8 +208,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    "nv-ingest-api @ file:///Users/jeffreycarpenter/nv-ingest/api/dist/nv_ingest_api-2025.4.11.dev20250411-py3-none-any.whl",
-    "nv-ingest-client @ file:///Users/jeffreycarpenter/nv-ingest/client/dist/nv_ingest_client-2025.4.11.dev20250411-py3-none-any.whl"
+    "nv-ingest-api==2025.4.22.dev20250422",
+    "nv-ingest-client==2025.4.22.dev20250422",
 ]
 
 postgresql = [
@@ -317,6 +317,3 @@ ignore_missing_imports = true
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.metadata]
-allow-direct-references = true
