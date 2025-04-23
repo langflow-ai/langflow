@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 # Create a context variable to store the current project
-current_project_ctx = ContextVar("current_project_ctx", default=None)
+current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
 
 # Create a mapping of project-specific SSE transports
 project_sse_transports = {}

@@ -82,8 +82,8 @@ async def create_project(
 
         if project.flows_list:
             update_statement_flows = (
-                update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)
-            )  # type: ignore[attr-defined]
+                update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+            )
             await session.exec(update_statement_flows)
             await session.commit()
 
