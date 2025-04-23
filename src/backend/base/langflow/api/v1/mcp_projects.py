@@ -49,7 +49,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
     """Get or create an SSE transport for a specific project."""
     project_id_str = str(project_id)
     if project_id_str not in project_sse_transports:
-        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
+        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}")
     return project_sse_transports[project_id_str]
 
 
@@ -162,6 +162,7 @@ class ProjectMCPServer:
                 logger.exception("Error in listing project tools")
                 raise
             return tools
+
         @self.server.list_prompts()
         async def handle_list_prompts():
             return []
@@ -398,6 +399,7 @@ class ProjectMCPServer:
                 msg = f"Error executing tool {name}: {e!s}"
                 logger.exception(msg)
                 raise
+
         # Delegate other handlers to the main MCP server
         # self.server.list_prompts = server.list_prompts
         # self.server.list_resources = server.list_resources
@@ -440,7 +442,6 @@ async def handle_project_sse(
     logger.info(f"Project MCP server name: {project_server.server.name}")
     logger.info(f"SSE: {sse}")
 
-
     # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
@@ -475,51 +476,79 @@ async def handle_project_sse(
 
 
 @router.post("/{project_id}")
-async def handle_project_messages(project_id: UUID, request: Request):
+async def handle_project_messages(
+    project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
+):
     """Handle POST messages for a project-specific MCP server."""
-    sse = get_project_sse(project_id)
+    # Verify project exists and user has access
+    db_service = get_db_service()
+    async with db_service.with_session() as session:
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    # Set context variables
+    user_token = current_user_ctx.set(current_user)
+    project_token = current_project_ctx.set(project_id)
+
     try:
+        sse = get_project_sse(project_id)
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e:
         logger.info("Project MCP Server disconnected for project %s", project_id)
         raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
+    finally:
+        current_user_ctx.reset(user_token)
+        current_project_ctx.reset(project_token)
+
+
+@router.post("/{project_id}/")
+async def handle_project_messages_with_slash(
+    project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Handle POST messages for a project-specific MCP server with trailing slash."""
+    # Call the original handler
+    return await handle_project_messages(project_id, request, current_user)
 
 
 # Replace the existing list_tools handler in the MCP server
-@server.list_tools()
-@handle_mcp_errors
-async def handle_list_tools_with_projects():
-    """Handle listing tools, including those from projects."""
-    tools = []
-    try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
-            # Get flows with mcp_enabled flag set to True
-            flows = (await session.exec(select(Flow).where(Flow.mcp_enabled == True))).all()  # noqa: E712
+# @server.list_tools()
+# @handle_mcp_errors
+# async def handle_list_tools_with_projects():
+#     """Handle listing tools, including those from projects."""
+#     tools = []
+#     try:
+#         db_service = get_db_service()
+#         async with db_service.with_session() as session:
+#             # Get flows with mcp_enabled flag set to True
+#             flows = (await session.exec(select(Flow).where(Flow.mcp_enabled == True))).all()  # noqa: E712
 
-            for flow in flows:
-                if flow.user_id is None:
-                    continue
+#             for flow in flows:
+#                 if flow.user_id is None:
+#                     continue
 
-                # Use action_name if available, otherwise construct from flow name
-                name = flow.action_name or "_".join(flow.name.lower().split())
+#                 # Use action_name if available, otherwise construct from flow name
+#                 name = flow.action_name or "_".join(flow.name.lower().split())
 
-                # Use action_description if available, otherwise use defaults
-                description = flow.action_description or (
-                    flow.description if flow.description else f"Tool generated from flow: {name}"
-                )
+#                 # Use action_description if available, otherwise use defaults
+#                 description = flow.action_description or (
+#                     flow.description if flow.description else f"Tool generated from flow: {name}"
+#                 )
 
-                tool = types.Tool(
-                    name=name,
-                    description=description,
-                    inputSchema=json_schema_from_flow(flow),
-                )
-                tools.append(tool)
-    except Exception as e:
-        msg = f"Error in listing tools: {e!s}"
-        logger.exception(msg)
-        raise
-    return tools
+#                 tool = types.Tool(
+#                     name=name,
+#                     description=description,
+#                     inputSchema=json_schema_from_flow(flow),
+#                 )
+#                 tools.append(tool)
+#     except Exception as e:
+#         msg = f"Error in listing tools: {e!s}"
+#         logger.exception(msg)
+#         raise
+#     return tools
 
 
 @router.patch("/{project_id}", status_code=200)
