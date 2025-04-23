@@ -133,10 +133,7 @@ test(
       .getByTestId("handle-basicloopcomponent-shownode-done-right")
       .first()
       .click();
-    await page
-      .getByTestId("handle-parser-shownode-data-left")
-      .first()
-      .click();
+    await page.getByTestId("handle-parser-shownode-data-left").first().click();
 
     // Parser -> Chat Output
     await page
