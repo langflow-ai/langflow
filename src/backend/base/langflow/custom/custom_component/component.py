@@ -1172,6 +1172,8 @@ class Component(CustomComponent):
                 "description": tool.description,
                 "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
                 "status": True,  # Initialize all tools with status True
+                "display_name": tool.name,
+                "display_description": tool.description,
             }
             for tool in tools
         ]
