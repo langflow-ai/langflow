@@ -129,7 +129,7 @@ async def log_transaction(
         # Convert the result to a serializable format
         if source.result:
             try:
-                result_dict = json.loads(source.result.model_dump_json())
+                result_dict = source.result.model_dump()
                 for key, value in result_dict.items():
                     if isinstance(value, pd.DataFrame):
                         result_dict[key] = value.to_dict()
