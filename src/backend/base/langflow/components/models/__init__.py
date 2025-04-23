@@ -1,5 +1,4 @@
 from .aiml import AIMLModelComponent
-from .amazon_bedrock import AmazonBedrockComponent
 from .anthropic import AnthropicModelComponent
 from .azure_openai import AzureChatOpenAIComponent
 from .baidu_qianfan_chat import QianfanChatEndpointComponent
@@ -25,7 +24,6 @@ from .xai import XAIModelComponent
 
 __all__ = [
     "AIMLModelComponent",
-    "AmazonBedrockComponent",
     "AnthropicModelComponent",
     "AzureChatOpenAIComponent",
     "ChatOllamaComponent",

@@ -16,8 +16,12 @@ test.describe("group node test", () => {
         .click();
       await page.getByTestId("fit_view").first().click();
 
-      await page.getByTestId("title-OpenAI").click({ modifiers: ["Shift"] });
-      await page.getByTestId("title-Prompt").click({ modifiers: ["Shift"] });
+      await page
+        .getByTestId("title-OpenAI")
+        .click({ modifiers: ["ControlOrMeta"] });
+      await page
+        .getByTestId("title-Prompt")
+        .click({ modifiers: ["ControlOrMeta"] });
 
       await page.getByRole("button", { name: "Group" }).click();
       await page.getByTestId("title-Group").click();
