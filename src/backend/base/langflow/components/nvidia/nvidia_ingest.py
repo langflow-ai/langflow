@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 
 from langflow.base.data import BaseFileComponent
-from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, SecretStrInput, Output
+from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, FloatInput, MessageTextInput, SecretStrInput, Output
 from langflow.schema import Data
 
 
@@ -50,6 +50,12 @@ class NvidiaIngestComponent(BaseFileComponent):
             name="extract_tables",
             display_name="Extract Tables",
             info="Extract text from tables",
+            value=True,
+        ),
+        BoolInput(
+            name="extract_images",
+            display_name="Extract Images",
+            info="Extract images from document",
             value=True,
         ),
         DropdownInput(
@@ -105,6 +111,48 @@ class NvidiaIngestComponent(BaseFileComponent):
             value=0,
             advanced=True,
         ),
+        BoolInput(
+            name="filter_images",
+            display_name="Filter Images",
+            info="Filter images (see advanced options for filtering criteria).",
+            advanced=True,
+            value=True,
+        ),
+        IntInput(
+            name="min_image_size",
+            display_name="Minimum Image Size Filter",
+            info="Minimum image width/length in pixels",
+            value=128,
+            advanced=True,
+        ),
+        FloatInput(
+            name="min_aspect_ratio",
+            display_name="Minimum Aspect Ratio Filter",
+            info="Minimum allowed aspect ratio (width / height). Images narrower than this will be filtered out.",
+            value=0.2,
+            advanced=True,
+        ),
+        FloatInput(
+            name="max_aspect_ratio",
+            display_name="Maximum Aspect Ratio Filter",
+            info="Maximum allowed aspect ratio (width / height). Images taller than this will be filtered out.",
+            value=5.0,
+            advanced=True,
+        ),
+        BoolInput(
+            name="dedup_images",
+            display_name="Deduplicate Images",
+            info="Filter duplicated images.",
+            advanced=True,
+            value=True,
+        ),
+        BoolInput(
+            name="caption_images",
+            display_name="Caption Images",
+            info="Generate captions for images using the NVIDIA captioning model.",
+            advanced=True,
+            value=True,
+        ),
     ]
 
     outputs = [
@@ -157,23 +205,38 @@ class NvidiaIngestComponent(BaseFileComponent):
                     extract_text=self.extract_text,
                     extract_tables=self.extract_tables,
                     extract_charts=self.extract_charts,
-                    extract_images=False,  # Currently not supported
+                    extract_images=self.extract_images,
                     text_depth=self.text_depth,
                 )
-            )
-        except Exception as e:
-            self.log(f"Error creating Ingestor: {e}")
-            raise
 
-        if self.split_text:
-            ingestor = ingestor.split(
-                tokenizer="meta-llama/Llama-3.2-1B",
-                chunk_size=1024,
-                chunk_overlap=150,
             )
 
-        try:
+            if self.extract_images:
+                if self.dedup_images:
+                    ingestor = ingestor.dedup(content_type="image", filter=True)
+
+                if self.filter_images:
+                    ingestor = ingestor.filter(
+                        content_type="image",
+                        min_size=self.min_image_size,
+                        min_aspect_ratio=self.min_aspect_ratio,
+                        max_aspect_ratio=self.max_aspect_ratio,
+                        filter=True,
+                    )
+
+                if self.caption_images:
+                    ingestor = ingestor.caption()
+
+            if self.extract_text and self.split_text:
+                ingestor = ingestor.split(
+                    tokenizer="intfloat/e5-large-unsupervised",
+                    chunk_size=512,
+                    chunk_overlap=150,
+                    params={"split_source_types":["PDF"]}
+                )
+
             result = ingestor.ingest()
+
         except Exception as e:
             self.log(f"Error during ingestion: {e}")
             raise
@@ -199,24 +262,44 @@ class NvidiaIngestComponent(BaseFileComponent):
                             text=metadata.get("content", ""),
                             file_path=source_metadata.get("source_name", ""),
                             document_type=document_type,
-                            description=content_metadata.get("description", ""),
+                            metadata=metadata,
                         )
                     )
                 # Both charts and tables are returned as "structured" document type,
                 # with extracted text in "table_content"
                 elif document_type == document_type_structured:
                     table_metadata = metadata.get("table_metadata", {})
+                    
+                    #reformat chart/table images as binary data
+                    if "content" in metadata:
+                        metadata["content"] = {"$binary": metadata["content"]}
+
                     data.append(
                         Data(
                             text=table_metadata.get("table_content", ""),
                             file_path=source_metadata.get("source_name", ""),
                             document_type=document_type,
-                            description=content_metadata.get("description", ""),
+                            metadata=metadata,
+                        )
+                    )
+                elif document_type == "image":
+                    image_metadata = metadata.get("image_metadata", {})
+
+                    #reformat images as binary data
+                    if "content" in metadata:
+                        metadata["content"] = {"$binary": metadata["content"]}
+
+                    data.append(
+                        Data(
+                            #output=f"data:image/png;base64,{image}",
+                            text=image_metadata.get("caption", "No caption available"),
+                            file_path=source_metadata.get("source_name", ""),
+                            document_type=document_type,
+                            metadata=metadata,
                         )
                     )
                 else:
-                    # image is not yet supported; skip if encountered
-                    self.log(f"Unsupported document type: {document_type}")
+                    self.log(f"Unsupported document type {document_type}: {element}")
 
         self.status = data or "No data"
 
