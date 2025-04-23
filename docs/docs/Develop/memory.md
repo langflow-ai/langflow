@@ -33,7 +33,7 @@ The following tables are stored in `langflow.db`:
 
 • **ApiKey** - Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
 
-• **Folder** - Provides a structure for flow storage. For more information, see [Projects and folders](/concepts-overview#projects-and-folders).
+• **Project** - Provides a structure for flow storage. For more information, see [Projects](/concepts-overview#projects).
 
 • **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
