@@ -88,10 +88,6 @@ const router = createBrowserRouter(
                     element={<HomePage key="flows" type="flows" />}
                   />
                   <Route
-                    path="mcp/"
-                    element={<HomePage key="mcp" type="mcp" />}
-                  />
-                  <Route
                     path="components/"
                     element={<HomePage key="components" type="components" />}
                   >
@@ -107,6 +103,15 @@ const router = createBrowserRouter(
                     <Route
                       path="folder/:folderId"
                       element={<HomePage key="flows" type="flows" />}
+                    />
+                  </Route>
+                  <Route
+                    path="mcp/"
+                    element={<HomePage key="mcp" type="mcp" />}
+                  >
+                    <Route
+                      path="folder/:folderId"
+                      element={<HomePage key="mcp" type="mcp" />}
                     />
                   </Route>
                 </Route>

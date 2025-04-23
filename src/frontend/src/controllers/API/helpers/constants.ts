@@ -27,6 +27,7 @@ export const URLs = {
   ALL: `all`,
   VOICE: `voice`,
   PUBLIC_FLOW: `flows/public_flow`,
+  MCP: `mcp/project`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
