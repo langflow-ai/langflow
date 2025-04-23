@@ -29,13 +29,13 @@ The `flow-id` is found in the [Publish pane](/concepts-publish) or in the flow's
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
 
-* Export the `folder-id` in your terminal.
-To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endpoint for a list of folders.
+* Export the `project-id` in your terminal.
+To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) endpoint for a list of projects.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/folders/" \
+  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
   </TabItem>
@@ -44,7 +44,7 @@ curl -X GET \
 [
   {
     "name": "My Projects",
-    "description": "Manage your own projects. Download and upload folders.",
+    "description": "Manage your own projects. Download and upload projects.",
     "id": "1415de42-8f01-4f36-bf34-539f23e47466",
     "parent_id": null
   }
@@ -52,9 +52,9 @@ curl -X GET \
 ```
   </TabItem>
 </Tabs>
-Export the `folder-id` as an environment variable.
+Export the `project-id` as an environment variable.
 ```bash
-export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
+export project_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
 
 * Export the Langflow API key as an environment variable.
@@ -982,7 +982,7 @@ curl -X POST \
    <TabItem value="result" label="Result">
 
 ```json
-{"name":"string2","description":"string","icon":"string","icon_bg_color":"#FF0000","gradient":"string","data":{},"is_component":false,"updated_at":"2025-02-04T21:07:36+00:00","webhook":false,"endpoint_name":"string","tags":["string"],"locked":false,"id":"e8d81c37-714b-49ae-ba82-e61141f020ee","user_id":"f58396d4-a387-4bb8-b749-f40825c3d9f3","folder_id":"1415de42-8f01-4f36-bf34-539f23e47466"}
+{"name":"string2","description":"string","icon":"string","icon_bg_color":"#FF0000","gradient":"string","data":{},"is_component":false,"updated_at":"2025-02-04T21:07:36+00:00","webhook":false,"endpoint_name":"string","tags":["string"],"locked":false,"id":"e8d81c37-714b-49ae-ba82-e61141f020ee","user_id":"f58396d4-a387-4bb8-b749-f40825c3d9f3","project_id":"1415de42-8f01-4f36-bf34-539f23e47466"}
 ```
 
    </TabItem>
@@ -1011,7 +1011,7 @@ A JSON object containing a list of flows.
    </TabItem>
 </Tabs>
 
-To retrieve only the flows from a specific folder, pass `folder_id` in the query string.
+To retrieve only the flows from a specific project, pass `project_id` in the query string.
 
 
 <Tabs>
@@ -1019,7 +1019,7 @@ To retrieve only the flows from a specific folder, pass `folder_id` in the query
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=$FOLDER_ID&header_flows=false&page=1&size=1" \
+  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&project_id=$project_ID&header_flows=false&page=1&size=1" \
   -H "accept: application/json"
 ```
 
@@ -1087,7 +1087,7 @@ curl -X PATCH \
   "name": "string",
   "description": "string",
   "data": {},
-  "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "endpoint_name": "my_new_endpoint_name",
   "locked": true
 }'
@@ -1112,7 +1112,7 @@ curl -X PATCH \
   "locked": true,
   "id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
   "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
-  "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }
 ```
 
@@ -1175,7 +1175,7 @@ curl -X POST \
       ],
       "locked": false,
       "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     },
     {
       "name": "string",
@@ -1193,7 +1193,7 @@ curl -X POST \
       ],
       "locked": false,
       "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     }
   ]
 }'
@@ -1224,7 +1224,7 @@ This example uploads a local file named `agent-with-astra-db-tool.json`.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
+  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$project_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@agent-with-astra-db-tool.json;type=application/json"
@@ -1249,12 +1249,12 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-To specify a target folder for the flow, include the query parameter `folder_id`.
-The target `folder_id` must already exist before uploading a flow. Call the [/api/v1/folders/](#read-folders) endpoint for a list of available folders.
+To specify a target project for the flow, include the query parameter `project_id`.
+The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](#read-projects) endpoint for a list of available projects.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
+  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$project_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@agent-with-astra-db-tool.json;type=application/json"
@@ -1316,22 +1316,22 @@ A list of example flows.
 </Tabs>
 
 
-## Folders
+## projects
 
-Use the `/folders` endpoint to create, read, update, and delete folders.
+Use the `/projects` endpoint to create, read, update, and delete projects.
 
-Folders store your flows and components.
+projects store your flows and components.
 
-### Read folders
+### Read projects
 
-Get a list of Langflow folders.
+Get a list of Langflow projects.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/folders/" \
+  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
 
@@ -1342,7 +1342,7 @@ curl -X GET \
 [
   {
     "name": "My Projects",
-    "description": "Manage your own projects. Download and upload folders.",
+    "description": "Manage your own projects. Download and upload projects.",
     "id": "1415de42-8f01-4f36-bf34-539f23e47466",
     "parent_id": null
   }
@@ -1352,20 +1352,20 @@ curl -X GET \
   </TabItem>
 </Tabs>
 
-### Create folder
+### Create project
 
-Create a new folder.
+Create a new project.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/folders/" \
+  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "new_folder_name",
+  "name": "new_project_name",
   "description": "string",
   "components_list": [],
   "flows_list": []
@@ -1377,7 +1377,7 @@ curl -X POST \
 
 ```json
 {
-  "name": "new_folder_name",
+  "name": "new_project_name",
   "description": "string",
   "id": "b408ddb9-6266-4431-9be8-e04a62758331",
   "parent_id": null
@@ -1387,17 +1387,17 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-To add flows and components at folder creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
+To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
 
-Adding a flow to a folder moves the flow from its previous location. The flow is not copied.
+Adding a flow to a project moves the flow from its previous location. The flow is not copied.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/folders/" \
+  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "new_folder_name",
+  "name": "new_project_name",
   "description": "string",
   "components_list": [
     "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -1408,18 +1408,18 @@ curl -X POST \
 }'
 ```
 
-### Read folder
+### Read project
 
-Retrieve details of a specific folder.
+Retrieve details of a specific project.
 
-To find the UUID of your folder, call the [read folders](#read-folders) endpoint.
+To find the UUID of your project, call the [read projects](#read-projects) endpoint.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/folders/$FOLDER_ID" \
+  "$LANGFLOW_URL/api/v1/projects/$project_ID" \
   -H "accept: application/json"
 ```
 
@@ -1430,7 +1430,7 @@ curl -X GET \
 [
     {
         "name": "My Projects",
-        "description": "Manage your own projects. Download and upload folders.",
+        "description": "Manage your own projects. Download and upload projects.",
         "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         "parent_id": null
     }
@@ -1440,11 +1440,11 @@ curl -X GET \
   </TabItem>
 </Tabs>
 
-### Update folder
+### Update project
 
-Update the information of a specific folder with a `PATCH` request.
+Update the information of a specific project with a `PATCH` request.
 
-Each PATCH request updates the folder with the values you send.
+Each PATCH request updates the project with the values you send.
 Only the fields you include in your request are updated.
 If you send the same values multiple times, the update is still processed, even if the values are unchanged.
 
@@ -1453,7 +1453,7 @@ If you send the same values multiple times, the update is still processed, even 
 
 ```bash
 curl -X PATCH \
-  "$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331" \
+  "$LANGFLOW_URL/api/v1/projects/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1484,16 +1484,16 @@ curl -X PATCH \
   </TabItem>
 </Tabs>
 
-### Delete folder
+### Delete project
 
-Delete a specific folder.
+Delete a specific project.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/folders/$FOLDER_ID" \
+  "$LANGFLOW_URL/api/v1/projects/$project_ID" \
   -H "accept: */*"
 ```
 
@@ -1507,9 +1507,9 @@ curl -X DELETE \
   </TabItem>
 </Tabs>
 
-### Download folder
+### Download project
 
-Download all flows from a folder as a zip file.
+Download all flows from a project as a zip file.
 
 The `--output` flag is optional.
 
@@ -1518,31 +1518,31 @@ The `--output` flag is optional.
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331" \
+  "$LANGFLOW_URL/api/v1/projects/download/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
-  --output langflow-folder.zip
+  --output langflow-project.zip
 ```
 
   </TabItem>
     <TabItem value="result" label="Result">
 
 ```text
-The folder contents.
+The project contents.
 ```
 
   </TabItem>
 </Tabs>
 
-### Upload folder
+### Upload project
 
-Upload a folder to Langflow.
+Upload a project to Langflow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/folders/upload/" \
+  "$LANGFLOW_URL/api/v1/projects/upload/" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@20241230_135006_langflow_flows.zip;type=application/zip"
@@ -1553,7 +1553,7 @@ curl -X POST \
   <TabItem value="result" label="Result">
 
 ```text
-The folder contents are uploaded to Langflow.
+The project contents are uploaded to Langflow.
 ```
 
   </TabItem>
