@@ -8,17 +8,23 @@ import {
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
+import { parseString } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
+import Markdown from "react-markdown";
 import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
+import rehypeMathjax from "rehype-mathjax";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 
-const McpServerTab = () => {
+const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [selectedMode, setSelectedMode] = useState<string>("Cursor");
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const projectId = folderId ?? myCollectionId ?? "";
+  const [isCopied, setIsCopied] = useState(false);
 
   const { data: flowsMCP, isLoading } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
@@ -42,51 +48,38 @@ const McpServerTab = () => {
     },
   };
 
-  const MCP_SERVER_EXAMPLE = {
-    Cursor: `{
-      "Cursor": {
-        "flow-id": {
-          "name": "Example Cursor Flow",
-          "description": "Short description of this cursor flow",
-          "command": "run-flow.sh",
-          "args": ["--some-flag"],
-          "env": {
-            "MCP_HOST": "http://127.0.0.1:7860"
-          }     
-        } 
-      }
-    }`,
-    Claude: `{
-      "Claude": {
-        "flow-id": {
-          "name": "Example Claude Flow",
-          "description": "Short description of this claude flow",
-          "command": "run-flow.sh",
-          "args": ["--some-flag"],
-          "env": {
-            "MCP_HOST": "http://127.0.0.1:7860"
-          }
-        }
-      }
-    }`,
-    "Raw JSON": `{
-      "JSON": {
-        "flow-id": {
-          "name": "Example JSON Flow",
-          "description": "Short description of this json flow",
-          "command": "run-flow.sh",
-          "args": ["--some-flag"],
-          "env": {
-            "MCP_HOST": "http://127.0.0.1:7860"
-          }
-        }
-      }
-    }`,
+  const host = window.location.host;
+  const protocol = window.location.protocol;
+  const apiUrl = `${protocol}//${host}/api/v1/mcp/project/${projectId}/sse`;
+
+  const MCP_SERVER_JSON = `{
+  "mcpServers": {
+    "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
+      "url": "${apiUrl}"
+    }
+  }
+}`;
+
+  const MCP_SERVER_TUTORIAL = {
+    Claude: `- Open **File** -> **Settings**
+- Click on **Developer**
+- Click on **Edit Config**
+- Paste the following JSON and save:`,
+    Cursor: `- Open **Settings** -> **Cursor Settings**
+- Click on **MCP**
+- Click on **Add new global MCP server**
+- Paste the following JSON and save:`,
   };
 
   const copyToClipboard = () => {
     navigator.clipboard
-      .writeText(MCP_SERVER_EXAMPLE[selectedMode])
+      .writeText(MCP_SERVER_JSON)
+      .then(() => {
+        setIsCopied(true);
+        setTimeout(() => {
+          setIsCopied(false);
+        }, 1000);
+      })
       .catch((err) => console.error("Failed to copy text: ", err));
   };
 
@@ -161,14 +154,19 @@ const McpServerTab = () => {
                 </Button>
               ))}
             </div>
-            {selectedMode === "Cursor" && (
+            {selectedMode !== "Raw JSON" && (
               <div className="flex flex-row items-center justify-between border-b border-border p-1.5 px-4">
-                <span className="text-[13px]">
-                  Add this server to Cursor config
+                <span className="py-2 text-[13px]">
+                  <Markdown
+                    remarkPlugins={[remarkGfm as any]}
+                    rehypePlugins={[rehypeMathjax, rehypeRaw]}
+                    className={cn(
+                      "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
+                    )}
+                  >
+                    {MCP_SERVER_TUTORIAL[selectedMode]}
+                  </Markdown>
                 </span>
-                <Button className="text-[13px]" size="sm">
-                  Add to Client
-                </Button>
               </div>
             )}
             <SyntaxHighlighter
@@ -185,17 +183,17 @@ const McpServerTab = () => {
                     onClick={copyToClipboard}
                   >
                     <ForwardedIconComponent
-                      name="copy"
+                      name={isCopied ? "check" : "copy"}
                       className="h-4 w-4"
                       aria-hidden="true"
                     />
                   </Button>
-                  <div className="p-4">{children}</div>
+                  <div className="overflow-x-auto p-4">{children}</div>
                 </div>
               )}
               language="json"
             >
-              {MCP_SERVER_EXAMPLE[selectedMode]}
+              {MCP_SERVER_JSON}
             </SyntaxHighlighter>
           </div>
         </div>
