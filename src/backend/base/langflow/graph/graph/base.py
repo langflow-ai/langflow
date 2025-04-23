@@ -1527,6 +1527,7 @@ class Graph:
         event_manager: EventManager | None = None,
     ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
+        has_webhook_component = "webhook" in start_component_id.lower() if start_component_id else False
         first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
         to_process = deque(first_layer)
@@ -1557,7 +1558,9 @@ class Graph:
 
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
             try:
-                next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
+                next_runnable_vertices = await self._execute_tasks(
+                    tasks, lock=lock, has_webhook_component=has_webhook_component
+                )
             except Exception:
                 logger.exception(f"Error executing tasks in layer {layer_index}")
                 raise
@@ -1614,14 +1617,15 @@ class Graph:
             - Creates error output structures
             - Calls log_vertex_build to record the failure
         """
-        from langflow.api.utils import format_exception_message
-
         if isinstance(result, ComponentBuildError):
             params = result.message
             tb = result.formatted_traceback
         else:
+            from langflow.api.utils import format_exception_message
+
             tb = traceback.format_exc()
             logger.exception("Error building Component")
+
             params = format_exception_message(result)
         message = {"errorMessage": params, "stackTrace": tb}
         vertex = self.get_vertex(vertex_id)
@@ -1647,12 +1651,15 @@ class Graph:
             artifacts={},
         )
 
-    async def _execute_tasks(self, tasks: list[asyncio.Task], lock: asyncio.Lock) -> list[str]:
+    async def _execute_tasks(
+        self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
+    ) -> list[str]:
         """Executes tasks in parallel, handling exceptions for each task.
 
         Args:
             tasks: List of tasks to execute
             lock: Async lock for synchronization
+            has_webhook_component: Whether the graph has a webhook component
         """
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
@@ -1664,7 +1671,8 @@ class Graph:
 
             if isinstance(result, Exception):
                 logger.error(f"Task {task_name} failed with exception: {result}")
-                await self._log_vertex_build_from_exception(vertex_id, result)
+                if has_webhook_component:
+                    await self._log_vertex_build_from_exception(vertex_id, result)
 
                 # Cancel all remaining tasks
                 for t in tasks[i + 1 :]:
