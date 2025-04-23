@@ -4,7 +4,7 @@ import asyncio
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -13,6 +13,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
+import pandas as pd
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
@@ -55,6 +56,22 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
+
+def serialize_response(obj):
+    if isinstance(obj, pd.DataFrame):
+        return obj.to_dict(orient='records')
+    return jsonable_encoder(obj)
+
+
+class CustomRunResponse(RunResponse):
+    @classmethod
+    def model_validate(cls, obj):
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if isinstance(value, pd.DataFrame):
+                    obj[key] = value.to_dict(orient='records')
+        return super().model_validate(obj)
+
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -267,7 +284,7 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
+@router.post("/run/{flow_id_or_name}", response_model=CustomRunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
@@ -756,3 +773,5 @@ async def get_config():
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
