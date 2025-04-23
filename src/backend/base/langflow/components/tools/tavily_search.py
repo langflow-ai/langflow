@@ -117,10 +117,10 @@ class TavilySearchComponent(Component):
             # Only process domains if they're provided
             include_domains = None
             exclude_domains = None
-            
+
             if self.include_domains:
                 include_domains = [domain.strip() for domain in self.include_domains.split(",") if domain.strip()]
-            
+
             if self.exclude_domains:
                 exclude_domains = [domain.strip() for domain in self.exclude_domains.split(",") if domain.strip()]
 
@@ -130,7 +130,6 @@ class TavilySearchComponent(Component):
                 "accept": "application/json",
             }
 
-            # Build payload with only valid parameters
             payload = {
                 "api_key": self.api_key,
                 "query": self.query,

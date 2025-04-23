@@ -209,12 +209,14 @@ Note: Check 'Advanced' for all options.
             self.status = error_message
             return [Data(data={"error": error_message})]
 
+        # Initialize domain variables as None
         include_domains = None
         exclude_domains = None
-        
+
+        # Only process domains if they're provided
         if self.include_domains:
             include_domains = [domain.strip() for domain in self.include_domains.split(",") if domain.strip()]
-        
+
         if self.exclude_domains:
             exclude_domains = [domain.strip() for domain in self.exclude_domains.split(",") if domain.strip()]
 
