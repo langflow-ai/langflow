@@ -99,10 +99,7 @@ async def ws_api_key_security(
                     reason="Missing first superuser credentials",
                 )
             warnings.warn(
-                (
-                    "In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. "
-                    "Please update your clients accordingly."
-                ),
+                ("In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. Please update your clients accordingly."),
                 DeprecationWarning,
                 stacklevel=2,
             )
