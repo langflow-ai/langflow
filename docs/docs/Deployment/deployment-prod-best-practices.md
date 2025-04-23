@@ -1,5 +1,5 @@
 ---
-title: Langflow Architecture and Best Practices
+title: Langflow architecture and best practices
 slug: /deployment-prod-best-practices
 ---
 
@@ -11,24 +11,24 @@ While Langflow offers flexible deployment options, deploying on a Kubernetes clu
 Deploying on Kubernetes offers the following advantages:
 
 * **Scalability**: Kubernetes allows you to scale the Langflow service to meet the demands of your workload.
-* **Availability and Resilience**: Kubernetes provides built-in resilience features, such as automatic failover and self-healing, to ensure that the Langflow service is always available.
+* **Availability and resilience**: Kubernetes provides built-in resilience features, such as automatic failover and self-healing, to ensure that the Langflow service is always available.
 * **Security**: Kubernetes provides security features, such as role-based access control and network isolation, to protect the Langflow service and its data.
 * **Portability**: Kubernetes is a portable platform, which means that you can deploy the Langflow service to any Kubernetes cluster, on-premises or in the cloud.
 
-Langflow can be deployed on cloud deployments like **AWS EKS, Google GKE, or Azure AKS**. For more information about deploying Langflow on AWS EKS, Google GKE, or Azure AKS, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
+Langflow can be deployed on cloud deployments like **AWS EKS, Google GKE, or Azure AKS**. For more information about deploying Langflow on AWS EKS, Google GKE, or Azure AKS, see the [Langflow Helm charts repository](https://github.com/langflow-ai/langflow-helm-charts).
 
 ## Langflow deployment
 
 A typical Langflow deployment includes:
 
-* **Langflow API & UI** – The Langflow service is the core component of the Langflow platform. It provides a RESTful API for executing flows.
-* **Kubernetes Cluster** – The Kubernetes cluster provides a platform for deploying and managing the Langflow service and its supporting components.
-* **Persistent Storage** – Persistent storage is used to store the Langflow service's data, such as models and training data.
-* **Ingress Controller** – The ingress controller provides a single entry point for traffic to the Langflow service.
-* **Load Balancer** – Balances traffic across multiple Langflow replicas.
-* **Vector Database** – If using Langflow for RAG, Vector DB (e.g., Astra DB) can be integrated.
+* **Langflow API and UI** – The Langflow service is the core component of the Langflow platform. It provides a RESTful API for executing flows.
+* **Kubernetes cluster** – The Kubernetes cluster provides a platform for deploying and managing the Langflow service and its supporting components.
+* **Persistent storage** – Persistent storage is used to store the Langflow service's data, such as models and training data.
+* **Ingress controller** – The ingress controller provides a single entry point for traffic to the Langflow service.
+* **Load balancer** – Balances traffic across multiple Langflow replicas.
+* **Vector database** – If you are using Langflow for RAG, you can integrate with the vector database in Astra Serverless.
 
-![Langflow Reference Architecture on Kubernetes](/img/langflow-reference-architecture.png)
+![Langflow reference architecture on Kubernetes](/img/langflow-reference-architecture.png)
 
 ## Environment isolation
 
