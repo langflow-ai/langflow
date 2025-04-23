@@ -164,10 +164,9 @@ project_mcp_servers = {}
 
 def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
     """Get or create an MCP server for a specific project."""
-    project_id_str = str(project_id)
-    if project_id_str not in project_mcp_servers:
-        project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
-    return project_mcp_servers[project_id_str]
+    if project_id not in project_mcp_servers:
+        project_mcp_servers[project_id] = ProjectMCPServer(project_id)
+    return project_mcp_servers[project_id]
 
 
 @router.get("/{project_id}/sse", response_class=StreamingResponse)
