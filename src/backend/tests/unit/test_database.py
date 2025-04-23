@@ -10,7 +10,7 @@ from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.models.project.model import FolderCreate
+from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from sqlalchemy import text
