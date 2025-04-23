@@ -124,7 +124,7 @@ export default function PublishDropdown() {
           >
             <div
               className="group-hover:bg-accent"
-              data-testid="api-access-item"
+              data-testid="mcp-server-item"
             >
               <IconComponent
                 name="Mcp"
