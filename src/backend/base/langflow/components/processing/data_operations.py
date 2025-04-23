@@ -22,7 +22,7 @@ class DataOperationsComponent(Component):
         "Literal Eval": [],
         "Combine": [],
         "Filter Values": ["filter_values", "actions", "operator", "filter_key"],
-        "Append or Update Data": ["append_update_data", "actions"],
+        "Append / Update ": ["append_update_data", "actions"],
         "Remove Keys": ["remove_keys_input", "actions"],
         "Rename Keys": ["rename_keys_input", "actions"],
     }
@@ -39,7 +39,7 @@ class DataOperationsComponent(Component):
                 {"name": "Literal Eval", "icon": "braces"},
                 {"name": "Combine", "icon": "merge"},
                 {"name": "Filter Values", "icon": "filter"},
-                {"name": "Append or Update Data", "icon": "circle-plus"},
+                {"name": "Append / Update ", "icon": "circle-plus"},
                 {"name": "Remove Keys", "icon": "eraser"},
                 {"name": "Rename Keys", "icon": "pencil-line"},
             ],
@@ -81,7 +81,7 @@ class DataOperationsComponent(Component):
         # update/ Append data inputs
         DictInput(
             name="append_update_data",
-            display_name="Append or Update Data",
+            display_name="Append / Update ",
             info="Data to append or update the existing data with.",
             show=False,
             value={"key": "value"},
@@ -112,6 +112,7 @@ class DataOperationsComponent(Component):
     # Helper methods for data operations
     def get_data_dict(self) -> dict:
         """Extract data dictionary from Data object."""
+        #ToDo: rasie error if it s list of data objects
         data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data
         return data.model_dump()
 
@@ -315,8 +316,8 @@ class DataOperationsComponent(Component):
         return Data(**data_filtered)
 
     def append_update(self) -> Data:
-        """Append or update data with new key-value pairs."""
-        self.validate_single_data("Append or Update Data")
+        """Append / Update  with new key-value pairs."""
+        self.validate_single_data("Append / Update ")
         data_filtered = self.get_normalized_data()
 
         for key, value in self.append_update_data.items():
@@ -337,7 +338,7 @@ class DataOperationsComponent(Component):
             "Literal Eval": {"is_list": False, "log_msg": "setting evaluate fields"},
             "Combine": {"is_list": True, "log_msg": "setting combine fields"},
             "Filter Values": {"is_list": False, "log_msg": "setting filter values fields"},
-            "Append or Update Data": {"is_list": False, "log_msg": "setting append or update data fields"},
+            "Append / Update ": {"is_list": False, "log_msg": "setting Append / Update  fields"},
             "Remove Keys": {"is_list": False, "log_msg": "setting remove keys fields"},
             "Rename Keys": {"is_list": False, "log_msg": "setting rename keys fields"},
         }
@@ -389,7 +390,7 @@ class DataOperationsComponent(Component):
             "Literal Eval": self.evaluate_data,
             "Combine": self.combine_data,
             "Filter Values": self.multi_filter_data,
-            "Append or Update Data": self.append_update,
+            "Append / Update ": self.append_update,
             "Remove Keys": self.remove_keys,
             "Rename Keys": self.rename_keys,
         }
