@@ -46,7 +46,7 @@ This component searches and retrieves papers from [arXiv.org](https://arXiv.org)
 | papers | Papers | List of retrieved arXiv papers |
 
 
-## Astra DB Tool
+## Astra DB tool
 
 This component allows agents to query data from Astra DB collections.
 
