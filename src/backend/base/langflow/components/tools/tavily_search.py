@@ -114,9 +114,15 @@ class TavilySearchComponent(Component):
 
     def fetch_content(self) -> list[Data]:
         try:
-            # Process include_domains and exclude_domains from comma-separated strings to lists
-            include_domains = [domain.strip() for domain in (self.include_domains or "").split(",") if domain.strip()]
-            exclude_domains = [domain.strip() for domain in (self.exclude_domains or "").split(",") if domain.strip()]
+            # Only process domains if they're provided
+            include_domains = None
+            exclude_domains = None
+            
+            if self.include_domains:
+                include_domains = [domain.strip() for domain in self.include_domains.split(",") if domain.strip()]
+            
+            if self.exclude_domains:
+                exclude_domains = [domain.strip() for domain in self.exclude_domains.split(",") if domain.strip()]
 
             url = "https://api.tavily.com/search"
             headers = {
@@ -136,22 +142,17 @@ class TavilySearchComponent(Component):
                 "include_raw_content": self.include_raw_content,
                 "days": self.days,
                 "time_range": self.time_range,
-                "include_domains": self.include_domains,
-                "exclude_domains": self.exclude_domains,
             }
+
+            # Only add domains to payload if they exist and have values
+            if include_domains:
+                payload["include_domains"] = include_domains
+            if exclude_domains:
+                payload["exclude_domains"] = exclude_domains
 
             # Add conditional parameters only if they should be included
             if self.search_depth == "advanced" and self.chunks_per_source:
                 payload["chunks_per_source"] = self.chunks_per_source
-
-            if include_domains:
-                payload["include_domains"] = include_domains
-
-            if exclude_domains:
-                payload["exclude_domains"] = exclude_domains
-
-            if self.include_raw_content:
-                payload["include_raw_content"] = self.include_raw_content
 
             if self.topic == "news" and self.days:
                 payload["days"] = int(self.days)  # Ensure days is an integer

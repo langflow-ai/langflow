@@ -209,9 +209,14 @@ Note: Check 'Advanced' for all options.
             self.status = error_message
             return [Data(data={"error": error_message})]
 
-        # Process include_domains and exclude_domains from comma-separated strings to lists
-        include_domains = [domain.strip() for domain in (self.include_domains or "").split(",") if domain.strip()]
-        exclude_domains = [domain.strip() for domain in (self.exclude_domains or "").split(",") if domain.strip()]
+        include_domains = None
+        exclude_domains = None
+        
+        if self.include_domains:
+            include_domains = [domain.strip() for domain in self.include_domains.split(",") if domain.strip()]
+        
+        if self.exclude_domains:
+            exclude_domains = [domain.strip() for domain in self.exclude_domains.split(",") if domain.strip()]
 
         return self._tavily_search(
             self.query,
