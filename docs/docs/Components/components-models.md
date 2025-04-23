@@ -3,6 +3,8 @@ title: Models
 slug: /components-models
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Model components in Langflow
 
 Model components generate text using large language models.
@@ -190,6 +192,22 @@ For more information, see the [Google Generative AI documentation](https://cloud
 
 This component generates text using Groq's language models.
 
+1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/starter-projects-basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
+
+![Groq component in a basic prompting flow](/img/component-groq.png)
+
+2. In the **Groq API Key** field, paste your Groq API key.
+The Groq model component automatically retrieves a list of the latest models.
+To refresh your list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Model** field, select the model you want to use for your LLM.
+This example uses [llama-3.1-8b-instant](https://console.groq.com/docs/model/llama-3.1-8b-instant), which Groq recommends for real-time conversational interfaces.
+4. In the **Prompt** component, enter:
+```text
+You are a helpful assistant who supports their claims with sources.
+```
+5. Click **Playground** and ask your Groq LLM a question.
+The responses include a list of sources.
+
 For more information, see the [Groq documentation](https://groq.com/).
 
 ### Inputs
@@ -197,11 +215,12 @@ For more information, see the [Groq documentation](https://groq.com/).
 | Name           | Type          | Description                                                     |
 |----------------|---------------|-----------------------------------------------------------------|
 | groq_api_key    | SecretString   | API key for the Groq API.                                      |
-| groq_api_base   | String         | Base URL path for API requests. Default: `https://api.groq.com` (advanced). |
-| max_tokens      | Integer        | The maximum number of tokens to generate (advanced).           |
+| groq_api_base   | String         | Base URL path for API requests. Default: `https://api.groq.com`. |
+| max_tokens      | Integer        | The maximum number of tokens to generate.           |
 | temperature     | Float          | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.1`. |
-| n               | Integer        | Number of chat completions to generate for each prompt (advanced). |
+| n               | Integer        | Number of chat completions to generate for each prompt. |
 | model_name      | String         | The name of the Groq model to use. Options are dynamically fetched from the Groq API. |
+| tool_mode_enabled | Bool | If enabled, the component only displays models that work with tools. |
 
 ### Outputs
 
@@ -439,7 +458,18 @@ For more information, see [NVIDIA AI documentation](https://developer.nvidia.com
 
 This component generates text using Ollama's language models.
 
-For more information, see [Ollama documentation](https://ollama.com/).
+To use this component in a flow, connect Langflow to your locally running Ollama server and select a model.
+
+1. In the Ollama component, in the **Base URL** field, enter the address for your locally running Ollama server.
+This value is set as the `OLLAMA_HOST` environment variable in Ollama.
+The default base URL is `http://127.0.0.1:11434`.
+2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Model Name** field, select a model. This example uses `llama3.2:latest`.
+4. Connect the **Ollama** model component to a flow. For example, this flow connects a local Ollama server running a Llama 3.2 model as the custom model for an [Agent](/components-agents) component.
+
+![Ollama model as Agent custom model](/img/component-ollama-model.png)
+
+For more information, see the [Ollama documentation](https://ollama.com/).
 
 ### Inputs
 
