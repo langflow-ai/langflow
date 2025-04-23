@@ -22,6 +22,8 @@ export function AppWrapperPage() {
       setTimeout(() => {
         localStorage.setItem("hasSeenMCPModal", "true");
       }, 1000);
+    } else if (flows !== undefined && flows.length === 0) {
+      localStorage.setItem("hasSeenMCPModal", "true");
     }
   }, [flows]);
 
