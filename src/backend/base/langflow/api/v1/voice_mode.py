@@ -602,12 +602,16 @@ async def flow_as_tool_websocket(
         send_lock = asyncio.Lock()
 
         async def safe_send_json(payload):
+            logger.debug(f"Sending JSON: {payload.type}")
             async with send_lock:
                 await client_websocket.send_json(payload)
+            logger.debug("JSON sent.")
 
         async def safe_send_text(payload):
+            logger.debug("Sending text")
             async with send_lock:
                 await client_websocket.send_text(payload)
+            logger.debug("Text sent.")
 
         async def safe_close():
             async with send_lock:
@@ -710,13 +714,28 @@ async def flow_as_tool_websocket(
 
                 shared_state["event_count"] = current_count + 1
 
+            # def send_event(event, loop, direction) -> None:
+            #    async def _inner():
+            #        async with send_lock:
+            #            await safe_send_json(event)
+            #            log_event(event, "↑")
+            #        log_event(event, direction)
+            #
+            #                asyncio.run_coroutine_threadsafe(_inner(), loop).result()
             def send_event(event, loop, direction) -> None:
-                async def _inner():
-                    async with send_lock:
-                        await safe_send_json(event)
-                    log_event(event, direction)
+                thread_lock = threading.Lock()  # lives only in this function
 
-                asyncio.run_coroutine_threadsafe(_inner(), loop).result()
+                def wrapper():
+                    async def inner():
+                        async with send_lock:  # from the outer scope
+                            await client_websocket.send_json(event)
+                            log_event(event, direction)
+
+                    future = asyncio.run_coroutine_threadsafe(inner(), loop)
+                    return future.result()
+
+                with thread_lock:
+                    return wrapper()
 
             def pass_through(from_dict, to_dict, keys):
                 for key in keys:
