@@ -92,7 +92,7 @@ def set_multiple_field_advanced(
     """Set advanced property for multiple fields at once."""
     if fields is not None:
         for field, advanced in fields.items():
-            build_config =  set_field_advanced(build_config, field, advanced)
+            build_config = set_field_advanced(build_config, field, advanced)
     elif field_list is not None:
         for field in field_list:
             build_config = set_field_advanced(build_config, field, is_advanced)
@@ -124,7 +124,7 @@ def set_current_fields(
     if selected_action in action_fields:
         for field in action_fields[selected_action]:
             build_config = set_field_display(build_config=build_config, field=field, is_visible=True)
-        for key,value in action_fields.items():
+        for key, value in action_fields.items():
             if key != selected_action:
                 for field in value:
                     build_config = set_field_display(build_config=build_config, field=field, is_visible=False)
