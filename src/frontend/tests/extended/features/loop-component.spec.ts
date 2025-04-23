@@ -60,35 +60,35 @@ test(
         targetPosition: { x: 500, y: 100 },
       });
 
-    // Add Parse Data component
+    // Add Parser component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("data to message");
-    await page.waitForSelector('[data-testid="processingData to Message"]', {
+    await page.getByTestId("sidebar-search-input").fill("Parser");
+    await page.waitForSelector('[data-testid="processingParser"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingData to Message")
+      .getByTestId("processingParser")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 100 },
       });
 
     //This one is for testing the wrong loop message
     await page
-      .getByTestId("processingData to Message")
+      .getByTestId("processingParser")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });
 
-    await page
-      .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(1)
-      .click();
+    // await page
+    //   .getByTestId("handle-updatedata-shownode-data-right")
+    //   .nth(1)
+    //   .click();
 
-    const loopItemInput = await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first()
-      .click();
+    // const loopItemInput = await page
+    //   .getByTestId("handle-basicloopcomponent-shownode-item-left")
+    //   .first()
+    //   .click();
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
@@ -110,7 +110,7 @@ test(
     // Loop Item -> Update Data
 
     await page
-      .getByTestId("handle-loopcomponent-shownode-item-right")
+      .getByTestId("handle-basicloopcomponent-shownode-item-right")
       .first()
       .click();
     await page
@@ -124,23 +124,23 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-data-left")
+      .getByTestId("handle-basicloopcomponent-shownode-data-left")
       .first()
       .click();
 
-    // Loop Done -> Parse Data
+    // Loop Done -> Parser
     await page
-      .getByTestId("handle-loopcomponent-shownode-done-right")
+      .getByTestId("handle-basicloopcomponent-shownode-done-right")
       .first()
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parser-shownode-data-left")
       .first()
       .click();
 
-    // Parse Data -> Chat Output
+    // Parser -> Chat Output
     await page
-      .getByTestId("handle-parsedata-shownode-message-right")
+      .getByTestId("handle-parser-shownode-message-right")
       .first()
       .click();
 
@@ -195,7 +195,7 @@ test(
       timeout: 15000,
     });
 
-    // Delete the second parse data used to test
+    // Delete the second parser used to test
 
     await page.getByTestId("div-generic-node").nth(4).click();
 
@@ -210,7 +210,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
+      .getByTestId("handle-basicloopcomponent-shownode-item-left")
       .first()
       .click();
 
