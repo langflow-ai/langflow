@@ -93,7 +93,7 @@ If you want to apply filters regardless of the LLM's input, use the **Static Fil
 | Description | Provides instructions to the LLM on how the parameter should be used. Clear and specific guidance helps the LLM provide valid input. For example, if a field such as `specialty` is stored in lowercase, the description should indicate that the input must be lowercase. |
 | Is Metadata | When loading data using LangChain or Langflow, additional attributes may be stored under a metadata object. If the target attribute is stored this way, enable this option. It adjusts the query by generating a filter in the format: `{"metadata.<attribute_name>": "<value>"}` |
 | Is Timestamp | For date or time-based filters, enable this option to automatically convert values to the timestamp format expected by the Astrapy client. This ensures compatibility with the underlying API without requiring manual formatting. |
-| Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters — one with the `$gt` (greater than) operator, and another with `$lt` (less than). |
+| Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters: one with the `$gt` (greater than) operator, and another with `$lt` (less than). |
 
 ### Inputs
 
