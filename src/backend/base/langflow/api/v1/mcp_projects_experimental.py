@@ -80,7 +80,7 @@
 
 #             # Optionally filter for MCP-enabled flows only
 #             if mcp_enabled_only:
-#                 flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
+#                 flows_query = flows_query.where(Flow.mcp_enabled == True)
 
 #             flows = (await session.exec(flows_query)).all()
 
@@ -225,7 +225,7 @@
 #                     # Get flows with mcp_enabled flag set to True and in this project
 #                     flows = (
 #                         await session.exec(
-#                             select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
+#                             select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)
 #                         )
 #                     ).all()
 
@@ -473,7 +473,7 @@
 # #         db_service = get_db_service()
 # #         async with db_service.with_session() as session:
 # #             # Get flows with mcp_enabled flag set to True
-# #             flows = (await session.exec(select(Flow).where(Flow.mcp_enabled == True))).all()  # noqa: E712
+# #             flows = (await session.exec(select(Flow).where(Flow.mcp_enabled == True))).all()
 
 # #             for flow in flows:
 # #                 if flow.user_id is None:
