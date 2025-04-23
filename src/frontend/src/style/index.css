@@ -69,6 +69,7 @@
     --round-btn-shadow: #00000063;
     --ice: #31a3cc;
     --selected: #2196f3;
+    --discord-color: #5765f2;
 
     --error-background: #fef2f2;
     --error-foreground: #991b1b;
@@ -194,6 +195,7 @@
     --accent-amber: 48, 96%, 89%;
     --accent-amber-foreground: 26 90.5% 37.1%;
     --red-foreground: 0 90.6% 70.8%;
+    --indigo-foreground: 243.7 54.5% 41.4%;
   }
 
   .dark {
@@ -344,6 +346,8 @@
     --hover: #1a202e;
     --disabled-run: #6366f1;
     --selected: #0369a1;
+    --discord-color: #5765f2;
+
 
     --filter-foreground: #eef2ff;
     --filter-background: #4e46e599;
@@ -450,5 +454,6 @@
     --accent-amber: 22, 78%, 26%;
     --accent-amber-foreground: 45.9 96.7% 64.5%;
     --red-foreground: 0 72.2% 50.6%;
+    --indigo-foreground: 234.5 89.5% 73.9%;
   }
 }
