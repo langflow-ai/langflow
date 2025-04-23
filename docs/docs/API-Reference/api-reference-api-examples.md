@@ -33,7 +33,9 @@ export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 
 - Export the `project-id` in your terminal.
   To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) endpoint for a list of projects.
-  <Tabs>
+
+<Tabs>
+
   <TabItem value="curl" label="curl" default>
 
 ```bash
@@ -63,7 +65,8 @@ export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 
 - Export the Langflow API key as an environment variable.
   To create a Langflow API key, run the following command in the Langflow CLI.
-  <Tabs>
+
+<Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```text
@@ -418,8 +421,9 @@ To run your flow, use the [`/run` endpoint](/api-reference-api-examples#run-flow
 This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
 
 1. Send a POST request to the `/build/{flow_id}/flow` endpoint.
-   <Tabs>
-   <TabItem value="curl" label="curl" default>
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -433,8 +437,8 @@ curl -X POST \
   }'
 ```
 
-   </TabItem>
-   <TabItem value="result" label="Result">
+  </TabItem>
+  <TabItem value="result" label="Result">
 
 ```json
 {
@@ -442,7 +446,7 @@ curl -X POST \
 }
 ```
 
-   </TabItem>
+  </TabItem>
 </Tabs>
 
 2. After receiving a job ID from the build endpoint, use the `/build/{job_id}/events` endpoint to stream the execution results:
@@ -575,8 +579,10 @@ Use the `/files` endpoint to add or delete files between your local machine and 
 
 Upload a file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
 Replace **FILE_NAME** with the uploaded file name.
+
 <Tabs>
-<TabItem value="curl" label="curl" default>
+
+  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -735,8 +741,9 @@ Upload a file to your user account. The file can be used across multiple flows.
 
 The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
 Replace **FILE_NAME.EXTENSION** with the uploaded file name and its extension.
+
 <Tabs>
-<TabItem value="curl" label="curl" default>
+  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -1066,7 +1073,7 @@ A JSON object containing a list of flows.
 Read a specific flow by its ID.
 
 <Tabs>
-<TabItem value="curl" label="curl" default>
+  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -1074,9 +1081,9 @@ curl -X GET \
   -H "accept: application/json"
 ```
 
-</TabItem>
+  </TabItem>
 
-<TabItem value="result" label="Result">
+  <TabItem value="result" label="Result">
 
 ```json
 {
@@ -1093,7 +1100,7 @@ curl -X GET \
 }
 ```
 
-   </TabItem>
+  </TabItem>
 </Tabs>
 
 ### Update flow
@@ -1103,7 +1110,7 @@ Update an existing flow by its ID.
 This example changes the value for `endpoint_name` from a random UUID to `my_new_endpoint_name`.
 
 <Tabs>
-<TabItem value="curl" label="curl" default>
+  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X PATCH \
@@ -1120,8 +1127,8 @@ curl -X PATCH \
 }'
 ```
 
-</TabItem>
-<TabItem value="result" label="Result">
+  </TabItem>
+  <TabItem value="result" label="Result">
 
 ```json
 {
@@ -1143,7 +1150,7 @@ curl -X PATCH \
 }
 ```
 
-   </TabItem>
+  </TabItem>
 </Tabs>
 
 ### Delete flow
