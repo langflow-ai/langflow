@@ -203,10 +203,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
         name: flowName,
         id: currentFlowId!,
       };
-      setCurrentFlow(newFlow);
 
       saveFlow(newFlow)
         .then(() => {
+          setCurrentFlow(newFlow);
           setSuccessData({ title: "Flow name updated successfully" });
         })
         .catch((error) => {
