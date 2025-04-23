@@ -1,11 +1,12 @@
-from typing import Any
 import ast
+from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, SortableListInput
+from langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
 from langflow.io import DataInput, Output
+from langflow.logging import logger
 from langflow.schema import Data
-from langflow.utils.component_utils import set_current_fields, update_fields
+from langflow.utils.component_utils import set_current_fields, delete_fields, add_fields
 
 
 class DataOperationsComponent(Component):
@@ -14,7 +15,13 @@ class DataOperationsComponent(Component):
     icon = "file-json-2"
     name = "DataOperations"
     default_keys = ["actions", "data"]
-    actions_data = {"Filter": ["filter_keys", "actions"], "Evaluate": [], "Combine": []}
+    actions_data = {
+        "Select Keys": ["select_keys_input", "actions"],
+        "Literal Eval": [],
+        "Combine": [],
+        "Filter Values": ["filter_values", "actions", "operator", "filter_key"],
+        "Append or Update Data": ["append_update_data", "actions"],
+    }
 
     inputs = [
         DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
@@ -24,57 +31,80 @@ class DataOperationsComponent(Component):
             placeholder="Select action",
             info="List of actions to perform on the data.",
             options=[
-                {"name": "Filter", "value": "filter", "icon": "filter"},
-                {"name": "Combine", "value": "combine", "icon": "merge"},
-                {"name": "Evaluate", "value": "evaluate", "icon": "braces"},
+                {"name": "Select Keys", "icon": "lasso-select"},
+                {"name": "Literal Eval", "icon": "braces"},
+                {"name": "Combine", "icon": "merge"},
+                {"name": "Filter Values", "icon": "filter"},
+                {"name": "Append or Update Data", "icon": "circle-plus"},
             ],
             real_time_refresh=True,
             limit=1,
         ),
-        # filter inputs
-        DropdownInput(
-            name="filter_keys",
-            display_name="Filter Keys",
-            info="List of keys to filter by.",
+        # select keys inputs
+        MessageTextInput(
+            name="select_keys_input",
+            display_name="Select Keys",
+            info="List of keys to select from the data.",
             show=False,
-            options=["data", "text_key", "source", "result", "text"],
-            combobox=True,
+            is_list=True,
+        ),
+        # filter values inputs
+        MessageTextInput(
+            name="filter_key",
+            display_name="Filter Key",
+            info="Key to filter by.",
+            is_list=True,
+            show=False,
+        ),
+        DropdownInput(
+            name="operator",
+            display_name="Comparison Operator",
+            options=["equals", "not equals", "contains", "starts with", "ends with"],
+            info="The operator to apply for comparing the values.",
+            value="equals",
+            advanced=False,
+            show=False,
+        ),
+        DictInput(
+            name="filter_values",
+            display_name="Filter Values",
+            info="List of values to filter by.",
+            show=False,
+            is_list=True,
+        ),
+        # update/ Append data inputs
+        DictInput(
+            name="append_update_data",
+            display_name="Append or Update Data",
+            info="Data to append or update the existing data with.",
+            show=False,
+            value={"key": "value"},
+            is_list=True,
         ),
     ]
     outputs = [
         Output(display_name="Data", name="data_output", method="as_data"),
     ]
 
-    def filter_data(self, evaluate: bool | None = None) -> Data:
-        print("filtering data")
+    def select_keys(self, evaluate: bool | None = None) -> Data:
         data_dict = self.get_data_dict()
-
-        filter_criteria: list[str] = [self.filter_keys]
-        # print("filter_criteria", filter_criteria)
-        # print("data_dict",data_dict.keys())
-        # print("data_dict",data_dict)
+        filter_criteria: list[str] = self.select_keys_input
 
         # Filter the data
-        if self.filter_keys == "data":
+        if len(filter_criteria) == 1 and filter_criteria[0] == "data":
             filtered = data_dict["data"]
         else:
-            if self.filter_keys not in data_dict["data"]:
-                print("filter_keys", self.filter_keys)
-                print("data_dict", data_dict.keys())
-                msg = f"Filter key {self.filter_keys} not found in data.Available keys: {data_dict.keys()}"
+            if not all(key in data_dict["data"] for key in filter_criteria):
+                msg = f"Select key {self.select_keys} not found in data.Available keys: {data_dict.keys()}"
                 raise ValueError(msg)
             filtered = {key: value for key, value in data_dict["data"].items() if key in filter_criteria}
-        print("filtered_keys", filtered.keys())
 
         # Create a new Data object with the filtered data
         if evaluate:
-            print("evaluating data with filter")
             filtered = self.recursive_eval(filtered)
-        # print("filtered", filtered)
 
         filtered_data = Data(**filtered)
         self.status = filtered_data
-        # print("filtered_data", filtered_data)
         return filtered_data
 
     def recursive_eval(self, data: Any) -> Any:
@@ -97,8 +127,10 @@ class DataOperationsComponent(Component):
                 ):
                     return ast.literal_eval(data)
                 return data
-            except Exception:  # Catch all exceptions including ValueError
+            except (ValueError, SyntaxError, TypeError, MemoryError):  # Catch specific exceptions from ast.literal_eval
                 # If evaluation fails for any reason, return the original string
+                return data
+            else:
                 return data
         return data
 
@@ -107,40 +139,70 @@ class DataOperationsComponent(Component):
         return data.model_dump()
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        # if "append_update_data" in build_config and field_name != "append_update_data":
+        #     build_config["append_update_data"]["value"] = None
         if field_name == "actions":
-            # options = [{"name": key, "value": key} for key in self.get_data_dict()]
-            # print(f"options: {options}")
-            # update_fields(build_config=build_config, fields={"filter_keys": {"options": options}})
             selected_actions = [action["name"] for action in self.actions]
-            if "Filter" in selected_actions:
+            if "Select Keys" in selected_actions and len(selected_actions) == 1:
                 build_config["data"]["is_list"] = False
-                print("setting filter fields")
+                logger.info("setting filter fields")
                 build_config = set_current_fields(
                     build_config=build_config,
                     action_fields=self.actions_data,
-                    selected_action="Filter",
+                    selected_action="Select Keys",
                     default_fields=self.default_keys,
                 )
-            if "Evaluate" in selected_actions and len(selected_actions) == 1:
+            if "Literal Eval" in selected_actions and len(selected_actions) == 1:
                 build_config["data"]["is_list"] = False
-                print("setting evaluate fields")
+                logger.info("setting evaluate fields")
                 build_config = set_current_fields(
                     build_config=build_config,
                     action_fields=self.actions_data,
-                    selected_action="Evaluate",
+                    selected_action="Literal Eval",
                     default_fields=self.default_keys,
                 )
             if "Combine" in selected_actions and len(selected_actions) == 1:
                 build_config["data"]["is_list"] = True
-                print("setting combine fields")
+                logger.info("setting combine fields")
                 build_config = set_current_fields(
                     build_config=build_config,
                     action_fields=self.actions_data,
                     selected_action="Combine",
                     default_fields=self.default_keys,
                 )
+            if "Filter Values" in selected_actions and len(selected_actions) == 1:
+                build_config["data"]["is_list"] = True
+                logger.info("setting filter values fields")
+                build_config = set_current_fields(
+                    build_config=build_config,
+                    action_fields=self.actions_data,
+                    selected_action="Filter Values",
+                    default_fields=self.default_keys,
+                )
+            if "Append or Update Data" in selected_actions and len(selected_actions) == 1:
+                build_config["data"]["is_list"] = True
+
+                # build_config = add_fields(
+                #     build_config=build_config,
+                #     fields=DictInput(
+                #         name="append_update_data",
+                #         display_name="Append or Update Data",
+                #         info="Data to append or update the existing data with.",
+                #         show=False,
+                #         value={"key": "value"},
+                #         is_list=True,
+                #     ).to_dict(),
+                # )
+                logger.info("setting append or update data fields")
+                build_config = set_current_fields(
+                    build_config=build_config,
+                    action_fields=self.actions_data,
+                    selected_action="Append or Update Data",
+                    default_fields=self.default_keys,
+                )
             elif len(selected_actions) == 0:
-                print("setting default fields")
+                logger.info("setting default fields")
+                # build_config = delete_fields(build_config=build_config, fields=["append_update_data"])
                 build_config = set_current_fields(
                     build_config=build_config,
                     action_fields=self.actions_data,
@@ -150,11 +212,11 @@ class DataOperationsComponent(Component):
         return build_config
 
     def evaluate_data(self) -> Data:
-        print("evaluating data")
+        logger.info("evaluating data")
         return Data(**self.recursive_eval(self.get_data_dict()))
 
     def combine_data(self, evaluate: bool | None = None) -> Data:
-        print("combining data")
+        logger.info("combining data")
         if len(self.data) > 1:
             data_dicts = [data.model_dump()["data"] for data in self.data]
             combined_data = {}
@@ -174,10 +236,76 @@ class DataOperationsComponent(Component):
                         )
             if evaluate:
                 combined_data = self.recursive_eval(combined_data)
-            return Data(data=combined_data)
+            return Data(**combined_data)
 
         # If there's only one data object, return it as is
         return self.data[0] if self.data else None
+
+    def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
+        if operator == "equals":
+            return str(item_value) == str(filter_value)
+        if operator == "not equals":
+            return str(item_value) != str(filter_value)
+        if operator == "contains":
+            return str(filter_value) in str(item_value)
+        if operator == "starts with":
+            return str(item_value).startswith(str(filter_value))
+        if operator == "ends with":
+            return str(item_value).endswith(str(filter_value))
+        return False
+
+    def filter_data(
+        self, input_data: list[dict[str, Any]], filter_key: str, filter_value: str, operator: str
+    ) -> list[Data]:
+        # Validate inputs
+        if not input_data:
+            self.status = "Input data is empty."
+            return []
+
+        if not filter_key or not filter_value:
+            self.status = "Filter key or value is missing."
+            return input_data
+
+        # Filter the data
+        filtered_data = []
+        for item in input_data:
+            if isinstance(item, dict) and filter_key in item:
+                if self.compare_values(item[filter_key], filter_value, operator):
+                    filtered_data.append(item)
+            else:
+                self.status = f"Warning: Some items don't have the key '{filter_key}' or are not dictionaries."
+
+        return filtered_data
+
+    def multi_filter_data(self) -> list[Data]:
+        data_filtered = self.get_data_dict()
+        if "data" in data_filtered:
+            data_filtered = data_filtered["data"]
+        for filter_key in self.filter_key:
+            if filter_key not in data_filtered:
+                msg = f"Filter key {filter_key} not found in data.Available keys: {data_filtered.keys()}"
+                raise ValueError(msg)
+            if isinstance(data_filtered[filter_key], list):
+                for filter_data in self.filter_values:
+                    # get key and value from
+                    data_filtered[filter_key] = self.filter_data(
+                        input_data=data_filtered[filter_key],
+                        filter_key=filter_data,
+                        filter_value=self.filter_values.get(filter_data, None),
+                        operator=self.operator,
+                    )
+            else:
+                msg = f"Filter key {filter_key} is not a list."
+                raise TypeError(msg)
+        return Data(**data_filtered)
+
+    def append_update(self) -> Data:
+        data_filtered = self.get_data_dict()
+        if "data" in data_filtered:
+            data_filtered = data_filtered["data"]
+        for key, value in self.append_update_data.items():
+            data_filtered[key] = value
+        return Data(**data_filtered)
 
     def data_is_list(self) -> bool:
         return len(self.data) > 1
@@ -192,22 +320,31 @@ class DataOperationsComponent(Component):
 
     def as_data(self) -> Data:
         selected_actions = [action["name"] for action in self.actions]
-        if "Filter" in selected_actions and len(selected_actions) == 1:
+        logger.info("selected_actions", selected_actions)
+        if "Select Keys" in selected_actions and len(selected_actions) == 1:
             if self.data_is_list():
-                self.data_list_exception("Filter")
-            return self.filter_data()
-        if "Evaluate" in selected_actions and len(selected_actions) == 1:
+                self.data_list_exception("Select Keys")
+            return self.select_keys()
+        if "Literal Eval" in selected_actions and len(selected_actions) == 1:
             if self.data_is_list():
-                self.data_list_exception("Evaluate")
+                self.data_list_exception("Literal Eval")
             return self.evaluate_data()
-        if "Filter" in selected_actions and "Evaluate" in selected_actions:
-            if self.data_is_list():
-                self.data_list_exception("Filter and Evaluate")
-            return self.filter_data(evaluate=True)
-        if "Evaluate" in selected_actions and "Combine" in selected_actions:
-            return self.combine_data(evaluate=True)
-        if "Filter" in selected_actions and "Combine" in selected_actions:
-            self.operation_exception(["Filter", "Combine"])
+        # if "Select Keys" in selected_actions and "Literal Eval" in selected_actions:
+        #     if self.data_is_list():
+        #         self.data_list_exception("Filter and Evaluate")
+        #     return self.select_keys(evaluate=True)
+        # if "Literal Eval" in selected_actions and "Combine" in selected_actions:
+        #     return self.combine_data(evaluate=True)
+        # if "Select Keys" in selected_actions and "Combine" in selected_actions:
+        #     self.operation_exception(["Select Keys", "Combine"])
         if "Combine" in selected_actions and len(selected_actions) == 1:
             return self.combine_data()
+        if "Filter Values" in selected_actions and len(selected_actions) == 1:
+            if self.data_is_list():
+                self.data_list_exception("Filter Values")
+            return self.multi_filter_data()
+        if "Append or Update Data" in selected_actions and len(selected_actions) == 1:
+            if self.data_is_list():
+                self.data_list_exception("Append or Update Data")
+            return self.append_update()
         return None

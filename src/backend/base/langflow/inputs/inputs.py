@@ -443,7 +443,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DICT
-    value: dict | None = {}
+    # value: dict | None = {"key": "value"}
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
