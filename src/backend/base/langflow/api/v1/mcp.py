@@ -326,6 +326,8 @@ def find_validation_error(exc):
 
 @router.get("/sse", response_class=StreamingResponse)
 async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+    logger.warning("Starting SSE connection")
+    logger.warning(f"server name: {server.name}")
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
