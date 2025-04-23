@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Badge } from "../../../../ui/badge";
 import { Button } from "../../../../ui/button";
+import { Skeleton } from "../../../../ui/skeleton";
 import { InputProps, ToolsComponentType } from "../../types";
 
 export default function ToolsComponent({
@@ -18,7 +19,7 @@ export default function ToolsComponent({
   title,
   icon,
   disabled = false,
-}: InputProps<any[], ToolsComponentType>): JSX.Element {
+}: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const actions = value
     ?.filter((action) => action.status === true)
@@ -39,23 +40,26 @@ export default function ToolsComponent({
         "flex w-full items-center" + (disabled ? " cursor-not-allowed" : "")
       }
     >
-      <ToolsModal
-        open={isModalOpen}
-        setOpen={setIsModalOpen}
-        isAction={isAction}
-        description={description}
-        rows={value}
-        handleOnNewValue={handleOnNewValue}
-        title={title}
-        icon={icon}
-      />
+      {value && (
+        <ToolsModal
+          open={isModalOpen}
+          setOpen={setIsModalOpen}
+          isAction={isAction}
+          description={description}
+          rows={value}
+          handleOnNewValue={handleOnNewValue}
+          title={title}
+          icon={icon}
+        />
+      )}
       <div
         className="relative flex w-full items-center gap-3"
         data-testid={"div-" + id}
       >
-        {visibleActions.length > 0 && (
+        {(visibleActions.length > 0 || isAction) && (
           <Button
             variant={"ghost"}
+            disabled={!value || disabled}
             size={"iconMd"}
             className={cn(
               "absolute -top-8 right-0 font-semibold text-muted-foreground group-hover:text-primary",
@@ -71,7 +75,13 @@ export default function ToolsComponent({
             {button_description}
           </Button>
         )}
-        {visibleActions.length > 0 && (
+        {!value ? (
+          <div className="flex w-full flex-wrap gap-1 overflow-hidden py-1.5">
+            {[...Array(4)].map((_, index) => (
+              <Skeleton key={index} className="h-6 w-20 rounded-full" />
+            ))}
+          </div>
+        ) : visibleActions.length > 0 ? (
           <div className="flex w-full flex-wrap gap-1 overflow-hidden py-1.5">
             {visibleActions.map((action, index) => (
               <Badge
@@ -89,9 +99,21 @@ export default function ToolsComponent({
               </span>
             )}
           </div>
+        ) : (
+          visibleActions.length === 0 &&
+          isAction && (
+            <div className="flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
+              <span className="text-sm text-muted-foreground">
+                No actions added to this server
+              </span>
+              <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
+                <span>Add actions</span>
+              </Button>
+            </div>
+          )
         )}
 
-        {visibleActions.length === 0 && (
+        {visibleActions.length === 0 && !isAction && value && (
           <Button
             disabled={disabled}
             size={editNode ? "xs" : "default"}
