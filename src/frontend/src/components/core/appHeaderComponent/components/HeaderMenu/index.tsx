@@ -22,11 +22,7 @@ export const HeaderMenuToggle = ({ children }) => (
   >
     <div className="flex items-center gap-1 rounded-lg px-2 py-1.5 group-hover:bg-muted">
       {children}
-      <ChevronsUpDown
-        className="text-muted-foreground group-hover:text-foreground"
-        size={"15px"}
-        strokeWidth={"2px"}
-      />
+      <ChevronsUpDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
     </div>
   </DropdownMenuTrigger>
 );
@@ -72,10 +68,14 @@ export const HeaderMenuItemButton = ({ icon = "", onClick, children }) => (
 export const HeaderMenuItems = ({
   position = "left",
   children,
-}: React.PropsWithChildren<{ position?: "left" | "right" }>) => {
+  classNameSize = "w-[20rem]",
+}: React.PropsWithChildren<{
+  position?: "left" | "right";
+  classNameSize?: string;
+}>) => {
   const positionClass = position === "left" ? "left-0" : "right-0";
   return (
-    <DropdownMenuContent className={cn("w-[20rem]", positionClass)}>
+    <DropdownMenuContent className={cn(classNameSize, positionClass)}>
       {children}
     </DropdownMenuContent>
   );
