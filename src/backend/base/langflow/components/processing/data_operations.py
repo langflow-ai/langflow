@@ -1,5 +1,6 @@
 import ast
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
 
 from langflow.custom import Component
 from langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
