@@ -157,11 +157,7 @@ export default function AppHeader(): JSX.Element {
         />
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
-            <ShadTooltip
-              content="Go to Langflow Store"
-              side="bottom"
-              styleClasses="z-10"
-            >
+            <ShadTooltip content="Go to Langflow Store" side="bottom">
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -169,10 +165,11 @@ export default function AppHeader(): JSX.Element {
                 }}
                 data-testid="button-store"
                 unstyled
+                className="group"
               >
                 <ForwardedIconComponent
                   name="Store"
-                  className={`side-bar-button-size mx-2 h-4 w-4 ${
+                  className={`side-bar-button-size mx-2 h-4 w-4 group-hover:text-primary ${
                     lastPath === "store"
                       ? "text-primary"
                       : "text-muted-foreground"
