@@ -8,7 +8,6 @@ from uuid import UUID
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from langflow.api.v1.schemas import MCPSettings
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -20,6 +19,7 @@ from langflow.api.v1.mcp import (
     handle_mcp_errors,
     server,
 )
+from langflow.api.v1.schemas import MCPSettings
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, Folder, User
