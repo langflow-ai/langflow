@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -35,7 +35,7 @@ import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
 
-export const MenuBar = ({}: {}): JSX.Element => {
+export const MenuBar = memo((): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -84,17 +84,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
-  const [nameLists, setNameList] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (flows) {
-      const tempNameList: string[] = [];
-      flows.forEach((flow) => {
-        tempNameList.push(flow.name);
-      });
-      setNameList(tempNameList.filter((name) => name !== currentFlowName));
-    }
-  }, [flows, currentFlowName]);
 
   useGetRefreshFlowsQuery(
     {
@@ -162,17 +151,17 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const handleEditName = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { value } = e.target;
-      let invalid = false;
-      for (let i = 0; i < nameLists.length; i++) {
-        if (value === nameLists[i]) {
-          invalid = true;
-          break;
-        }
-      }
+      const flows = useFlowsManagerStore.getState().flows;
+      const flowNames =
+        flows
+          ?.map((flow) => flow.name)
+          .filter((name) => name !== currentFlowName) ?? [];
+
+      const invalid = flowNames.includes(value);
       setIsInvalidName(invalid);
       setFlowName(value);
     },
-    [nameLists],
+    [currentFlowName],
   );
 
   const handleKeyDown = useCallback(
@@ -577,6 +566,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
   ) : (
     <></>
   );
-};
+});
 
 export default MenuBar;
