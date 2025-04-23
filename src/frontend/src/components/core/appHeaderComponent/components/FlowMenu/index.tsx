@@ -81,10 +81,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
-  const currentFlowManagerStore = useFlowsManagerStore(
-    (state) => state.currentFlow,
-  );
-  const currentFlowStore = useFlowStore((state) => state.currentFlow);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -208,10 +204,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
         id: currentFlowId!,
       };
       setCurrentFlow(newFlow);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      console.log("newFlow", newFlow);
-      console.log("currentFlowManagerStore", currentFlowManagerStore);
-      console.log("currentFlowStore", currentFlowStore);
 
       saveFlow(newFlow)
         .then(() => {
