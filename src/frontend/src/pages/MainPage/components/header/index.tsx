@@ -119,7 +119,7 @@ const HeaderComponent = ({
                     key={viewType}
                     unstyled
                     size="icon"
-                    className={`group relative z-10 mx-[2px] my-[2px] flex-1 rounded-lg p-2 ${
+                    className={`group relative z-10 mx-[2px] my-[3px] flex-1 rounded-lg p-2 ${
                       view === viewType
                         ? "text-foreground"
                         : "text-muted-foreground hover:bg-muted"
