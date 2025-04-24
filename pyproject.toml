@@ -123,6 +123,8 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
     "openai>=1.68.2",
+    "python-pptx==1.0.2",
+    "docling>=2.30.0",
 ]
 
 [dependency-groups]
@@ -211,7 +213,7 @@ nv-ingest = [
     # nv-ingest-client 2025.2.7.dev0 does not correctly install its
     # dependencies, so we need to install some manually.
     "nv-ingest-client==2025.2.7.dev0",
-    "python-pptx==0.6.23",
+    "python-pptx==1.0.2",
     "pymilvus[bulk_writer,model]==2.5.0",
     "llama-index-embeddings-nvidia==0.1.5",
 ]

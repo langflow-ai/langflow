@@ -128,11 +128,23 @@ def read_docx_file(file_path: str) -> str:
 
 
 def parse_pdf_to_text(file_path: str) -> str:
-    from pypdf import PdfReader
+    from docling.document_converter import DocumentConverter
 
-    with Path(file_path).open("rb") as f:
-        reader = PdfReader(f)
-        return "\n\n".join([page.extract_text() for page in reader.pages])
+    # Get the source of the PDF file
+    converter = DocumentConverter()
+    result = converter.convert(file_path)
+
+    return Data(file_path=file_path, text=str(result.document.export_to_dict()))
+
+
+def handle_json_data(text):
+    # if file is json, yaml, or xml, we can parse it
+    text = orjson.loads(text)
+    if isinstance(text, dict):
+        text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
+    elif isinstance(text, list):
+        text = [normalize_text(item) if isinstance(item, str) else item for item in text]
+    return orjson.dumps(text).decode("utf-8")
 
 
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
@@ -144,15 +156,13 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         else:
             text = read_text_file(file_path)
 
+        # Check if the text is already a data object
+        if isinstance(text, Data):
+            return text
+
         # if file is json, yaml, or xml, we can parse it
         if file_path.endswith(".json"):
-            text = orjson.loads(text)
-            if isinstance(text, dict):
-                text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
-            elif isinstance(text, list):
-                text = [normalize_text(item) if isinstance(item, str) else item for item in text]
-            text = orjson.dumps(text).decode("utf-8")
-
+            text = handle_json_data(text)
         elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
