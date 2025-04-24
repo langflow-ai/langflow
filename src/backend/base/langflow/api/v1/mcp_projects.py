@@ -244,45 +244,6 @@ class ProjectMCPServer:
                 logger.exception(msg)
                 raise
 
-        # Register handlers that filter by project
-        @self.server.list_tools()
-        @handle_mcp_errors
-        async def handle_list_project_tools():
-            """Handle listing tools for this specific project."""
-            tools = []
-            try:
-                db_service = get_db_service()
-                async with db_service.with_session() as session:
-                    # Get flows with mcp_enabled flag set to True and in this project
-                    flows = (
-                        await session.exec(
-                            select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
-                        )
-                    ).all()
-
-                    for flow in flows:
-                        if flow.user_id is None:
-                            continue
-
-                        # Use action_name if available, otherwise construct from flow name
-                        name = flow.action_name or "_".join(flow.name.lower().split())
-
-                        # Use action_description if available, otherwise use defaults
-                        description = flow.action_description or (
-                            flow.description if flow.description else f"Tool generated from flow: {name}"
-                        )
-
-                        tool = types.Tool(
-                            name=name,
-                            description=description,
-                            inputSchema=json_schema_from_flow(flow),
-                        )
-                        tools.append(tool)
-            except Exception:
-                logger.exception("Error in listing project tools")
-                raise
-            return tools
-
         @self.server.call_tool()
         @handle_mcp_errors
         async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
@@ -399,12 +360,6 @@ class ProjectMCPServer:
                 logger.exception(msg)
                 raise
 
-        # Delegate other handlers to the main MCP server
-        # self.server.list_prompts = server.list_prompts
-        # self.server.list_resources = server.list_resources
-        # self.server.read_resource = server.read_resource
-        # self.server.call_tool = server.call_tool
-
 
 # Cache of project MCP servers
 project_mcp_servers = {}
@@ -471,7 +426,8 @@ async def handle_project_sse(
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
 
-    return StreamingResponse(content=[], media_type="text/event-stream")
+    # Return an empty response as the actual streaming is handled by the SSE connection
+    return StreamingResponse(media_type="text/event-stream")
 
 
 @router.post("/{project_id}")
@@ -511,43 +467,6 @@ async def handle_project_messages_with_slash(
     """Handle POST messages for a project-specific MCP server with trailing slash."""
     # Call the original handler
     return await handle_project_messages(project_id, request, current_user)
-
-
-# Replace the existing list_tools handler in the MCP server
-# @server.list_tools()
-# @handle_mcp_errors
-# async def handle_list_tools_with_projects():
-#     """Handle listing tools, including those from projects."""
-#     tools = []
-#     try:
-#         db_service = get_db_service()
-#         async with db_service.with_session() as session:
-#             # Get flows with mcp_enabled flag set to True
-#             flows = (await session.exec(select(Flow).where(Flow.mcp_enabled == True))).all()  # noqa: E712
-
-#             for flow in flows:
-#                 if flow.user_id is None:
-#                     continue
-
-#                 # Use action_name if available, otherwise construct from flow name
-#                 name = flow.action_name or "_".join(flow.name.lower().split())
-
-#                 # Use action_description if available, otherwise use defaults
-#                 description = flow.action_description or (
-#                     flow.description if flow.description else f"Tool generated from flow: {name}"
-#                 )
-
-#                 tool = types.Tool(
-#                     name=name,
-#                     description=description,
-#                     inputSchema=json_schema_from_flow(flow),
-#                 )
-#                 tools.append(tool)
-#     except Exception as e:
-#         msg = f"Error in listing tools: {e!s}"
-#         logger.exception(msg)
-#         raise
-#     return tools
 
 
 @router.patch("/{project_id}", status_code=200)
