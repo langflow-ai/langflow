@@ -68,7 +68,7 @@ export default function Dropdown({
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
-    if (value && !validOptions.includes(value)) {
+    if (value && !validOptions.includes(value) && combobox) {
       return [...validOptions, value];
     }
     return validOptions;
@@ -221,12 +221,14 @@ export default function Dropdown({
       );
 
       // If there are custom values, preserve them when resetting filtered options
-      if (customValuesInFiltered.length > 0) {
+      if (customValuesInFiltered.length > 0 && combobox) {
         setFilteredOptions([...validOptions, ...customValuesInFiltered]);
       } else {
         setFilteredOptions(validOptions);
       }
-      setCustomValue("");
+    }
+    if (!combobox && value && !validOptions.includes(value)) {
+      onSelect("", undefined, true);
     }
   }, [open, validOptions]);
 
