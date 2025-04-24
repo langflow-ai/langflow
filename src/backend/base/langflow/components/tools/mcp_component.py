@@ -1,12 +1,9 @@
-import os
 import traceback
 from typing import Any
 
-import httpx
 from langchain_core.tools import StructuredTool
 
 from langflow.base.mcp.util import (
-    HTTP_ERROR_STATUS_CODE,
     MCPSseClient,
     MCPStdioClient,
     create_input_schema_from_json_schema,
@@ -84,8 +81,6 @@ class MCPToolsComponent(Component):
         Output(display_name="Response", name="response", method="build_output"),
     ]
 
-
-
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
         """Validate connection parameters based on mode."""
         if mode not in ["Stdio", "SSE"]:
@@ -146,7 +141,9 @@ class MCPToolsComponent(Component):
                     ):
                         is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
                         if not is_valid:
-                            raise ValueError("Invalid SSE URL configuration: {build_config['sse_url']['value']}. Please check the SSE URL and try again.")
+                            raise ValueError(
+                                "Invalid SSE URL configuration: {build_config['sse_url']['value']}. Please check the SSE URL and try again."
+                            )
                     elif build_config["mode"]["value"] == "SSE":
                         if len(build_config["sse_url"]["value"]) > 0:
                             is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
