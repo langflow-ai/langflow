@@ -129,7 +129,7 @@ const HeaderComponent = ({
                     <ForwardedIconComponent
                       name={viewType === "list" ? "Menu" : "LayoutGrid"}
                       aria-hidden="true"
-                      className="relative bottom-[1px] h-4 w-4 group-hover:text-foreground"
+                      className="h-4 w-4 group-hover:text-foreground"
                     />
                   </Button>
                 ))}
