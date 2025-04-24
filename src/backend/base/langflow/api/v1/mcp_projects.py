@@ -57,7 +57,7 @@ async def list_project_tools(
     project_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],
     *,
-    mcp_enabled_only: bool = True,
+    mcp_enabled: bool = True,
 ):
     """List all tools in a project that are enabled for MCP."""
     tools: list[MCPSettings] = []
@@ -80,7 +80,7 @@ async def list_project_tools(
             flows_query = select(Flow).where(Flow.folder_id == project_id)
 
             # Optionally filter for MCP-enabled flows only
-            if mcp_enabled_only:
+            if mcp_enabled:
                 flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
 
             flows = (await session.exec(flows_query)).all()

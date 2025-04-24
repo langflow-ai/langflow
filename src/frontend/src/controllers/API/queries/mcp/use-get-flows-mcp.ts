@@ -18,7 +18,7 @@ export const useGetFlowsMCP: useQueryFunctionType<
 
   const responseFn = async () => {
     const { data } = await api.get<getFlowsMCPResponse>(
-      `${getURL("MCP")}/${params.projectId}?mcp_enabled_only=false`,
+      `${getURL("MCP")}/${params.projectId}?mcp_enabled=false`,
     );
     return data;
   };
