@@ -1,8 +1,11 @@
 import asyncio
 import os
+import re
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any
+from datetime import date
+from enum import Enum
+from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -77,7 +80,12 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session) -> Flow | N
     return None
 
 
-def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
+def create_input_schema_from_json_schema(
+    schema: dict[str, Any],
+    defs: dict[str, Any] | None = None,
+    *,
+    keep_title: bool = False,
+) -> type[BaseModel]:
     """Converts a JSON schema into a Pydantic model dynamically.
 
     Fields not listed as required are wrapped in Optional[...] and default to None if not provided.
@@ -89,32 +97,101 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         msg = "JSON schema must be of type 'object' at the root level."
         raise ValueError(msg)
 
+    if defs is None:
+        defs = {}
+
+    defs_to_process = schema.get("$defs", {})
+
+    # Parse enum definitions first since they always have plain schema
+    enum_defs: dict[str, Any] = {}
+    for name, enum_def in defs_to_process.items():
+        if "enum" in enum_def:
+            enum_members = {re.sub(r"\W|^(?=\d)", "_", v): v for v in enum_def["enum"]}
+            enum_defs[name] = Enum(name, enum_members)
+
+    defs.update(enum_defs)
+
+    for def_name in defs:
+        # Drop already processed defs as we might need those to resolve chained references
+        defs_to_process.pop(def_name, None)
+
+    # Parse all the other definitions recursively
+    for name, _def in defs_to_process.items():
+        if "enum" not in _def:
+            # In order to resolve potential complex references we can pass unprocessed definitions further
+            # Still, it can't really resolve circular references, only chained ones
+            possibly_needed_defs = {k: v for k, v in defs_to_process.items() if k != name}
+            _def["$defs"] = possibly_needed_defs
+            defs[name] = create_input_schema_from_json_schema(_def, defs, keep_title=True)
+
+    def _resolve_type(definition: dict) -> Any:
+        if "$ref" in definition:
+            ref_name = definition["$ref"].split("/")[-1]
+            return defs.get(ref_name, str)  # defaults to str
+
+        # anyOf should go first since complex objects can have both anyOf and `type: object``
+        if "anyOf" in definition:
+            subtypes = [_resolve_type(sub) for sub in definition["anyOf"]]
+            subtypes = list(set(subtypes))  # remove duplicates
+            if type(None) in subtypes:
+                subtypes.remove(type(None))
+                if len(subtypes) == 1:
+                    return subtypes[0] | None
+                return Union[tuple(subtypes)] | None  # noqa: UP007
+            return Union[tuple(subtypes)]  # noqa: UP007
+
+        if "type" in definition:
+            field_type_str = definition.get("type", "str")
+
+            if field_type_str in ("string", "str"):
+                if definition.get("format") == "date":
+                    return date
+                return str
+            if field_type_str in ("integer", "int"):
+                return int
+            if field_type_str in ("number", "float"):
+                return float
+            if field_type_str in ("boolean", "bool"):
+                return bool
+            if field_type_str == "object":
+                # we can't handle dict reverse parsing properly since `dict key` typing is not inherited from the schema
+                return dict
+            if field_type_str == "array":
+                # Case: array = list
+                if "items" in definition:
+                    item_type = _resolve_type(definition["items"])
+                    return list[item_type]  # type: ignore # noqa: PGH003
+                # Case: array = tuple
+                if "prefixItems" in definition:
+                    item_types = [_resolve_type(_item) for _item in definition["prefixItems"]]
+                    return tuple[*item_types]  # type: ignore # noqa: PGH003
+                return list[str]  # fallback to list of strings
+            if field_type_str == "null":
+                return type(None)
+
+        return Any  # fallback for anything unrecognized
+
     fields = {}
     properties = schema.get("properties", {})
-    required_fields = set(schema.get("required", []))
 
     for field_name, field_def in properties.items():
-        # Determine the base type from the JSON schema type string.
-        field_type_str = field_def.get("type", "str")  # Defaults to string if not specified.
-        base_type = {
-            "string": str,
-            "str": str,
-            "integer": int,
-            "int": int,
-            "number": float,
-            "boolean": bool,
-            "array": list,
-            "object": dict,
-        }.get(field_type_str, Any)
+        base_type = _resolve_type(field_def)
 
-        field_metadata = {"description": field_def.get("description", "")}
+        field_metadata = {
+            "description": field_def.get("description", ""),
+            "required": field_def.get("required", False),
+        }
+        if "annotation" in field_def:
+            field_metadata["annotation"] = field_def.get("annotation")
 
         # For non-required fields, wrap the type in Optional[...] and set a default value.
-        if field_name not in required_fields:
+        if "default" in field_def or not field_metadata["required"]:
             field_metadata["default"] = field_def.get("default", None)
 
         fields[field_name] = (base_type, Field(**field_metadata))
 
+    if keep_title:
+        return create_model(schema.get("title", "UnknownType"), **fields)
     return create_model("InputSchema", **fields)
 
 
