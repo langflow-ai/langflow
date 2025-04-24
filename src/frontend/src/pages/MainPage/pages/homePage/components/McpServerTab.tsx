@@ -30,7 +30,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
 
-  const { data: flowsMCP, isLoading } = useGetFlowsMCP({ projectId });
+  const { data: flowsMCP } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
