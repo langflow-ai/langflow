@@ -1,6 +1,7 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_community.utilities import SQLDatabase
+from sqlalchemy.exc import SQLAlchemyError
 
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import BoolInput, MessageTextInput, Output
@@ -8,6 +9,9 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Result
 
 
 class SQLComponent(ComponentWithCache):
@@ -63,7 +67,7 @@ class SQLComponent(ComponentWithCache):
         try:
             result = self.db.run(self.query, include_columns=self.include_columns)
             self.status = result
-        except Exception as e:
+        except SQLAlchemyError as e:
             msg = f"An error occurred while running the SQL Query: {e}"
             self.log(msg)
             result = str(e)
@@ -81,8 +85,9 @@ class SQLComponent(ComponentWithCache):
     def __execute_query(self) -> list[dict[str, Any]]:
         self.maybe_create_db()
         try:
-            return self.db._execute(self.query)
-        except Exception as e:
+            cursor: Result[Any] = self.db.run(self.query, fetch="cursor")
+            return [x._asdict() for x in cursor.fetchall()]
+        except SQLAlchemyError as e:
             msg = f"An error occurred while running the SQL Query: {e}"
             self.log(msg)
             raise ValueError(msg) from e
