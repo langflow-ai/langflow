@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import BaseModal from "../baseModal";
 
 export default function MCPNoticeModal({
@@ -17,6 +18,7 @@ export default function MCPNoticeModal({
   open: boolean;
   setOpen: (open: boolean) => void;
 }): JSX.Element {
+  const navigate = useCustomNavigate();
   return (
     <BaseModal
       size="notice"
@@ -52,9 +54,10 @@ export default function MCPNoticeModal({
               Close
             </Button>
             <Button
-              onClick={() =>
-                window.open("https://example-link-to-server", "_blank")
-              }
+              onClick={() => {
+                navigate("/mcp");
+                setOpen(false);
+              }}
             >
               Go to Server
             </Button>

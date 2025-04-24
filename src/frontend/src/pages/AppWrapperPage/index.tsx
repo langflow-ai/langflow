@@ -18,14 +18,19 @@ export function AppWrapperPage() {
     // Show modal if user has multiple flows and hasn't seen it before
     if (!hasSeenMCPModal && flows && flows.length > 1) {
       setShowMCPModal(true);
-      // Mark as seen
-      setTimeout(() => {
-        localStorage.setItem("hasSeenMCPModal", "true");
-      }, 1000);
     } else if (flows !== undefined && flows.length === 0) {
       localStorage.setItem("hasSeenMCPModal", "true");
     }
   }, [flows]);
+
+  const setOpen = (open: boolean) => {
+    if (!open) {
+      setTimeout(() => {
+        localStorage.setItem("hasSeenMCPModal", "true");
+      }, 1000);
+    }
+    setShowMCPModal(open);
+  };
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -47,7 +52,7 @@ export function AppWrapperPage() {
       <div className="app-div">
         <AlertDisplayArea />
         {!hasSeenMCPModal && (
-          <MCPNoticeModal open={showMCPModal} setOpen={setShowMCPModal} />
+          <MCPNoticeModal open={showMCPModal} setOpen={setOpen} />
         )}
       </div>
     </div>
