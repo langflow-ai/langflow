@@ -422,7 +422,7 @@ class MCPToolsComponent(Component):
         command: str | None = None,
         url: str | None = None,
         env: list[str] | None = None,
-        headers: list[dict[str, str]] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> list[StructuredTool]:
         """Connect to the MCP server and update available tools with improved error handling."""
         try:

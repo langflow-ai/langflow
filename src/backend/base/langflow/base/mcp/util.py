@@ -88,8 +88,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
     model_cache: dict[str, type[BaseModel]] = {}
 
-    def resolve_ref(s: dict[str, Any]) -> dict[str, Any]:
+    def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
         """Follow a $ref chain until you land on a real subschema."""
+        if s is None:
+            return {}
         while "$ref" in s:
             ref_name = s["$ref"].split("/")[-1]
             s = defs.get(ref_name)
@@ -98,18 +100,23 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 raise ValueError(msg)
         return s
 
-    def parse_type(s: dict[str, Any]) -> Any:
+    def parse_type(s: dict[str, Any] | None) -> Any:
         """Map a JSON Schema subschema to a Python type (possibly nested)."""
+        if s is None:
+            return None
         s = resolve_ref(s)
 
         if "anyOf" in s:
             subtypes = [parse_type(sub) for sub in s["anyOf"]]
             return tuple | subtypes
 
-        t = s.get("type")
+        t = s.get("type", Any)
         if t == "array":
             item_schema = s.get("items", {})
-            return list[parse_type(item_schema)]
+            # schema_type: type[Any]
+            schema_type: Any = parse_type(item_schema)
+
+            return list[schema_type]
 
         if t == "object":
             # inline object not in $defs ⇒ anonymous nested model
@@ -124,6 +131,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             "object": dict,
             "array": list,
         }.get(t, Any)
+        # if result == "":
+        #     return Any
+        # return result
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""
@@ -186,10 +196,9 @@ class MCPStdioClient:
         self.exit_stack = AsyncExitStack()
 
     async def connect_to_server(self, command_str: str, env: list[str] | None = None):
+        env_dict: dict[str, str] = {}
         if env is None:
             env = []
-            env_dict = {}
-        env_dict = {}
         for var in env:
             if "=" not in var:
                 msg = f"Invalid env var format: {var}. Must be in the format 'VAR_NAME=VAR_VALUE'"

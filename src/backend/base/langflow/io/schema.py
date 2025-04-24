@@ -73,13 +73,13 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
             req_here = set(schema.get("required", []))
             for k, subschema in schema.get("properties", {}).items():
                 child_name = f"{name}.{k}" if name else k
-                _walk(child_name, subschema, inherited_req and k in req_here)
+                _walk(name=child_name, schema=subschema, inherited_req=inherited_req and k in req_here)
             return
 
         # ── arrays (always recurse into the first item as “[0]”) ───────────
         if t == "array":
             items = schema.get("items", {})
-            _walk(f"{name}[0]", items, inherited_req)
+            _walk(name=f"{name}[0]", schema=items, inherited_req=inherited_req)
             return
 
         leaf: dict[str, Any] = {
