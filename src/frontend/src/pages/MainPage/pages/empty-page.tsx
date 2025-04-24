@@ -102,7 +102,7 @@ export const EmptyPageCommunity = ({
               </span>
             </div>
 
-            <div className="flex w-full max-w-[510px] flex-col gap-12 sm:gap-[29px]">
+            <div className="flex w-full max-w-[510px] flex-col gap-7 sm:gap-[29px]">
               <Button
                 unstyled
                 className="group mx-3 h-[84px] sm:mx-0"
