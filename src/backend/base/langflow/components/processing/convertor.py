@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from langflow.custom import Component
 from langflow.io import HandleInput, Output, TabInput
@@ -72,7 +72,7 @@ class DataTypeConverterComponent(Component):
                 text = json.dumps(input_data.data)
                 return Message(text=text)
             except Exception as e:
-                self.log(f"Error converting Data to Message: {str(e)}")
+                self.log(f"Error converting Data to Message: {e!s}")
                 return Message(text=str(input_data.data))
 
         if isinstance(input_data, DataFrame):
@@ -81,7 +81,7 @@ class DataTypeConverterComponent(Component):
                 text = input_data.to_markdown(index=False)
                 return Message(text=text)
             except Exception as e:
-                self.log(f"Error converting DataFrame to Message: {str(e)}")
+                self.log(f"Error converting DataFrame to Message: {e!s}")
                 return Message(text=str(input_data))
 
         # Default fallback
@@ -107,7 +107,7 @@ class DataTypeConverterComponent(Component):
                     # If not valid JSON, use text as is
                     return Data(data={"text": input_data.get_text()})
             except Exception as e:
-                self.log(f"Error converting Message to Data: {str(e)}")
+                self.log(f"Error converting Message to Data: {e!s}")
                 return Data(data={"text": str(input_data)})
 
         if isinstance(input_data, DataFrame):
@@ -116,7 +116,7 @@ class DataTypeConverterComponent(Component):
                 data_dict = input_data.to_dict(orient="records")
                 return Data(data={"records": data_dict})
             except Exception as e:
-                self.log(f"Error converting DataFrame to Data: {str(e)}")
+                self.log(f"Error converting DataFrame to Data: {e!s}")
                 return Data(data={"text": str(input_data)})
 
         # Default fallback
@@ -133,6 +133,7 @@ class DataTypeConverterComponent(Component):
             # Try to convert message text to DataFrame
             try:
                 import json
+
                 import pandas as pd
 
                 text = input_data.get_text()
@@ -141,16 +142,15 @@ class DataTypeConverterComponent(Component):
                     data = json.loads(text)
                     if isinstance(data, list):
                         return DataFrame.from_pandas(pd.DataFrame(data))
-                    elif isinstance(data, dict):
+                    if isinstance(data, dict):
                         return DataFrame.from_pandas(pd.DataFrame([data]))
-                    else:
-                        # Single value, create a simple DataFrame
-                        return DataFrame.from_pandas(pd.DataFrame({"value": [data]}))
+                    # Single value, create a simple DataFrame
+                    return DataFrame.from_pandas(pd.DataFrame({"value": [data]}))
                 except json.JSONDecodeError:
                     # Not JSON, create a simple text DataFrame
                     return DataFrame.from_pandas(pd.DataFrame({"text": [text]}))
             except Exception as e:
-                self.log(f"Error converting Message to DataFrame: {str(e)}")
+                self.log(f"Error converting Message to DataFrame: {e!s}")
                 return DataFrame.from_pandas(pd.DataFrame({"text": [str(input_data)]}))
 
         if isinstance(input_data, Data):
@@ -161,12 +161,11 @@ class DataTypeConverterComponent(Component):
                 data = input_data.data
                 if isinstance(data, dict):
                     return DataFrame.from_pandas(pd.DataFrame([data]))
-                elif isinstance(data, list):
+                if isinstance(data, list):
                     return DataFrame.from_pandas(pd.DataFrame(data))
-                else:
-                    return DataFrame.from_pandas(pd.DataFrame({"value": [data]}))
+                return DataFrame.from_pandas(pd.DataFrame({"value": [data]}))
             except Exception as e:
-                self.log(f"Error converting Data to DataFrame: {str(e)}")
+                self.log(f"Error converting Data to DataFrame: {e!s}")
                 return DataFrame.from_pandas(pd.DataFrame({"value": [str(input_data)]}))
 
         # Default fallback
