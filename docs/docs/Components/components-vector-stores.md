@@ -35,7 +35,10 @@ This component implements a Vector Store using Astra DB with search capabilities
 
 For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -57,12 +60,14 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 | ignore_invalid_documents | Ignore Invalid Documents | A boolean flag to determine whether to ignore invalid documents at runtime. |
 | astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | An optional dictionary of additional parameters for the AstraDBVectorStore. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | Astra DB vector store instance configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+
+</details>
 
 ### Generate embeddings
 
@@ -133,7 +138,10 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 This component implements a Vector Store using AstraDB with graph capabilities.
 For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -153,20 +161,24 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results |
 | search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | Astra DB graph vector store instance configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
+</details>
 
 ## Cassandra
 
 This component creates a Cassandra Vector Store with search capabilities.
 For more information, see the [Cassandra documentation](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -189,18 +201,23 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 | body_search | String | Document textual search terms |
 | enable_body_search | Boolean | Flag to enable body search |
 
-### Outputs
+**Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
 | vector_store | Cassandra | A Cassandra vector store instance configured with the specified parameters. |
 | search_results | List[Data] | The results of the similarity search as a list of `Data` objects. |
 
+</details>
+
 ## Cassandra Graph Vector Store
 
 This component implements a Cassandra Graph Vector Store with search capabilities.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -220,233 +237,250 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (for "Similarity with score threshold" search type) |
 | search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | A Cassandra Graph vector store instance configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
-## Chroma DB
+</details>
+
+## Chroma
 
 This component creates a Chroma Vector Store with search capabilities.
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
 
-| Name                         | Type          | Description                                      |
-|------------------------------|---------------|--------------------------------------------------|
-| collection_name               | String        | The name of the Chroma collection. Default: "langflow". |
-| persist_directory             | String        | The directory to persist the Chroma database.     |
-| search_query                  | String        | The query to search for in the vector store.      |
-| ingest_data                   | Data          | The data to ingest into the vector store (list of Data objects). |
-| embedding                     | Embeddings    | The embedding function to use for the vector store. |
-| chroma_server_cors_allow_origins | String     | CORS allow origins for the Chroma server.         |
-| chroma_server_host            | String        | Host for the Chroma server.                       |
-| chroma_server_http_port       | Integer       | HTTP port for the Chroma server.                  |
-| chroma_server_grpc_port       | Integer       | gRPC port for the Chroma server.                  |
-| chroma_server_ssl_enabled     | Boolean       | Enable SSL for the Chroma server.                 |
-| allow_duplicates              | Boolean       | Allow duplicate documents in the vector store.    |
-| search_type                   | String        | Type of search to perform: "Similarity" or "MMR". |
-| number_of_results             | Integer       | Number of results to return from the search. Default: 10. |
-| limit                         | Integer       | Limit the number of records to compare when Allow Duplicates is False. |
+**Inputs**
 
-### Outputs
+| Name                   | Type          | Description                               |
+|------------------------|---------------|-------------------------------------------|
+| search_type            | String        | Type of search to perform                 |
+| collection_name        | String        | Name of the collection to use             |
+| persist_directory      | String        | Directory to persist the collection to    |
+| search_query           | String        | Query for similarity search               |
+| ingest_data            | Data          | Data to be ingested into the vector store |
+| embedding              | Embeddings    | Embedding function to use                 |
+| number_of_results      | Integer       | Number of results to return in search     |
+| search_score_threshold | Float         | Minimum similarity score for search results |
+| search_filter          | Dict          | Metadata filters for search query         |
+| include                | List[String]  | Fields to include in search results       |
+| limit                  | Integer       | Limit for similarity search results       |
 
-| Name           | Type          | Description                    |
-|----------------|---------------|--------------------------------|
-| vector_store   | Chroma        | Chroma vector store instance   |
-| search_results | List[Data]    | Results of similarity search   |
+**Outputs**
+
+| Name          | Type     | Description                               |
+|---------------|----------|-------------------------------------------|
+| vector_store  | Chroma   | Chroma vector store instance              |
+| search_results| List[Data]| Results of similarity search             |
+
+</details>
 
 ## Clickhouse
 
-This component implements a Clickhouse Vector Store with search capabilities.
-For more information, see the [CLickhouse Documentation](https://clickhouse.com/docs/en/intro).
+This component creates a Clickhouse Vector Store with search capabilities.
+For more information, see the [Clickhouse documentation](https://clickhouse.com/docs/en/cloud/database/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| host | hostname | Clickhouse server hostname (required, default: "localhost") |
-| port | port | Clickhouse server port (required, default: 8123) |
-| database | database | Clickhouse database name (required) |
-| table | Table name | Clickhouse table name (required) |
-| username | The ClickHouse user name. | Username for authentication (required) |
-| password | The password for username. | Password for authentication (required) |
-| index_type | index_type | Type of the index (options: "annoy", "vector_similarity", default: "annoy") |
-| metric | metric | Metric to compute distance (options: "angular", "euclidean", "manhattan", "hamming", "dot", default: "angular") |
-| secure | Use https/TLS | Overrides inferred values from the interface or port arguments (default: false) |
-| index_param | Param of the index | Index parameters (default: "'L2Distance',100") |
-| index_query_params | index query params | Additional index query parameters |
-| search_query | Search Query | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store |
-| embedding | Embedding | Embedding model to use |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
-| score_threshold | Score threshold | Threshold for similarity scores |
+**Inputs**
 
-### Outputs
+| Name          | Type          | Description                                |
+|-----------------|---------------|------------------------------------------|
+| host            | String        | Hostname or IP address of Clickhouse server|
+| port            | Integer       | Port number for Clickhouse server         |
+| database        | String        | Database name in Clickhouse               |
+| username        | SecretString  | Username for authentication               |
+| password        | SecretString  | Password for authentication               |
+| table_name      | String        | Table name in Clickhouse                  |
+| search_query    | String        | Query for similarity search               |
+| ingest_data     | Data          | Data to be ingested into the vector store |
+| embedding       | Embeddings    | Embedding function to use                 |
+| number_of_results | Integer     | Number of results to return in search     |
+| column_map      | Dict          | Mapping of column names                   |
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| vector_store | Vector Store | Built Clickhouse vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+**Outputs**
+
+| Name          | Type        | Description                               |
+|---------------|-------------|-------------------------------------------|
+| vector_store  | Clickhouse  | Clickhouse vector store instance          |
+| search_results| List[Data]  | Results of similarity search              |
+
+</details>
 
 ## Couchbase
 
 This component creates a Couchbase Vector Store with search capabilities.
-For more information, see the [Couchbase documentation](https://docs.couchbase.com/home/index.html).
+For more information, see the [Couchbase documentation](https://docs.couchbase.com/python-sdk/current/concept-docs/analytics-for-sdk-users.html).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
 
-| Name                    | Type          | Description                                      |
-|-------------------------|---------------|--------------------------------------------------|
-| couchbase_connection_string | SecretString | Couchbase Cluster connection string (required).   |
-| couchbase_username       | String        | Couchbase username (required).                   |
-| couchbase_password       | SecretString  | Couchbase password (required).                   |
-| bucket_name              | String        | Name of the Couchbase bucket (required).         |
-| scope_name               | String        | Name of the Couchbase scope (required).          |
-| collection_name          | String        | Name of the Couchbase collection (required).     |
-| index_name               | String        | Name of the Couchbase index (required).          |
-| search_query             | String        | The query to search for in the vector store.     |
-| ingest_data              | Data          | The data to ingest into the vector store (list of Data objects). |
-| embedding                | Embeddings    | The embedding function to use for the vector store. |
-| number_of_results        | Integer       | Number of results to return from the search. Default: 4 (advanced). |
+**Inputs**
 
-### Outputs
+| Name                       | Type          | Description                               |
+|----------------------------|---------------|-------------------------------------------|
+| couchbase_connection_string| String        | Connection string for Couchbase server    |
+| bucket_name                | String        | Name of the bucket to use                 |
+| scope_name                 | String        | Name of the scope in the bucket           |
+| collection_name            | String        | Name of the collection in the scope       |
+| username                   | SecretString  | Username for authentication               |
+| password                   | SecretString  | Password for authentication               |
+| search_query               | String        | Query for similarity search               |
+| ingest_data                | Data          | Data to be ingested into the vector store |
+| embedding                  | Embeddings    | Embedding function to use                 |
+| number_of_results          | Integer       | Number of results to return in search     |
 
-| Name           | Type                   | Description                    |
-|----------------|------------------------|--------------------------------|
-| vector_store   | CouchbaseVectorStore    | A Couchbase vector store instance configured with the specified parameters. |
+**Outputs**
 
+| Name          | Type      | Description                               |
+|---------------|-----------|-------------------------------------------|
+| vector_store  | Couchbase | Couchbase vector store instance           |
+| search_results| List[Data]| Results of similarity search              |
+
+</details>
 
 ## Elasticsearch
 
 This component creates an Elasticsearch Vector Store with search capabilities.
-For more information, see the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html).
+For more information, see the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/hybrid-search-with-knn.html).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
 
-| Name | Type | Description |
-|------|------|-------------|
-| es_url | String | Elasticsearch server URL |
-| es_user | String | Username for Elasticsearch authentication |
-| es_password | SecretString | Password for Elasticsearch authentication |
-| index_name | String | Name of the Elasticsearch index |
-| strategy | String | Strategy for vector search ("approximate_k_nearest_neighbors" or "script_scoring") |
-| distance_strategy | String | Strategy for distance calculation ("COSINE", "EUCLIDEAN_DISTANCE", "DOT_PRODUCT") |
-| search_query | String | Query for similarity search |
-| ingest_data | Data | Data to be ingested into the vector store |
-| embedding | Embeddings | Embedding function to use |
-| number_of_results | Integer | Number of results to return in search (default: 4) |
+**Inputs**
 
-### Outputs
+| Name          | Type          | Description                               |
+|---------------|---------------|-------------------------------------------|
+| es_url        | String        | URL for Elasticsearch                     |
+| es_cloud_id   | String        | Cloud ID for Elasticsearch                |
+| api_key       | SecretString  | API key for Elasticsearch                 |
+| es_user       | String        | Username for Elasticsearch                |
+| es_password   | SecretString  | Password for Elasticsearch                |
+| index_name    | String        | Name of the index in Elasticsearch        |
+| query         | String        | Query for similarity search               |
+| ingest_data   | Data          | Data to be ingested into the vector store |
+| embedding     | Embeddings    | Embedding function to use                 |
+| number_of_results | Integer   | Number of results to return in search     |
 
-| Name | Type | Description |
-|------|------|-------------|
-| vector_store | ElasticsearchStore | Elasticsearch vector store instance |
-| search_results | List[Data] | Results of similarity search |
+**Outputs**
+
+| Name          | Type          | Description                               |
+|---------------|---------------|-------------------------------------------|
+| vector_store  | ElasticsearchStore | Elasticsearch vector store instance      |
+| search_results| List[Data]    | Results of similarity search              |
+
+</details>
 
 ## FAISS
 
 This component creates a FAISS Vector Store with search capabilities.
-For more information, see the [FAISS documentation](https://faiss.ai/index.html).
+For more information, see the [FAISS documentation](https://github.com/facebookresearch/faiss).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
 
-| Name                      | Type          | Description                                      |
-|---------------------------|---------------|--------------------------------------------------|
-| index_name                 | String        | The name of the FAISS index. Default: "langflow_index". |
-| persist_directory          | String        | Path to save the FAISS index. It will be relative to where Langflow is running. |
-| search_query               | String        | The query to search for in the vector store.     |
-| ingest_data                | Data          | The data to ingest into the vector store (list of Data objects or documents). |
-| allow_dangerous_deserialization | Boolean  | Set to True to allow loading pickle files from untrusted sources. Default: True (advanced). |
-| embedding                  | Embeddings    | The embedding function to use for the vector store. |
-| number_of_results          | Integer       | Number of results to return from the search. Default: 4 (advanced). |
+**Inputs**
 
-### Outputs
+| Name              | Type         | Description                               |
+|-------------------|--------------|-------------------------------------------|
+| index_name        | String       | Name of the FAISS index                   |
+| persist_directory | String       | Directory to persist the index to         |
+| distance_strategy | String       | Strategy for calculating distance between vectors |
+| search_query      | String       | Query for similarity search               |
+| ingest_data       | Data         | Data to be ingested into the vector store |
+| embedding         | Embeddings   | Embedding function to use                 |
+| number_of_results | Integer      | Number of results to return in search     |
 
-| Name           | Type                   | Description                    |
-|----------------|------------------------|--------------------------------|
-| vector_store   | FAISS                  | A FAISS vector store instance configured with the specified parameters. |
+**Outputs**
+
+| Name          | Type       | Description                               |
+|---------------|------------|-------------------------------------------|
+| vector_store  | FAISS      | FAISS vector store instance               |
+| search_results| List[Data] | Results of similarity search              |
+
+</details>
 
 ## Graph RAG
 
-This component performs Graph RAG (Retrieval Augmented Generation) traversal in a vector store, enabling graph-based document retrieval.
-For more information, see the [Graph RAG documentation](https://datastax.github.io/graph-rag/).
+This component creates a Graph Vector Store with search capabilities, integrating graph navigation with vector search.
+For more information, see the [Neo4j documentation](https://neo4j.com/docs/python-manual/current/vector-search/).
 
-For an example flow, see the **Graph RAG** template.
+<details>
+<summary>Parameters</summary>
 
-### Inputs
+**Inputs**
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| embedding_model | Embedding Model | Specify the embedding model. This is not required for collections embedded with [Astra vectorize](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
-| vector_store | Vector Store Connection | Connection to the vector store. |
-| edge_definition | Edge Definition | Edge definition for the graph traversal. For more information, see the [GraphRAG documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/). |
-| strategy | Traversal Strategies | The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
-| search_query | Search Query | The query to search for in the vector store. |
-| graphrag_strategy_kwargs | Strategy Parameters | Optional dictionary of additional parameters for the retrieval strategy. For more information, see the [strategy documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
+| Name               | Type         | Description                               |
+|--------------------|--------------|-------------------------------------------|
+| neo4j_uri          | String       | URI for Neo4j database                    |
+| neo4j_username     | String       | Username for Neo4j                        |
+| neo4j_password     | SecretString | Password for Neo4j                        |
+| workspace          | String       | Workspace to use in Neo4j                 |
+| search_query       | String       | Query for similarity search               |
+| ingest_data        | Data         | Data to be ingested into the vector store |
+| embedding          | Embeddings   | Embedding function to use                 |
+| number_of_results  | Integer      | Number of results to return in search     |
+| retrieval_query    | String       | Specific query for retrieval              |
 
-### Outputs
+**Outputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| search_results | List[Data] | Results of the graph-based document retrieval as a list of [Data](/concepts-objects#data-object) objects. |
+| Name          | Type        | Description                               |
+|---------------|-------------|-------------------------------------------|
+| vector_store  | GraphStore  | Neo4j graph store instance                |
+| search_results| List[Data]  | Results of similarity search              |
 
-## Hyper-Converged Database (HCD) Vector Store
+</details>
 
-This component implements a Vector Store using HCD.
+## Hyper-Converged Database (HCD)
 
-To use the HCD vector store, add your deployment's collection name, username, password, and HCD Data API endpoint.
-The endpoint must be formatted like `http[s]://**DOMAIN_NAME** or **IP_ADDRESS**[:port]`, for example, `http://192.0.2.250:8181`.
+This component creates a Hyper-Converged Database Vector Store with search capabilities.
+For more information, see the [HCD documentation](https://docs.hcd.fal.ai/).
 
-Replace **DOMAIN_NAME** or **IP_ADDRESS** with the domain name or IP address of your HCD Data API connection.
+<details>
+<summary>Parameters</summary>
 
-To use the HCD vector store for embeddings ingestion, connect it to an embeddings model and a file loader:
+**Inputs**
 
-![HCD vector store embeddings ingestion](/img/component-hcd-example-flow.png)
+| Name                | Type         | Description                               |
+|---------------------|--------------|-------------------------------------------|
+| endpoint            | String       | API endpoint in the format `https://[api_subdomain].fal.ai` |
+| api_key             | SecretString | API key for authentication                |
+| hcd_api_key         | SecretString | HCD-specific API key                      |
+| hcd_subdomain       | String       | HCD subdomain                             |
+| schema_name         | String       | Name of the schema                        |
+| table_name          | String       | Name of the table                         |
+| search_query        | String       | Query for similarity search               |
+| ingest_data         | Data         | Data to be ingested into the vector store |
+| embedding           | Embeddings   | Embedding function to use                 |
+| number_of_results   | Integer      | Number of results to return in search     |
+| filter              | Dict         | Filter for search query                   |
+| similarity_threshold| Float        | Minimum similarity score for search results |
+| hybrid_search       | Boolean      | Whether to use hybrid search              |
+| hybrid_search_weight| Float        | Weight for hybrid search                  |
 
-### Inputs
+**Outputs**
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| collection_name | Collection Name | The name of the collection within HCD where the vectors will be stored (required) |
-| username | HCD Username | Authentication username for accessing HCD (default: "hcd-superuser", required) |
-| password | HCD Password | Authentication password for accessing HCD (required) |
-| api_endpoint | HCD API Endpoint | API endpoint URL for the HCD service (required) |
-| search_input | Search Input | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store |
-| namespace | Namespace | Optional namespace within HCD to use for the collection (default: "default_namespace") |
-| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD |
-| metric | Metric | Optional distance metric for vector comparisons (options: "cosine", "dot_product", "euclidean") |
-| batch_size | Batch Size | Optional number of data to process in a single batch |
-| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations |
-| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data |
-| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations |
-| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off", default: "Sync") |
-| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
-| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing |
-| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration |
-| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing |
-| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
-| search_type | Search Type | Search type to use (options: "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)", default: "Similarity") |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (default: 0) |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+| Name          | Type         | Description                               |
+|---------------|--------------|-------------------------------------------|
+| vector_store  | HyperConvergedDatabaseVectorStore | HCD vector store instance |
+| search_results| List[Data]   | Results of similarity search              |
 
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| vector_store | Vector Store | An HCD vector store instance The results of the similarity search as a list of `Data` objects.|
-| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
+</details>
 
 ## Milvus
 
 This component creates a Milvus Vector Store with search capabilities.
 For more information, see the [Milvus documentation](https://milvus.io/docs).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
@@ -467,18 +501,23 @@ For more information, see the [Milvus documentation](https://milvus.io/docs).
 | vector_dimensions        | Integer       | Number of dimensions of the vectors              |
 | pre_delete_collection    | Boolean       | Whether to delete the collection before creating a new one |
 
-### Outputs
+**Outputs**
 
 | Name           | Type                   | Description                    |
 |----------------|------------------------|--------------------------------|
 | vector_store   | Milvus                 | A Milvus vector store instance configured with the specified parameters. |
+
+</details>
 
 ## MongoDB Atlas
 
 This component creates a MongoDB Atlas Vector Store with search capabilities.
 For more information, see the [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                      | Type         | Description                               |
 | ------------------------- | ------------ | ----------------------------------------- |
@@ -497,19 +536,24 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 | similarity                | String       | The method used to measure similarity between vectors (options: "cosine", "euclidean", "dotProduct", default: "cosine") |
 | quantization              | String       | Quantization reduces memory costs by converting 32-bit floats to smaller data types (options: "scalar", "binary") |
 
-### Outputs
+**Outputs**
 
 | Name          | Type                   | Description                               |
 | ------------- | ---------------------- | ----------------------------------------- |
 | vector_store  | MongoDBAtlasVectorSearch| MongoDB Atlas vector store instance       |
 | search_results| List[Data]             | Results of similarity search              |
 
+</details>
+
 ## Opensearch
 
 This component creates an Opensearch vector store with search capabilities
 For more information, see [Opensearch documentation](https://opensearch.org/platform/search/vector-database.html).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                   | Type         | Description                                                                                                            |
 |------------------------|--------------|------------------------------------------------------------------------------------------------------------------------|
@@ -527,19 +571,24 @@ For more information, see [Opensearch documentation](https://opensearch.org/plat
 | verify_certs           | Boolean      | Verify certificates                                                                                                    |
 | hybrid_search_query    | String       | Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching |
 
-### Outputs
+**Outputs**
 
 | Name          | Type                   | Description                                 |
 | ------------- |------------------------|---------------------------------------------|
 | vector_store  | OpenSearchVectorSearch | OpenSearch vector store instance            |
 | search_results| List[Data]             | Results of similarity search                |
 
+</details>
+
 ## PGVector
 
 This component creates a PGVector Vector Store with search capabilities.
 For more information, see the [PGVector documentation](https://github.com/pgvector/pgvector).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
@@ -550,12 +599,14 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 | embedding       | Embeddings   | Embedding function to use                 |
 | number_of_results | Integer    | Number of results to return in search     |
 
-### Outputs
+**Outputs**
 
 | Name          | Type        | Description                               |
 | ------------- | ----------- | ----------------------------------------- |
 | vector_store  | PGVector    | PGVector vector store instance            |
 | search_results| List[Data]  | Results of similarity search              |
+
+</details>
 
 
 ## Pinecone
@@ -563,7 +614,10 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 This component creates a Pinecone Vector Store with search capabilities.
 For more information, see the [Pinecone documentation](https://docs.pinecone.io/home).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name              | Type         | Description                               |
 | ----------------- | ------------ | ----------------------------------------- |
@@ -577,12 +631,14 @@ For more information, see the [Pinecone documentation](https://docs.pinecone.io/
 | embedding         | Embeddings   | Embedding function to use                 |
 | number_of_results | Integer      | Number of results to return in search     |
 
-### Outputs
+**Outputs**
 
 | Name          | Type       | Description                               |
 | ------------- | ---------- | ----------------------------------------- |
 | vector_store  | Pinecone   | Pinecone vector store instance            |
 | search_results| List[Data] | Results of similarity search              |
+
+</details>
 
 
 ## Qdrant
@@ -590,7 +646,10 @@ For more information, see the [Pinecone documentation](https://docs.pinecone.io/
 This component creates a Qdrant Vector Store with search capabilities.
 For more information, see the [Qdrant documentation](https://qdrant.tech/documentation/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                 | Type         | Description                               |
 | -------------------- | ------------ | ----------------------------------------- |
@@ -611,12 +670,14 @@ For more information, see the [Qdrant documentation](https://qdrant.tech/documen
 | embedding            | Embeddings   | Embedding function to use                 |
 | number_of_results    | Integer      | Number of results to return in search     |
 
-### Outputs
+**Outputs**
 
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
 | vector_store  | Qdrant   | Qdrant vector store instance              |
 | search_results| List[Data] | Results of similarity search            |
+
+</details>
 
 
 ## Redis
@@ -624,7 +685,10 @@ For more information, see the [Qdrant documentation](https://qdrant.tech/documen
 This component creates a Redis Vector Store with search capabilities.
 For more information, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name              | Type         | Description                               |
 | ----------------- | ------------ | ----------------------------------------- |
@@ -637,12 +701,14 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 | number_of_results | Integer      | Number of results to return in search     |
 | embedding         | Embeddings   | Embedding function to use                 |
 
-### Outputs
+**Outputs**
 
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
 | vector_store  | Redis    | Redis vector store instance               |
 | search_results| List[Data]| Results of similarity search             |
+
+</details>
 
 
 ## Supabase
@@ -650,7 +716,10 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 This component creates a connection to a Supabase Vector Store with search capabilities.
 For more information, see the [Supabase documentation](https://supabase.com/docs/guides/ai).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                | Type         | Description                               |
 | ------------------- | ------------ | ----------------------------------------- |
@@ -663,12 +732,14 @@ For more information, see the [Supabase documentation](https://supabase.com/docs
 | embedding           | Embeddings   | Embedding function to use                 |
 | number_of_results   | Integer      | Number of results to return in search     |
 
-### Outputs
+**Outputs**
 
 | Name          | Type               | Description                               |
 | ------------- | ------------------ | ----------------------------------------- |
 | vector_store  | SupabaseVectorStore | Supabase vector store instance            |
 | search_results| List[Data]          | Results of similarity search              |
+
+</details>
 
 
 ## Upstash
@@ -676,7 +747,10 @@ For more information, see the [Supabase documentation](https://supabase.com/docs
 This component creates an Upstash Vector Store with search capabilities.
 For more information, see the [Upstash documentation](https://upstash.com/docs/introduction).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
@@ -690,12 +764,14 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 | embedding       | Embeddings   | Embedding function to use (optional)      |
 | number_of_results | Integer    | Number of results to return in search     |
 
-### Outputs
+**Outputs**
 
 | Name          | Type             | Description                               |
 | ------------- | ---------------- | ----------------------------------------- |
 | vector_store  | UpstashVectorStore| Upstash vector store instance             |
 | search_results| List[Data]        | Results of similarity search              |
+
+</details>
 
 
 ## Vectara
@@ -703,7 +779,10 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 This component creates a Vectara Vector Store with search capabilities.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name             | Type         | Description                               |
 | ---------------- | ------------ | ----------------------------------------- |
@@ -715,19 +794,24 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 | search_query      | String       | Query for similarity search               |
 | number_of_results | Integer      | Number of results to return in search     |
 
-### Outputs
+**Outputs**
 
 | Name          | Type              | Description                               |
 | ------------- | ----------------- | ----------------------------------------- |
 | vector_store  | VectaraVectorStore | Vectara vector store instance             |
 | search_results| List[Data]         | Results of similarity search              |
 
+</details>
+
 ## Vectara Search
 
 This component searches a Vectara Vector Store for documents based on the provided input.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name                | Type         | Description                               |
 |---------------------|--------------|-------------------------------------------|
@@ -738,18 +822,23 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 | vectara_api_key     | SecretString | Vectara API key                           |
 | files_url           | List[String] | Optional URLs for file initialization     |
 
-### Outputs
+**Outputs**
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
 | search_results | List[Data] | Results of similarity search |
+
+</details>
 
 ## Weaviate
 
 This component facilitates a Weaviate Vector Store setup, optimizing text and document indexing and retrieval.
 For more information, see the [Weaviate Documentation](https://weaviate.io/developers/weaviate).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
@@ -762,18 +851,23 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | embedding     | Embeddings   | Model used                                |
 | attributes    | List[String] | Optional additional attributes            |
 
-### Outputs
+**Outputs**
 
 | Name         | Type             | Description                   |
 |--------------|------------------|-------------------------------|
 | vector_store | WeaviateVectorStore | Weaviate vector store instance |
+
+</details>
 
 ## Weaviate Search
 
 This component searches a Weaviate Vector Store for documents similar to the input.
 For more information, see the [Weaviate Documentation](https://weaviate.io/developers/weaviate).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
@@ -787,11 +881,10 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | embedding     | Embeddings   | Model used                                |
 | attributes    | List[String] | Optional additional attributes            |
 
-### Outputs
+**Outputs**
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
 | search_results | List[Data] | Results of similarity search |
 
-
-
+</details>
