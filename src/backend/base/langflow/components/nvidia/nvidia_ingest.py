@@ -50,7 +50,7 @@ class NvidiaIngestComponent(BaseFileComponent):
             name="extract_tables",
             display_name="Extract Tables",
             info="Extract text from tables",
-            value=True,
+            value=False,
         ),
         BoolInput(
             name="extract_images",
@@ -66,7 +66,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                 "Support for 'block', 'line', 'span' varies by document type."
             ),
             options=["document", "page", "block", "line", "span"],
-            value="document",  # Default value
+            value="page",  # Default value
             advanced=True,
         ),
         BoolInput(
@@ -74,12 +74,13 @@ class NvidiaIngestComponent(BaseFileComponent):
             display_name="Split Text",
             info="Split text into smaller chunks",
             value=True,
+            advanced=True,
         ),
         IntInput(
             name="chunk_size",
             display_name="Chunk size",
             info="The number of tokens per chunk",
-            value=512,
+            value=500,
             advanced=True,
         ),
         IntInput(
