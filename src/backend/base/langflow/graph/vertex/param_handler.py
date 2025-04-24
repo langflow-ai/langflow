@@ -70,6 +70,11 @@ class ParameterHandler:
                 params[param_key].append(self.vertex.graph.get_vertex(edge.source_id))
             else:
                 params[param_key] = self.process_non_list_edge_param(field, edge)
+        elif param_key in self.vertex.output_names:
+            # If the param_key is in the output_names, it means that the loop is run
+            #  if the loop is run the param_key item will be set over here
+            # validate the edge
+            params[param_key] = self.vertex.graph.get_vertex(edge.source_id)
         return params
 
     def process_non_list_edge_param(self, field: dict, edge: CycleEdge) -> Any:

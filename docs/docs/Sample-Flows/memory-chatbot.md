@@ -26,7 +26,7 @@ This component retrieves previous messages and sends them to the **Prompt** comp
 To examine the template, click the **Template** field in the **Prompt** component.
 The **Prompt** tells the **OpenAI model** component how to respond to input.
 
-```plain
+```text
 You are a helpful assistant that answers questions.
 
 Use markdown to format your answer, properly embedding images and urls.
@@ -44,7 +44,7 @@ The **Chat Memory** component is connected to this port to store chat messages f
 1. Open the **Playground**.
 2. Enter multiple questions. For example, try entering this conversation:
 
-```plain
+```text
 Hi, my name is Luca.
 Please tell me about PostgreSQL.
 What is my name?

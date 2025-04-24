@@ -89,7 +89,7 @@ You created a chatbot application with Langflow, but let's try an experiment.
 1. Ask the bot: `Who won the Oscar in 2024 for best movie?`
 2. The bot's response is similar to this:
 
-```plain
+```text
 I'm sorry, but I don't have information on events or awards that occurred after
 October 2023, including the Oscars in 2024.
 You may want to check the latest news or the official Oscars website
@@ -162,7 +162,7 @@ If you used Langflow's **Global Variables** feature, the RAG application flow co
 1. Modify the **Prompt** component to contain variables for both `{user_question}` and `{context}`.
 The `{context}` variable gives the bot additional context for answering `{user_question}` beyond what the LLM was trained on.
 
-```plain
+```text
 Given the context
 {context}
 Answer the question
@@ -175,7 +175,7 @@ This example uploads an up-to-date CSV about Oscar winners.
 4. Ask the bot: `Who won the Oscar in 2024 for best movie?`
 5. The bot's response should be similar to this:
 
-```plain
+```text
 The Oscar for Best Picture in 2024 was awarded to "Oppenheimer,"
 produced by Emma Thomas, Charles Roven, and Christopher Nolan.
 ```

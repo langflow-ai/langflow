@@ -161,7 +161,7 @@ class TextAnalyzerComponent(Component):
 4. Connect the tool output to the agent's tools input.
 5. Ask the agent, `What tools are you using to answer my questions?`
 Your response will be similar to the following, and will include your custom component.
-```plain
+```text
 I have access to several tools that assist me in answering your questions, including:
 Search API: This allows me to search for recent information or results on the web.
 HTTP Requests: I can make HTTP requests to various URLs to retrieve data or interact with APIs.

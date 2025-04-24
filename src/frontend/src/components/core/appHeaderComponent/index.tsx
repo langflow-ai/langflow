@@ -12,10 +12,12 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
-import GithubStarComponent from "./components/GithubStarButton";
+import LangflowCounts from "./components/langflow-counts";
 
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -46,9 +48,24 @@ export default function AppHeader(): JSX.Element {
 
   useResetDismissUpdateAll();
 
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const examples = useFlowsManagerStore((state) => state.examples);
+  const folders = useFolderStore((state) => state.folders);
+
+  const isEmpty = flows?.length !== examples?.length || folders?.length > 1;
+
+  const getNotificationBadge = () => {
+    const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
+    return notificationCenter
+      ? `${baseClasses} right-[5.1rem] top-[10px]`
+      : "hidden";
+  };
+
   return (
     <div
-      className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background"
+      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background ${
+        !isEmpty ? "hidden" : ""
+      }`}
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -65,7 +82,7 @@ export default function AppHeader(): JSX.Element {
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : (
-            <LangflowLogo className="h-5 w-6" />
+            <LangflowLogo className="h-6 w-6" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
@@ -83,22 +100,20 @@ export default function AppHeader(): JSX.Element {
 
       {/* Right Section */}
       <div
-        className={`z-30 flex items-center gap-2`}
+        className={`relative left-3 z-30 flex items-center gap-1`}
         data-testid="header_right_section_wrapper"
       >
-        {!ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <Button
-              unstyled
-              className="hidden items-center whitespace-nowrap pr-2 2xl:inline"
-              onClick={() =>
-                window.open("https://github.com/langflow-ai/langflow", "_blank")
-              }
-            >
-              <GithubStarComponent />
-            </Button>
-          </>
-        )}
+        <>
+          <Button
+            unstyled
+            className="hidden items-center whitespace-nowrap pr-2 lg:inline"
+            onClick={() =>
+              window.open("https://github.com/langflow-ai/langflow", "_blank")
+            }
+          >
+            <LangflowCounts />
+          </Button>
+        </>
         <AlertDropdown
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
@@ -111,8 +126,7 @@ export default function AppHeader(): JSX.Element {
             <AlertDropdown onClose={() => setActiveState(null)}>
               <Button
                 ref={notificationRef}
-                variant="ghost"
-                className={`relative ${activeState === "notifications" ? "bg-accent text-accent-foreground" : ""}`}
+                unstyled
                 onClick={() =>
                   setActiveState((prev) =>
                     prev === "notifications" ? null : "notifications",
@@ -120,94 +134,30 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <span
-                  className={
-                    notificationCenter
-                      ? `absolute left-[31px] top-[10px] h-1 w-1 rounded-full bg-destructive`
-                      : "hidden"
-                  }
-                />
-                <ForwardedIconComponent
-                  name="Bell"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap">Notifications</span>
+                <div className="hit-area-hover group items-center rounded-md px-2 py-1 text-muted-foreground">
+                  <span className={getNotificationBadge()} />
+                  <ForwardedIconComponent
+                    name="Bell"
+                    className={`side-bar-button-size h-4 w-4 ${
+                      activeState === "notifications"
+                        ? "text-primary"
+                        : "text-muted-foreground group-hover:text-primary"
+                    }`}
+                    strokeWidth={2}
+                  />
+                  <span className="hidden whitespace-nowrap">
+                    Notifications
+                  </span>
+                </div>
               </Button>
             </AlertDropdown>
           </ShadTooltip>
         </AlertDropdown>
-        {!ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <ShadTooltip
-              content="Go to Langflow Store"
-              side="bottom"
-              styleClasses="z-10"
-            >
-              <Button
-                variant="ghost"
-                className={` ${lastPath === "store" ? "bg-accent text-accent-foreground" : ""} z-50`}
-                onClick={() => {
-                  navigate("/store");
-                }}
-                data-testid="button-store"
-              >
-                <ForwardedIconComponent
-                  name="Store"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap">Store</span>
-              </Button>
-            </ShadTooltip>
-            <Separator
-              orientation="vertical"
-              className="my-auto h-7 dark:border-zinc-700"
-            />
-          </>
-        )}
-        {ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <ShadTooltip content="Docs" side="bottom" styleClasses="z-10">
-              <Button
-                variant="ghost"
-                className="flex text-sm font-medium"
-                onClick={() =>
-                  window.open(
-                    "https://docs.datastax.com/en/langflow/index.html",
-                    "_blank",
-                  )
-                }
-              >
-                <ForwardedIconComponent
-                  name="book-open-text"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap 2xl:inline">
-                  Docs
-                </span>
-              </Button>
-            </ShadTooltip>
-            <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
-              <Button
-                data-testid="user-profile-settings"
-                variant="ghost"
-                className="flex text-sm font-medium"
-                onClick={() => navigate("/settings")}
-              >
-                <ForwardedIconComponent
-                  name="Settings"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap 2xl:inline">
-                  Settings
-                </span>
-              </Button>
-            </ShadTooltip>
-            <Separator
-              orientation="vertical"
-              className="my-auto h-7 dark:border-zinc-700"
-            />
-          </>
-        )}
+        <Separator
+          orientation="vertical"
+          className="my-auto ml-3 h-7 dark:border-zinc-700"
+        />
+
         <div className="flex">
           <AccountMenu />
         </div>

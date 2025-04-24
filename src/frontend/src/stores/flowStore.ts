@@ -835,7 +835,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
       playgroundPage,
-      stream,
       eventDelivery,
     });
     get().setIsBuilding(false);
