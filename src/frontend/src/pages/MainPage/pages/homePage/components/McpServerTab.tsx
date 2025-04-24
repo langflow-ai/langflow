@@ -56,7 +56,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const host = window.location.host;
   const protocol = window.location.protocol;
-  const apiUrl = `${protocol}//${host}/api/v1/mcp/project/${projectId}/sse/`;
+  const apiUrl = `${protocol}//${host}/api/v1/mcp/project/${projectId}/sse`;
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
