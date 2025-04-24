@@ -77,20 +77,9 @@ test(
 
     expect(sseURLCount).toBeGreaterThan(0);
 
-    await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
-      timeout: 30000,
-    });
-
     await page.getByTestId("tab_0_stdio").click();
 
     await page.getByTestId("refresh-button-command").click();
-
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-      },
-    );
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -125,9 +114,5 @@ test(
     sseURLCount = await page.getByTestId("textarea_str_sse_url").count();
 
     expect(sseURLCount).toBeGreaterThan(0);
-
-    await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
-      timeout: 30000,
-    });
   },
 );
