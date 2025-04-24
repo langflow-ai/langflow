@@ -165,8 +165,6 @@ class MCPToolsComponent(Component):
         Output(display_name="Response", name="response", method="build_output"),
     ]
 
-
-
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
         """Validate connection parameters based on mode."""
         if mode not in ["Stdio", "SSE"]:
@@ -179,6 +177,7 @@ class MCPToolsComponent(Component):
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
+
     def _process_headers(self, headers: Any) -> dict:
         """Process the headers input into a valid dictionary.
 
@@ -205,6 +204,7 @@ class MCPToolsComponent(Component):
                 return {}  # Return empty dictionary instead of None
             return processed_headers
         return {}
+
     async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
         """Validate and process schema inputs for a tool."""
         try:
