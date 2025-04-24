@@ -75,21 +75,17 @@ test(
       });
 
     //This one is for testing the wrong loop message
+
+    await page.getByTestId("sidebar-search-input").fill("File");
+    await page.waitForSelector('[data-testid="dataFile"]', {
+      timeout: 1000,
+    });
+
     await page
-      .getByTestId("processingParser")
+      .getByTestId("dataFile")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });
-
-    await page
-      .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(1)
-      .click();
-
-    const loopItemInput = await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first()
-      .click();
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
@@ -111,7 +107,7 @@ test(
     // Loop Item -> Update Data
 
     await page
-      .getByTestId("handle-loopcomponent-shownode-item-right")
+      .getByTestId("handle-basicloopcomponent-shownode-item-right")
       .first()
       .click();
     await page
@@ -125,23 +121,23 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-data-left")
+      .getByTestId("handle-basicloopcomponent-shownode-data or dataframe-left")
       .first()
       .click();
 
     // Loop Done -> Parse Data
     await page
-      .getByTestId("handle-loopcomponent-shownode-done-right")
+      .getByTestId("handle-basicloopcomponent-shownode-done-right")
       .first()
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
       .first()
       .click();
 
     // Parse Data -> Chat Output
     await page
-      .getByTestId("handle-parsedata-shownode-message-right")
+      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .first()
       .click();
 
@@ -150,7 +146,14 @@ test(
       .first()
       .click();
 
-    await zoomOut(page, 4);
+    //Loop to File
+
+    await page
+      .getByTestId("handle-basicloopcomponent-shownode-item-left")
+      .first()
+      .click();
+    await page.getByTestId("handle-file-shownode-data-right").first().click();
+    await zoomOut(page, 3);
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
@@ -188,7 +191,7 @@ test(
     await page.getByTestId("keypair100").fill("modified_value");
 
     // Build and run, expect the wrong loop message
-    await page.getByTestId("button_run_chat output").click();
+    await page.getByTestId("button_run_file").click();
     await page.waitForSelector("text=The flow has an incomplete loop.", {
       timeout: 30000,
     });
@@ -198,7 +201,7 @@ test(
 
     // Delete the second parse data used to test
 
-    await page.getByTestId("div-generic-node").nth(4).click();
+    await page.getByTestId("title-File").last().click();
 
     await page.getByTestId("more-options-modal").click();
 
@@ -211,7 +214,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
+      .getByTestId("handle-basicloopcomponent-shownode-item-left")
       .first()
       .click();
 
