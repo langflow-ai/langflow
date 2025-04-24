@@ -136,9 +136,8 @@ class MCPToolsComponent(Component):
                     "type": "str",
                     "description": "Header value",
                 },
-
             ],
-            value=[]
+            value=[],
         ),
         DropdownInput(
             name="tool",
@@ -158,7 +157,6 @@ class MCPToolsComponent(Component):
             show=False,
             tool_mode=True,
         ),
-
     ]
 
     outputs = [
@@ -244,7 +242,6 @@ class MCPToolsComponent(Component):
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["env"]["show"] = False
-                    print("Setting the header as True")
                     build_config["sse_url"]["show"] = True
                     build_config["sse_url"]["value"] = "MCP_SSE"
                     build_config["headers_input"]["show"] = True
