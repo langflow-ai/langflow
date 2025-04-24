@@ -56,37 +56,29 @@ def data_to_text_list(template: str, data: JSON | list[JSON]) -> tuple[list[str]
         ... )
         >>> assert result == (["Alice is 25"], [Data(data={"name": "Alice", "age": 25})])
     """
-    if data is None:
-        return [], []
-
-    if template is None:
-        msg = "Template must be a string, but got None."
-        raise ValueError(msg)
+    if not template:
+        raise ValueError("Template must be a valid string.")
 
     if not isinstance(template, str):
-        msg = f"Template must be a string, but got {type(template)}"
-        raise TypeError(msg)
+        raise TypeError(f"Template must be a string, but got {type(template)}")
 
     formatted_text: list[str] = []
     processed_data: list[JSON] = []
 
-    data_list = [data] if isinstance(data, JSON) else data
+    if not data:
+        return formatted_text, processed_data
 
-    data_objects = [item if isinstance(item, JSON) else JSON(text=str(item)) for item in data_list]
+    if isinstance(data, JSON):
+        data = [data]
 
-    for data_obj in data_objects:
-        format_dict = {}
+    for data_obj in data:
+        if not isinstance(data_obj, JSON):
+            raise TypeError(f"Each item in data must be a JSON object, but got {type(data_obj)}")
 
-        if isinstance(data_obj.data, dict):
-            format_dict.update(data_obj.data)
+        format_dict = data_obj.data if isinstance(data_obj.data, dict) else {}
 
-            if isinstance(data_obj.data.get("data"), dict):
-                format_dict.update(data_obj.data["data"])
-
-            elif format_dict.get("error"):
-                format_dict["text"] = format_dict["error"]
-
-        format_dict["data"] = data_obj.data
+        if "data" in format_dict and isinstance(format_dict["data"], dict):
+            format_dict.update(format_dict["data"])
 
         safe_dict = defaultdict(str, format_dict)
 
@@ -94,14 +86,13 @@ def data_to_text_list(template: str, data: JSON | list[JSON]) -> tuple[list[str]
             formatted_text.append(template.format_map(safe_dict))
             processed_data.append(data_obj)
         except ValueError as e:
-            msg = f"Error formatting template: {e!s}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error formatting template: {e}") from e
 
     return formatted_text, processed_data
 
 
 def data_to_text(template: str, data: JSON | list[JSON], sep: str = "\n") -> str:
-    r"""Converts data into a formatted text string based on a given template.
+    """Converts data into a formatted text string based on a given template.
 
     Args:
         template (str): The template string used to format each data item.
@@ -112,8 +103,7 @@ def data_to_text(template: str, data: JSON | list[JSON], sep: str = "\n") -> str
         str: A string containing the formatted data items separated by the specified separator.
     """
     formatted_text, _ = data_to_text_list(template, data)
-    sep = "\n" if sep is None else sep
-    return sep.join(formatted_text)
+    return (sep or "\n").join(formatted_text)
 
 
 def messages_to_text(template: str, messages: Message | list[Message]) -> str:
