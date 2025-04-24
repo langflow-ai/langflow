@@ -16,7 +16,7 @@ from langflow.base.mcp.util import (
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, TableInput
 from langflow.inputs.inputs import InputTypes
-from langflow.io import MessageTextInput, Output, TabInput
+from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema import Message
@@ -110,7 +110,7 @@ class MCPToolsComponent(Component):
             show=True,
             tool_mode=False,
         ),
-        MessageTextInput(
+        MultilineInput(
             name="sse_url",
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
@@ -244,7 +244,7 @@ class MCPToolsComponent(Component):
                     build_config["env"]["show"] = False
                     build_config["headers"]["show"] = True
                     build_config["sse_url"]["show"] = True
-
+                    build_config["sse_url"]["value"] = "MCP_SSE"
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
