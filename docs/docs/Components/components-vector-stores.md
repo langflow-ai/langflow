@@ -438,37 +438,56 @@ For more information, see the [Neo4j documentation](https://neo4j.com/docs/pytho
 
 ## Hyper-Converged Database (HCD)
 
-This component creates a Hyper-Converged Database Vector Store with search capabilities.
-For more information, see the [HCD documentation](https://docs.hcd.fal.ai/).
+This component implements a Vector Store using HCD.
+
+To use the HCD vector store, add your deployment's collection name, username, password, and HCD Data API endpoint.
+The endpoint must be formatted like `http[s]://**DOMAIN_NAME** or **IP_ADDRESS**[:port]`, for example, `http://192.0.2.250:8181`.
+
+Replace **DOMAIN_NAME** or **IP_ADDRESS** with the domain name or IP address of your HCD Data API connection.
+
+To use the HCD vector store for embeddings ingestion, connect it to an embeddings model and a file loader:
+
+![HCD vector store embeddings ingestion](/img/component-hcd-example-flow.png)
 
 <details>
 <summary>Parameters</summary>
 
 **Inputs**
 
-| Name                | Type         | Description                               |
-|---------------------|--------------|-------------------------------------------|
-| endpoint            | String       | API endpoint in the format `https://[api_subdomain].fal.ai` |
-| api_key             | SecretString | API key for authentication                |
-| hcd_api_key         | SecretString | HCD-specific API key                      |
-| hcd_subdomain       | String       | HCD subdomain                             |
-| schema_name         | String       | Name of the schema                        |
-| table_name          | String       | Name of the table                         |
-| search_query        | String       | Query for similarity search               |
-| ingest_data         | Data         | Data to be ingested into the vector store |
-| embedding           | Embeddings   | Embedding function to use                 |
-| number_of_results   | Integer      | Number of results to return in search     |
-| filter              | Dict         | Filter for search query                   |
-| similarity_threshold| Float        | Minimum similarity score for search results |
-| hybrid_search       | Boolean      | Whether to use hybrid search              |
-| hybrid_search_weight| Float        | Weight for hybrid search                  |
+### Inputs
 
-**Outputs**
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | The name of the collection within HCD where the vectors will be stored (required) |
+| username | HCD Username | Authentication username for accessing HCD (default: "hcd-superuser", required) |
+| password | HCD Password | Authentication password for accessing HCD (required) |
+| api_endpoint | HCD API Endpoint | API endpoint URL for the HCD service (required) |
+| search_input | Search Input | Query string for similarity search |
+| ingest_data | Ingest Data | Data to be ingested into the vector store |
+| namespace | Namespace | Optional namespace within HCD to use for the collection (default: "default_namespace") |
+| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD |
+| metric | Metric | Optional distance metric for vector comparisons (options: "cosine", "dot_product", "euclidean") |
+| batch_size | Batch Size | Optional number of data to process in a single batch |
+| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations |
+| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data |
+| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off", default: "Sync") |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
+| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing |
+| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration |
+| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing |
+| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
+| search_type | Search Type | Search type to use (options: "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)", default: "Similarity") |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (default: 0) |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
-| Name          | Type         | Description                               |
-|---------------|--------------|-------------------------------------------|
-| vector_store  | HyperConvergedDatabaseVectorStore | HCD vector store instance |
-| search_results| List[Data]   | Results of similarity search              |
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | An HCD vector store instance The results of the similarity search as a list of `Data` objects.|
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 </details>
 
