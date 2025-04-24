@@ -82,6 +82,8 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             "sse_url": {"show": True, "value": "http://localhost:7860/api/v1/mcp/sse"},
             "tool": {"options": [], "show": True},
             "mode": {"value": "Stdio"},
+            "env": {"show": True, "value": []},
+            "headers_input": {"show": False, "value": []},
         }
 
         # Test switching to Stdio mode
