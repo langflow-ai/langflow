@@ -132,7 +132,7 @@ export default function FileRendererComponent({
             </span>
           )}
           {file.progress !== undefined && file.progress === -1 ? (
-            <span className="text-[13px] text-primary">
+            <span className="text-mmd text-primary">
               Upload failed,{" "}
               <span
                 className="cursor-pointer text-accent-pink-foreground underline"
