@@ -38,7 +38,6 @@ import { GleanIcon } from "@/icons/Glean";
 import { GlobeOkIcon } from "@/icons/globe-ok";
 import { GmailIcon } from "@/icons/gmail";
 import { GoogleIcon } from "@/icons/Google";
-import { OutlookIcon } from "@/icons/outlook";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
 import {
@@ -77,6 +76,7 @@ import { OneDriveIcon } from "@/icons/OneDrive";
 import { OpenAiIcon } from "@/icons/OpenAi";
 import { OpenRouterIcon } from "@/icons/OpenRouter";
 import { OpenSearch } from "@/icons/OpenSearch";
+import { OutlookIcon } from "@/icons/outlook";
 import { PerplexityIcon } from "@/icons/Perplexity";
 import { PineconeIcon } from "@/icons/Pinecone";
 import { PostgresIcon } from "@/icons/Postgres";
