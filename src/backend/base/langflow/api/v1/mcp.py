@@ -11,8 +11,8 @@ from uuid import uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, StreamingResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -326,6 +326,11 @@ def find_validation_error(exc):
             return exc
         exc = getattr(exc, "__cause__", None) or getattr(exc, "__context__", None)
     return None
+
+
+@router.head("/sse", response_class=HTMLResponse, include_in_schema=False)
+async def im_alive(request: Request):
+    return Response()
 
 
 @router.get("/sse", response_class=StreamingResponse)
