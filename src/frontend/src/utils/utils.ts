@@ -4,6 +4,8 @@ import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
+import moment from "moment";
+import "moment-timezone";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -855,3 +857,30 @@ export function setCookie(
 
   document.cookie = cookieString;
 }
+
+/**
+ * Converts a string to snake_case
+ * Example: "New York" becomes "new_york"
+ * @param {string} str - The string to convert
+ * @returns {string} The snake_case string
+ */
+export function testIdCase(str: string): string {
+  return str.toLowerCase().replace(/\s+/g, "_");
+}
+
+export const convertUTCToLocalTimezone = (timestamp: string) => {
+  const localTimezone = moment.tz.guess();
+  return moment.utc(timestamp).tz(localTimezone).format("MM/DD/YYYY HH:mm:ss");
+};
+
+export const formatNumber = (num: number | undefined): string => {
+  if (num === undefined) return "0";
+
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(0) + "M";
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(0) + "k";
+  }
+  return num?.toString();
+};

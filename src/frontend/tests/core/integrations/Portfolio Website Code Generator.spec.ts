@@ -46,7 +46,7 @@ withEventDeliveryModes(
       .first()
       .fill(process.env.ANTHROPIC_API_KEY ?? "");
 
-    await uploadFile(page, "test_file.txt");
+    await uploadFile(page, "resume.txt");
 
     await page.getByTestId("playground-btn-flow-io").click();
 

@@ -37,7 +37,7 @@ The **JavaScript API** tab displays code to interact with your flow in JavaScrip
 1. Copy and paste the code into a JavaScript file.
 2. Run the script.
 
-```plain
+```text
 node test-script.js "tell me about something interesting"
 ```
 

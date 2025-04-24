@@ -77,6 +77,9 @@ export type StrRenderComponentType = {
   templateData: Partial<InputFieldType>;
   name: string;
   display_name: string;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
 };
 
 export type InputListComponentType = {
@@ -91,11 +94,23 @@ export type DropDownComponentType = {
   name: string;
   dialogInputs?: any;
   optionsMetaData?: any[];
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
+  toggle?: boolean;
+  toggleValue?: boolean;
+  toggleDisable?: boolean;
 };
 
 export type TextAreaComponentType = {
   password?: boolean;
   updateVisibility?: () => void;
+};
+
+export type QueryComponentType = {
+  display_name: string;
+  info: string;
+  separator?: string;
 };
 
 export type InputGlobalComponentType = {

@@ -56,14 +56,18 @@ export type DropDownComponent = {
   isLoading?: boolean;
   value: string;
   combobox?: boolean;
+  nodeId: string;
+  nodeClass: APIClassType;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
   optionsMetaData?: any[];
   onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
-  name?: string;
+  name: string;
   dialogInputs?: any;
+  toggle?: boolean;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -103,6 +107,8 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  showHiddenOutputs?: boolean;
+  hidden?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -146,9 +152,9 @@ export type DisclosureComponentType = {
   isChild?: boolean;
   button: {
     title: string;
-    Icon: React.ElementType;
+    icon: string;
     buttons?: {
-      Icon: ReactElement;
+      icon: string;
       title: string;
       onClick: (event?: React.MouseEvent) => void;
     }[];
@@ -669,6 +675,17 @@ export type textModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
+};
+export type queryModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  title: string;
+  description: string;
+  placeholder?: string;
+  disabled?: boolean;
+  children?: ReactNode;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {

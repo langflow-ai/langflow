@@ -9,7 +9,7 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
 import { flushSync } from "react-dom";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
@@ -40,7 +40,7 @@ type BuildVerticesParams = {
   logBuilds?: boolean;
   session?: string;
   playgroundPage?: boolean;
-  stream?: boolean;
+  eventDelivery: EventDeliveryType;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -139,7 +139,7 @@ export async function buildFlowVerticesWithFallback(
 ) {
   logFlowLoad("Starting flow load");
   try {
-    // Use shouldUsePolling() to determine stream mode
+    // Use the event_delivery parameter directly
     return await buildFlowVertices({ ...params });
   } catch (e: any) {
     if (
@@ -147,7 +147,10 @@ export async function buildFlowVerticesWithFallback(
       e.message === POLLING_MESSAGES.STREAMING_NOT_SUPPORTED
     ) {
       // Fallback to polling
-      return await buildFlowVertices({ ...params, stream: false });
+      return await buildFlowVertices({
+        ...params,
+        eventDelivery: EventDeliveryType.POLLING,
+      });
     }
     throw e;
   }
@@ -175,13 +178,16 @@ async function pollBuildEvents(
 ): Promise<void> {
   let isDone = false;
   while (!isDone) {
-    const response = await fetch(`${url}?stream=false`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${url}?event_delivery=${EventDeliveryType.POLLING}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: abortController.signal, // Add abort signal to fetch
       },
-      signal: abortController.signal, // Add abort signal to fetch
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -240,7 +246,7 @@ export async function buildFlowVertices({
   logBuilds,
   session,
   playgroundPage,
-  stream = true,
+  eventDelivery,
 }: BuildVerticesParams) {
   const inputs = {};
 
@@ -257,6 +263,11 @@ export async function buildFlowVertices({
   if (logBuilds !== undefined) {
     queryParams.append("log_builds", logBuilds.toString());
   }
+
+  queryParams.append(
+    "event_delivery",
+    eventDelivery ?? EventDeliveryType.POLLING,
+  );
 
   if (queryParams.toString()) {
     buildUrl = `${buildUrl}?${queryParams.toString()}`;
@@ -283,6 +294,57 @@ export async function buildFlowVertices({
   }
 
   try {
+    // If event_delivery is direct, we'll stream from the build endpoint directly
+    if (eventDelivery === EventDeliveryType.DIRECT) {
+      const buildController = new AbortController();
+      buildController.signal.addEventListener("abort", () => {
+        onBuildStopped && onBuildStopped();
+      });
+      useFlowStore.getState().setBuildController(buildController);
+
+      const buildResults: Array<boolean> = [];
+      const verticesStartTimeMs: Map<string, number> = new Map();
+
+      return performStreamingRequest({
+        method: "POST",
+        url: buildUrl,
+        body: postData,
+        onData: async (event) => {
+          const type = event["event"];
+          const data = event["data"];
+          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
+            onBuildStart,
+            onBuildUpdate,
+            onBuildComplete,
+            onBuildError,
+            onGetOrderSuccess,
+            onValidateNodes,
+          });
+        },
+        onError: (statusCode) => {
+          if (statusCode === 404) {
+            throw new Error("Flow not found");
+          }
+          throw new Error("Error processing build events");
+        },
+        onNetworkError: (error: Error) => {
+          if (error.name === "AbortError") {
+            onBuildStopped && onBuildStopped();
+            return;
+          }
+          onBuildError!("Error Building Component", [
+            "Network error. Please check the connection to the server.",
+          ]);
+        },
+        buildController,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  try {
+    // Otherwise, use the existing two-step process (job_id + events endpoint)
     // First, start the build and get the job ID
     const buildResponse = await fetch(buildUrl, {
       method: "POST",
@@ -318,13 +380,12 @@ export async function buildFlowVertices({
       }
     });
     useFlowStore.getState().setBuildController(buildController);
-
     // Then stream the events
     const eventsUrl = `${BASE_URL_API}build/${job_id}/events`;
     const buildResults: Array<boolean> = [];
     const verticesStartTimeMs: Map<string, number> = new Map();
 
-    if (stream) {
+    if (eventDelivery === EventDeliveryType.STREAMING) {
       return performStreamingRequest({
         method: "GET",
         url: eventsUrl,

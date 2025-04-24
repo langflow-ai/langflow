@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.3.1"
+version = "0.3.4"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -88,6 +88,7 @@ dependencies = [
     "scipy>=1.15.2",
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
+    "trustcall>=0.0.38",
 ]
 
 [dependency-groups]

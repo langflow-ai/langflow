@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "User should be able to use components as tool",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();

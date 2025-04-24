@@ -655,6 +655,10 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "link",
   "slider",
   "tab",
+  "sortableList",
+  "connect",
+  "auth",
+  "query",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -1001,6 +1005,7 @@ export const GRADIENT_CLASS_DISABLED =
   "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
+export const SELECT_AN_OPTION = "Select an option";
 
 export const ICON_STROKE_WIDTH = 1.5;
 
@@ -1060,3 +1065,15 @@ export const OPENAI_VOICES = [
   { name: "shimmer", value: "shimmer" },
   { name: "verse", value: "verse" },
 ];
+
+export const DEFAULT_POLLING_INTERVAL = 5000;
+export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
+export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
+export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
+export const TWITTER_URL = "https://x.com/langflow_ai";
+export const DOCS_URL = "https://docs.langflow.org";
+export const DATASTAX_DOCS_URL =
+  "https://docs.datastax.com/en/langflow/index.html";
+
+export const UUID_PARSING_ERROR = "uuid_parsing";
