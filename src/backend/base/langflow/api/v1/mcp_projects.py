@@ -4,6 +4,7 @@ import json
 import logging
 from contextvars import ContextVar
 from datetime import datetime, timezone
+import traceback
 from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
@@ -28,7 +29,7 @@ from langflow.api.v1.mcp import (
 from langflow.api.v1.schemas import InputValueRequest, MCPSettings
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import api_key_security, get_current_active_user, get_current_user
 from langflow.services.database.models import Flow, Folder, User
 from langflow.services.deps import get_db_service, get_settings_service, get_storage_service
 from langflow.services.storage.utils import build_content_type_from_extension
@@ -52,7 +53,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-@router.get("/{project_id}", response_model=list[MCPSettings])
+@router.get("/{project_id}", response_model=list[MCPSettings], dependencies=[Depends(get_current_user)])
 async def list_project_tools(
     project_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -97,17 +98,20 @@ async def list_project_tools(
                 description = flow.action_description or (
                     flow.description if flow.description else f"Tool generated from flow: {flow_name}"
                 )
-
-                tool = {
-                    "id": str(flow.id),
-                    "action_name": name,
-                    "action_description": description,
-                    "mcp_enabled": flow.mcp_enabled,
-                    "inputSchema": json_schema_from_flow(flow),
-                    "name": flow.name,
-                    "description": flow.description,
-                }
-                tools.append(tool)
+                try:
+                    tool = {
+                        "id": str(flow.id),
+                        "action_name": name,
+                        "action_description": description,
+                        "mcp_enabled": flow.mcp_enabled,
+                        "inputSchema": json_schema_from_flow(flow),
+                        "name": flow.name,
+                        "description": flow.description,
+                    }
+                    tools.append(tool)
+                except Exception as e:
+                    logger.warning(f"Error in listing project tools: {e!s} from flow: {name}")
+                    continue
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
@@ -157,8 +161,10 @@ class ProjectMCPServer:
                             inputSchema=json_schema_from_flow(flow),
                         )
                         tools.append(tool)
-            except Exception:
-                logger.exception("Error in listing project tools")
+            except Exception as e:
+                logger.exception("Error in listing project tools ")
+                print(traceback.format_exc())
+                print(e)
                 raise
             return tools
 
@@ -373,7 +379,9 @@ def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
     return project_mcp_servers[project_id_str]
 
 
-@router.get("/{project_id}/sse", response_class=StreamingResponse)
+@router.get(
+    "/{project_id}/sse", response_class=StreamingResponse, dependencies=[Depends(get_current_user)]
+)
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
@@ -430,7 +438,7 @@ async def handle_project_sse(
     return StreamingResponse(media_type="text/event-stream")
 
 
-@router.post("/{project_id}")
+@router.post("/{project_id}", dependencies=[Depends(get_current_user)])
 async def handle_project_messages(
     project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
 ):
@@ -460,7 +468,7 @@ async def handle_project_messages(
         current_project_ctx.reset(project_token)
 
 
-@router.post("/{project_id}/")
+@router.post("/{project_id}/", dependencies=[Depends(get_current_user)])
 async def handle_project_messages_with_slash(
     project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
 ):
@@ -469,7 +477,7 @@ async def handle_project_messages_with_slash(
     return await handle_project_messages(project_id, request, current_user)
 
 
-@router.patch("/{project_id}", status_code=200)
+@router.patch("/{project_id}", status_code=200, dependencies=[Depends(get_current_user)])
 async def update_project_mcp_settings(
     project_id: UUID,
     settings: list[MCPSettings],

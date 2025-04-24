@@ -1,4 +1,5 @@
 import os
+import traceback
 from typing import Any
 
 import httpx
@@ -83,20 +84,7 @@ class MCPToolsComponent(Component):
         Output(display_name="Response", name="response", method="build_output"),
     ]
 
-    async def find_langflow_instance(self) -> tuple[bool, int | None, str]:
-        """Find Langflow instance by checking env variable first, then scanning common ports."""
-        # First check environment variable
-        env_port = os.getenv("LANGFLOW_PORT")
-        port = int(env_port) if env_port else 7860
-        try:
-            url = f"http://localhost:{port}/api/v1/mcp/sse"
-            async with httpx.AsyncClient() as client:
-                response = await client.head(url, timeout=2.0)
-                if response.status_code < HTTP_ERROR_STATUS_CODE:
-                    return True, port, f"Langflow instance found at configured port {port}"
-        except (ValueError, httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError):
-            logger.warning(f"Could not connect to Langflow at configured port {env_port}")
-        return False, None, "No Langflow instance found on configured port or common ports"
+
 
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
         """Validate connection parameters based on mode."""
@@ -158,11 +146,7 @@ class MCPToolsComponent(Component):
                     ):
                         is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
                         if not is_valid:
-                            found, port, message = await self.find_langflow_instance()
-                            if found:
-                                new_url = f"http://localhost:{port}/api/v1/mcp/sse"
-                                logger.info(f"Original URL {build_config['sse_url']['value']} not valid. {message}")
-                                build_config["sse_url"]["value"] = new_url
+                            raise ValueError("Invalid SSE URL configuration: {build_config['sse_url']['value']}. Please check the SSE URL and try again.")
                     elif build_config["mode"]["value"] == "SSE":
                         if len(build_config["sse_url"]["value"]) > 0:
                             is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
@@ -217,6 +201,7 @@ class MCPToolsComponent(Component):
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
+            print(traceback.format_exc())
             logger.exception(msg)
             raise ValueError(msg) from e
         else:

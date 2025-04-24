@@ -187,14 +187,18 @@ async def handle_list_tools():
                     continue
 
                 flow_name = "_".join(flow.name.lower().split())
-                tool = types.Tool(
-                    name=flow_name,
-                    description=f"{flow.id}: {flow.description}"
-                    if flow.description
-                    else f"Tool generated from flow: {flow_name}",
-                    inputSchema=json_schema_from_flow(flow),
-                )
-                tools.append(tool)
+                try:
+                    tool = types.Tool(
+                        name=flow_name,
+                        description=f"{flow.id}: {flow.description}"
+                        if flow.description
+                        else f"Tool generated from flow: {flow_name}",
+                        inputSchema=json_schema_from_flow(flow),
+                    )
+                    tools.append(tool)
+                except Exception as e:
+                    logger.warning(f"Error in listing tools: {e!s} from flow: {flow_name}")
+                    continue
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         logger.exception(msg)
