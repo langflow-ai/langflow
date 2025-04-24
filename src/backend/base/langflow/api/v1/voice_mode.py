@@ -602,7 +602,7 @@ async def flow_as_tool_websocket(
         send_lock = asyncio.Lock()
 
         async def safe_send_json(payload):
-            logger.debug(f"Sending JSON: {payload["type"]}")
+            logger.debug(f"Sending JSON: {payload['type']}")
             async with send_lock:
                 await client_websocket.send_json(payload)
             logger.debug("JSON sent.")
@@ -1050,7 +1050,7 @@ async def flow_tts_websocket(
         send_lock = asyncio.Lock()
 
         async def safe_send_json(payload):
-            logger.debug(f"Sending JSON: {payload["type"]}")
+            logger.debug(f"Sending JSON: {payload['type']}")
             async with send_lock:
                 await client_websocket.send_json(payload)
             logger.debug("JSON sent.")
