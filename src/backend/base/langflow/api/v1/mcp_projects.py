@@ -264,7 +264,7 @@ class ProjectMCPServer:
 
             async def execute_tool(session):
                 # get flow id from name
-                flow = await get_flow_snake_case(name, current_user.id, session)
+                flow = await get_flow_snake_case(name, current_user.id, session, is_action=True)
                 if not flow:
                     msg = f"Flow with name '{name}' not found"
                     raise ValueError(msg)
