@@ -107,9 +107,6 @@ export default function AppHeader(): JSX.Element {
           <Button
             unstyled
             className="hidden items-center whitespace-nowrap pr-2 lg:inline"
-            onClick={() =>
-              window.open("https://github.com/langflow-ai/langflow", "_blank")
-            }
           >
             <LangflowCounts />
           </Button>
