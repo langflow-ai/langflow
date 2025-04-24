@@ -44,12 +44,14 @@ def get_fields(build_config: dotdict, fields: list[str] | None = None) -> dict[s
 
 def update_input_types(build_config: dotdict) -> dotdict:
     """Update input types for all fields in build_config."""
-    for key, value in build_config.items():
+    items = build_config.items()
+    for key, value in items:
         if isinstance(value, dict):
-            if value.get("input_types") is None:
-                build_config[key]["input_types"] = []
-        elif hasattr(value, "input_types") and value.input_types is None:
-            value.input_types = []
+            if "input_types" not in value:
+                value["input_types"] = []
+        elif hasattr(value, "input_types"):
+            if value.input_types is None:
+                value.input_types = []
     return build_config
 
 
