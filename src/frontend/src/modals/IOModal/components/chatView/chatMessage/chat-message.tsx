@@ -316,7 +316,7 @@ export default function ChatMessage({
                   )}
                 </span>
                 {chat.properties?.source && !playgroundPage && (
-                  <div className="text-xs font-normal text-muted-foreground">
+                  <div className="text-mmd font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
                 )}

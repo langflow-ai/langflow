@@ -177,7 +177,7 @@ export const EmptyPageCommunity = ({
         </div>
         <p
           data-testid="empty_page_drag_and_drop_text"
-          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-xs text-muted-foreground"
+          className="text-xxs absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-muted-foreground"
         >
           {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>
