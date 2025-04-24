@@ -7,7 +7,7 @@ from langflow.schema.message import Message
 
 class ConditionalRouterComponent(Component):
     display_name = "If-Else"
-    description = "Routes an input message to a corresponding output based on text comparison."
+    description = "Routes an input message to a corresponding output based on text or number comparison."
     icon = "split"
     name = "ConditionalRouter"
 
@@ -31,7 +31,10 @@ class ConditionalRouterComponent(Component):
         DropdownInput(
             name="operator",
             display_name="Operator",
-            options=["equals", "not equals", "contains", "starts with", "ends with", "regex"],
+            options=[
+                "equals", "not equals", "contains", "starts with", "ends with", "regex",
+                "less than", "less than or equal", "greater than", "greater than or equal"
+            ],
             info="The operator to apply for comparing the texts.",
             value="equals",
             real_time_refresh=True,
@@ -92,6 +95,20 @@ class ConditionalRouterComponent(Component):
                 return bool(re.match(match_text, input_text))
             except re.error:
                 return False  # Return False if the regex is invalid
+        if operator in ["less than", "less than or equal", "greater than", "greater than or equal"]:
+            try:
+                input_num = float(input_text)
+                match_num = float(match_text)
+                if operator == "less than":
+                    return input_num < match_num
+                if operator == "less than or equal":
+                    return input_num <= match_num
+                if operator == "greater than":
+                    return input_num > match_num
+                if operator == "greater than or equal":
+                    return input_num >= match_num
+            except ValueError:
+                return False  # Invalid number format for comparison
         return False
 
     def iterate_and_stop_once(self, route_to_stop: str):
@@ -128,7 +145,6 @@ class ConditionalRouterComponent(Component):
         if field_name == "operator":
             if field_value == "regex":
                 build_config.pop("case_sensitive", None)
-
             # Ensure case_sensitive is present for all other operators
             elif "case_sensitive" not in build_config:
                 case_sensitive_input = next(
