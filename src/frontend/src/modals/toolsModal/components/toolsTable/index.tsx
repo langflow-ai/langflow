@@ -95,6 +95,7 @@ export default function ToolsTable({
           const processedValue = parseString(row.name, [
             "snake_case",
             "no_blank",
+            "lowercase",
           ]);
           return selectedRows?.some(
             (selected) =>
