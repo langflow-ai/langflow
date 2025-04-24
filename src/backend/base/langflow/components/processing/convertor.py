@@ -23,16 +23,12 @@ class DataTypeConverterComponent(Component):
             name="output_type",
             display_name="Output Type",
             options=["Message", "Data", "DataFrame"],
-            value="Message",
             info="Select the desired output data type",
             real_time_refresh=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Message Output", name="message_output", method="to_message"),
-        Output(display_name="Data Output", name="data_output", method="to_data"),
-        Output(display_name="DataFrame Output", name="dataframe_output", method="to_dataframe"),
     ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
@@ -60,6 +56,8 @@ class DataTypeConverterComponent(Component):
     def to_message(self) -> Message:
         """Convert input to Message type."""
         input_data = self.input_data
+        print(f"input_data: {input_data}")
+        print(f"type(input_data): {type(input_data)}")
 
         if isinstance(input_data, Message):
             return input_data
@@ -69,8 +67,8 @@ class DataTypeConverterComponent(Component):
             try:
                 import json
 
-                text = json.dumps(input_data.data)
-                return Message(text=text)
+                json_string = input_data.model_dump()
+                return Message(text=json_string)
             except Exception as e:
                 self.log(f"Error converting Data to Message: {str(e)}")
                 return Message(text=str(input_data.data))
@@ -90,25 +88,17 @@ class DataTypeConverterComponent(Component):
     def to_data(self) -> Data:
         """Convert input to Data type."""
         input_data = self.input_data
+        print(f"input_data: {input_data}")
+        print(f"type(input_data): {type(input_data)}")
 
         if isinstance(input_data, Data):
             return input_data
 
         if isinstance(input_data, Message):
-            # Create a Data object with the message text
-            try:
-                import json
-
-                # Try to parse as JSON first
-                try:
-                    data_dict = json.loads(input_data.get_text())
-                    return Data(data=data_dict)
-                except json.JSONDecodeError:
-                    # If not valid JSON, use text as is
-                    return Data(data={"text": input_data.get_text()})
-            except Exception as e:
-                self.log(f"Error converting Message to Data: {str(e)}")
-                return Data(data={"text": str(input_data)})
+            # Using function from MessageToData component
+            print(f"messag to daata processing")
+            print(input_data.data)
+            return Data(**input_data.data)
 
         if isinstance(input_data, DataFrame):
             # Convert DataFrame to a dictionary for Data
@@ -119,55 +109,51 @@ class DataTypeConverterComponent(Component):
                 self.log(f"Error converting DataFrame to Data: {str(e)}")
                 return Data(data={"text": str(input_data)})
 
-        # Default fallback
+        # Default fallback  
         return Data(data={"value": str(input_data)})
 
     def to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
         input_data = self.input_data
+        print(f"input_data: {input_data}")
+        print(f"type(input_data): {type(input_data)}")
 
         if isinstance(input_data, DataFrame):
             return input_data
 
-        if isinstance(input_data, Message):
-            # Try to convert message text to DataFrame
-            try:
-                import json
-                import pandas as pd
-
-                text = input_data.get_text()
-                # Try to parse as JSON
-                try:
-                    data = json.loads(text)
-                    if isinstance(data, list):
-                        return DataFrame.from_pandas(pd.DataFrame(data))
-                    elif isinstance(data, dict):
-                        return DataFrame.from_pandas(pd.DataFrame([data]))
-                    else:
-                        # Single value, create a simple DataFrame
-                        return DataFrame.from_pandas(pd.DataFrame({"value": [data]}))
-                except json.JSONDecodeError:
-                    # Not JSON, create a simple text DataFrame
-                    return DataFrame.from_pandas(pd.DataFrame({"text": [text]}))
-            except Exception as e:
-                self.log(f"Error converting Message to DataFrame: {str(e)}")
-                return DataFrame.from_pandas(pd.DataFrame({"text": [str(input_data)]}))
-
         if isinstance(input_data, Data):
-            # Convert Data to DataFrame
-            try:
-                import pandas as pd
+            # Using function from DataToDataFrame component
+            data_input = [input_data]
+            rows = []
 
-                data = input_data.data
-                if isinstance(data, dict):
-                    return DataFrame.from_pandas(pd.DataFrame([data]))
-                elif isinstance(data, list):
-                    return DataFrame.from_pandas(pd.DataFrame(data))
-                else:
-                    return DataFrame.from_pandas(pd.DataFrame({"value": [data]}))
-            except Exception as e:
-                self.log(f"Error converting Data to DataFrame: {str(e)}")
-                return DataFrame.from_pandas(pd.DataFrame({"value": [str(input_data)]}))
+            for item in data_input:
+                # Start with a copy of item.data or an empty dict
+                row_dict = dict(item.data) if item.data else {}
+
+                # If the Data object has text, store it under 'text' col
+                text_val = item.get_text()
+                if text_val:
+                    row_dict["text"] = text_val
+
+                rows.append(row_dict)
+
+            # Build a DataFrame from these row dictionaries
+            df_result = DataFrame(rows)
+            return df_result
+
+        if isinstance(input_data, Message):
+            # First convert Message to Data
+            data_obj = Data(data=input_data.data)
+
+            # Then convert Data to DataFrame
+            row_dict = dict(data_obj.data) if data_obj.data else {}
+            text_val = data_obj.get_text()
+            if text_val:
+                row_dict["text"] = text_val
+
+            # Build a DataFrame with a single row
+            df_result = DataFrame([row_dict])
+            return df_result
 
         # Default fallback
         import pandas as pd
