@@ -67,29 +67,27 @@ def flatten_list(list_of_lists: list[list | Any]) -> list:
 
 
 def get_artifact_type(value, build_result) -> str:
-    result = ArtifactType.UNKNOWN
-    match value:
-        case JSON():
-            result = ArtifactType.RECORD
+    if isinstance(value, JSON):
+        return ArtifactType.RECORD.value
 
-        case str():
-            result = ArtifactType.TEXT
+    if isinstance(value, str):
+        return ArtifactType.TEXT.value
 
-        case dict():
-            result = ArtifactType.OBJECT
+    if isinstance(value, dict):
+        return ArtifactType.OBJECT.value
 
-        case list():
-            result = ArtifactType.ARRAY
+    if isinstance(value, list):
+        return ArtifactType.ARRAY.value
 
-        case Message():
-            result = ArtifactType.MESSAGE
+    if isinstance(value, Message):
+        if isinstance(build_result, Generator) or isinstance(value.text, Generator):
+            return ArtifactType.STREAM.value
+        return ArtifactType.MESSAGE.value
 
-    if result == ArtifactType.UNKNOWN and (
-        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
-    ):
-        result = ArtifactType.STREAM
+    if isinstance(build_result, Generator):
+        return ArtifactType.STREAM.value
 
-    return result.value
+    return ArtifactType.UNKNOWN.value
 
 
 def post_process_raw(raw, artifact_type: str):
