@@ -9,7 +9,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from loguru import logger
 from typing_extensions import override
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
@@ -209,7 +209,7 @@ class OpikTracer(BaseTracer):
         elif isinstance(value, Message):
             value = value.text
 
-        elif isinstance(value, Data):
+        elif isinstance(value, JSON):
             value = value.get_text()
 
         elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):

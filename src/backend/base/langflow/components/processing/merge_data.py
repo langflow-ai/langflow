@@ -4,7 +4,7 @@ from typing import cast
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, Output
+from langflow.io import DropdownInput, JSONInput, Output
 from langflow.schema import DataFrame
 
 
@@ -22,7 +22,7 @@ class MergeDataComponent(Component):
     MIN_INPUTS_REQUIRED = 2
 
     inputs = [
-        DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),
+        JSONInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),
         DropdownInput(
             name="operation",
             display_name="Operation Type",

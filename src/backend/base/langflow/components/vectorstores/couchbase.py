@@ -5,7 +5,7 @@ from langchain_community.vectorstores import CouchbaseVectorStore
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
@@ -59,7 +59,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
@@ -87,7 +87,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
 
         return couchbase_vs
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

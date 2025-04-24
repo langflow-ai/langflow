@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class HomeAssistantControl(LCToolComponent):
@@ -66,7 +66,7 @@ class HomeAssistantControl(LCToolComponent):
             "Do not infer; use the list_homeassistant_states tool to retrieve it.",
         )
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         """Used when the 'Run' button is clicked in LangFlow.
 
         - Uses default_action and default_entity_id entered in the UI.
@@ -141,12 +141,12 @@ class HomeAssistantControl(LCToolComponent):
         except Exception as e:  # noqa: BLE001
             return f"An unexpected error occurred: {e}"
 
-    def _make_data_response(self, result: dict[str, Any] | str) -> Data:
+    def _make_data_response(self, result: dict[str, Any] | str) -> JSON:
         """Returns a response in the LangFlow Data format."""
         if isinstance(result, str):
             # Handle error messages
-            return Data(text=result)
+            return JSON(text=result)
 
         # Convert dict to JSON string
         formatted_json = json.dumps(result, indent=2, ensure_ascii=False)
-        return Data(data=result, text=formatted_json)
+        return JSON(data=result, text=formatted_json)

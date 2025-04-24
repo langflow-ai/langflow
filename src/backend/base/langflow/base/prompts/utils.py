@@ -2,10 +2,10 @@ from copy import deepcopy
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
-def data_to_string(record: Data) -> str:
+def data_to_string(record: JSON) -> str:
     """Convert a record to a string.
 
     Args:
@@ -36,13 +36,13 @@ def dict_values_to_string(d: dict) -> dict:
             for i, item in enumerate(value):
                 if isinstance(item, Message):
                     d_copy[key][i] = item.text
-                elif isinstance(item, Data):
+                elif isinstance(item, JSON):
                     d_copy[key][i] = data_to_string(item)
                 elif isinstance(item, Document):
                     d_copy[key][i] = document_to_string(item)
         elif isinstance(value, Message):
             d_copy[key] = value.text
-        elif isinstance(value, Data):
+        elif isinstance(value, JSON):
             d_copy[key] = data_to_string(value)
         elif isinstance(value, Document):
             d_copy[key] = document_to_string(value)

@@ -9,7 +9,7 @@ from uuid import UUID
 from loguru import logger
 
 from langflow.interface.utils import extract_input_variables_from_prompt
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import Message
 from langflow.serialization import serialize
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
@@ -69,7 +69,7 @@ def flatten_list(list_of_lists: list[list | Any]) -> list:
 def get_artifact_type(value, build_result) -> str:
     result = ArtifactType.UNKNOWN
     match value:
-        case Data():
+        case JSON():
             result = ArtifactType.RECORD
 
         case str():

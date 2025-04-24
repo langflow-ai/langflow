@@ -13,7 +13,7 @@ from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, Interface
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstanceError
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -285,7 +285,7 @@ class InterfaceVertex(ComponentVertex):
                 # Turn the dict into a pleasing to
                 # read JSON inside a code block
                 message = dict_to_codeblock(text_output)
-            elif isinstance(text_output, Data):
+            elif isinstance(text_output, JSON):
                 message = text_output.text
             elif isinstance(message, AsyncIterator | Iterator):
                 stream_url = self.build_stream_url()
@@ -339,13 +339,13 @@ class InterfaceVertex(ComponentVertex):
             ValueError: If an element in the list is not an instance of `Data` and
                 `ignore_errors` is set to `False`.
         """
-        if isinstance(self.built_object, Data):
+        if isinstance(self.built_object, JSON):
             artifacts = [self.built_object.data]
         elif isinstance(self.built_object, list):
             artifacts = []
             ignore_errors = self.params.get("ignore_errors", False)
             for value in self.built_object:
-                if isinstance(value, Data):
+                if isinstance(value, JSON):
                     artifacts.append(value.data)
                 elif ignore_errors:
                     logger.error(f"Data expected, but got {value} of type {type(value)}")
@@ -362,7 +362,7 @@ class InterfaceVertex(ComponentVertex):
             message = self._process_data_component()
         if isinstance(self.built_object, AsyncIterator | Iterator):
             if self.params.get("return_data", False):
-                self.built_object = Data(text=message, data=self.artifacts)
+                self.built_object = JSON(text=message, data=self.artifacts)
             else:
                 self.built_object = message
         self.built_result = self.built_object

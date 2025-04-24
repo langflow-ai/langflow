@@ -5,7 +5,7 @@ from langchain_community.vectorstores import FAISS
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class FaissVectorStoreComponent(LCVectorStoreComponent):
@@ -74,7 +74,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
@@ -83,7 +83,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         faiss.save_local(str(path), self.index_name)
         return faiss
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the FAISS vector store."""
         path = self.get_persist_directory()
         index_path = path / f"{self.index_name}.faiss"

@@ -2,7 +2,7 @@ from langchain_core.tools import Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import IntInput, MultilineInput, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class GoogleSearchAPIComponent(LCToolComponent):
@@ -21,10 +21,10 @@ class GoogleSearchAPIComponent(LCToolComponent):
         IntInput(name="k", display_name="Number of results", value=4, required=True),
     ]
 
-    def run_model(self) -> Data | list[Data]:
+    def run_model(self) -> JSON | list[JSON]:
         wrapper = self._build_wrapper()
         results = wrapper.results(query=self.input_value, num_results=self.k)
-        data = [Data(data=result, text=result["snippet"]) for result in results]
+        data = [JSON(data=result, text=result["snippet"]) for result in results]
         self.status = data
         return data
 

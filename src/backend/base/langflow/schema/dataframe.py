@@ -4,7 +4,7 @@ import pandas as pd
 from langchain_core.documents import Document
 from pandas import DataFrame as pandas_DataFrame
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 
 class DataFrame(pandas_DataFrame):
@@ -35,7 +35,7 @@ class DataFrame(pandas_DataFrame):
 
     def __init__(
         self,
-        data: list[dict] | list[Data] | pd.DataFrame | None = None,
+        data: list[dict] | list[JSON] | pd.DataFrame | None = None,
         text_key: str = "text",
         default_value: str = "",
         **kwargs,
@@ -51,7 +51,7 @@ class DataFrame(pandas_DataFrame):
             return
 
         if isinstance(data, list):
-            if all(isinstance(x, Data) for x in data):
+            if all(isinstance(x, JSON) for x in data):
                 data = [d.data for d in data if hasattr(d, "data")]
             elif not all(isinstance(x, dict) for x in data):
                 msg = "List items must be either all Data objects or all dictionaries"
@@ -85,13 +85,13 @@ class DataFrame(pandas_DataFrame):
     def default_value(self, value: str) -> None:
         self._default_value = value
 
-    def to_data_list(self) -> list[Data]:
+    def to_data_list(self) -> list[JSON]:
         """Converts the DataFrame back to a list of Data objects."""
         list_of_dicts = self.to_dict(orient="records")
         # suggested change: [Data(**row) for row in list_of_dicts]
-        return [Data(data=row) for row in list_of_dicts]
+        return [JSON(data=row) for row in list_of_dicts]
 
-    def add_row(self, data: dict | Data) -> "DataFrame":
+    def add_row(self, data: dict | JSON) -> "DataFrame":
         """Adds a single row to the dataset.
 
         Args:
@@ -104,12 +104,12 @@ class DataFrame(pandas_DataFrame):
             >>> dataset = DataFrame([{"name": "John"}])
             >>> dataset = dataset.add_row({"name": "Jane"})
         """
-        if isinstance(data, Data):
+        if isinstance(data, JSON):
             data = data.data
         new_df = self._constructor([data])
         return cast("DataFrame", pd.concat([self, new_df], ignore_index=True))
 
-    def add_rows(self, data: list[dict | Data]) -> "DataFrame":
+    def add_rows(self, data: list[dict | JSON]) -> "DataFrame":
         """Adds multiple rows to the dataset.
 
         Args:
@@ -120,7 +120,7 @@ class DataFrame(pandas_DataFrame):
         """
         processed_data = []
         for item in data:
-            if isinstance(item, Data):
+            if isinstance(item, JSON):
                 processed_data.append(item.data)
             else:
                 processed_data.append(item)

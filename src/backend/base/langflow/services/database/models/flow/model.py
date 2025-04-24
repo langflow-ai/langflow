@@ -20,7 +20,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema import Data
+from langflow.schema import JSON as LFJSON
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
@@ -197,7 +197,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        return Data(data=data)
+        return LFJSON(data=data)
 
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_flow_name"),

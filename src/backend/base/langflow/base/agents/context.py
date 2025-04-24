@@ -6,7 +6,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, Field, field_validator, model_serializer
 
 from langflow.field_typing import LanguageModel
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 
 class AgentContext(BaseModel):
@@ -54,12 +54,12 @@ class AgentContext(BaseModel):
         data_objs = []
         for name, val, time_str in self.context_history:
             content = val.content if hasattr(val, "content") else val
-            data_objs.append(Data(name=name, value=content, timestamp=time_str))
+            data_objs.append(JSON(name=name, value=content, timestamp=time_str))
 
         sorted_data_objs = sorted(data_objs, key=lambda x: datetime.fromisoformat(x.timestamp), reverse=True)
 
         sorted_data_objs.append(
-            Data(
+            JSON(
                 name="Formatted Context",
                 value=self.get_full_context(),
             )

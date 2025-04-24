@@ -17,7 +17,7 @@ from langflow.inputs import (
 )
 from langflow.io import Output
 from langflow.logging import logger
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -85,9 +85,9 @@ class ComposioBaseComponent(Component):
             result = [result]
         return DataFrame(result)
 
-    def as_data(self) -> Data:
+    def as_data(self) -> JSON:
         result = self.execute_action()
-        return Data(results=result)
+        return JSON(results=result)
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""

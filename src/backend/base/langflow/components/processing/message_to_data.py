@@ -2,7 +2,7 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import MessageInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -25,12 +25,12 @@ class MessageToDataComponent(Component):
         Output(display_name="Data", name="data", method="convert_message_to_data"),
     ]
 
-    def convert_message_to_data(self) -> Data:
+    def convert_message_to_data(self) -> JSON:
         if isinstance(self.message, Message):
             # Convert Message to Data
-            return Data(data=self.message.data)
+            return JSON(data=self.message.data)
 
         msg = "Error converting Message to Data: Input must be a Message object"
         logger.opt(exception=True).debug(msg)
         self.status = msg
-        return Data(data={"error": msg})
+        return JSON(data={"error": msg})

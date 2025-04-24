@@ -9,7 +9,7 @@ from pymongo.operations import SearchIndexModel
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class MongoVectorStoreComponent(LCVectorStoreComponent):
@@ -143,7 +143,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
@@ -156,7 +156,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             )
         return MongoDBAtlasVectorSearch(embedding=self.embedding, collection=collection, index_name=self.index_name)
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         from bson.objectid import ObjectId
 
         vector_store = self.build_vector_store()

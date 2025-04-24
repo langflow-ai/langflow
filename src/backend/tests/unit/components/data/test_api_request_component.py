@@ -8,7 +8,7 @@ import pytest
 import respx
 from httpx import Response
 from langflow.components.data import APIRequestComponent
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -76,7 +76,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             url=url,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert result.data["source"] == url
         # The JSON response is nested in the 'result' key
         assert "result" in result.data
@@ -97,7 +97,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             include_httpx_metadata=True,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert result.data["source"] == url
         assert result.data["status_code"] == 200
         assert result.data["response_headers"]["custom-header"] == "Value"
@@ -116,7 +116,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             save_to_file=True,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert "file_path" in result.data
         file_path = Path(result.data["file_path"])
 
@@ -143,7 +143,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             url=url,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert result.data["source"] == url
 
     @respx.mock
@@ -159,7 +159,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             timeout=1,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert result.data["status_code"] == 408
         assert result.data["error"] == "Request timed out"
 
@@ -181,7 +181,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             follow_redirects=True,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert result.data["source"] == url
         assert result.data["status_code"] == 200
         assert result.data["redirection_history"] == [{"url": redirect_url, "status_code": 303}]
@@ -238,7 +238,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
     async def test_output_formats(self, component):
         # Test different output formats
         with patch.object(component, "make_requests") as mock_make_requests:
-            mock_make_requests.return_value = [Data(data={"key": "value"})]
+            mock_make_requests.return_value = [JSON(data={"key": "value"})]
 
             # Test DataFrame output
             df_result = await component.as_dataframe()
@@ -248,7 +248,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             test_data = {"test": "value"}
             data_result = component.to_data(test_data)
             assert isinstance(data_result, list)
-            assert all(isinstance(item, Data) for item in data_result)
+            assert all(isinstance(item, JSON) for item in data_result)
 
     async def test_invalid_urls(self, component):
         # Test invalid URL handling

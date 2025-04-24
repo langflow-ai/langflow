@@ -4,7 +4,7 @@ from pathlib import Path
 
 from platformdirs import user_cache_dir
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 
 def raw_frontend_data_is_valid(raw_frontend_data):
@@ -102,7 +102,7 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     return frontend_node
 
 
-def apply_json_filter(result, filter_) -> Data:  # type: ignore[return-value]
+def apply_json_filter(result, filter_) -> JSON:  # type: ignore[return-value]
     """Apply a json filter to the result.
 
     Args:
@@ -117,7 +117,7 @@ def apply_json_filter(result, filter_) -> Data:  # type: ignore[return-value]
         return result
 
     # If result is a Data object, get the data
-    original_data = result.data if isinstance(result, Data) else result
+    original_data = result.data if isinstance(result, JSON) else result
 
     # Handle None input
     if original_data is None:

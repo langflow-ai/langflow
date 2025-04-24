@@ -2,7 +2,7 @@ from langchain_text_splitters import CharacterTextSplitter
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.utils.util import unescape_string
 
 
@@ -17,7 +17,7 @@ class SplitTextComponent(Component):
             name="data_inputs",
             display_name="Data or DataFrame",
             info="The data with texts to split in chunks.",
-            input_types=["Data", "DataFrame"],
+            input_types=["JSON", "Data", "DataFrame"],
             required=True,
         ),
         IntInput(
@@ -67,8 +67,8 @@ class SplitTextComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    def _docs_to_data(self, docs) -> list[Data]:
-        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
+    def _docs_to_data(self, docs) -> list[JSON]:
+        return [JSON(text=doc.page_content, data=doc.metadata) for doc in docs]
 
     def _fix_separator(self, separator: str) -> str:
         """Fix common separator issues and convert to proper format."""
@@ -99,12 +99,12 @@ class SplitTextComponent(Component):
                 raise TypeError(msg)
 
             documents = []
-            if isinstance(self.data_inputs, Data):
+            if isinstance(self.data_inputs, JSON):
                 self.data_inputs.text_key = self.text_key
                 documents = [self.data_inputs.to_lc_document()]
             else:
                 try:
-                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
+                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, JSON)]
                     if not documents:
                         msg = f"No valid Data inputs found in {type(self.data_inputs)}"
                         raise TypeError(msg)
@@ -132,7 +132,7 @@ class SplitTextComponent(Component):
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
 
-    def split_text(self) -> list[Data]:
+    def split_text(self) -> list[JSON]:
         return self._docs_to_data(self.split_text_base())
 
     def as_dataframe(self) -> DataFrame:

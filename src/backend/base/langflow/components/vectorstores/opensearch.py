@@ -15,7 +15,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 @vector_store_connection
@@ -137,7 +137,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 error_message = f"Expected Data object, got {type(_input)}"
@@ -219,7 +219,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         self.log(error_message)
         raise ValueError(error_message)
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the vector store based on the search input.
 
         If no search input is provided, retrieve all documents.
@@ -228,7 +228,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             query = self.search_query.strip() if self.search_query else None
             results = self.search(query)
             retrieved_data = [
-                Data(
+                JSON(
                     file_path=result["metadata"].get("file_path", ""),
                     text=result["page_content"],
                 )

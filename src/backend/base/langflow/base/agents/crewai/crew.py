@@ -11,7 +11,7 @@ from pydantic import SecretStr
 from langflow.custom import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
@@ -144,7 +144,7 @@ class BaseCrewComponent(Component):
     # Model properties to exclude when creating a CrewAI LLM object
     manager_llm: LLM | None
 
-    def task_is_valid(self, task_data: Data, crew_type: Process) -> Task:
+    def task_is_valid(self, task_data: JSON, crew_type: Process) -> Task:
         return "task_type" in task_data and task_data.task_type == crew_type
 
     def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:

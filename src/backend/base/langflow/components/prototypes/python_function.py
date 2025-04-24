@@ -5,7 +5,7 @@ from loguru import logger
 from langflow.custom import Component
 from langflow.custom.utils import get_function
 from langflow.io import CodeInput, Output
-from langflow.schema import Data, dotdict
+from langflow.schema import JSON, dotdict
 from langflow.schema.message import Message
 
 
@@ -60,10 +60,10 @@ class PythonFunctionComponent(Component):
             logger.opt(exception=True).debug("Error executing function")
             return f"Error executing function: {e}"
 
-    def execute_function_data(self) -> list[Data]:
+    def execute_function_data(self) -> list[JSON]:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
-        return [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]
+        return [(JSON(text=x) if isinstance(x, str) else JSON(**x)) for x in results]
 
     def execute_function_message(self) -> Message:
         results = self.execute_function()

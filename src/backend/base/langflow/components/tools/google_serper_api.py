@@ -13,7 +13,7 @@ from langflow.inputs import (
     MultilineInput,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class QuerySchema(BaseModel):
@@ -58,7 +58,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
         ),
     ]
 
-    def run_model(self) -> Data | list[Data]:
+    def run_model(self) -> JSON | list[JSON]:
         wrapper = self._build_wrapper(self.k, self.query_type, self.query_params)
         results = wrapper.results(query=self.query)
 
@@ -73,7 +73,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
         data_list = []
         for result in list_results:
             result["text"] = result.pop("snippet", "")
-            data_list.append(Data(data=result))
+            data_list.append(JSON(data=result))
         self.status = data_list
         return data_list
 

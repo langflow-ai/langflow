@@ -4,7 +4,7 @@ from langchain_community.graph_vectorstores.extractors import HtmlLinkExtractor,
 from langchain_core.documents import BaseDocumentTransformer
 
 from langflow.base.document_transformers.model import LCDocumentTransformerComponent
-from langflow.inputs import BoolInput, DataInput, StrInput
+from langflow.inputs import BoolInput, JSONInput, StrInput
 
 
 class HtmlLinkExtractorComponent(LCDocumentTransformerComponent):
@@ -17,7 +17,7 @@ class HtmlLinkExtractorComponent(LCDocumentTransformerComponent):
     inputs = [
         StrInput(name="kind", display_name="Kind of edge", value="hyperlink", required=False),
         BoolInput(name="drop_fragments", display_name="Drop URL fragments", value=True, required=False),
-        DataInput(
+        JSONInput(
             name="data_input",
             display_name="Input",
             info="The texts from which to extract links.",

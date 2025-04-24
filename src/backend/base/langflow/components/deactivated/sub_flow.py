@@ -7,7 +7,7 @@ from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 
@@ -28,7 +28,7 @@ class SubFlowComponent(CustomComponent):
         flow_datas = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
-    async def get_flow(self, flow_name: str) -> Data | None:
+    async def get_flow(self, flow_name: str) -> JSON | None:
         flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
@@ -104,7 +104,7 @@ class SubFlowComponent(CustomComponent):
             },
         }
 
-    async def build(self, flow_name: str, **kwargs) -> list[Data]:
+    async def build(self, flow_name: str, **kwargs) -> list[JSON]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: list[RunOutputs | None] = await self.run_flow(
             tweaks=tweaks,

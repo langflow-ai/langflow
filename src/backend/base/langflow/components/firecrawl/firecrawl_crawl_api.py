@@ -1,8 +1,8 @@
 import uuid
 
 from langflow.custom import Component
-from langflow.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.io import IntInput, JSONInput, MultilineInput, Output, SecretStrInput, StrInput
+from langflow.schema import JSON
 
 
 class FirecrawlCrawlApi(Component):
@@ -37,12 +37,12 @@ class FirecrawlCrawlApi(Component):
             display_name="Idempotency Key",
             info="Optional idempotency key to ensure unique requests.",
         ),
-        DataInput(
+        JSONInput(
             name="crawlerOptions",
             display_name="Crawler Options",
             info="The crawler options to send with the request.",
         ),
-        DataInput(
+        JSONInput(
             name="scrapeOptions",
             display_name="Scrape Options",
             info="The page options to send with the request.",
@@ -54,7 +54,7 @@ class FirecrawlCrawlApi(Component):
     ]
     idempotency_key: str | None = None
 
-    def crawl(self) -> Data:
+    def crawl(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:
@@ -85,4 +85,4 @@ class FirecrawlCrawlApi(Component):
 
         app = FirecrawlApp(api_key=self.api_key)
         crawl_result = app.crawl_url(self.url, params=params, idempotency_key=self.idempotency_key)
-        return Data(data={"results": crawl_result})
+        return JSON(data={"results": crawl_result})

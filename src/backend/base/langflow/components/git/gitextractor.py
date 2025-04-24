@@ -9,7 +9,7 @@ import git
 
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -50,7 +50,7 @@ class GitExtractorComponent(Component):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    async def get_repository_info(self) -> list[Data]:
+    async def get_repository_info(self) -> list[JSON]:
         try:
             async with self.temp_git_repo() as temp_dir:
                 repo = git.Repo(temp_dir)
@@ -67,15 +67,15 @@ class GitExtractorComponent(Component):
                     },
                     "branches": [str(branch) for branch in repo.branches],
                 }
-                result = [Data(data=repo_info)]
+                result = [JSON(data=repo_info)]
                 self.status = result
                 return result
         except git.GitError as e:
-            error_result = [Data(data={"error": f"Error getting repository info: {e!s}"})]
+            error_result = [JSON(data={"error": f"Error getting repository info: {e!s}"})]
             self.status = error_result
             return error_result
 
-    async def get_statistics(self) -> list[Data]:
+    async def get_statistics(self) -> list[JSON]:
         try:
             async with self.temp_git_repo() as temp_dir:
                 total_files = 0
@@ -105,11 +105,11 @@ class GitExtractorComponent(Component):
                     "binary_files": binary_files,
                     "directories": directories,
                 }
-                result = [Data(data=statistics)]
+                result = [JSON(data=statistics)]
                 self.status = result
                 return result
         except git.GitError as e:
-            error_result = [Data(data={"error": f"Error calculating statistics: {e!s}"})]
+            error_result = [JSON(data={"error": f"Error calculating statistics: {e!s}"})]
             self.status = error_result
             return error_result
 
@@ -134,7 +134,7 @@ class GitExtractorComponent(Component):
             self.status = error_message
             return Message(text=error_message)
 
-    async def get_files_content(self) -> list[Data]:
+    async def get_files_content(self) -> list[JSON]:
         try:
             async with self.temp_git_repo() as temp_dir:
                 content_list = []
@@ -149,12 +149,12 @@ class GitExtractorComponent(Component):
                         except UnicodeDecodeError:
                             file_content = "[BINARY FILE]"
                         content_list.append(
-                            Data(data={"path": str(relative_path), "size": file_size, "content": file_content})
+                            JSON(data={"path": str(relative_path), "size": file_size, "content": file_content})
                         )
                 self.status = content_list
                 return content_list
         except git.GitError as e:
-            error_result = [Data(data={"error": f"Error getting files content: {e!s}"})]
+            error_result = [JSON(data={"error": f"Error getting files content: {e!s}"})]
             self.status = error_result
             return error_result
 

@@ -3,7 +3,7 @@ from typing import Any
 
 from langflow.custom import Component
 from langflow.io import BoolInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class DynamicOutputComponent(Component):
@@ -35,7 +35,7 @@ class DynamicOutputComponent(Component):
                 ]
         return frontend_node
 
-    def build_output(self) -> Data:
-        data = Data(value=self.input_value)
+    def build_output(self) -> JSON:
+        data = JSON(value=self.input_value)
         self.status = data
         return data

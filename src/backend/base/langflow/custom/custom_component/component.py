@@ -30,7 +30,7 @@ from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -648,7 +648,7 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | JSON | StructuredTool) for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)
@@ -1001,7 +1001,7 @@ class Component(CustomComponent):
 
     def _build_artifact(self, result):
         custom_repr = self.custom_repr()
-        if custom_repr is None and isinstance(result, dict | Data | str):
+        if custom_repr is None and isinstance(result, dict | JSON | str):
             custom_repr = result
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)
@@ -1025,8 +1025,8 @@ class Component(CustomComponent):
             return result.data
         if hasattr(result, "model_dump"):
             return result.model_dump()
-        if isinstance(result, Data | dict | str):
-            return result.data if isinstance(result, Data) else result
+        if isinstance(result, JSON | dict | str):
+            return result.data if isinstance(result, JSON) else result
 
         if self.status:
             return self.status
@@ -1050,7 +1050,7 @@ class Component(CustomComponent):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
             return self.repr_value
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
+        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, JSON):
             return str(self.repr_value)
         return self.repr_value
 

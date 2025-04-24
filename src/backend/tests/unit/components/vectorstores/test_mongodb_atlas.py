@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from langflow.components.vectorstores.mongodb_atlas import MongoVectorStoreComponent
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from pymongo.collection import Collection
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
@@ -36,7 +36,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             "similarity": "cosine",
             "quantization": "scalar",
             "insert_mode": "append",
-            "ingest_data": [Data(data={"text": "test data 1"}), Data(data={"text": "test data 2"})],
+            "ingest_data": [JSON(data={"text": "test data 1"}), JSON(data={"text": "test data 2"})],
         }
 
     @pytest.fixture
@@ -75,7 +75,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
     ) -> None:
         """Test creating a collection with data."""
         test_texts = ["test data 1", "test data 2", "something completely different"]
-        default_kwargs["ingest_data"] = [Data(data={"text": text}) for text in test_texts]
+        default_kwargs["ingest_data"] = [JSON(data={"text": text}) for text in test_texts]
         default_kwargs["insert_mode"] = "overwrite"
 
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
@@ -97,7 +97,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             "Machine learning models process data",
             "The lazy dog sleeps all day long",
         ]
-        default_kwargs["ingest_data"] = [Data(data={"text": text, "metadata": {}}) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(data={"text": text, "metadata": {}}) for text in test_data]
         default_kwargs["number_of_results"] = 2
         default_kwargs["insert_mode"] = "overwrite"
 
@@ -168,8 +168,8 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         """Test handling of document metadata."""
         # Create test data with metadata
         test_data = [
-            Data(data={"text": "Document 1", "metadata": {"category": "test", "priority": 1}}),
-            Data(data={"text": "Document 2", "metadata": {"category": "test", "priority": 2}}),
+            JSON(data={"text": "Document 1", "metadata": {"category": "test", "priority": 1}}),
+            JSON(data={"text": "Document 2", "metadata": {"category": "test", "priority": 2}}),
         ]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["collection_name"] = "test_collection_metadata"

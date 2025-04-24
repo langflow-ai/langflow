@@ -17,7 +17,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dotdict import dotdict
 
 logging.basicConfig(level=logging.INFO)
@@ -228,9 +228,9 @@ class LangWatchComponent(Component):
             return {}
         return dynamic_inputs
 
-    async def evaluate(self) -> Data:
+    async def evaluate(self) -> JSON:
         if not self.api_key:
-            return Data(data={"error": "API key is required"})
+            return JSON(data={"error": "API key is required"})
 
         # Prioritize evaluator_name if it exists
         evaluator_name = getattr(self, "evaluator_name", None) or self.current_evaluator
@@ -240,14 +240,14 @@ class LangWatchComponent(Component):
                 evaluator_name = next(iter(self.evaluators))
                 logger.info("No evaluator was selected. Using default: %s", evaluator_name)
             else:
-                return Data(
+                return JSON(
                     data={"error": "No evaluator selected and no evaluators available. Please choose an evaluator."}
                 )
 
         try:
             evaluator = self.evaluators.get(evaluator_name)
             if not evaluator:
-                return Data(data={"error": f"Selected evaluator '{evaluator_name}' not found."})
+                return JSON(data={"error": f"Selected evaluator '{evaluator_name}' not found."})
 
             logger.info("Evaluating with evaluator: %s", evaluator_name)
 
@@ -282,9 +282,9 @@ class LangWatchComponent(Component):
 
             formatted_result = json.dumps(result, indent=2)
             self.status = f"Evaluation completed successfully. Result:\n{formatted_result}"
-            return Data(data=result)
+            return JSON(data=result)
 
         except (httpx.RequestError, KeyError, AttributeError, ValueError) as e:
             error_message = f"Evaluation error: {e!s}"
             self.status = error_message
-            return Data(data={"error": error_message})
+            return JSON(data={"error": error_message})

@@ -1,8 +1,8 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.io import DropdownInput, JSONInput, MessageTextInput, Output
+from langflow.schema import JSON
 
 
 class DataFilterComponent(Component):
@@ -16,7 +16,7 @@ class DataFilterComponent(Component):
     name = "FilterDataValues"
 
     inputs = [
-        DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),
+        JSONInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),
         MessageTextInput(
             name="filter_key",
             display_name="Filter Key",
@@ -58,9 +58,9 @@ class DataFilterComponent(Component):
             return str(item_value).endswith(filter_value)
         return False
 
-    def filter_data(self) -> list[Data]:
+    def filter_data(self) -> list[JSON]:
         # Extract inputs
-        input_data: list[Data] = self.input_data
+        input_data: list[JSON] = self.input_data
         filter_key: str = self.filter_key.text
         filter_value: str = self.filter_value.text
         operator: str = self.operator

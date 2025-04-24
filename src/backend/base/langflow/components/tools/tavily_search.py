@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class TavilySearchDepth(Enum):
@@ -94,7 +94,7 @@ Note: Check 'Advanced' for all options.
         ),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         # Convert string values to enum instances with validation
         try:
             search_depth_enum = (
@@ -105,7 +105,7 @@ Note: Check 'Advanced' for all options.
         except ValueError as e:
             error_message = f"Invalid search depth value: {e!s}"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [JSON(data={"error": error_message})]
 
         try:
             topic_enum = (
@@ -114,7 +114,7 @@ Note: Check 'Advanced' for all options.
         except ValueError as e:
             error_message = f"Invalid topic value: {e!s}"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [JSON(data={"error": error_message})]
 
         return self._tavily_search(
             self.query,
@@ -142,7 +142,7 @@ Note: Check 'Advanced' for all options.
         max_results: int = 5,
         include_images: bool = False,
         include_answer: bool = False,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         # Validate enum values
         if not isinstance(search_depth, TavilySearchDepth):
             msg = f"Invalid search_depth value: {search_depth}"
@@ -174,7 +174,7 @@ Note: Check 'Advanced' for all options.
             search_results = response.json()
 
             data_results = [
-                Data(
+                JSON(
                     data={
                         "title": result.get("title"),
                         "url": result.get("url"),
@@ -186,10 +186,10 @@ Note: Check 'Advanced' for all options.
             ]
 
             if include_answer and search_results.get("answer"):
-                data_results.insert(0, Data(data={"answer": search_results["answer"]}))
+                data_results.insert(0, JSON(data={"answer": search_results["answer"]}))
 
             if include_images and search_results.get("images"):
-                data_results.append(Data(data={"images": search_results["images"]}))
+                data_results.append(JSON(data={"images": search_results["images"]}))
 
             self.status = data_results  # type: ignore[assignment]
 

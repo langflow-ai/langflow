@@ -1,8 +1,8 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, MessageTextInput, Output
-from langflow.schema import Data, dotdict
+from langflow.io import DropdownInput, JSONInput, MessageTextInput, Output
+from langflow.schema import JSON, dotdict
 
 
 class DataConditionalRouterComponent(Component):
@@ -13,7 +13,7 @@ class DataConditionalRouterComponent(Component):
     legacy = True
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data_input",
             display_name="Data Input",
             info="The Data object or list of Data objects to process",
@@ -65,8 +65,8 @@ class DataConditionalRouterComponent(Component):
             return value.lower() in {"true", "1", "yes", "y", "on"}
         return bool(value)
 
-    def validate_input(self, data_item: Data) -> bool:
-        if not isinstance(data_item, Data):
+    def validate_input(self, data_item: JSON) -> bool:
+        if not isinstance(data_item, JSON):
             self.status = "Input is not a Data object"
             return False
         if self.key_name not in data_item.data:
@@ -74,7 +74,7 @@ class DataConditionalRouterComponent(Component):
             return False
         return True
 
-    def process_data(self) -> Data | list[Data]:
+    def process_data(self) -> JSON | list[JSON]:
         if isinstance(self.data_input, list):
             true_output = []
             false_output = []
@@ -88,12 +88,12 @@ class DataConditionalRouterComponent(Component):
             self.stop("false_output" if true_output else "true_output")
             return true_output or false_output
         if not self.validate_input(self.data_input):
-            return Data(data={"error": self.status})
+            return JSON(data={"error": self.status})
         result = self.process_single_data(self.data_input)
         self.stop("false_output" if result else "true_output")
         return self.data_input
 
-    def process_single_data(self, data_item: Data) -> bool:
+    def process_single_data(self, data_item: JSON) -> bool:
         item_value = data_item.data[self.key_name]
         operator = self.operator
 

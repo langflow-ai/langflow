@@ -7,7 +7,7 @@ from langchain_community.document_loaders import RecursiveUrlLoader
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -102,7 +102,7 @@ class URLComponent(Component):
 
         return url
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         """Load documents from the URLs."""
         all_docs = []
         data = []
@@ -131,7 +131,7 @@ class URLComponent(Component):
                 logger.info(msg)
                 all_docs.extend(docs)
 
-            data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
+            data = [JSON(text=doc.page_content, **doc.metadata) for doc in all_docs]
             self.status = data
 
         except Exception as e:

@@ -6,7 +6,7 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class WikipediaAPIComponent(LCToolComponent):
@@ -29,10 +29,10 @@ class WikipediaAPIComponent(LCToolComponent):
         ),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         wrapper = self._build_wrapper()
         docs = wrapper.load(self.input_value)
-        data = [Data.from_document(doc) for doc in docs]
+        data = [JSON.from_document(doc) for doc in docs]
         self.status = data
         return data
 

@@ -4,13 +4,13 @@ from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import (
     BoolInput,
-    DataInput,
     DictInput,
     IntInput,
+    JSONInput,
     MessageTextInput,
 )
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dotdict import dotdict
 
 
@@ -22,7 +22,7 @@ class UpdateDataComponent(Component):
     icon = "FolderSync"
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="old_data",
             display_name="Data",
             info="The record to update.",
@@ -105,12 +105,12 @@ class UpdateDataComponent(Component):
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    async def build_data(self) -> Data | list[Data]:
+    async def build_data(self) -> JSON | list[JSON]:
         """Build the updated data by combining the old data with new fields."""
         new_data = self.get_data()
         if isinstance(self.old_data, list):
             for data_item in self.old_data:
-                if not isinstance(data_item, Data):
+                if not isinstance(data_item, JSON):
                     continue  # Skip invalid items
                 data_item.data.update(new_data)
                 if self.text_key:
@@ -118,7 +118,7 @@ class UpdateDataComponent(Component):
                 self.validate_text_key(data_item)
             self.status = self.old_data
             return self.old_data  # Returns List[Data]
-        if isinstance(self.old_data, Data):
+        if isinstance(self.old_data, JSON):
             self.old_data.data.update(new_data)
             if self.text_key:
                 self.old_data.text_key = self.text_key
@@ -144,14 +144,14 @@ class UpdateDataComponent(Component):
                 continue  # Skip default attributes
             if isinstance(attr_value, dict):
                 for key, value in attr_value.items():
-                    data[key] = value.get_text() if isinstance(value, Data) else value
-            elif isinstance(attr_value, Data):
+                    data[key] = value.get_text() if isinstance(value, JSON) else value
+            elif isinstance(attr_value, JSON):
                 data[attr_name] = attr_value.get_text()
             else:
                 data[attr_name] = attr_value
         return data
 
-    def validate_text_key(self, data: Data) -> None:
+    def validate_text_key(self, data: JSON) -> None:
         """This function validates that the Text Key is one of the keys in the Data."""
         data_keys = data.data.keys()
         if self.text_key and self.text_key not in data_keys:

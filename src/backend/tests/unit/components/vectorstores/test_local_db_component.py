@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.vectorstores.local_db import LocalDBComponent
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.services.cache.utils import CACHE_DIR
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
@@ -65,7 +65,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         """Test creating a vector store with data."""
         # Set ingest_data in default_kwargs to a list of Data objects
         test_texts = ["test data 1", "test data 2", "something completely different"]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_texts]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_texts]
 
         # Mock the collection count to return the expected number
         mock_collection.count.return_value = len(test_texts)
@@ -112,7 +112,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
             "Machine learning models process data",
             "The lazy dog sleeps all day long",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["search_type"] = "Similarity"
         default_kwargs["number_of_results"] = 2
 
@@ -159,7 +159,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
             "The quick brown fox hops",
             "Something completely different about cats",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["search_type"] = "MMR"
         default_kwargs["number_of_results"] = 3
 
@@ -206,7 +206,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
             "Python is a popular programming language",
             "Machine learning models process data",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["number_of_results"] = 2
 
         # Mock the search methods to return documents
@@ -257,9 +257,9 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         """Test handling of duplicate documents."""
         # Create test data with duplicates
         test_data = [
-            Data(text_key="text", data={"text": "This is a test document"}),
-            Data(text_key="text", data={"text": "This is a test document"}),  # Duplicate with exact same data
-            Data(text_key="text", data={"text": "This is another document"}),
+            JSON(text_key="text", data={"text": "This is a test document"}),
+            JSON(text_key="text", data={"text": "This is a test document"}),  # Duplicate with exact same data
+            JSON(text_key="text", data={"text": "This is another document"}),
         ]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["allow_duplicates"] = False
@@ -291,8 +291,8 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
 
         # Test with allow_duplicates=True
         test_data = [
-            Data(text_key="text", data={"text": "This is a test document"}),
-            Data(text_key="text", data={"text": "This is a test document"}),  # Duplicate
+            JSON(text_key="text", data={"text": "This is a test document"}),
+            JSON(text_key="text", data={"text": "This is a test document"}),  # Duplicate
         ]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["allow_duplicates"] = True

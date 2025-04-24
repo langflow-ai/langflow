@@ -2,7 +2,7 @@ import json
 from collections import Counter
 from typing import Any
 
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 def infer_list_type(items: list, max_samples: int = 5) -> str:
@@ -136,7 +136,7 @@ def analyze_value(
 
 
 def get_data_structure(
-    data_obj: Data | dict,
+    data_obj: JSON | dict,
     max_depth: int = 10,
     max_sample_size: int = 3,
     *,
@@ -189,7 +189,7 @@ def get_data_structure(
         }
     """
     # Handle both Data objects and dictionaries
-    data = data_obj.data if isinstance(data_obj, Data) else data_obj
+    data = data_obj.data if isinstance(data_obj, JSON) else data_obj
 
     result = {
         "structure": analyze_value(

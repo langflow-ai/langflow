@@ -3,8 +3,8 @@ from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplat
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
-from langflow.inputs.inputs import DataInput, HandleInput
-from langflow.schema import Data
+from langflow.inputs.inputs import HandleInput, JSONInput
+from langflow.schema import JSON
 
 
 class XMLAgentComponent(LCToolsAgentComponent):
@@ -16,7 +16,7 @@ class XMLAgentComponent(LCToolsAgentComponent):
     inputs = [
         *LCToolsAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
-        DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
+        JSONInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
         MultilineInput(
             name="system_prompt",
             display_name="System Prompt",
@@ -51,7 +51,7 @@ Question: {input}
         ),
     ]
 
-    def get_chat_history_data(self) -> list[Data] | None:
+    def get_chat_history_data(self) -> list[JSON] | None:
         return self.chat_history
 
     def create_agent_runnable(self):

@@ -5,7 +5,7 @@ from fastapi.encoders import jsonable_encoder
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.encoders import CUSTOM_ENCODERS
 from langflow.schema.message import Message
@@ -31,7 +31,7 @@ def get_artifact_type(value, build_result=None) -> str:
                 result = ArtifactType(enum_value)
             else:
                 result = ArtifactType.MESSAGE
-        case Data():
+        case JSON():
             enum_value = get_artifact_type(value.data)
             result = ArtifactType(enum_value)
 

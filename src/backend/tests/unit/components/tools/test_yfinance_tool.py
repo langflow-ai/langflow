@@ -5,7 +5,7 @@ from langchain_core.tools import ToolException
 from langflow.components.tools import YfinanceComponent
 from langflow.components.tools.yahoo import YahooFinanceMethod
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class TestYfinanceComponent:
@@ -69,7 +69,7 @@ class TestYfinanceComponent:
 
         assert isinstance(result, list)
         assert len(result) == 2
-        assert all(isinstance(item, Data) for item in result)
+        assert all(isinstance(item, JSON) for item in result)
         assert "News 1" in result[0].text
         assert "http://example.com/1" in result[0].text
 

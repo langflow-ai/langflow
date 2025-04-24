@@ -1,5 +1,5 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -40,7 +40,7 @@ class BaseMemoryComponent(CustomComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Data]:
+    def get_messages(self, **kwargs) -> list[JSON]:
         raise NotImplementedError
 
     def add_message(

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotionUserList(LCToolComponent):
@@ -26,7 +26,7 @@ class NotionUserList(LCToolComponent):
     class NotionUserListSchema(BaseModel):
         pass
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         users = self._list_users()
         records = []
         combined_text = ""
@@ -38,7 +38,7 @@ class NotionUserList(LCToolComponent):
             output += "________________________\n"
 
             combined_text += output
-            records.append(Data(text=output, data=user))
+            records.append(JSON(text=output, data=user))
 
         self.status = records
         return records

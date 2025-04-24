@@ -5,7 +5,7 @@ from langchain_core.tools import ToolException
 from langflow.components.tools import SerpComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -65,8 +65,8 @@ def test_fetch_content_text():
     component = SerpComponent()
     component.fetch_content = MagicMock(
         return_value=[
-            Data(text="First result", data={"title": "Title 1"}),
-            Data(text="Second result", data={"title": "Title 2"}),
+            JSON(text="First result", data={"title": "Title 1"}),
+            JSON(text="Second result", data={"title": "Title 2"}),
         ]
     )
 

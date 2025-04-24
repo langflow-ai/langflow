@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs.inputs import DataInput, IntInput
+from langflow.inputs.inputs import IntInput, JSONInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class SelectDataComponent(Component):
@@ -13,7 +13,7 @@ class SelectDataComponent(Component):
     legacy = True
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data_list",
             display_name="Data List",
             info="List of data to select from.",
@@ -32,7 +32,7 @@ class SelectDataComponent(Component):
         Output(display_name="Selected Data", name="selected_data", method="select_data"),
     ]
 
-    async def select_data(self) -> Data:
+    async def select_data(self) -> JSON:
         # Retrieve the selected index from the dropdown
         selected_index = int(self.data_index)
         # Get the data list

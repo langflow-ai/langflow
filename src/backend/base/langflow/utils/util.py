@@ -10,7 +10,7 @@ from typing import Any
 from docstring_parser import parse
 
 from langflow.logging.logger import logger
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
@@ -385,7 +385,7 @@ def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str
         value["value"] = options_map[class_name][0]
 
 
-def build_loader_repr_from_data(data: list[Data]) -> str:
+def build_loader_repr_from_data(data: list[JSON]) -> str:
     """Builds a string representation of the loader based on the given data.
 
     Args:

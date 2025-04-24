@@ -1,4 +1,4 @@
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 def chroma_collection_to_data(collection_dict: dict):
@@ -18,5 +18,5 @@ def chroma_collection_to_data(collection_dict: dict):
         }
         if ("metadatas" in collection_dict) and collection_dict["metadatas"][i]:
             data_dict.update(collection_dict["metadatas"][i].items())
-        data.append(Data(**data_dict))
+        data.append(JSON(**data_dict))
     return data

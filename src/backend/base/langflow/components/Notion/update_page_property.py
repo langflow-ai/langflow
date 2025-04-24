@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotionPageUpdate(LCToolComponent):
@@ -43,16 +43,16 @@ class NotionPageUpdate(LCToolComponent):
             ..., description="The properties to update on the page (as a JSON string or a dictionary)."
         )
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._update_notion_page(self.page_id, self.properties)
         if isinstance(result, str):
             # An error occurred, return it as text
-            return Data(text=result)
+            return JSON(text=result)
         # Success, return the updated page data
         output = "Updated page properties:\n"
         for prop_name, prop_value in result.get("properties", {}).items():
             output += f"{prop_name}: {prop_value}\n"
-        return Data(text=output, data=result)
+        return JSON(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(

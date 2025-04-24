@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from langflow.custom import Component
 from langflow.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -62,15 +62,15 @@ class SerpComponent(Component):
             )
         return SerpAPIWrapper(serpapi_api_key=self.serpapi_api_key)
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self.fetch_content()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         wrapper = self._build_wrapper(self.search_params)
 
         def search_func(
             query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
-        ) -> list[Data]:
+        ) -> list[JSON]:
             try:
                 local_wrapper = wrapper
                 if params:
@@ -80,7 +80,7 @@ class SerpComponent(Component):
                 organic_results = full_results.get("organic_results", [])[:max_results]
 
                 limited_results = [
-                    Data(
+                    JSON(
                         text=result.get("snippet", ""),
                         data={
                             "title": result.get("title", "")[:max_snippet_length],

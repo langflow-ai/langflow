@@ -17,7 +17,7 @@ from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from typing_extensions import override
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
@@ -305,7 +305,7 @@ class ArizePhoenixTracer(BaseTracer):
         elif isinstance(value, Message):
             value = value.text
 
-        elif isinstance(value, Data):
+        elif isinstance(value, JSON):
             value = value.get_text()
 
         elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):

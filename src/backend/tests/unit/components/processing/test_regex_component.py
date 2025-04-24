@@ -1,6 +1,6 @@
 import pytest
 from langflow.components.processing.regex import RegexExtractorComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -33,7 +33,7 @@ class TestRegexExtractorComponent(ComponentTestBaseWithoutClient):
 
         result = component.extract_matches()
         assert isinstance(result, list)
-        assert all(isinstance(item, Data) for item in result)
+        assert all(isinstance(item, JSON) for item in result)
         assert len(result) == 2
         assert result[0].data["match"] == "test@example.com"
         assert result[1].data["match"] == "support@test.com"

@@ -7,7 +7,7 @@ from langchain_graph_retriever import GraphRetriever
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers import docs_to_data
 from langflow.inputs import DropdownInput, HandleInput, MultilineInput, NestedDictInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 def traversal_strategies() -> list[str]:
@@ -87,7 +87,7 @@ class GraphRAGComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Searches for documents using the graph retriever based on the selected strategy, edge definition, and query.
 
         Returns:

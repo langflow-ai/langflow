@@ -1,6 +1,6 @@
 import pytest
 from langflow.helpers.data import data_to_text_list
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 @pytest.mark.parametrize(
@@ -12,15 +12,15 @@ from langflow.schema import Data
     [
         (
             "{name} is {age} years old",
-            Data(data={"name": "Alice", "age": 25}),
-            (["Alice is 25 years old"], [Data(data={"name": "Alice", "age": 25})]),
+            JSON(data={"name": "Alice", "age": 25}),
+            (["Alice is 25 years old"], [JSON(data={"name": "Alice", "age": 25})]),
         ),
         (
             "{name} is {age} years old",
             [
-                Data(data={"name": "Alice", "age": 25}),
-                Data(data={"name": "Bob", "age": 30}),
-                Data(data={"name": "Alex", "age": 35}),
+                JSON(data={"name": "Alice", "age": 25}),
+                JSON(data={"name": "Bob", "age": 30}),
+                JSON(data={"name": "Alex", "age": 35}),
             ],
             (
                 [
@@ -29,9 +29,9 @@ from langflow.schema import Data
                     "Alex is 35 years old",
                 ],
                 [
-                    Data(data={"name": "Alice", "age": 25}),
-                    Data(data={"name": "Bob", "age": 30}),
-                    Data(data={"name": "Alex", "age": 35}),
+                    JSON(data={"name": "Alice", "age": 25}),
+                    JSON(data={"name": "Bob", "age": 30}),
+                    JSON(data={"name": "Alex", "age": 35}),
                 ],
             ),
         ),
@@ -44,7 +44,7 @@ def test_data_to_text_list(template, data, expected):
 
 def test_data_to_text_list__template_empty():
     template = ""
-    data = Data(data={"key": "value"})
+    data = JSON(data={"key": "value"})
 
     result = data_to_text_list(template, data)
 
@@ -58,7 +58,7 @@ def test_data_to_text_list__template_empty():
 
 def test_data_to_text_list__template_without_placeholder():
     template = "My favorite color is gray"
-    data = Data(data={"color": "silver"})
+    data = JSON(data={"color": "silver"})
 
     result = data_to_text_list(template, data)
 
@@ -72,7 +72,7 @@ def test_data_to_text_list__template_without_placeholder():
 
 def test_data_to_text_list__template_without_placeholder_and_data_attribute_empty():
     template = "My favorite color is gray"
-    data_list = [Data(data={})]
+    data_list = [JSON(data={})]
 
     result = data_to_text_list(template, data_list)
 
@@ -86,7 +86,7 @@ def test_data_to_text_list__template_without_placeholder_and_data_attribute_empt
 
 def test_data_to_text_list__template_wrong_placeholder():
     template = "My favorite color is {color}"
-    data = Data(data={"fruit": "apple"})
+    data = JSON(data={"fruit": "apple"})
 
     # Should not raise KeyError due to defaultdict behavior
     result = data_to_text_list(template, data)
@@ -95,7 +95,7 @@ def test_data_to_text_list__template_wrong_placeholder():
 
 def test_data_to_text_list__data_with_data_attribute_empty():
     template = "My favorite color is {color}"
-    data = Data(data={})
+    data = JSON(data={})
 
     # Should not raise KeyError due to defaultdict behavior
     result = data_to_text_list(template, data)
@@ -104,7 +104,7 @@ def test_data_to_text_list__data_with_data_attribute_empty():
 
 def test_data_to_text_list__data_contains_nested_data_key():
     template = "My data is: {data}"
-    data = Data(data={"data": {"key": "value"}})
+    data = JSON(data={"data": {"key": "value"}})
 
     result = data_to_text_list(template, data)
 

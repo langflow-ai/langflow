@@ -4,7 +4,7 @@ from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langflow.custom import Component
 from langflow.inputs import HandleInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -56,7 +56,7 @@ class SelfQueryRetrieverComponent(Component):
         ),
     ]
 
-    def retrieve_documents(self) -> list[Data]:
+    def retrieve_documents(self) -> list[JSON]:
         metadata_field_infos = [AttributeInfo(**value.data) for value in self.attribute_infos]
         self_query_retriever = SelfQueryRetriever.from_llm(
             llm=self.llm,
@@ -75,6 +75,6 @@ class SelfQueryRetrieverComponent(Component):
             raise TypeError(msg)
 
         documents = self_query_retriever.invoke(input=input_text, config={"callbacks": self.get_langchain_callbacks()})
-        data = [Data.from_document(document) for document in documents]
+        data = [JSON.from_document(document) for document in documents]
         self.status = data
         return data

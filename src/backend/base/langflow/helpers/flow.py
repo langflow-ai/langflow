@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.schema import RunOutputs
     from langflow.graph.vertex.base import Vertex
-    from langflow.schema import Data
+    from langflow.schema import JSON
 
 INPUT_TYPE_MAP = {
     "ChatInput": {"type_hint": "Optional[str]", "default": '""'},
@@ -28,7 +28,7 @@ INPUT_TYPE_MAP = {
 }
 
 
-async def list_flows(*, user_id: str | None = None) -> list[Data]:
+async def list_flows(*, user_id: str | None = None) -> list[JSON]:
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -209,7 +209,7 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_data: Data, graph: Graph, user_id: str | UUID | None
+    flow_data: JSON, graph: Graph, user_id: str | UUID | None
 ) -> tuple[Callable[..., Awaitable[Any]], type[BaseModel]]:
     """Builds a dynamic function and schema for a given flow.
 

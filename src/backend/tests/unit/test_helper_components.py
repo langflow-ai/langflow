@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langflow.components import helpers, processing
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 # def test_update_data_component():
@@ -57,7 +57,7 @@ def test_data_as_text_component():
 
     # Act
     # Replace with your actual test data
-    data = [Data(data={"key": "value", "bacon": "eggs"})]
+    data = [JSON(data={"key": "value", "bacon": "eggs"})]
     template = "Data:{data} -- Bacon:{bacon}"
     data_as_text_component.set_attributes({"data": data, "template": template})
     result = data_as_text_component.parse_data()

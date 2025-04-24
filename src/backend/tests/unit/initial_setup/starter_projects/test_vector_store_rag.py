@@ -14,7 +14,7 @@ from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 
 
@@ -23,7 +23,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
+    file_component.set_on_output(name="data", value=JSON(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
     text_splitter.set(data_inputs=file_component.load_files)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
@@ -34,11 +34,11 @@ def ingestion_graph():
     vector_store = AstraDBVectorStoreComponent(_id="ingestion-vector-store-123")
 
     # Mock search_documents by changing the value otherwise set by the vector_store_connection_decorator
-    vector_store.set_on_output(name="vectorstoreconnection", value=[Data(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="vectorstoreconnection", value=[JSON(text="This is a test file.")], cache=True)
 
-    vector_store.set_on_output(name="vectorstoreconnection", value=[Data(text="This is a test file.")], cache=True)
-    vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
-    vector_store.set_on_output(name="dataframe", value=DataFrame(data=[Data(text="This is a test file.")]), cache=True)
+    vector_store.set_on_output(name="vectorstoreconnection", value=[JSON(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="search_results", value=[JSON(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="dataframe", value=DataFrame(data=[JSON(text="This is a test file.")]), cache=True)
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
@@ -63,8 +63,8 @@ def rag_graph():
     )
     # Mock search_documents
     data_list = [
-        Data(data={"text": "Hello, world!"}),
-        Data(data={"text": "Goodbye, world!"}),
+        JSON(data={"text": "Hello, world!"}),
+        JSON(data={"text": "Goodbye, world!"}),
     ]
     rag_vector_store.set_on_output(
         name="search_results",
@@ -150,9 +150,9 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     # Verify each expected node exists with correct type
     for node_id, expected_type in expected_nodes.items():
         assert node_id in node_map, f"Missing node {node_id}"
-        assert node_map[node_id]["type"] == expected_type, (
-            f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
-        )
+        assert (
+            node_map[node_id]["type"] == expected_type
+        ), f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
 
     # Verify all nodes in graph are expected
     unexpected_nodes = set(node_map.keys()) - set(expected_nodes.keys())
@@ -232,9 +232,9 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
         f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
         f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
     )
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
-        f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
-    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"

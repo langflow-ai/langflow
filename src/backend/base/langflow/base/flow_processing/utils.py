@@ -1,11 +1,11 @@
 from loguru import logger
 
 from langflow.graph.schema import ResultData, RunOutputs
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
-def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
+def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[JSON]:
     """Build a list of data from the given RunOutputs.
 
     Args:
@@ -24,7 +24,7 @@ def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
     return data
 
 
-def build_data_from_result_data(result_data: ResultData) -> list[Data]:
+def build_data_from_result_data(result_data: ResultData) -> list[JSON]:
     """Build a list of data from the given ResultData.
 
     Args:
@@ -44,35 +44,35 @@ def build_data_from_result_data(result_data: ResultData) -> list[Data]:
     if not messages:
         # Result with a single record
         if isinstance(result_data.artifacts, dict):
-            data.append(Data(data=result_data.artifacts))
+            data.append(JSON(data=result_data.artifacts))
         # List of artifacts
         elif isinstance(result_data.artifacts, list):
             for artifact in result_data.artifacts:
                 # If multiple records are found as artifacts, return as-is
-                if isinstance(artifact, Data):
+                if isinstance(artifact, JSON):
                     data.append(artifact)
                 else:
                     # Warn about unknown output type
                     logger.warning(f"Unable to build record output from unknown ResultData.artifact: {artifact}")
         # Chat or text output
         elif result_data.results:
-            data.append(Data(data={"result": result_data.results}, text_key="result"))
+            data.append(JSON(data={"result": result_data.results}, text_key="result"))
             return data
         else:
             return []
 
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
-            dataobj: Data | Message | None
-            dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
+            dataobj: JSON | Message | None
+            dataobj = result if isinstance(result, Message) else JSON(data=result, text_key=name)
 
             data.append(dataobj)
     else:
-        data.append(Data(data=result_data.results))
+        data.append(JSON(data=result_data.results))
     return data
 
 
-def format_flow_output_data(data: list[Data]) -> str:
+def format_flow_output_data(data: list[JSON]) -> str:
     """Format the flow output data into a string.
 
     Args:

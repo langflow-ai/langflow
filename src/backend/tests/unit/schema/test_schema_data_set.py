@@ -1,16 +1,16 @@
 import pandas as pd
 import pytest
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 
 
 @pytest.fixture
-def sample_data_objects() -> list[Data]:
+def sample_data_objects() -> list[JSON]:
     """Fixture providing a list of sample Data objects."""
     return [
-        Data(data={"name": "John", "age": 30, "city": "New York"}),
-        Data(data={"name": "Jane", "age": 25, "city": "Boston"}),
-        Data(data={"name": "Bob", "age": 35, "city": "Chicago"}),
+        JSON(data={"name": "John", "age": 30, "city": "New York"}),
+        JSON(data={"name": "Jane", "age": 25, "city": "Boston"}),
+        JSON(data={"name": "Bob", "age": 35, "city": "Chicago"}),
     ]
 
 
@@ -22,7 +22,7 @@ def sample_dataset(sample_data_objects) -> DataFrame:
 
 def test_from_data_list_basic():
     """Test basic functionality of from_data_list."""
-    data_objects = [Data(data={"name": "John", "age": 30}), Data(data={"name": "Jane", "age": 25})]
+    data_objects = [JSON(data={"name": "John", "age": 30}), JSON(data={"name": "Jane", "age": 25})]
     dataset = DataFrame(data_objects)
 
     assert isinstance(dataset, DataFrame)
@@ -43,8 +43,8 @@ def test_from_data_list_empty():
 def test_from_data_list_missing_fields():
     """Test from_data_list with inconsistent data fields."""
     data_objects = [
-        Data(data={"name": "John", "age": 30}),
-        Data(data={"name": "Jane", "city": "Boston"}),  # Missing age
+        JSON(data={"name": "John", "age": 30}),
+        JSON(data={"name": "Jane", "city": "Boston"}),  # Missing age
     ]
     dataset = DataFrame(data_objects)
 
@@ -57,8 +57,8 @@ def test_from_data_list_missing_fields():
 def test_from_data_list_nested_data():
     """Test from_data_list with nested dictionary data."""
     data_objects = [
-        Data(data={"name": "John", "address": {"city": "New York", "zip": "10001"}}),
-        Data(data={"name": "Jane", "address": {"city": "Boston", "zip": "02108"}}),
+        JSON(data={"name": "John", "address": {"city": "New York", "zip": "10001"}}),
+        JSON(data={"name": "Jane", "address": {"city": "Boston", "zip": "02108"}}),
     ]
     dataset = DataFrame(data_objects)
 
@@ -72,7 +72,7 @@ def test_to_data_list_basic(sample_dataset, sample_data_objects):
     result = sample_dataset.to_data_list()
 
     assert isinstance(result, list)
-    assert all(isinstance(item, Data) for item in result)
+    assert all(isinstance(item, JSON) for item in result)
     assert len(result) == len(sample_data_objects)
 
     # Check if data is preserved
@@ -97,7 +97,7 @@ def test_to_data_list_modified_data(sample_dataset):
     result = sample_dataset.to_data_list()
 
     assert isinstance(result, list)
-    assert all(isinstance(item, Data) for item in result)
+    assert all(isinstance(item, JSON) for item in result)
     assert result[0].data["new_column"] == 1
     assert result[0].data["age"] == 31
 
@@ -122,7 +122,7 @@ def test_dataset_pandas_operations(sample_dataset):
 
 def test_dataset_with_null_values():
     """Test handling of null values in DataFrame."""
-    data_objects = [Data(data={"name": "John", "age": None}), Data(data={"name": None, "age": 25})]
+    data_objects = [JSON(data={"name": "John", "age": None}), JSON(data={"name": None, "age": 25})]
     dataset = DataFrame(data_objects)
 
     assert pd.isna(dataset.iloc[0]["age"])
@@ -137,7 +137,7 @@ def test_dataset_with_null_values():
 def test_dataset_type_preservation():
     """Test that data types are preserved through conversion."""
     data_objects = [
-        Data(
+        JSON(
             data={
                 "int_val": 1,
                 "float_val": 1.5,
@@ -173,7 +173,7 @@ def test_add_row_with_dict(sample_dataset):
 
 def test_add_row_with_data_object(sample_dataset):
     """Test adding a single row using a Data object."""
-    new_row = Data(data={"name": "Alice", "age": 28, "city": "Seattle"})
+    new_row = JSON(data={"name": "Alice", "age": 28, "city": "Seattle"})
     result = sample_dataset.add_row(new_row)
 
     assert isinstance(result, DataFrame)
@@ -197,8 +197,8 @@ def test_add_rows_with_dicts(sample_dataset):
 def test_add_rows_with_data_objects(sample_dataset):
     """Test adding multiple rows using Data objects."""
     new_rows = [
-        Data(data={"name": "Alice", "age": 28, "city": "Seattle"}),
-        Data(data={"name": "Charlie", "age": 32, "city": "Portland"}),
+        JSON(data={"name": "Alice", "age": 28, "city": "Seattle"}),
+        JSON(data={"name": "Charlie", "age": 32, "city": "Portland"}),
     ]
     result = sample_dataset.add_rows(new_rows)
 
@@ -212,7 +212,7 @@ def test_add_rows_mixed_types(sample_dataset):
     """Test adding multiple rows using a mix of dictionaries and Data objects."""
     new_rows = [
         {"name": "Alice", "age": 28, "city": "Seattle"},
-        Data(data={"name": "Charlie", "age": 32, "city": "Portland"}),
+        JSON(data={"name": "Charlie", "age": 32, "city": "Portland"}),
     ]
     result = sample_dataset.add_rows(new_rows)
 
@@ -224,7 +224,7 @@ def test_add_rows_mixed_types(sample_dataset):
 
 def test_init_with_data_objects():
     """Test initialization with Data objects."""
-    data_objects = [Data(data={"name": "John", "age": 30}), Data(data={"name": "Jane", "age": 25})]
+    data_objects = [JSON(data={"name": "John", "age": 30}), JSON(data={"name": "Jane", "age": 25})]
     dataset = DataFrame(data_objects)
 
     assert isinstance(dataset, DataFrame)
@@ -281,7 +281,7 @@ def test_init_with_invalid_list():
     """Test initialization with invalid list items."""
     invalid_data = [
         {"name": "John", "age": 30},
-        Data(data={"name": "Jane", "age": 25}),  # Mixed types should fail
+        JSON(data={"name": "Jane", "age": 25}),  # Mixed types should fail
     ]
     with pytest.raises(ValueError, match="List items must be either all Data objects or all dictionaries"):
         DataFrame(invalid_data)

@@ -9,7 +9,7 @@ from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import BoolInput, DropdownInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dotdict import dotdict
 
 
@@ -26,7 +26,7 @@ class FlowToolComponent(LCToolComponent):
         flow_datas = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
-    async def get_flow(self, flow_name: str) -> Data | None:
+    async def get_flow(self, flow_name: str) -> JSON | None:
         """Retrieves a flow by its name.
 
         Args:

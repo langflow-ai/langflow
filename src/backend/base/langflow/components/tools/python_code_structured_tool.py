@@ -19,7 +19,7 @@ from langflow.inputs.inputs import (
     MultilineInput,
 )
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dotdict import dotdict
 
 
@@ -174,7 +174,7 @@ class PythonCodeStructuredTool(LCToolComponent):
 
         if isinstance(self.global_variables, list):
             for data in self.global_variables:
-                if isinstance(data, Data):
+                if isinstance(data, JSON):
                     globals_.update(data.data)
         elif isinstance(self.global_variables, dict):
             globals_.update(self.global_variables)

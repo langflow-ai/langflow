@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.serialization.serialization import serialize
@@ -46,7 +46,7 @@ def get_type(payload):
         case Message():
             result = LogType.MESSAGE
 
-        case Data():
+        case JSON():
             result = LogType.DATA
 
         case dict():
@@ -75,8 +75,8 @@ def get_message(payload):
     elif hasattr(payload, "model_dump"):
         message = payload.model_dump()
 
-    if message is None and isinstance(payload, dict | str | Data):
-        message = payload.data if isinstance(payload, Data) else payload
+    if message is None and isinstance(payload, dict | str | JSON):
+        message = payload.data if isinstance(payload, JSON) else payload
 
     return message or payload
 

@@ -5,7 +5,7 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class OlivyaComponent(Component):
@@ -66,7 +66,7 @@ class OlivyaComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
-    async def build_output(self) -> Data:
+    async def build_output(self) -> JSON:
         try:
             payload = {
                 "variables": {
@@ -113,4 +113,4 @@ class OlivyaComponent(Component):
             response_data = {"error": f"An unexpected error occurred: {e!s}"}
 
         # Return the response as part of the output
-        return Data(value=response_data)
+        return JSON(value=response_data)

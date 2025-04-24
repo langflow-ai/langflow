@@ -1,6 +1,6 @@
 from langflow.custom import Component
-from langflow.io import DataInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.io import JSONInput, Output
+from langflow.schema import JSON, DataFrame
 
 
 class DataToDataFrameComponent(Component):
@@ -14,7 +14,7 @@ class DataToDataFrameComponent(Component):
     name = "DataToDataFrame"
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data_list",
             display_name="Data or Data List",
             info="One or multiple Data objects to transform into a DataFrame.",
@@ -48,7 +48,7 @@ class DataToDataFrameComponent(Component):
 
         rows = []
         for item in data_input:
-            if not isinstance(item, Data):
+            if not isinstance(item, JSON):
                 msg = f"Expected Data objects, got {type(item)} instead."
                 raise TypeError(msg)
 

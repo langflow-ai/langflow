@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class YahooFinanceMethod(Enum):
@@ -77,7 +77,7 @@ to access financial data and market information from Yahoo Finance."""
         ),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self._yahoo_finance_tool(
             self.symbol,
             self.method,
@@ -97,7 +97,7 @@ to access financial data and market information from Yahoo Finance."""
         symbol: str,
         method: YahooFinanceMethod,
         num_news: int | None = 5,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         ticker = yf.Ticker(symbol)
 
         try:
@@ -111,9 +111,9 @@ to access financial data and market information from Yahoo Finance."""
             result = pprint.pformat(result)
 
             if method == YahooFinanceMethod.GET_NEWS:
-                data_list = [Data(data=article) for article in ast.literal_eval(result)]
+                data_list = [JSON(data=article) for article in ast.literal_eval(result)]
             else:
-                data_list = [Data(data={"result": result})]
+                data_list = [JSON(data={"result": result})]
 
         except Exception as e:
             error_message = f"Error retrieving data: {e}"

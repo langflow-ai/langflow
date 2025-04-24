@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from loguru import logger
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.constants import DIRECT_TYPES
@@ -234,7 +234,7 @@ class ParameterHandler:
                         params[field_name] = [unescape_string(v) for v in val]
                     case str():
                         params[field_name] = unescape_string(val)
-                    case Data():
+                    case JSON():
                         params[field_name] = unescape_string(val.get_text())
             case "bool":
                 match val:

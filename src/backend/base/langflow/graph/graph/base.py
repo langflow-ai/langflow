@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.schema import ResultData
-    from langflow.schema import Data
+    from langflow.schema import JSON
     from langflow.services.chat.schema import GetCache, SetCache
     from langflow.services.tracing.service import TracingService
 
@@ -493,7 +493,7 @@ class Graph:
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
 
-    def get_state(self, name: str) -> Data | None:
+    def get_state(self, name: str) -> JSON | None:
         """Returns the state of the graph with the given name.
 
         Args:
@@ -504,7 +504,7 @@ class Graph:
         """
         return self.state_manager.get_state(name, run_id=self._run_id)
 
-    def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
+    def update_state(self, name: str, record: str | JSON, caller: str | None = None) -> None:
         """Updates the state of the graph with the given name.
 
         Args:
@@ -574,7 +574,7 @@ class Graph:
         """Resets the activated vertices in the graph."""
         self.activated_vertices = []
 
-    def append_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
+    def append_state(self, name: str, record: str | JSON, caller: str | None = None) -> None:
         """Appends the state of the graph with the given name.
 
         Args:

@@ -10,7 +10,7 @@ from langflow.io import (
     Output,
     TabInput,
 )
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.schema.message import Message
 
 
@@ -97,19 +97,19 @@ class ParserComponent(Component):
         input_data = self.input_data
 
         match input_data:
-            case list() if all(isinstance(item, Data) for item in input_data):
+            case list() if all(isinstance(item, JSON) for item in input_data):
                 msg = "List of Data objects is not supported."
                 raise ValueError(msg)
             case DataFrame():
                 return input_data, None
-            case Data():
+            case JSON():
                 return None, input_data
             case dict() if "data" in input_data:
                 try:
                     if "columns" in input_data:  # Likely a DataFrame
                         return DataFrame.from_dict(input_data), None
                     # Likely a Data object
-                    return None, Data(**input_data)
+                    return None, JSON(**input_data)
                 except (TypeError, ValueError, KeyError) as e:
                     msg = f"Invalid structured input provided: {e!s}"
                     raise ValueError(msg) from e
@@ -145,7 +145,7 @@ class ParserComponent(Component):
                 return data
             if isinstance(data, Message):
                 return data.get_text()
-            if isinstance(data, Data):
+            if isinstance(data, JSON):
                 return json.dumps(data.data)
             if isinstance(data, DataFrame):
                 if hasattr(self, "clean_data") and self.clean_data:

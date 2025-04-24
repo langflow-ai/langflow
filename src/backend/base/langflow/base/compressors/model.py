@@ -3,7 +3,7 @@ from abc import abstractmethod
 from langflow.custom import Component
 from langflow.field_typing import BaseDocumentCompressor
 from langflow.io import DataInput, IntInput, MultilineInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
 
@@ -43,12 +43,12 @@ class LCCompressorComponent(Component):
         msg = "build_compressor method must be implemented."
         raise NotImplementedError(msg)
 
-    async def compress_documents(self) -> list[Data]:
+    async def compress_documents(self) -> list[JSON]:
         """Compresses the documents retrieved from the vector store."""
         compressor = self.build_compressor()
         documents = compressor.compress_documents(
             query=self.search_query,
-            documents=[passage.to_lc_document() for passage in self.search_results if isinstance(passage, Data)],
+            documents=[passage.to_lc_document() for passage in self.search_results if isinstance(passage, JSON)],
         )
         data = self.to_data(documents)
         self.status = data

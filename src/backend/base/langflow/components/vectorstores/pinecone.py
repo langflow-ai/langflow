@@ -4,7 +4,7 @@ from langchain_core.vectorstores import VectorStore
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
@@ -81,7 +81,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
                 # Convert DataFrame to Data if needed using parent's method
 
                 for doc in self.ingest_data:
-                    if isinstance(doc, Data):
+                    if isinstance(doc, JSON):
                         documents.append(doc.to_lc_document())
                     else:
                         documents.append(doc)
@@ -91,7 +91,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
             return pinecone
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search documents in the vector store."""
         try:
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():

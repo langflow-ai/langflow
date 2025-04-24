@@ -1,6 +1,6 @@
 from langflow.components.inputs import ChatInput
 from langflow.components.processing.parse_json_data import ParseJSONDataComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component
@@ -16,7 +16,7 @@ async def test_from_data():
             "query": ".[0].key",
         },
     )
-    assert outputs["filtered_data"] == [Data(text="value1")]
+    assert outputs["filtered_data"] == [JSON(text="value1")]
 
     outputs = await run_single_component(
         ParseJSONDataComponent,
@@ -29,7 +29,7 @@ async def test_from_data():
             "query": ".[0].key.[0].field2",
         },
     )
-    assert outputs["filtered_data"] == [Data(text="2")]
+    assert outputs["filtered_data"] == [JSON(text="2")]
 
 
 async def test_from_message():
@@ -41,7 +41,7 @@ async def test_from_message():
         },
         run_input="{'key':'value1'}",
     )
-    assert outputs["filtered_data"] == [Data(text="value1")]
+    assert outputs["filtered_data"] == [JSON(text="value1")]
 
     outputs = await run_single_component(
         ParseJSONDataComponent,
@@ -51,4 +51,4 @@ async def test_from_message():
         },
         run_input='{"key":[{"field1": 1, "field2": 2}]}',
     )
-    assert outputs["filtered_data"] == [Data(text="2")]
+    assert outputs["filtered_data"] == [JSON(text="2")]

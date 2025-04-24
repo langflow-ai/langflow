@@ -2,7 +2,7 @@ from langchain_text_splitters import CharacterTextSplitter
 
 from langflow.custom import Component
 from langflow.io import HandleInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.utils.util import unescape_string
 
 
@@ -45,12 +45,12 @@ class SplitTextComponent(Component):
     ]
 
     def _docs_to_data(self, docs):
-        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
+        return [JSON(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def split_text(self) -> list[Data]:
+    def split_text(self) -> list[JSON]:
         separator = unescape_string(self.separator)
 
-        documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, Data)]
+        documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, JSON)]
 
         splitter = CharacterTextSplitter(
             chunk_overlap=self.chunk_overlap,

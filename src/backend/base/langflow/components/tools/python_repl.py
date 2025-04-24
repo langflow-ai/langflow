@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -91,7 +91,7 @@ class PythonREPLToolComponent(LCToolComponent):
         self.status = f"Python REPL Tool created with global imports: {self.global_imports}"
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
         result = tool.run(self.code)
-        return [Data(data={"result": result})]
+        return [JSON(data={"result": result})]

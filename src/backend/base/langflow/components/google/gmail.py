@@ -16,7 +16,7 @@ from loguru import logger
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.template import Output
 
 
@@ -65,7 +65,7 @@ class GmailLoaderComponent(Component):
         Output(display_name="Data", name="data", method="load_emails"),
     ]
 
-    def load_emails(self) -> Data:
+    def load_emails(self) -> JSON:
         class CustomGMailLoader(GMailLoader):
             def __init__(
                 self, creds: Any, *, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False
@@ -188,4 +188,4 @@ class GmailLoaderComponent(Component):
 
         # Return the loaded documents
         self.status = docs
-        return Data(data={"text": docs})
+        return JSON(data={"text": docs})

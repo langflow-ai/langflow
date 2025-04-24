@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 from langflow.components.processing.save_to_file import SaveToFileComponent
-from langflow.schema import Data, Message
+from langflow.schema import JSON, Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -122,7 +122,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             component.set_attributes(
                 {
                     "input_type": "Data",
-                    "data": Data(data=test_data),
+                    "data": JSON(data=test_data),
                     "file_format": "json",
                     "file_path": "./test_output.json",
                 }

@@ -12,7 +12,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class AgentQL(Component):
@@ -101,7 +101,7 @@ class AgentQL(Component):
         Output(display_name="Data", name="data", method="build_output"),
     ]
 
-    def build_output(self) -> Data:
+    def build_output(self) -> JSON:
         endpoint = "https://api.agentql.com/v1/query-data"
         headers = {
             "X-API-Key": self.api_key,
@@ -136,7 +136,7 @@ class AgentQL(Component):
             response.raise_for_status()
 
             json = response.json()
-            data = Data(result=json["data"], metadata=json["metadata"])
+            data = JSON(result=json["data"], metadata=json["metadata"])
 
         except httpx.HTTPStatusError as e:
             response = e.response

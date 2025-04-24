@@ -1,5 +1,5 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotifyComponent(CustomComponent):
@@ -19,16 +19,16 @@ class NotifyComponent(CustomComponent):
             },
         }
 
-    def build(self, name: str, *, data: Data | None = None, append: bool = False) -> Data:
-        if data and not isinstance(data, Data):
+    def build(self, name: str, *, data: JSON | None = None, append: bool = False) -> JSON:
+        if data and not isinstance(data, JSON):
             if isinstance(data, str):
-                data = Data(text=data)
+                data = JSON(text=data)
             elif isinstance(data, dict):
-                data = Data(data=data)
+                data = JSON(data=data)
             else:
-                data = Data(text=str(data))
+                data = JSON(text=str(data))
         elif not data:
-            data = Data(text="")
+            data = JSON(text="")
         if data:
             if append:
                 self.append_state(name, data)

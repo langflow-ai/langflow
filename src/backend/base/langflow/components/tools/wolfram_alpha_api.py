@@ -4,7 +4,7 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 
 class WolframAlphaAPIComponent(LCToolComponent):
@@ -27,10 +27,10 @@ topics, delivering structured responses."""
 
     icon = "WolframAlphaAPI"
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         wrapper = self._build_wrapper()
         result_str = wrapper.run(self.input_value)
-        data = [Data(text=result_str)]
+        data = [JSON(text=result_str)]
         self.status = data
         return data
 

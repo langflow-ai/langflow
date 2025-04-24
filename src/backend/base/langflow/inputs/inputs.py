@@ -6,7 +6,7 @@ from pandas import DataFrame
 from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
@@ -43,7 +43,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @classmethod
     def validate_value(cls, v: Any, _info):
         # Convert single dict or Data instance into a list.
-        if isinstance(v, dict | Data):
+        if isinstance(v, dict | JSON):
             v = [v]
         # Automatically convert DataFrame into a list of dictionaries.
         if isinstance(v, DataFrame):
@@ -62,7 +62,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
             raise ValueError(msg)  # noqa: TRY004
         # Ensure each item in the list is either a dict or a Data instance.
         for i, item in enumerate(v):
-            if not isinstance(item, dict | Data):
+            if not isinstance(item, dict | JSON):
                 msg = (
                     f"Row {i + 1} in your table has an invalid format. Each row must be either:\n"
                     "- A dictionary containing column name/value pairs\n"
@@ -94,7 +94,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin)
         input_types (list[str]): A list of input types supported by this data input.
     """
 
-    input_types: list[str] = ["Data", "JSON"]
+    input_types: list[str] = ["Data"]
 
 
 class JSONInput(DataInput):
@@ -231,7 +231,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
             value = v
         elif isinstance(v, Message):
             value = v.text
-        elif isinstance(v, Data):
+        elif isinstance(v, JSON):
             if v.text_key in v.data:
                 value = v.data[v.text_key]
             else:
@@ -313,7 +313,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
             value = v
         elif isinstance(v, Message):
             value = v.text
-        elif isinstance(v, Data):
+        elif isinstance(v, JSON):
             if v.text_key in v.data:
                 value = v.data[v.text_key]
             else:
@@ -438,7 +438,7 @@ class NestedDictInput(
     """
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
-    value: dict | Data | None = {}
+    value: dict | JSON | None = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -664,6 +664,7 @@ InputTypes: TypeAlias = (
     | LinkInput
     | SliderInput
     | DataFrameInput
+    | JSONInput
     | TabInput
 )
 

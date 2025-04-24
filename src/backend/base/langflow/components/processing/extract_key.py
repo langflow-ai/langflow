@@ -1,6 +1,6 @@
 from langflow.custom import Component
-from langflow.io import DataInput, Output, StrInput
-from langflow.schema import Data
+from langflow.io import JSONInput, Output, StrInput
+from langflow.schema import JSON
 
 
 class ExtractDataKeyComponent(Component):
@@ -14,7 +14,7 @@ class ExtractDataKeyComponent(Component):
     legacy = True
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data_input",
             display_name="Data Input",
             info="The Data object or list of Data objects to extract the key from.",
@@ -30,24 +30,24 @@ class ExtractDataKeyComponent(Component):
         Output(display_name="Extracted Data", name="extracted_data", method="extract_key"),
     ]
 
-    def extract_key(self) -> Data | list[Data]:
+    def extract_key(self) -> JSON | list[JSON]:
         key = self.key
 
         if isinstance(self.data_input, list):
             result = []
             for item in self.data_input:
-                if isinstance(item, Data) and key in item.data:
+                if isinstance(item, JSON) and key in item.data:
                     extracted_value = item.data[key]
-                    result.append(Data(data={key: extracted_value}))
+                    result.append(JSON(data={key: extracted_value}))
             self.status = result
             return result
-        if isinstance(self.data_input, Data):
+        if isinstance(self.data_input, JSON):
             if key in self.data_input.data:
                 extracted_value = self.data_input.data[key]
-                result = Data(data={key: extracted_value})
+                result = JSON(data={key: extracted_value})
                 self.status = result
                 return result
             self.status = f"Key '{key}' not found in Data object."
-            return Data(data={"error": f"Key '{key}' not found in Data object."})
+            return JSON(data={"error": f"Key '{key}' not found in Data object."})
         self.status = "Invalid input. Expected Data object or list of Data objects."
-        return Data(data={"error": "Invalid input. Expected Data object or list of Data objects."})
+        return JSON(data={"error": "Invalid input. Expected Data object or list of Data objects."})

@@ -3,8 +3,8 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MessageTextInput
-from langflow.inputs.inputs import DataInput, HandleInput
-from langflow.schema import Data
+from langflow.inputs.inputs import HandleInput, JSONInput
+from langflow.schema import JSON
 
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
@@ -28,7 +28,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             info="System prompt to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
-        DataInput(
+        JSONInput(
             name="chat_history",
             display_name="Chat Memory",
             is_list=True,
@@ -37,7 +37,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         ),
     ]
 
-    def get_chat_history_data(self) -> list[Data] | None:
+    def get_chat_history_data(self) -> list[JSON] | None:
         return self.chat_history
 
     def create_agent_runnable(self):

@@ -2,8 +2,8 @@ import assemblyai as aai
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.io import DropdownInput, FloatInput, IntInput, JSONInput, MultilineInput, Output, SecretStrInput
+from langflow.schema import JSON
 
 
 class AssemblyAILeMUR(Component):
@@ -20,7 +20,7 @@ class AssemblyAILeMUR(Component):
             advanced=False,
             required=True,
         ),
-        DataInput(
+        JSONInput(
             name="transcription_result",
             display_name="Transcription Result",
             info="The transcription result from AssemblyAI",
@@ -81,25 +81,25 @@ class AssemblyAILeMUR(Component):
         Output(display_name="LeMUR Response", name="lemur_response", method="run_lemur"),
     ]
 
-    def run_lemur(self) -> Data:
+    def run_lemur(self) -> JSON:
         """Use the LeMUR task endpoint to input the LLM prompt."""
         aai.settings.api_key = self.api_key
 
         if not self.transcription_result and not self.transcript_ids:
             error = "Either a Transcription Result or Transcript IDs must be provided"
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
         if self.transcription_result and self.transcription_result.data.get("error"):
             # error message from the previous step
             self.status = self.transcription_result.data["error"]
             return self.transcription_result
         if self.endpoint == "task" and not self.prompt:
             self.status = "No prompt specified for the task endpoint"
-            return Data(data={"error": "No prompt specified"})
+            return JSON(data={"error": "No prompt specified"})
         if self.endpoint == "question-answer" and not self.questions:
             error = "No Questions were provided for the question-answer endpoint"
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
 
         # Check for valid transcripts
         transcript_ids = None
@@ -112,7 +112,7 @@ class AssemblyAILeMUR(Component):
         if not transcript_ids:
             error = "Either a valid Transcription Result or valid Transcript IDs must be provided"
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
 
         # Get TranscriptGroup and check if there is any error
         transcript_group = aai.TranscriptGroup(transcript_ids=transcript_ids)
@@ -120,12 +120,12 @@ class AssemblyAILeMUR(Component):
         if failures:
             error = f"Getting transcriptions failed: {failures[0]}"
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
 
         for t in transcript_group.transcripts:
             if t.status == aai.TranscriptStatus.error:
                 self.status = t.error
-                return Data(data={"error": t.error})
+                return JSON(data={"error": t.error})
 
         # Perform LeMUR action
         try:
@@ -134,9 +134,9 @@ class AssemblyAILeMUR(Component):
             logger.opt(exception=True).debug("Error running LeMUR")
             error = f"An Error happened: {e}"
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
 
-        result = Data(data=response)
+        result = JSON(data=response)
         self.status = result
         return result
 

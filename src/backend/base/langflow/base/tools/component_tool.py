@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.message import Message
 
 if TYPE_CHECKING:
@@ -120,7 +120,7 @@ def _build_output_function(component: Component, output_method: Callable, event_
 
         if isinstance(result, Message):
             return result.get_text()
-        if isinstance(result, Data):
+        if isinstance(result, JSON):
             return result.data
         if isinstance(result, BaseModel):
             return result.model_dump()
@@ -144,7 +144,7 @@ def _build_output_async_function(
             raise ToolException(e) from e
         if isinstance(result, Message):
             return result.get_text()
-        if isinstance(result, Data):
+        if isinstance(result, JSON):
             return result.data
         if isinstance(result, BaseModel):
             return result.model_dump()

@@ -2,7 +2,7 @@ import re
 
 import pytest
 from langflow.components.processing import CreateDataComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ async def test_build_data(create_data_component):
 
     result = await create_data_component.build_data()
 
-    assert isinstance(result, Data)
+    assert isinstance(result, JSON)
     assert result.data == {"key1": "value1", "key2": "value2"}
     assert result.text_key == "key1"
 

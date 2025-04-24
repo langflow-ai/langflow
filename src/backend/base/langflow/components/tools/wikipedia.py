@@ -3,7 +3,7 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 from langflow.custom import Component
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.schema.message import Message
 
 
@@ -31,10 +31,10 @@ class WikipediaComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         wrapper = self._build_wrapper()
         docs = wrapper.load(self.input_value)
-        data = [Data.from_document(doc) for doc in docs]
+        data = [JSON.from_document(doc) for doc in docs]
         self.status = data
         return data
 

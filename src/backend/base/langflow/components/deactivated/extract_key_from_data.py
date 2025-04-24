@@ -1,5 +1,5 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ExtractKeyFromDataComponent(CustomComponent):
@@ -22,7 +22,7 @@ class ExtractKeyFromDataComponent(CustomComponent):
         },
     }
 
-    def build(self, data: Data, keys: list[str], *, silent_error: bool = True) -> Data:
+    def build(self, data: JSON, keys: list[str], *, silent_error: bool = True) -> JSON:
         """Extracts the keys from a data.
 
         Args:
@@ -41,6 +41,6 @@ class ExtractKeyFromDataComponent(CustomComponent):
                 if not silent_error:
                     msg = f"The key '{key}' does not exist in the data."
                     raise KeyError(msg) from e
-        return_data = Data(data=extracted_keys)
+        return_data = JSON(data=extracted_keys)
         self.status = return_data
         return return_data

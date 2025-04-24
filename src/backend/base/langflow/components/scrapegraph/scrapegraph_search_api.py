@@ -4,7 +4,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ScrapeGraphSearchApi(Component):
@@ -37,7 +37,7 @@ class ScrapeGraphSearchApi(Component):
         Output(display_name="Data", name="data", method="search"),
     ]
 
-    def search(self) -> list[Data]:
+    def search(self) -> list[JSON]:
         try:
             from scrapegraph_py import Client
             from scrapegraph_py.logger import sgai_logger
@@ -60,7 +60,7 @@ class ScrapeGraphSearchApi(Component):
             # Close the client
             sgai_client.close()
 
-            return Data(data=response)
+            return JSON(data=response)
         except Exception:
             sgai_client.close()
             raise

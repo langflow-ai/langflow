@@ -1,7 +1,7 @@
 from langchain_core.documents import Document
 
 from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class DocumentsToDataComponent(CustomComponent):
@@ -14,9 +14,9 @@ class DocumentsToDataComponent(CustomComponent):
         "documents": {"display_name": "Documents"},
     }
 
-    def build(self, documents: list[Document]) -> list[Data]:
+    def build(self, documents: list[Document]) -> list[JSON]:
         if isinstance(documents, Document):
             documents = [documents]
-        data = [Data.from_document(document) for document in documents]
+        data = [JSON.from_document(document) for document in documents]
         self.status = data
         return data

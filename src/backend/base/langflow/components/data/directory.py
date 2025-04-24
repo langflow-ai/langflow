@@ -1,7 +1,7 @@
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
 from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.template import Output
 
@@ -71,7 +71,7 @@ class DirectoryComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    def load_directory(self) -> list[Data]:
+    def load_directory(self) -> list[JSON]:
         path = self.path
         types = self.types
         depth = self.depth
@@ -105,7 +105,7 @@ class DirectoryComponent(Component):
         else:
             loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
 
-        valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]
+        valid_data = [x for x in loaded_data if x is not None and isinstance(x, JSON)]
         self.status = valid_data
         return valid_data
 

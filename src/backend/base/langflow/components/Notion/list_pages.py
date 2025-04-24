@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotionListPages(LCToolComponent):
@@ -52,12 +52,12 @@ class NotionListPages(LCToolComponent):
             "Leave empty for no filters or sorts.",
         )
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         result = self._query_notion_database(self.database_id, self.query_json)
 
         if isinstance(result, str):
             # An error occurred, return it as a single record
-            return [Data(text=result)]
+            return [JSON(text=result)]
 
         records = []
         combined_text = f"Pages found: {len(result)}\n\n"
@@ -80,7 +80,7 @@ class NotionListPages(LCToolComponent):
             )
 
             combined_text += text
-            records.append(Data(text=text, **page_data))
+            records.append(JSON(text=text, **page_data))
 
         self.status = records
         return records

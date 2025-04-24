@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.template import Output
 
 
@@ -147,5 +147,5 @@ class GoogleDriveSearchComponent(Component):
     def search_doc_titles(self) -> list[str]:
         return self.search_files()["doc_titles"]
 
-    def search_data(self) -> Data:
-        return Data(data={"text": self.search_files()["doc_titles_urls"]})
+    def search_data(self) -> JSON:
+        return JSON(data={"text": self.search_files()["doc_titles_urls"]})

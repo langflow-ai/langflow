@@ -10,7 +10,7 @@ from langflow.io import (
     MessageTextInput,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
@@ -164,7 +164,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
@@ -208,7 +208,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             return "mmr"
         return "similarity"
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         self.log(f"Search input: {self.search_query}")

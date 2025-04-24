@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
@@ -85,7 +85,7 @@ class CustomComponent(BaseComponent):
         self.status: Any | None = None
 
         # Initialize collections with empty defaults
-        self._flows_data: list[Data] | None = None
+        self._flows_data: list[JSON] | None = None
         self._outputs: list[OutputValue] = []
         self._logs: list[Log] = []
         self._output_logs: dict[str, list[Log] | Log] = {}
@@ -228,7 +228,7 @@ class CustomComponent(BaseComponent):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
             return self.repr_value
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
+        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, JSON):
             return str(self.repr_value)
         return self.repr_value
 
@@ -262,7 +262,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_code_tree(self._code or "")
 
-    def to_data(self, data: Any, *, keys: list[str] | None = None, silent_errors: bool = False) -> list[Data]:
+    def to_data(self, data: Any, *, keys: list[str] | None = None, silent_errors: bool = False) -> list[JSON]:
         """Converts input data into a list of Data objects.
 
         Args:
@@ -313,7 +313,7 @@ class CustomComponent(BaseComponent):
                 msg = f"Invalid data type: {type(item)}"
                 raise TypeError(msg)
 
-            data_objects.append(Data(data=data_dict))
+            data_objects.append(JSON(data=data_dict))
 
         return data_objects
 
@@ -325,7 +325,7 @@ class CustomComponent(BaseComponent):
 
         return self._extract_return_type(return_type)
 
-    def create_references_from_data(self, data: list[Data], *, include_data: bool = False) -> str:
+    def create_references_from_data(self, data: list[JSON], *, include_data: bool = False) -> str:
         """Create references from a list of data.
 
         Args:
@@ -522,11 +522,11 @@ class CustomComponent(BaseComponent):
             run_id=self.graph.run_id,
         )
 
-    def list_flows(self) -> list[Data]:
+    def list_flows(self) -> list[JSON]:
         """DEPRECATED - This is kept for backward compatibility. Using alist_flows instead is recommended."""
         return run_until_complete(self.alist_flows())
 
-    async def alist_flows(self) -> list[Data]:
+    async def alist_flows(self) -> list[JSON]:
         if not self.user_id:
             msg = "Session is invalid"
             raise ValueError(msg)

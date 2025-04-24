@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 from langflow.base.data import BaseFileComponent
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NvidiaIngestComponent(BaseFileComponent):
@@ -174,7 +174,7 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         self.log(f"Results: {result}")
 
-        data: list[Data | None] = []
+        data: list[JSON | None] = []
         document_type_text = "text"
         document_type_structured = "structured"
 
@@ -189,7 +189,7 @@ class NvidiaIngestComponent(BaseFileComponent):
 
                 if document_type == document_type_text:
                     data.append(
-                        Data(
+                        JSON(
                             text=metadata.get("content", ""),
                             file_path=source_metadata.get("source_name", ""),
                             document_type=document_type,
@@ -201,7 +201,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                 elif document_type == document_type_structured:
                     table_metadata = metadata.get("table_metadata", {})
                     data.append(
-                        Data(
+                        JSON(
                             text=table_metadata.get("table_content", ""),
                             file_path=source_metadata.get("source_name", ""),
                             document_type=document_type,

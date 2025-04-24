@@ -5,7 +5,7 @@ from langchain_core.documents import BaseDocumentTransformer
 
 from langflow.custom import Component
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.utils.util import build_loader_repr_from_data
 
 
@@ -15,7 +15,7 @@ class LCDocumentTransformerComponent(Component):
         Output(display_name="Data", name="data", method="transform_data"),
     ]
 
-    def transform_data(self) -> list[Data]:
+    def transform_data(self) -> list[JSON]:
         data_input = self.get_data_input()
         documents = []
 
@@ -23,7 +23,7 @@ class LCDocumentTransformerComponent(Component):
             data_input = [data_input]
 
         for _input in data_input:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

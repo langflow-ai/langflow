@@ -3,7 +3,7 @@ from typing import Any
 from langchain_text_splitters import NLTKTextSplitter, TextSplitter
 
 from langflow.base.textsplitters.model import LCTextSplitterComponent
-from langflow.inputs import DataInput, IntInput, MessageTextInput
+from langflow.inputs import IntInput, JSONInput, MessageTextInput
 from langflow.utils.util import unescape_string
 
 
@@ -28,7 +28,7 @@ class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
             info="The number of characters that overlap between consecutive chunks.",
             value=200,
         ),
-        DataInput(
+        JSONInput(
             name="data_input",
             display_name="Input",
             info="The text data to be split.",

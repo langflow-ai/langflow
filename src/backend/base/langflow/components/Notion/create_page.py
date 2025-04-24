@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotionPageCreator(LCToolComponent):
@@ -40,16 +40,16 @@ class NotionPageCreator(LCToolComponent):
         database_id: str = Field(..., description="The ID of the Notion database.")
         properties_json: str = Field(..., description="The properties of the new page as a JSON string.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._create_notion_page(self.database_id, self.properties_json)
         if isinstance(result, str):
             # An error occurred, return it as text
-            return Data(text=result)
+            return JSON(text=result)
         # Success, return the created page data
         output = "Created page properties:\n"
         for prop_name, prop_value in result.get("properties", {}).items():
             output += f"{prop_name}: {prop_value}\n"
-        return Data(text=output, data=result)
+        return JSON(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(

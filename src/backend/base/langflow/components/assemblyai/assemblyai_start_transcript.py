@@ -5,7 +5,7 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class AssemblyAITranscriptionJobCreator(Component):
@@ -133,7 +133,7 @@ class AssemblyAITranscriptionJobCreator(Component):
         Output(display_name="Transcript ID", name="transcript_id", method="create_transcription_job"),
     ]
 
-    def create_transcription_job(self) -> Data:
+    def create_transcription_job(self) -> JSON:
         aai.settings.api_key = self.api_key
 
         # Convert speakers_expected to int if it's not empty
@@ -143,7 +143,7 @@ class AssemblyAITranscriptionJobCreator(Component):
                 speakers_expected = int(self.speakers_expected)
             except ValueError:
                 self.status = "Error: Expected Number of Speakers must be a valid integer"
-                return Data(data={"error": "Error: Expected Number of Speakers must be a valid integer"})
+                return JSON(data={"error": "Error: Expected Number of Speakers must be a valid integer"})
 
         language_code = self.language_code or None
 
@@ -165,24 +165,24 @@ class AssemblyAITranscriptionJobCreator(Component):
             # Check if the file exists
             if not Path(self.audio_file).exists():
                 self.status = "Error: Audio file not found"
-                return Data(data={"error": "Error: Audio file not found"})
+                return JSON(data={"error": "Error: Audio file not found"})
             audio = self.audio_file
         elif self.audio_file_url:
             audio = self.audio_file_url
         else:
             self.status = "Error: Either an audio file or an audio URL must be specified"
-            return Data(data={"error": "Error: Either an audio file or an audio URL must be specified"})
+            return JSON(data={"error": "Error: Either an audio file or an audio URL must be specified"})
 
         try:
             transcript = aai.Transcriber().submit(audio, config=config)
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error submitting transcription job")
             self.status = f"An error occurred: {e}"
-            return Data(data={"error": f"An error occurred: {e}"})
+            return JSON(data={"error": f"An error occurred: {e}"})
 
         if transcript.error:
             self.status = transcript.error
-            return Data(data={"error": transcript.error})
-        result = Data(data={"transcript_id": transcript.id})
+            return JSON(data={"error": transcript.error})
+        result = JSON(data={"transcript_id": transcript.id})
         self.status = result
         return result

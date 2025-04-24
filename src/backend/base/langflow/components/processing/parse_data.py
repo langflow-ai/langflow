@@ -1,7 +1,7 @@
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
-from langflow.io import DataInput, MultilineInput, Output, StrInput
-from langflow.schema import Data
+from langflow.io import JSONInput, MultilineInput, Output, StrInput
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -16,7 +16,7 @@ class ParseDataComponent(Component):
     }
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data",
             display_name="Data",
             info="The data to convert to text.",
@@ -49,7 +49,7 @@ class ParseDataComponent(Component):
         ),
     ]
 
-    def _clean_args(self) -> tuple[list[Data], str, str]:
+    def _clean_args(self) -> tuple[list[JSON], str, str]:
         data = self.data if isinstance(self.data, list) else [self.data]
         template = self.template
         sep = self.sep
@@ -61,7 +61,7 @@ class ParseDataComponent(Component):
         self.status = result_string
         return Message(text=result_string)
 
-    def parse_data_as_list(self) -> list[Data]:
+    def parse_data_as_list(self) -> list[JSON]:
         data, template, _ = self._clean_args()
         text_list, data_list = data_to_text_list(template, data)
         for item, text in zip(data_list, text_list, strict=True):

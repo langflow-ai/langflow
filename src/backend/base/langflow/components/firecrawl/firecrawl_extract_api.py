@@ -3,12 +3,12 @@ from loguru import logger
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
-    DataInput,
+    JSONInput,
     MultilineInput,
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class FirecrawlExtractApi(Component):
@@ -40,7 +40,7 @@ class FirecrawlExtractApi(Component):
             info="Prompt to guide the extraction process.",
             tool_mode=True,
         ),
-        DataInput(
+        JSONInput(
             name="schema",
             display_name="Schema",
             required=False,
@@ -75,7 +75,7 @@ class FirecrawlExtractApi(Component):
         Output(display_name="Data", name="data", method="extract"),
     ]
 
-    def extract(self) -> Data:
+    def extract(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:
@@ -137,7 +137,7 @@ class FirecrawlExtractApi(Component):
         try:
             app = FirecrawlApp(api_key=self.api_key)
             extract_result = app.extract(urls, params=params)
-            return Data(data=extract_result)
+            return JSON(data=extract_result)
         except Exception as e:
             msg = f"Error during extraction: {e!s}"
             raise ValueError(msg) from e

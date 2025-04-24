@@ -5,7 +5,7 @@ from typing import Union
 import pytest
 from langflow.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
 from langflow.io.schema import schema_to_langflow_inputs
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
@@ -56,12 +56,12 @@ class TestInput:
         assert set(post_process_type(Union[int, list[str], list[float]])) == {int, str, float}  # noqa: UP007
 
         # Custom data types
-        assert set(post_process_type(Data)) == {Data}
-        assert set(post_process_type(list[Data])) == {Data}
+        assert set(post_process_type(JSON)) == {JSON}
+        assert set(post_process_type(list[JSON])) == {JSON}
 
         # Union with custom types
-        assert set(post_process_type(Union[Data, str])) == {Data, str}  # noqa: UP007
-        assert set(post_process_type(Union[Data, int, list[str]])) == {Data, int, str}  # noqa: UP007
+        assert set(post_process_type(Union[JSON, str])) == {JSON, str}  # noqa: UP007
+        assert set(post_process_type(Union[JSON, int, list[str]])) == {JSON, int, str}  # noqa: UP007
 
         # Empty lists and edge cases
         assert set(post_process_type(list)) == {list}
@@ -77,23 +77,23 @@ class TestInput:
         assert set(post_process_type(tuple)) == {tuple}
 
         # Union with custom types
-        assert set(post_process_type(Union[Data, str])) == {Data, str}  # noqa: UP007
-        assert set(post_process_type(Data | str)) == {Data, str}
-        assert set(post_process_type(Data | int | list[str])) == {Data, int, str}
+        assert set(post_process_type(Union[JSON, str])) == {JSON, str}  # noqa: UP007
+        assert set(post_process_type(JSON | str)) == {JSON, str}
+        assert set(post_process_type(JSON | int | list[str])) == {JSON, int, str}
 
         # More complex combinations with Data
-        assert set(post_process_type(Data | list[float])) == {Data, float}
-        assert set(post_process_type(Data | Union[int, str])) == {Data, int, str}  # noqa: UP007
-        assert set(post_process_type(Data | list[int] | None)) == {Data, int, type(None)}
-        assert set(post_process_type(Data | Union[float, None])) == {Data, float, type(None)}  # noqa: UP007
+        assert set(post_process_type(JSON | list[float])) == {JSON, float}
+        assert set(post_process_type(JSON | Union[int, str])) == {JSON, int, str}  # noqa: UP007
+        assert set(post_process_type(JSON | list[int] | None)) == {JSON, int, type(None)}
+        assert set(post_process_type(JSON | Union[float, None])) == {JSON, float, type(None)}  # noqa: UP007
 
         # Multiple Data types combined
-        assert set(post_process_type(Union[Data, str | float])) == {Data, str, float}  # noqa: UP007
-        assert set(post_process_type(Union[Data | float | str, int])) == {Data, int, float, str}  # noqa: UP007
+        assert set(post_process_type(Union[JSON, str | float])) == {JSON, str, float}  # noqa: UP007
+        assert set(post_process_type(Union[JSON | float | str, int])) == {JSON, int, float, str}  # noqa: UP007
 
         # Testing with nested unions and lists
-        assert set(post_process_type(Union[list[Data], list[int | str]])) == {Data, int, str}  # noqa: UP007
-        assert set(post_process_type(Data | list[float | str])) == {Data, float, str}
+        assert set(post_process_type(Union[list[JSON], list[int | str]])) == {JSON, int, str}  # noqa: UP007
+        assert set(post_process_type(JSON | list[float | str])) == {JSON, float, str}
 
     def test_input_to_dict(self):
         input_obj = Input(field_type="str")

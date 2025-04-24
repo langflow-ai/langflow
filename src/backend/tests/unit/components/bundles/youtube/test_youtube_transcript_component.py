@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from langflow.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import JSON, DataFrame, Message
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -82,7 +82,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(default_kwargs)
         result = component.get_data_output()
 
-        assert isinstance(result, Data)
+        assert isinstance(result, JSON)
         assert result.data["video_url"] == default_kwargs["url"]
         assert result.data["transcript"] == "First part of the transcript Second part of the transcript"
         assert "error" not in result.data
@@ -115,7 +115,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
 
         # Test Data output
         data_result = component.get_data_output()
-        assert isinstance(data_result, Data)
+        assert isinstance(data_result, JSON)
         assert "error" in data_result.data
         assert data_result.data["transcript"] == ""
 
@@ -136,7 +136,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(default_kwargs)
 
         data_result = component.get_data_output()
-        assert isinstance(data_result, Data)
+        assert isinstance(data_result, JSON)
         assert "error" in data_result.data
         assert data_result.data["transcript"] == ""
 

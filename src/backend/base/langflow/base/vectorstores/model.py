@@ -7,7 +7,7 @@ from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import BoolInput
 from langflow.io import HandleInput, Output, QueryInput
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.documents import Document
@@ -59,7 +59,7 @@ class LCVectorStoreComponent(Component):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["JSON", "Data", "DataFrame"],
             is_list=True,
         ),
         QueryInput(
@@ -105,7 +105,7 @@ class LCVectorStoreComponent(Component):
 
     def _prepare_ingest_data(self) -> list[Any]:
         """Prepares ingest_data by converting DataFrame to Data if needed."""
-        ingest_data: list | Data | DataFrame = self.ingest_data
+        ingest_data: list | JSON | DataFrame = self.ingest_data
         if not ingest_data:
             return []
 
@@ -128,7 +128,7 @@ class LCVectorStoreComponent(Component):
         vector_store: VectorStore,
         k=10,
         **kwargs,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         """Search for data in the vector store based on the input value and search type.
 
         Args:
@@ -154,7 +154,7 @@ class LCVectorStoreComponent(Component):
         self.status = data
         return data
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the vector store."""
         if self._cached_vector_store is not None:
             vector_store = self._cached_vector_store

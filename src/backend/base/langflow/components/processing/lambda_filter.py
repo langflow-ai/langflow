@@ -5,8 +5,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from langflow.custom import Component
-from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.io import HandleInput, IntInput, JSONInput, MultilineInput, Output
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.utils.data_structure import get_data_structure
 
@@ -22,7 +22,7 @@ class LambdaFilterComponent(Component):
     beta = True
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data",
             display_name="Data",
             info="The structured data to filter or transform using a lambda function.",
@@ -84,7 +84,7 @@ class LambdaFilterComponent(Component):
         # Return False if the lambda function does not start with 'lambda' or does not contain a colon
         return lambda_text.strip().startswith("lambda") and ":" in lambda_text
 
-    async def filter_data(self) -> list[Data]:
+    async def filter_data(self) -> list[JSON]:
         self.log(str(self.data))
         data = self.data[0].data if isinstance(self.data, list) else self.data.data
 
@@ -152,12 +152,12 @@ class LambdaFilterComponent(Component):
 
         # If it's a dict, wrap it in a Data object
         if isinstance(processed_data, dict):
-            return [Data(**processed_data)]
+            return [JSON(**processed_data)]
         # If it's a list, convert each item to a Data object
         if isinstance(processed_data, list):
-            return [Data(**item) if isinstance(item, dict) else Data(text=str(item)) for item in processed_data]
+            return [JSON(**item) if isinstance(item, dict) else JSON(text=str(item)) for item in processed_data]
         # If it's anything else, convert to string and wrap in a Data object
-        return [Data(text=str(processed_data))]
+        return [JSON(text=str(processed_data))]
 
     async def as_dataframe(self) -> DataFrame:
         """Return filtered data as a DataFrame."""

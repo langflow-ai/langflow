@@ -3,8 +3,8 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DataInput, FloatInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.io import FloatInput, JSONInput, Output, SecretStrInput
+from langflow.schema import JSON
 
 
 class AssemblyAITranscriptionJobPoller(Component):
@@ -20,7 +20,7 @@ class AssemblyAITranscriptionJobPoller(Component):
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
             required=True,
         ),
-        DataInput(
+        JSONInput(
             name="transcript_id",
             display_name="Transcript ID",
             info="The ID of the transcription job to poll",
@@ -40,7 +40,7 @@ class AssemblyAITranscriptionJobPoller(Component):
         Output(display_name="Transcription Result", name="transcription_result", method="poll_transcription_job"),
     ]
 
-    def poll_transcription_job(self) -> Data:
+    def poll_transcription_job(self) -> JSON:
         """Polls the transcription status until completion and returns the Data."""
         aai.settings.api_key = self.api_key
         aai.settings.polling_interval = self.polling_interval
@@ -56,7 +56,7 @@ class AssemblyAITranscriptionJobPoller(Component):
             error = f"Getting transcription failed: {e}"
             logger.opt(exception=True).debug(error)
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
 
         if transcript.status == aai.TranscriptStatus.completed:
             json_response = transcript.json_response
@@ -65,8 +65,8 @@ class AssemblyAITranscriptionJobPoller(Component):
             transcript_id = json_response.pop("id", None)
             sorted_data = {"text": text, "utterances": utterances, "id": transcript_id}
             sorted_data.update(json_response)
-            data = Data(data=sorted_data)
+            data = JSON(data=sorted_data)
             self.status = data
             return data
         self.status = transcript.error
-        return Data(data={"error": transcript.error})
+        return JSON(data={"error": transcript.error})

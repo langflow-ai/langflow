@@ -7,7 +7,7 @@ import nanoid
 from loguru import logger
 from typing_extensions import override
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
@@ -174,7 +174,7 @@ class LangWatchTracer(BaseTracer):
                 value = langchain_message_to_chat_message(value.to_lc_message())
             else:
                 value = cast("dict", value.to_lc_document())
-        elif isinstance(value, Data):
+        elif isinstance(value, JSON):
             value = cast("dict", value.to_lc_document())
         return value
 

@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 from langflow.components.vectorstores.chroma import ChromaVectorStoreComponent
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -60,7 +60,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         """Test the create_collection method with data."""
         # set ingest_data in default_kwargs to a list of Data objects
         test_texts = ["test data 1", "test data 2", "something completely different"]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_texts]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_texts]
 
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
@@ -81,7 +81,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
             "Machine learning models process data",
             "The lazy dog sleeps all day long",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["search_type"] = "Similarity"
         default_kwargs["number_of_results"] = 2
 
@@ -112,7 +112,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
             "The quick brown fox hops",
             "Something completely different about cats",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["search_type"] = "MMR"
         default_kwargs["number_of_results"] = 3
 
@@ -141,7 +141,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
             "Python is a popular programming language",
             "Machine learning models process data",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["number_of_results"] = 2
 
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
@@ -172,7 +172,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
             "Python is a popular programming language",
             "Machine learning models process data",
         ]
-        default_kwargs["ingest_data"] = [Data(text=text) for text in test_data]
+        default_kwargs["ingest_data"] = [JSON(text=text) for text in test_data]
         default_kwargs["number_of_results"] = 2
 
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
@@ -200,9 +200,9 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         """Test handling of duplicate documents."""
         # Create test data with duplicates
         test_data = [
-            Data(text_key="text", data={"text": "This is a test document"}),
-            Data(text_key="text", data={"text": "This is a test document"}),  # Duplicate with exact same data
-            Data(text_key="text", data={"text": "This is another document"}),
+            JSON(text_key="text", data={"text": "This is a test document"}),
+            JSON(text_key="text", data={"text": "This is a test document"}),  # Duplicate with exact same data
+            JSON(text_key="text", data={"text": "This is another document"}),
         ]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["allow_duplicates"] = False
@@ -225,8 +225,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # Test with allow_duplicates=True
         test_data = [
-            Data(text_key="text", data={"text": "This is a test document"}),
-            Data(text_key="text", data={"text": "This is a test document"}),  # Duplicate
+            JSON(text_key="text", data={"text": "This is a test document"}),
+            JSON(text_key="text", data={"text": "This is a test document"}),  # Duplicate
         ]
         default_kwargs["ingest_data"] = test_data
         default_kwargs["allow_duplicates"] = True
@@ -254,8 +254,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # Create a collection with documents and metadata
         test_data = [
-            Data(data={"text": "Document 1", "metadata_field": "value1"}),
-            Data(data={"text": "Document 2", "metadata_field": "value2"}),
+            JSON(data={"text": "Document 1", "metadata_field": "value1"}),
+            JSON(data={"text": "Document 2", "metadata_field": "value2"}),
         ]
         default_kwargs["ingest_data"] = test_data
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
@@ -268,7 +268,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         # Verify the conversion
         assert len(data_objects) == 2
         for data_obj in data_objects:
-            assert isinstance(data_obj, Data)
+            assert isinstance(data_obj, JSON)
             assert "id" in data_obj.data
             assert "text" in data_obj.data
             assert data_obj.data["text"] in {"Document 1", "Document 2"}
@@ -283,8 +283,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # Create a collection with documents but no metadata
         test_data = [
-            Data(data={"text": "Simple document 1"}),
-            Data(data={"text": "Simple document 2"}),
+            JSON(data={"text": "Simple document 1"}),
+            JSON(data={"text": "Simple document 2"}),
         ]
         default_kwargs["ingest_data"] = test_data
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
@@ -297,7 +297,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         # Verify the conversion
         assert len(data_objects) == 2
         for data_obj in data_objects:
-            assert isinstance(data_obj, Data)
+            assert isinstance(data_obj, JSON)
             assert "id" in data_obj.data
             assert "text" in data_obj.data
             assert data_obj.data["text"] in {"Simple document 1", "Simple document 2"}

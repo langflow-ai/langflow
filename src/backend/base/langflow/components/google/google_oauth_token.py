@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 from langflow.custom import Component
 from langflow.io import FileInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class GoogleOAuthToken(Component):
@@ -53,7 +53,7 @@ class GoogleOAuthToken(Component):
             error_message = "Invalid scope format."
             raise ValueError(error_message)
 
-    def build_output(self) -> Data:
+    def build_output(self) -> JSON:
         self.validate_scopes(self.scopes)
 
         user_scopes = [scope.strip() for scope in self.scopes.split(",")]
@@ -86,4 +86,4 @@ class GoogleOAuthToken(Component):
 
         creds_json = json.loads(creds.to_json())
 
-        return Data(data=creds_json)
+        return JSON(data=creds_json)

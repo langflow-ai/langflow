@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class SerpAPISchema(BaseModel):
@@ -96,7 +96,7 @@ class SerpAPIComponent(LCToolComponent):
         self.status = "SerpAPI Tool created"
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
         try:
             results = tool.run(
@@ -108,12 +108,12 @@ class SerpAPIComponent(LCToolComponent):
                 }
             )
 
-            data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
+            data_list = [JSON(data=result, text=result.get("snippet", "")) for result in results]
 
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error running SerpAPI")
             self.status = f"Error: {e}"
-            return [Data(data={"error": str(e)}, text=str(e))]
+            return [JSON(data={"error": str(e)}, text=str(e))]
 
         self.status = data_list  # type: ignore[assignment]
         return data_list

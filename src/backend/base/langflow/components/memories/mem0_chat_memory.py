@@ -12,7 +12,7 @@ from langflow.inputs import (
     SecretStrInput,
 )
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
         return mem0_memory
 
-    def build_search_results(self) -> Data:
+    def build_search_results(self) -> JSON:
         """Searches the Mem0 memory for related messages based on the search query and returns the results."""
         mem0_memory = self.ingest_data()
         search_query = self.search_query

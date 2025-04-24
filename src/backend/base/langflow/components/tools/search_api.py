@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class SearchAPIComponent(LCToolComponent):
@@ -70,7 +70,7 @@ class SearchAPIComponent(LCToolComponent):
         self.status = f"Search API Tool created with engine: {self.engine}"
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
         results = tool.run(
             {
@@ -81,7 +81,7 @@ class SearchAPIComponent(LCToolComponent):
             }
         )
 
-        data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
+        data_list = [JSON(data=result, text=result.get("snippet", "")) for result in results]
 
         self.status = data_list
         return data_list

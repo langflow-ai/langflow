@@ -1,7 +1,7 @@
 from langflow.base.data import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import BoolInput, IntInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class FileComponent(BaseFileComponent):
@@ -50,7 +50,7 @@ class FileComponent(BaseFileComponent):
             list[BaseFileComponent.BaseFile]: Updated list of files with merged data.
         """
 
-        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:
+        def process_file(file_path: str, *, silent_errors: bool = False) -> JSON | None:
             """Processes a single file and returns its Data object."""
             try:
                 return parse_text_file_to_data(file_path, silent_errors=silent_errors)

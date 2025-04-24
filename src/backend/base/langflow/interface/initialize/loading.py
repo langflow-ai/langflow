@@ -10,7 +10,7 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
 
@@ -167,7 +167,7 @@ async def build_custom_component(params: dict, custom_component: CustomComponent
         # Call the build method directly if it's sync
         build_result = custom_component.build(**params)
     custom_repr = custom_component.custom_repr()
-    if custom_repr is None and isinstance(build_result, dict | Data | str):
+    if custom_repr is None and isinstance(build_result, dict | JSON | str):
         custom_repr = build_result
     if not isinstance(custom_repr, str):
         custom_repr = str(custom_repr)
@@ -177,8 +177,8 @@ async def build_custom_component(params: dict, custom_component: CustomComponent
 
     elif hasattr(raw, "model_dump") and raw is not None:
         raw = raw.model_dump()
-    if raw is None and isinstance(build_result, dict | Data | str):
-        raw = build_result.data if isinstance(build_result, Data) else build_result
+    if raw is None and isinstance(build_result, dict | JSON | str):
+        raw = build_result.data if isinstance(build_result, JSON) else build_result
 
     artifact_type = get_artifact_type(custom_component.repr_value or raw, build_result)
     raw = post_process_raw(raw, artifact_type)

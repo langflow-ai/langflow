@@ -381,7 +381,7 @@ def build_custom_component_template_from_inputs(
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
         if output.types:
-            add_new_types_to_output(output)
+            # add_new_types_to_output(output)
             continue
         return_types = cc_instance.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]

@@ -7,13 +7,13 @@ import pandas as pd
 from langflow.custom import Component
 from langflow.io import (
     DataFrameInput,
-    DataInput,
     DropdownInput,
+    JSONInput,
     MessageInput,
     Output,
     StrInput,
 )
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import JSON, DataFrame, Message
 
 
 class SaveToFileComponent(Component):
@@ -42,7 +42,7 @@ class SaveToFileComponent(Component):
             dynamic=True,
             show=True,
         ),
-        DataInput(
+        JSONInput(
             name="data",
             display_name="Data",
             info="The Data object to save.",
@@ -141,7 +141,7 @@ class SaveToFileComponent(Component):
 
         return f"DataFrame saved successfully as '{path}'"
 
-    def _save_data(self, data: Data, path: Path, fmt: str) -> str:
+    def _save_data(self, data: JSON, path: Path, fmt: str) -> str:
         if fmt == "csv":
             pd.DataFrame(data.data).to_csv(path, index=False)
         elif fmt == "excel":
