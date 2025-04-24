@@ -1,8 +1,10 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
-from langflow.schema import DataFrame, Data
-import pandas as pd
-import matplotlib.pyplot as plt
+from langflow.schema import Data, DataFrame
+
 
 class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
@@ -188,7 +190,7 @@ class DataFrameOperationsComponent(Component):
             return DataFrame(dataframe_copy)
         if operation == "Base64":
             return self.convert_dataframe_to_base64(dataframe_copy)
-        
+
         msg = f"Unsupported operation: {operation}"
         raise ValueError(msg)
 
