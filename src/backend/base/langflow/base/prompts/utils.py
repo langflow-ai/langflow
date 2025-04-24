@@ -1,4 +1,3 @@
-
 from langchain_core.documents import Document
 
 from langflow.schema import JSON
