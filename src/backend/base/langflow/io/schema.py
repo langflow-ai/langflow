@@ -60,18 +60,18 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
     required_list: list[str] = []
 
     def _resolve_if_ref(schema: dict[str, Any]) -> dict[str, Any]:
-        while "$ref" in schema:
-            ref_name = schema["$ref"].split("/")[-1]
-            schema = defs.get(ref_name, {})
-        return schema
+        ref_name = schema.get("$ref", "").split("/")[-1]
+        return defs.get(ref_name, schema) if ref_name else schema
 
-    def _walk(name: str, schema: dict[str, Any], *, inherited_req: bool) -> None:
-        schema = _resolve_if_ref(schema)
+    def _walk(name: str, schema: dict[str, Any], inherited_req: bool) -> None:
+        while "$ref" in schema:
+            schema = _resolve_if_ref(schema)
+
         t = schema.get("type")
 
         # ── objects ─────────────────────────────────────────────────────────
         if t == "object":
-            req_here = set(schema.get("required", []))
+            req_here = schema.get("required", [])
             for k, subschema in schema.get("properties", {}).items():
                 child_name = f"{name}.{k}" if name else k
                 _walk(name=child_name, schema=subschema, inherited_req=inherited_req and k in req_here)
@@ -83,11 +83,11 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
             _walk(name=f"{name}[0]", schema=items, inherited_req=inherited_req)
             return
 
-        leaf: dict[str, Any] = {
+        leaf = {
             k: v
             for k, v in schema.items()
             if k
-            in (
+            in {
                 "type",
                 "description",
                 "pattern",
@@ -102,18 +102,18 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
                 "exclusiveMaximum",
                 "additionalProperties",
                 "examples",
-            )
+            }
         }
         flat_props[name] = leaf
         if inherited_req:
             required_list.append(name)
 
-    # kick things off at the true root
-    root_required = set(root_schema.get("required", []))
+    # Kick things off at the true root
+    root_required_set = set(root_schema.get("required", []))
     for k, subschema in props.items():
-        _walk(k, subschema, inherited_req=k in root_required)
+        _walk(k, subschema, inherited_req=k in root_required_set)
 
-    # build the flattened schema; keep any descriptive metadata
+    # Build the flattened schema; keep any descriptive metadata
     result: dict[str, Any] = {
         "type": "object",
         "properties": flat_props,
