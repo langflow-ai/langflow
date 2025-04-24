@@ -1,7 +1,8 @@
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
-from langflow.schema import DataFrame
-
+from langflow.schema import DataFrame, Data
+import pandas as pd
+import matplotlib.pyplot as plt
 
 class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
@@ -187,8 +188,9 @@ class DataFrameOperationsComponent(Component):
             return DataFrame(dataframe_copy)
         if operation == "Base64":
             return self.convert_dataframe_to_base64(dataframe_copy)
-
-        raise ValueError(f"Unsupported operation: {operation}")
+        
+        msg = f"Unsupported operation: {operation}"
+        raise ValueError(msg)
 
     # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
@@ -226,21 +228,21 @@ class DataFrameOperationsComponent(Component):
         if self.operation != "Convert to Data List":
             return []
         try:
-            df = self.df.copy()
-            records = df.to_dict(orient="records")
+            df_data = self.df.copy()
+            records = df_data.to_dict(orient="records")
             return [Data(data=row) for row in records]
-        except Exception as e:
+        except (AttributeError, ValueError, TypeError) as e:
             self.status = f"Error converting to Data: {e!s}"
             self.log(self.status)
             return [Data(data={"error": str(e)})]
 
     def convert_dataframe_to_base64(self, df: DataFrame) -> DataFrame:
         try:
-            df = pd.DataFrame(df).copy()
-            fig, ax = plt.subplots(figsize=(len(df.columns) * 1.2, len(df) * 0.5))
+            df_base64 = pd.DataFrame(df).copy()
+            fig, ax = plt.subplots(figsize=(len(df_base64.columns) * 1.2, len(df_base64) * 0.5))
             ax.axis("tight")
             ax.axis("off")
-            ax.table(cellText=df.values, colLabels=df.columns, loc="center")
+            ax.table(cellText=df.values, colLabels=df_base64.columns, loc="center")
             buf = io.BytesIO()
             plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
             plt.close(fig)
