@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
@@ -11,6 +12,8 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
+from langflow.custom.custom_component.component import Component
+from langflow.events.event_manager import EventManager
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import JSON
 from langflow.schema.message import Message
@@ -87,36 +90,30 @@ def _patch_send_message_decorator(component, func):
     will send messages to the UI.
     """
 
+    # Using context manager to handle the patching of send_message method
     async def async_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
+        with _temporary_patch_send_message(component):
             return await func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
 
     def sync_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
+        with _temporary_patch_send_message(component):
             return func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
 
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
 
 def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
     def output_function(*args, **kwargs):
+        if event_manager:
+            event_manager.on_build_start(data={"id": component._id})
         try:
-            if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
             component.set(*args, **kwargs)
             result = output_method()
-            if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
+        finally:
+            if event_manager:
+                event_manager.on_build_end(data={"id": component._id})
 
         if isinstance(result, Message):
             return result.get_text()
@@ -162,6 +159,10 @@ def _format_tool_name(name: str):
 
 def _add_commands_to_tool_description(tool_description: str, commands: str):
     return f"very_time you see one of those commands {commands} run the tool. tool description is {tool_description}"
+
+
+def send_message_noop(*args, **kwargs):
+    """No-op function for send_message."""
 
 
 class ComponentToolkit:
