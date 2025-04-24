@@ -97,6 +97,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 - Click on **MCP**
 - Click on **Add new global MCP server**
 - Paste the following JSON and save:`,
+    "Raw JSON": `- You need a **Langflow API key** to access the MCP server.`,
   };
 
   const copyToClipboard = () => {
@@ -182,42 +183,48 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 </Button>
               ))}
             </div>
-            {selectedMode !== "Raw JSON" && (
+            {(!isAutoLogin || selectedMode !== "Raw JSON") && (
               <div className="flex flex-row items-start justify-between border-b border-border p-1.5 px-4">
-                <span className="py-2 text-[13px]">
-                  <Markdown
-                    remarkPlugins={[remarkGfm as any]}
-                    rehypePlugins={[rehypeMathjax, rehypeRaw]}
-                    className={cn(
-                      "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
-                    )}
-                  >
-                    {MCP_SERVER_TUTORIAL[selectedMode]}
-                  </Markdown>
-                </span>
-                <Button
-                  size="sm"
-                  className="mt-2"
-                  disabled={apiKey !== ""}
-                  loading={isGeneratingApiKey}
-                  onClick={() => {
-                    setIsGeneratingApiKey(true);
-                    createApiKey(`MCP Server ${folderName}`)
-                      .then((res) => {
-                        setApiKey(res["api_key"]);
-                      })
-                      .catch((err) => {})
-                      .finally(() => {
-                        setIsGeneratingApiKey(false);
-                      });
-                  }}
-                >
-                  <span>
-                    {apiKey === "" ? "Generate API key" : "API key generated"}
+                {(selectedMode !== "Raw JSON" || !isAutoLogin) && (
+                  <span className="py-2 text-[13px]">
+                    <Markdown
+                      remarkPlugins={[remarkGfm as any]}
+                      rehypePlugins={[rehypeMathjax, rehypeRaw]}
+                      className={cn(
+                        "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
+                      )}
+                    >
+                      {MCP_SERVER_TUTORIAL[selectedMode]}
+                    </Markdown>
                   </span>
-                </Button>
+                )}
+
+                {!isAutoLogin && (
+                  <Button
+                    size="sm"
+                    className="my-2"
+                    disabled={apiKey !== ""}
+                    loading={isGeneratingApiKey}
+                    onClick={() => {
+                      setIsGeneratingApiKey(true);
+                      createApiKey(`MCP Server ${folderName}`)
+                        .then((res) => {
+                          setApiKey(res["api_key"]);
+                        })
+                        .catch((err) => {})
+                        .finally(() => {
+                          setIsGeneratingApiKey(false);
+                        });
+                    }}
+                  >
+                    <span>
+                      {apiKey === "" ? "Generate API key" : "API key generated"}
+                    </span>
+                  </Button>
+                )}
               </div>
             )}
+
             <SyntaxHighlighter
               style={syntaxHighlighterStyle}
               CodeTag={({ children }) => (
