@@ -1,7 +1,7 @@
 
 [project]
 name = "langflow"
-version = "1.3.3"
+version = "1.3.4"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -19,7 +19,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.3.3",
+    "langflow-base==0.3.4",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -72,7 +72,7 @@ dependencies = [
     "nltk==3.9.1",
     "lark==1.2.2",
     "jq==1.8.0",
-    "pydantic-settings==2.4.0",
+    "pydantic-settings>=2.2.0,<3.0.0",
     "ragstack-ai-knowledge-store==0.2.1",
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
