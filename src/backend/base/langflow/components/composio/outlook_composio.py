@@ -668,7 +668,7 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
         MessageTextInput(
             name="OUTLOOK_OUTLOOK_LIST_MESSAGES_orderby",
             display_name="Orderby",
-            info="Specify properties to sort results by. For example, 'receivedDateTime desc' for newest messages first.",
+            info="Specify properties to sort results by. For example, 'receivedDateTime desc' for newest messages first.",  # noqa: E501
             show=False,
             advanced=True,
         ),
