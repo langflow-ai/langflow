@@ -83,7 +83,10 @@ AI
 A new message has been received and added to the Urgent queue. Please review it at your earliest convenience.
 ```
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
@@ -95,12 +98,14 @@ A new message has been received and added to the Urgent queue. Please review it 
 | max_iterations | Integer  | The maximum number of iterations for the conditional router. Default: 10. |
 | default_route  | Dropdown | The default route to take when max iterations are reached. Options: "true_result" or "false_result". Default: "false_result". |
 
-### Outputs
+**Outputs**
 
 | Name         | Type    | Description                                |
 |--------------|---------|--------------------------------------------|
 | true_result  | Message | The output when the condition is true.     |
 | false_result | Message | The output when the condition is false.    |
+
+</details>
 
 ### Operator Behavior
 
@@ -119,18 +124,22 @@ All options respect the `case_sensitive` setting except **regex**.
 
 This component listens for a notification and retrieves its associated state.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Type   | Description                                    |
 |------|--------|------------------------------------------------|
 | name | String | The name of the notification to listen for.    |
 
-### Outputs
+**Outputs**
 
 | Name   | Type | Description                                |
 |--------|------|--------------------------------------------|
 | output | Data | The state associated with the notification. |
 
+</details>
 
 ## Loop
 
@@ -152,24 +161,32 @@ In this example, the data is loaded into **Chroma DB**.
 
 Follow along with this step-by-step video guide for creating this flow and adding agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Type      | Description                                          |
 |------|-----------|------------------------------------------------------|
 | data | Data/List | The initial list of Data objects to iterate over.    |
 
-### Outputs
+**Outputs**
 
 | Name | Type    | Description                                           |
 |------|---------|-------------------------------------------------------|
 | item | Data    | Outputs one item at a time from the data list.        |
 | done | Data    | Triggered when iteration complete, returns aggregated results. |
 
+</details>
+
 ## Notify
 
 This component generates a notification for the Listen component to use.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name   | Type    | Description                                                       |
 |--------|---------|-------------------------------------------------------------------|
@@ -177,28 +194,35 @@ This component generates a notification for the Listen component to use.
 | data   | Data    | The data to store in the notification.                            |
 | append | Boolean | If true, the record will be appended to the existing notification.|
 
-### Outputs
+**Outputs**
 
 | Name   | Type | Description                             |
 |--------|------|-----------------------------------------|
 | output | Data | The data stored in the notification.    |
 
+</details>
+
 ## Pass message
 
 This component forwards the input message, unchanged.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_message | Input Message | The message to be passed forward. |
 | ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | output_message | Output Message | The forwarded input message. |
+
+</details>
 
 ## Run flow
 
@@ -218,7 +242,10 @@ Your flow should now look like this:
 ![Run Flow component](/img/component-run-flow.png)
 5. Run the flow. The Agent uses the Run Flow component as a tool to run the selected sub-flow.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name              | Type     | Description                                                    |
 |-------------------|----------|----------------------------------------------------------------|
@@ -226,11 +253,13 @@ Your flow should now look like this:
 | flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior.         |
 | dynamic inputs  | Various  | Additional inputs that are generated based on the selected flow.     |
 
-### Outputs
+**Outputs**
 
 | Name         | Type        | Description                                                   |
 |--------------|-------------|---------------------------------------------------------------|
 | run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs are generated from running the flow.                   |
+
+</details>
 
 ## Legacy components
 
