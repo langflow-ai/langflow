@@ -97,6 +97,8 @@ export const lazyIconsMapping = {
     })),
   Gmail: () =>
     import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
+  Outlook: () =>
+    import("@/icons/outlook").then((mod) => ({ default: mod.OutlookIcon })),
   GradientInfinity: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientInfinity,
