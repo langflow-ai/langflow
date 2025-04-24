@@ -602,7 +602,7 @@ async def flow_as_tool_websocket(
         send_lock = asyncio.Lock()
 
         async def safe_send_json(payload):
-            logger.debug(f"Sending JSON: {payload.type}")
+            logger.debug(f"Sending JSON: {payload["type"]}")
             async with send_lock:
                 await client_websocket.send_json(payload)
             logger.debug("JSON sent.")
@@ -902,6 +902,7 @@ async def flow_as_tool_websocket(
                         do_forward = do_forward and event_type.find("flow.") != 0
                         if do_forward:
                             await safe_send_text(data)
+                            log_event(event, "↓")
 
                         if event_type == "response.text.delta":
                             if voice_config.use_elevenlabs:
@@ -989,9 +990,6 @@ async def flow_as_tool_websocket(
                                 logger.error(traceback.format_exc())
                         elif event_type == "error":
                             pass
-                        else:
-                            await safe_send_text(data)
-                        log_event(event, "↓")
 
                 except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                     pass
@@ -1052,12 +1050,16 @@ async def flow_tts_websocket(
         send_lock = asyncio.Lock()
 
         async def safe_send_json(payload):
+            logger.debug(f"Sending JSON: {payload["type"]}")
             async with send_lock:
                 await client_websocket.send_json(payload)
+            logger.debug("JSON sent.")
 
         async def safe_send_text(payload):
+            logger.debug("Sending text")
             async with send_lock:
                 await client_websocket.send_text(payload)
+            logger.debug("Text sent.")
 
         async def safe_close():
             async with send_lock:
