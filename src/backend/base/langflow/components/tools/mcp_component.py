@@ -232,6 +232,8 @@ class MCPToolsComponent(Component):
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
         try:
+            print(f"TOOL OPTIONS______________")
+            print(f"update_build_config: {build_config['tool']['options']}")
             if field_name == "mode":
                 self.remove_non_default_keys(build_config)
                 if field_value == "Stdio":
@@ -239,24 +241,33 @@ class MCPToolsComponent(Component):
                     build_config["env"]["show"] = True
                     build_config["headers_input"]["show"] = False
                     build_config["sse_url"]["show"] = False
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
+                    self.tools = []
+                    self.tool_names = []
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["env"]["show"] = False
                     build_config["sse_url"]["show"] = True
                     build_config["sse_url"]["value"] = "MCP_SSE"
                     build_config["headers_input"]["show"] = True
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
+                    self.tools = []
+                    self.tool_names = []
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
-                    await self.update_tools(
+                    build_config["tool"]["options"] = []
+                    tool_list=await self.update_tools(
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
                         env=build_config["env"]["value"],
                         headers=build_config["headers_input"]["value"],
                     )
-                    if "tool" in build_config:
-                        build_config["tool"]["options"] = self.tool_names
+                    tool_names = [tool.name for tool in tool_list]
+                    build_config["tool"]["options"] = tool_names
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
