@@ -102,7 +102,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const copyToClipboard = () => {
     navigator.clipboard
-      .writeText(MCP_SERVER_JSON)
+      .writeText(isAutoLogin ? MCP_SERVER_JSON : MCP_SERVER_JSON_WITH_API_KEY)
       .then(() => {
         setIsCopied(true);
         setTimeout(() => {
