@@ -66,7 +66,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "-y",
         "supergateway",
         "--sse",
-        "${apiUrl}",
+        "${apiUrl}"
       ]
     }
   }
