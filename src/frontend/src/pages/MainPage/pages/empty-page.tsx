@@ -1,4 +1,3 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import logoDarkPng from "@/assets/logo_dark.png";
 import logoLightPng from "@/assets/logo_light.png";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
@@ -6,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { DotBackgroundDemo } from "@/components/ui/dot-background";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
-import { EnhancedBeamEffect } from "@/pages/MainPage/pages/enchanced-beam-effect";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useFolderStore } from "@/stores/foldersStore";
