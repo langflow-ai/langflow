@@ -1,12 +1,9 @@
-import os
 import re
 from typing import Any
 
-import httpx
 from langchain_core.tools import StructuredTool
 
 from langflow.base.mcp.util import (
-    HTTP_ERROR_STATUS_CODE,
     MCPSseClient,
     MCPStdioClient,
     create_input_schema_from_json_schema,
@@ -77,6 +74,7 @@ class MCPToolsComponent(Component):
         "tool_placeholder",
         "tool_mode",
         "tool",
+        "headers_input",
     ]
 
     display_name = "MCP Server"
@@ -116,6 +114,31 @@ class MCPToolsComponent(Component):
             info="URL for MCP SSE connection",
             show=False,
             refresh_button=True,
+            value="MCP_SSE",
+            real_time_refresh=True,
+        ),
+        TableInput(
+            name="headers_input",
+            display_name="Headers",
+            info="Headers to include in the tool",
+            show=False,
+            real_time_refresh=True,
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
+
+            ],
+            value=[]
         ),
         DropdownInput(
             name="tool",
@@ -135,28 +158,7 @@ class MCPToolsComponent(Component):
             show=False,
             tool_mode=True,
         ),
-        TableInput(
-            name="headers",
-            display_name="Headers",
-            info="Headers to include in the tool",
-            value=[],
-            show=False,
-            tool_mode=False,
-            table_schema=[
-                {
-                    "name": "key",
-                    "display_name": "Header",
-                    "type": "str",
-                    "description": "Header name",
-                },
-                {
-                    "name": "value",
-                    "display_name": "Value",
-                    "type": "str",
-                    "description": "Header value",
-                },
-            ],
-        ),
+
     ]
 
     outputs = [
@@ -237,14 +239,15 @@ class MCPToolsComponent(Component):
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
                     build_config["env"]["show"] = True
-                    build_config["headers"]["show"] = False
+                    build_config["headers_input"]["show"] = False
                     build_config["sse_url"]["show"] = False
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["env"]["show"] = False
-                    build_config["headers"]["show"] = True
+                    print("Setting the header as True")
                     build_config["sse_url"]["show"] = True
                     build_config["sse_url"]["value"] = "MCP_SSE"
+                    build_config["headers_input"]["show"] = True
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
@@ -253,7 +256,7 @@ class MCPToolsComponent(Component):
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
                         env=build_config["env"]["value"],
-                        headers=build_config["headers"]["value"],
+                        headers=build_config["headers_input"]["value"],
                     )
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
@@ -270,7 +273,7 @@ class MCPToolsComponent(Component):
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
                         env=build_config["env"]["value"],
-                        headers=build_config["headers"]["value"],
+                        headers=build_config["headers_input"]["value"],
                     )
                 if self.tool is None:
                     return build_config
@@ -341,7 +344,7 @@ class MCPToolsComponent(Component):
                 command=build_config["command"]["value"],
                 url=build_config["sse_url"]["value"],
                 env=build_config["env"]["value"],
-                headers=build_config["headers"]["value"],
+                headers=build_config["headers_input"]["value"],
             )
 
         if not tool_name:
@@ -435,7 +438,7 @@ class MCPToolsComponent(Component):
             if url is None:
                 url = self.sse_url
             if headers is None:
-                headers = self.headers
+                headers = self.headers_input
             headers = self._process_headers(headers)
             await self._validate_connection_params(mode, command, url)
 
