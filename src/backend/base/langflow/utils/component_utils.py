@@ -26,7 +26,8 @@ def delete_fields(build_config: dotdict, fields: dict[str, Any] | list[str]) -> 
         fields = list(fields.keys())
 
     for field in fields:
-        build_config.pop(field, None)
+        if field in build_config:
+            del build_config[field]
     return build_config
 
 
