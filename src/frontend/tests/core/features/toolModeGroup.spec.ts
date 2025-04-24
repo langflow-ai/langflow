@@ -5,7 +5,7 @@ test.describe("group node test", () => {
   /// <reference lib="dom"/>
   test(
     "group and ungroup updating values",
-    { tag: ["@release", "@workspace"] },
+    { tag: ["@release", "@workspace", "@components"] },
     async ({ page }) => {
       await awaitBootstrapTest(page);
 

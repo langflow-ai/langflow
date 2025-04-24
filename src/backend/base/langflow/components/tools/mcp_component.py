@@ -203,6 +203,10 @@ class MCPToolsComponent(Component):
             return processed_headers
         return {}
 
+    def _is_valid_key_value_item(self, item: Any) -> bool:
+        """Check if an item is a valid key-value dictionary."""
+        return isinstance(item, dict) and "key" in item and "value" in item
+
     async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
         """Validate and process schema inputs for a tool."""
         try:
@@ -234,6 +238,7 @@ class MCPToolsComponent(Component):
         try:
             if field_name == "mode":
                 self.remove_non_default_keys(build_config)
+                build_config["tool"]["options"] = []
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
                     build_config["env"]["show"] = True
