@@ -1,4 +1,3 @@
-import traceback
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -141,9 +140,8 @@ class MCPToolsComponent(Component):
                     ):
                         is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
                         if not is_valid:
-                            raise ValueError(
-                                "Invalid SSE URL configuration: {build_config['sse_url']['value']}. Please check the SSE URL and try again."
-                            )
+                            msg = "Invalid SSE URL configuration. Please check the SSE URL and try again."
+                            raise ValueError(msg)
                     elif build_config["mode"]["value"] == "SSE":
                         if len(build_config["sse_url"]["value"]) > 0:
                             is_valid, _ = await self.sse_client.validate_url(build_config["sse_url"]["value"])
@@ -198,7 +196,6 @@ class MCPToolsComponent(Component):
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
-            print(traceback.format_exc())
             logger.exception(msg)
             raise ValueError(msg) from e
         else:

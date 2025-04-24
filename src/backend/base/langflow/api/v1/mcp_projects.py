@@ -2,7 +2,6 @@ import asyncio
 import base64
 import json
 import logging
-import traceback
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import Annotated
@@ -99,18 +98,19 @@ async def list_project_tools(
                     flow.description if flow.description else f"Tool generated from flow: {flow_name}"
                 )
                 try:
-                    tool = {
-                        "id": str(flow.id),
-                        "action_name": name,
-                        "action_description": description,
-                        "mcp_enabled": flow.mcp_enabled,
-                        "inputSchema": json_schema_from_flow(flow),
-                        "name": flow.name,
-                        "description": flow.description,
-                    }
+                    tool = MCPSettings(
+                        id=str(flow.id),
+                        action_name=name,
+                        action_description=description,
+                        mcp_enabled=flow.mcp_enabled,
+                        # inputSchema=json_schema_from_flow(flow),
+                        name=flow.name,
+                        description=flow.description,
+                    )
                     tools.append(tool)
-                except Exception as e:
-                    logger.warning(f"Error in listing project tools: {e!s} from flow: {name}")
+                except Exception as e:  # noqa: BLE001
+                    msg = f"Error in listing project tools: {e!s} from flow: {name}"
+                    logger.warning(msg)
                     continue
 
     except Exception as e:
@@ -161,11 +161,9 @@ class ProjectMCPServer:
                             inputSchema=json_schema_from_flow(flow),
                         )
                         tools.append(tool)
-            except Exception as e:
-                logger.exception("Error in listing project tools ")
-                print(traceback.format_exc())
-                print(e)
-                raise
+            except Exception as e:  # noqa: BLE001
+                msg = f"Error in listing project tools: {e!s} from flow: {name}"
+                logger.warning(msg)
             return tools
 
         @self.server.list_prompts()
