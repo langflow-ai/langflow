@@ -1,4 +1,3 @@
-from copy import deepcopy
 
 from langchain_core.documents import Document
 
@@ -28,25 +27,24 @@ def dict_values_to_string(d: dict) -> dict:
     """
     from langflow.schema.message import Message
 
-    # Do something similar to the above
-    d_copy = deepcopy(d)
-    for key, value in d_copy.items():
+    for key, value in d.items():
         # it could be a list of data or documents or strings
         if isinstance(value, list):
-            for i, item in enumerate(value):
+            for i in range(len(value)):
+                item = value[i]
                 if isinstance(item, Message):
-                    d_copy[key][i] = item.text
+                    value[i] = item.text
                 elif isinstance(item, JSON):
-                    d_copy[key][i] = data_to_string(item)
+                    value[i] = item.get_text()
                 elif isinstance(item, Document):
-                    d_copy[key][i] = document_to_string(item)
+                    value[i] = item.page_content
         elif isinstance(value, Message):
-            d_copy[key] = value.text
+            d[key] = value.text
         elif isinstance(value, JSON):
-            d_copy[key] = data_to_string(value)
+            d[key] = value.get_text()
         elif isinstance(value, Document):
-            d_copy[key] = document_to_string(value)
-    return d_copy
+            d[key] = value.page_content
+    return d
 
 
 def document_to_string(document: Document) -> str:
