@@ -1,11 +1,13 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
+import { createApiKey } from "@/controllers/API";
 import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
@@ -25,9 +27,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const projectId = folderId ?? myCollectionId ?? "";
   const [isCopied, setIsCopied] = useState(false);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
 
   const { data: flowsMCP, isLoading } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+
+  const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
   const flowsMCPData = flowsMCP?.map((flow) => ({
     id: flow.id,
@@ -55,7 +61,29 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
-      "url": "${apiUrl}"
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--sse",
+        "${apiUrl}",
+      ]
+    }
+  }
+}`;
+
+  const MCP_SERVER_JSON_WITH_API_KEY = `{
+  "mcpServers": {
+    "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--sse",
+        "${apiUrl}",
+        "--header",
+        "x-api-key:${apiKey || "YOUR_API_KEY"}"
+      ]
     }
   }
 }`;
@@ -155,7 +183,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ))}
             </div>
             {selectedMode !== "Raw JSON" && (
-              <div className="flex flex-row items-center justify-between border-b border-border p-1.5 px-4">
+              <div className="flex flex-row items-start justify-between border-b border-border p-1.5 px-4">
                 <span className="py-2 text-[13px]">
                   <Markdown
                     remarkPlugins={[remarkGfm as any]}
@@ -167,6 +195,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     {MCP_SERVER_TUTORIAL[selectedMode]}
                   </Markdown>
                 </span>
+                <Button
+                  size="sm"
+                  className="mt-2"
+                  disabled={apiKey !== ""}
+                  loading={isGeneratingApiKey}
+                  onClick={() => {
+                    setIsGeneratingApiKey(true);
+                    createApiKey(`MCP Server ${folderName}`)
+                      .then((res) => {
+                        setApiKey(res["api_key"]);
+                      })
+                      .catch((err) => {})
+                      .finally(() => {
+                        setIsGeneratingApiKey(false);
+                      });
+                  }}
+                >
+                  <span>
+                    {apiKey === "" ? "Generate API key" : "API key generated"}
+                  </span>
+                </Button>
               </div>
             )}
             <SyntaxHighlighter
@@ -193,7 +242,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               )}
               language="json"
             >
-              {MCP_SERVER_JSON}
+              {isAutoLogin ? MCP_SERVER_JSON : MCP_SERVER_JSON_WITH_API_KEY}
             </SyntaxHighlighter>
           </div>
         </div>
