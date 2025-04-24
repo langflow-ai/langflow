@@ -46,32 +46,10 @@ The equivalent call in this example is `curl -v https://dummy-json.mock.beecepto
 5. Click **Playground**, and then click **Run Flow**.
 Your request returns a list of blog posts in the `result` field.
 
-### Filter API request data
+<details>
+<summary>Parameters</summary>
 
-The **API Request** component retrieved a list of JSON objects in the `result` field.
-For this example, you will use the **Lambda Filter** to extract the desired data nested within the `result` field.
-
-1. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
-2. In the **Groq** model component, add your **Groq** API key.
-3. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
-For this example, enter:
-```
-I want to explode the result column out into a Data object
-```
-:::tip
-Avoid punctuation in the **Instructions** field, as it can cause errors.
-:::
-4. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
-5. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
-The result is a structured DataFrame.
-```text
-| userId | id | title | body | link | comment_count |
-|---|----|-------|------|------|---------------|
-| 1 | 1 | Introduction to Artificial Intelligence | Learn the basics of AI ...| https://example.com/article1 | 8 |
-| 2 | 2 | Web Development with React | Build modern web applications ...| https://example.com/article2 | 12 |
-```
-
-### Inputs
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -87,18 +65,23 @@ The result is a structured DataFrame.
 | save_to_file | Save to File | Save the API response to a temporary file |
 | include_httpx_metadata | Include HTTPx Metadata | Include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | The result of the API requests. Returns a Data object containing source URL and results.  |
 | dataframe | DataFrame | Converts the API response data into a tabular DataFrame format. |
 
+</details>
+
 ## Directory
 
 This component recursively loads files from a directory, with options for file types, depth, and concurrency.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Input              | Type             | Description                                        |
 | ------------------ | ---------------- | -------------------------------------------------- |
@@ -111,12 +94,13 @@ This component recursively loads files from a directory, with options for file t
 | silent_errors      | BoolInput        | If true, errors do not raise an exception        |
 | use_multithreading | BoolInput        | If true, multithreading is used               |
 
-
-### Outputs
+**Outputs**
 
 | Output | Type       | Description                         |
 | ------ | ---------- | ----------------------------------- |
 | data   | List[Data] | Loaded file data from the directory |
+
+</details>
 
 ## File
 
@@ -132,7 +116,10 @@ The loaded file name appears in the component.
 The default maximum supported file size is 100 MB.
 To modify this value, see [--max-file-size-upload](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -146,7 +133,7 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 | use_multithreading | [Deprecated] Use Multithreading | Set 'Processing Concurrency' greater than `1` to enable multithreading. This option is deprecated. |
 | concurrency_multithreading | Processing Concurrency | When multiple files are being processed, the number of files to process concurrently. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -154,6 +141,7 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 | dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe-object) object. |
 | message | Message | File content as a [Message](/concepts-objects#message-object) object. |
 
+</details>
 
 ### Supported File Types
 
@@ -180,90 +168,14 @@ Archive formats (for bundling multiple files):
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
 
-## Gmail Loader
-
-:::info
-Google components are available in the **Components** menu under **Bundles**.
-For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
-:::
-
-This component loads emails from Gmail using provided credentials and filters.
-
-For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
-
-### Inputs
-
-| Input       | Type             | Description                                                                          |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
-| label_ids   | MessageTextInput | Comma-separated list of label IDs to filter emails                                   |
-| max_results | MessageTextInput | Maximum number of emails to load                                                     |
-
-### Outputs
-
-| Output | Type | Description       |
-| ------ | ---- | ----------------- |
-| data   | Data | Loaded email data |
-
-## Google Drive Loader
-
-:::info
-Google components are available in the **Components** menu under **Bundles**.
-For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
-:::
-
-This component loads documents from Google Drive using provided credentials and a single document ID.
-
-For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
-
-### Inputs
-
-| Input       | Type             | Description                                                                          |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
-| document_id | MessageTextInput | Single Google Drive document ID                                                      |
-
-### Outputs
-
-| Output | Type | Description          |
-| ------ | ---- | -------------------- |
-| docs   | Data | Loaded document data |
-
-## Google Drive Search
-
-:::info
-Google components are available in the **Components** menu under **Bundles**.
-For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
-:::
-
-This component searches Google Drive files using provided credentials and query parameters.
-
-For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
-
-### Inputs
-
-| Input          | Type             | Description                                                                          |
-| -------------- | ---------------- | ------------------------------------------------------------------------------------ |
-| token_string   | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
-| query_item     | DropdownInput    | The field to query                                                                   |
-| valid_operator | DropdownInput    | Operator to use in the query                                                         |
-| search_term    | MessageTextInput | The value to search for in the specified query item                                  |
-| query_string   | MessageTextInput | The query string used for searching (can be edited manually)                         |
-
-### Outputs
-
-| Output     | Type      | Description                                     |
-| ---------- | --------- | ----------------------------------------------- |
-| doc_urls   | List[str] | URLs of the found documents                     |
-| doc_ids    | List[str] | IDs of the found documents                      |
-| doc_titles | List[str] | Titles of the found documents                   |
-| Data       | Data      | Document titles and URLs in a structured format |
-
 ## SQL Query
 
 This component executes SQL queries on a specified database.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -273,11 +185,13 @@ This component executes SQL queries on a specified database.
 | passthrough | Passthrough | If an error occurs, return the query instead of raising an exception. |
 | add_error | Add Error | Add the error to the result. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | result | Result | The result of the SQL query execution. |
+
+</details>
 
 ## URL
 
@@ -317,7 +231,10 @@ Result:
 Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
 ```
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -326,13 +243,15 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 | separator | Separator | Specify the separator to use between multiple outputs. Default for **Text** is `\n\n`. Default for **Raw HTML** is `\n<!-- Separator -->\n`. |
 | clean_extra_whitespace | Clean Extra Whitespace | Whether to clean excessive blank lines in the text output. Only applies to `Text` format. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | List of [Data](/concepts-objects) objects containing fetched content and metadata. |
 | text | Text | Fetched content as formatted text, with applied separators and cleaning. |
 | dataframe | DataFrame | Content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
+
+</details>
 
 ## Webhook
 
@@ -361,7 +280,10 @@ This mode passes the webhook's data as a string for the **Chat Output** componen
 7. Open the **Playground**.
 Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Description |
 |------|--------------|-------------|
@@ -369,8 +291,94 @@ Your JSON data is posted to the **Chat Output** component, which indicates that 
 | curl | cURL | The cURL command template for making requests to this webhook. |
 | endpoint | Endpoint | The endpoint URL where this webhook receives requests. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Description |
 |------|--------------|-------------|
 | output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
+
+</details>
+
+## Moved components
+
+The Google components are available in the **Components** menu under **Bundles**.
+For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
+
+### Gmail Loader
+
+This component loads emails from Gmail using provided credentials and filters.
+
+For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Input       | Type             | Description                                                                          |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
+| json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
+| label_ids   | MessageTextInput | Comma-separated list of label IDs to filter emails                                   |
+| max_results | MessageTextInput | Maximum number of emails to load                                                     |
+
+**Outputs**
+
+| Output | Type | Description       |
+| ------ | ---- | ----------------- |
+| data   | Data | Loaded email data |
+
+</details>
+
+### Google Drive Loader
+
+This component loads documents from Google Drive using provided credentials and a single document ID.
+
+For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Input       | Type             | Description                                                                          |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
+| json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
+| document_id | MessageTextInput | Single Google Drive document ID                                                      |
+
+**Outputs**
+
+| Output | Type | Description          |
+| ------ | ---- | -------------------- |
+| docs   | Data | Loaded document data |
+
+</details>
+
+### Google Drive Search
+
+This component searches Google Drive files using provided credentials and query parameters.
+
+For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Input          | Type             | Description                                                                          |
+| -------------- | ---------------- | ------------------------------------------------------------------------------------ |
+| token_string   | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
+| query_item     | DropdownInput    | The field to query                                                                   |
+| valid_operator | DropdownInput    | Operator to use in the query                                                         |
+| search_term    | MessageTextInput | The value to search for in the specified query item                                  |
+| query_string   | MessageTextInput | The query string used for searching (can be edited manually)                         |
+
+**Outputs**
+
+| Output     | Type      | Description                                     |
+| ---------- | --------- | ----------------------------------------------- |
+| doc_urls   | List[str] | URLs of the found documents                     |
+| doc_ids    | List[str] | IDs of the found documents                      |
+| doc_titles | List[str] | Titles of the found documents                   |
+| Data       | Data      | Document titles and URLs in a structured format |
+
+</details>
