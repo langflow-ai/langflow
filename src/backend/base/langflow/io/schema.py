@@ -1,3 +1,4 @@
+from types import UnionType
 from typing import Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, Field, create_model
@@ -128,6 +129,12 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
 
     for field_name, model_field in schema.model_fields.items():
         ann = model_field.annotation
+        if isinstance(ann, UnionType):
+            # Extract non-None types from Union
+            non_none_types = [t for t in get_args(ann) if t is not type(None)]
+            if len(non_none_types) == 1:
+                ann = non_none_types[0]
+
         is_list = False
 
         if get_origin(ann) is list:
