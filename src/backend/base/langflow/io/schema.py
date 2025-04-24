@@ -1,5 +1,5 @@
 from types import UnionType
-from typing import Any, Literal, Union, get_args, get_origin
+from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, Field, create_model
 
@@ -129,72 +129,52 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
 
     for field_name, model_field in schema.model_fields.items():
         ann = model_field.annotation
+        origin_ann = get_origin(ann)
+        args_ann = get_args(ann)
+
         if isinstance(ann, UnionType):
-            # Extract non-None types from Union
-            non_none_types = [t for t in get_args(ann) if t is not type(None)]
-            if len(non_none_types) == 1:
-                ann = non_none_types[0]
+            ann = next((t for t in args_ann if t is not type(None)), ann)
 
-        is_list = False
+        is_list = origin_ann is list
+        ann = args_ann[0] if is_list else ann
 
-        if get_origin(ann) is list:
-            is_list = True
-            ann = get_args(ann)[0]
+        options: list[Any] = None
+        if origin_ann is Literal:
+            options = list(args_ann)
+            ann = type(options[0])
 
-        options: list[Any] | None = None
-        if get_origin(ann) is Literal:
-            options = list(get_args(ann))
-            if options:
-                ann = type(options[0])
+        if isinstance(ann, UnionType):
+            ann = next((t for t in args_ann if t is not type(None)), ann)
 
-        if get_origin(ann) is Union:
-            non_none = [t for t in get_args(ann) if t is not type(None)]
-            if len(non_none) == 1:
-                ann = non_none[0]
+        display_name = model_field.title or field_name.replace("_", " ").title()
+        info = model_field.description or ""
+        required = model_field.is_required()
 
-        # 1) Nested Pydantic model?
-        # if isinstance(ann, type) and issubclass(ann, BaseModel):
-        #    nested = schema_to_langflow_inputs(ann)
-        #    inputs.append(
-        #        ObjectInput(
-        #            display_name=model_field.title or field_name.replace("_", " ").title(),
-        #            name=field_name,
-        #            info=model_field.description or "",
-        #            required=model_field.is_required(),
-        #            is_list=is_list,
-        #            inputs=nested,
-        #        )
-        #    )
-        #    continue
-
-        # 2) Enumerated choices
-        if options is not None:
+        if options:
             inputs.append(
                 DropdownInput(
-                    display_name=model_field.title or field_name.replace("_", " ").title(),
+                    display_name=display_name,
                     name=field_name,
-                    info=model_field.description or "",
-                    required=model_field.is_required(),
+                    info=info,
+                    required=required,
                     is_list=is_list,
                     options=options,
                 )
             )
             continue
 
-        # 3) “Any” fallback → text
         if ann is Any:
             inputs.append(
                 MessageTextInput(
-                    display_name=model_field.title or field_name.replace("_", " ").title(),
+                    display_name=display_name,
                     name=field_name,
-                    info=model_field.description or "",
-                    required=model_field.is_required(),
+                    info=info,
+                    required=required,
                     is_list=is_list,
                 )
             )
             continue
 
-        # 4) Primitive via your mapping
         try:
             lf_cls = _convert_type_to_field_type[ann]
         except KeyError as err:
@@ -202,10 +182,10 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
             raise TypeError(msg) from err
         inputs.append(
             lf_cls(
-                display_name=model_field.title or field_name.replace("_", " ").title(),
+                display_name=display_name,
                 name=field_name,
-                info=model_field.description or "",
-                required=model_field.is_required(),
+                info=info,
+                required=required,
                 is_list=is_list,
             )
         )
