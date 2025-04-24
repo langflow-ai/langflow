@@ -269,10 +269,6 @@ To use this component in a flow, enter your SQL database parameters and a query 
 2. In the **Query** field, enter an SQL query.
 For example, to select all rows of the `customers` column, enter `SELECT * FROM customers;`.
 
-This flow creates SQL queries from natural language and returns the results to the **Playground**.
-
-![SQL query component in a flow](/img/component-sql-query.png)
-
 ### Inputs
 
 | Name | Display Name | Info |
