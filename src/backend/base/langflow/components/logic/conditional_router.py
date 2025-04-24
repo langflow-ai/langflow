@@ -32,8 +32,16 @@ class ConditionalRouterComponent(Component):
             name="operator",
             display_name="Operator",
             options=[
-                "equals", "not equals", "contains", "starts with", "ends with", "regex",
-                "less than", "less than or equal", "greater than", "greater than or equal"
+                "equals",
+                "not equals",
+                "contains",
+                "starts with",
+                "ends with",
+                "regex",
+                "less than",
+                "less than or equal",
+                "greater than",
+                "greater than or equal",
             ],
             info="The operator to apply for comparing the texts.",
             value="equals",
