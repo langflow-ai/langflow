@@ -69,76 +69,8 @@ This component creates a CSV agent from a CSV file and LLM.
 |------|------|-------------|
 | agent | AgentExecutor | CSV agent instance |
 
-## CrewAI Agent
 
-This component represents an Agent of CrewAI, allowing for the creation of specialized AI agents with defined roles, goals, and capabilities within a crew.
 
-For more information, see the [CrewAI documentation](https://docs.crewai.com/core-concepts/Agents/).
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| role | Role | The role of the agent |
-| goal | Goal | The objective of the agent |
-| backstory | Backstory | The backstory of the agent |
-| tools | Tools | Tools at agent's disposal |
-| llm | Language Model | Language model that will run the agent |
-| memory | Memory | Whether the agent should have memory or not |
-| verbose | Verbose | Enables verbose output |
-| allow_delegation | Allow Delegation | Whether the agent is allowed to delegate tasks to other agents |
-| allow_code_execution | Allow Code Execution | Whether the agent is allowed to execute code |
-| kwargs | kwargs | Additional keyword arguments for the agent |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output | Agent | The constructed CrewAI Agent object |
-
-## Hierarchical Crew
-
-This component represents a group of agents, managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
-
-For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| agents | Agents | List of Agent objects representing the crew members |
-| tasks | Tasks | List of HierarchicalTask objects representing the tasks to be executed |
-| manager_llm | Manager LLM | Language model for the manager agent (optional) |
-| manager_agent | Manager Agent | Specific agent to act as the manager (optional) |
-| verbose | Verbose | Enables verbose output for detailed logging |
-| memory | Memory | Specifies the memory configuration for the crew |
-| use_cache | Use Cache | Enables caching of results |
-| max_rpm | Max RPM | Sets the maximum requests per minute |
-| share_crew | Share Crew | Determines if the crew information is shared among agents |
-| function_calling_llm | Function Calling LLM | Specifies the language model for function calling |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| crew | Crew | The constructed Crew object with hierarchical task execution |
-
-## JSON Agent
-
-This component creates a JSON agent from a JSON or YAML file and an LLM.
-
-### Inputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| path | File | Path to the JSON or YAML file |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | JSON agent instance |
 
 ## OpenAI Tools Agent
 
@@ -200,6 +132,159 @@ This component creates a SQL Agent to interact with SQL databases.
 |------|------|-------------|
 | agent | AgentExecutor | SQL Agent instance |
 
+## Tool Calling Agent
+
+This component creates a Tool Calling Agent using LangChain.
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| system_prompt | String | System prompt for the agent |
+| user_prompt | String | User prompt template (must contain 'input' key) |
+| chat_history | List[Data] | Optional chat history for the agent |
+| tools | List[Tool] | List of tools available to the agent |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | Tool Calling Agent instance |
+
+## XML Agent
+
+This component creates an XML Agent using LangChain.
+
+The agent uses XML formatting for tool instructions to the Language Model.
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| user_prompt | String | Custom prompt template for the agent (includes XML formatting instructions) |
+| tools | List[Tool] | List of tools available to the agent |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | XML Agent instance |
+
+## Legacy components
+
+Legacy components are available to use but no longer supported.
+
+## JSON Agent
+
+This component creates a JSON agent from a JSON or YAML file and an LLM.
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| path | File | Path to the JSON or YAML file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | JSON agent instance |
+
+### Vector Store Agent
+
+This component creates a Vector Store Agent using LangChain.
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| vectorstore | VectorStoreInfo | Vector store information for the agent to use |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | Vector Store Agent instance |
+
+## Vector Store Router Agent
+
+This component creates a Vector Store Router Agent using LangChain.
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| vectorstores | List[VectorStoreInfo] | List of vector store information for the agent to route between |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | Vector Store Router Agent instance |
+
+## Moved components
+
+The following components are available under **Bundles**.
+
+## CrewAI Agent
+
+This component represents an Agent of CrewAI, allowing for the creation of specialized AI agents with defined roles, goals, and capabilities within a crew.
+
+For more information, see the [CrewAI documentation](https://docs.crewai.com/core-concepts/Agents/).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| role | Role | The role of the agent |
+| goal | Goal | The objective of the agent |
+| backstory | Backstory | The backstory of the agent |
+| tools | Tools | Tools at agent's disposal |
+| llm | Language Model | Language model that will run the agent |
+| memory | Memory | Whether the agent should have memory or not |
+| verbose | Verbose | Enables verbose output |
+| allow_delegation | Allow Delegation | Whether the agent is allowed to delegate tasks to other agents |
+| allow_code_execution | Allow Code Execution | Whether the agent is allowed to execute code |
+| kwargs | kwargs | Additional keyword arguments for the agent |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output | Agent | The constructed CrewAI Agent object |
+
+## Hierarchical Crew
+
+This component represents a group of agents, managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
+
+For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| agents | Agents | List of Agent objects representing the crew members |
+| tasks | Tasks | List of HierarchicalTask objects representing the tasks to be executed |
+| manager_llm | Manager LLM | Language model for the manager agent (optional) |
+| manager_agent | Manager Agent | Specific agent to act as the manager (optional) |
+| verbose | Verbose | Enables verbose output for detailed logging |
+| memory | Memory | Specifies the memory configuration for the crew |
+| use_cache | Use Cache | Enables caching of results |
+| max_rpm | Max RPM | Sets the maximum requests per minute |
+| share_crew | Share Crew | Determines if the crew information is shared among agents |
+| function_calling_llm | Function Calling LLM | Specifies the language model for function calling |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| crew | Crew | The constructed Crew object with hierarchical task execution |
+
 ## Sequential Crew
 
 This component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
@@ -255,76 +340,3 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 |------|--------------|------|
 | task_output | Sequential Task | List of SequentialTask objects representing the created tasks |
 
-## Tool Calling Agent
-
-This component creates a Tool Calling Agent using LangChain.
-
-### Inputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| system_prompt | String | System prompt for the agent |
-| user_prompt | String | User prompt template (must contain 'input' key) |
-| chat_history | List[Data] | Optional chat history for the agent |
-| tools | List[Tool] | List of tools available to the agent |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | Tool Calling Agent instance |
-
-## Vector Store Agent
-
-This component creates a Vector Store Agent using LangChain.
-
-### Inputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| vectorstore | VectorStoreInfo | Vector store information for the agent to use |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | Vector Store Agent instance |
-
-## Vector Store Router Agent
-
-This component creates a Vector Store Router Agent using LangChain.
-
-### Inputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| vectorstores | List[VectorStoreInfo] | List of vector store information for the agent to route between |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | Vector Store Router Agent instance |
-
-## XML Agent
-
-This component creates an XML Agent using LangChain.
-
-The agent uses XML formatting for tool instructions to the Language Model.
-
-### Inputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| user_prompt | String | Custom prompt template for the agent (includes XML formatting instructions) |
-| tools | List[Tool] | List of tools available to the agent |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | XML Agent instance |
