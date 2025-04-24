@@ -23,10 +23,15 @@ def add_fields(build_config: dotdict, fields: dict[str, Any]) -> dotdict:
 def delete_fields(build_config: dotdict, fields: dict[str, Any] | list[str]) -> dotdict:
     """Delete specified fields from build_config."""
     if isinstance(fields, dict):
-        fields = list(fields.keys())
+        fields = fields.keys()
 
-    for field in fields:
-        build_config.pop(field, None)
+    # Create a list of fields to delete
+    fields_to_delete = [field for field in fields if field in build_config]
+
+    # Use the del statement for faster deletion
+    for field in fields_to_delete:
+        del build_config[field]
+
     return build_config
 
 
