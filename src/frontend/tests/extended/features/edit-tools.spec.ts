@@ -137,9 +137,11 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.waitForSelector("text=tool_this_is_a_test_name", {
-      timeout: 30000,
-    });
+    expect(
+      await page
+        .locator('[data-testid="tool_this_is_a_test_name"]')
+        .isVisible(),
+    ).toBe(true);
 
     await page.getByTestId("button_open_actions").click();
 
