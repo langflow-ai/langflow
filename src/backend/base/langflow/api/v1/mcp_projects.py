@@ -9,8 +9,8 @@ from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
 from anyio import BrokenResourceError
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, StreamingResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -48,7 +48,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
     """Get or create an SSE transport for a specific project."""
     project_id_str = str(project_id)
     if project_id_str not in project_sse_transports:
-        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}")
+        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
     return project_sse_transports[project_id_str]
 
 
@@ -382,6 +382,11 @@ def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
     if project_id_str not in project_mcp_servers:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
+
+
+@router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
+async def im_alive(request: Request):
+    return Response()
 
 
 @router.get("/{project_id}/sse", response_class=StreamingResponse, dependencies=[Depends(get_current_user)])
