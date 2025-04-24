@@ -371,10 +371,13 @@ project_mcp_servers = {}
 
 def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
     """Get or create an MCP server for a specific project."""
-    project_id_str = str(project_id)
-    if project_id_str not in project_mcp_servers:
-        project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
-    return project_mcp_servers[project_id_str]
+    # Check if the project_id is already present in the cache
+    cached_server = project_mcp_servers.get(project_id)
+    if cached_server is None:
+        # If not, create a new server and cache it
+        cached_server = ProjectMCPServer(project_id)
+        project_mcp_servers[project_id] = cached_server
+    return cached_server
 
 
 @router.get("/{project_id}/sse", response_class=StreamingResponse, dependencies=[Depends(get_current_user)])
