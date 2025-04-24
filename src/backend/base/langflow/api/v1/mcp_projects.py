@@ -336,6 +336,13 @@ class ProjectMCPServer:
                                     )
                                     if message:
                                         collected_results.append(types.TextContent(type="text", text=str(message)))
+                                if event_data.get("event") == "error":
+                                    collected_results.append(
+                                        types.TextContent(
+                                            type="text",
+                                            text=str(event_data.get("data", {}).get("error", "Unknown error")),
+                                        )
+                                    )
                             except json.JSONDecodeError:
                                 msg = f"Failed to parse event data: {line}"
                                 logger.warning(msg)
