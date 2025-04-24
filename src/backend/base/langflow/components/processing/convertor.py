@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from langflow.custom import Component
 from langflow.io import HandleInput, Output, TabInput
@@ -28,8 +28,7 @@ class DataTypeConverterComponent(Component):
         ),
     ]
 
-    outputs = [
-    ]
+    outputs = []
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
@@ -65,12 +64,10 @@ class DataTypeConverterComponent(Component):
         if isinstance(input_data, Data):
             # Convert Data to a string representation and create a Message
             try:
-                import json
-
                 json_string = input_data.model_dump()
                 return Message(text=json_string)
             except Exception as e:
-                self.log(f"Error converting Data to Message: {str(e)}")
+                self.log(f"Error converting Data to Message: {e!s}")
                 return Message(text=str(input_data.data))
 
         if isinstance(input_data, DataFrame):
@@ -79,7 +76,7 @@ class DataTypeConverterComponent(Component):
                 text = input_data.to_markdown(index=False)
                 return Message(text=text)
             except Exception as e:
-                self.log(f"Error converting DataFrame to Message: {str(e)}")
+                self.log(f"Error converting DataFrame to Message: {e!s}")
                 return Message(text=str(input_data))
 
         # Default fallback
@@ -96,7 +93,7 @@ class DataTypeConverterComponent(Component):
 
         if isinstance(input_data, Message):
             # Using function from MessageToData component
-            print(f"messag to daata processing")
+            print("messag to daata processing")
             print(input_data.data)
             return Data(**input_data.data)
 
@@ -106,10 +103,10 @@ class DataTypeConverterComponent(Component):
                 data_dict = input_data.to_dict(orient="records")
                 return Data(data={"records": data_dict})
             except Exception as e:
-                self.log(f"Error converting DataFrame to Data: {str(e)}")
+                self.log(f"Error converting DataFrame to Data: {e!s}")
                 return Data(data={"text": str(input_data)})
 
-        # Default fallback  
+        # Default fallback
         return Data(data={"value": str(input_data)})
 
     def to_dataframe(self) -> DataFrame:
