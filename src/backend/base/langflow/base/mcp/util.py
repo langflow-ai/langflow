@@ -173,7 +173,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         model_cache[name] = model_cls
         return model_cls
 
-    # build the top - level “InputSchema” from the root properties
+    # build the top - level "InputSchema" from the root properties
     top_props = schema.get("properties", {})
     top_reqs = set(schema.get("required", []))
     top_fields: dict[str, Any] = {}
@@ -237,7 +237,7 @@ class MCPSseClient:
             async with httpx.AsyncClient() as client:
                 try:
                     # First try a HEAD request to check if server is reachable
-                    response = await client.get(url, timeout=5.0)
+                    response = await client.head(url, timeout=5.0)
                     if response.status_code >= HTTP_ERROR_STATUS_CODE:
                         return False, f"Server returned error status: {response.status_code}"
 
@@ -257,7 +257,7 @@ class MCPSseClient:
             return url
         try:
             async with httpx.AsyncClient(follow_redirects=False) as client:
-                response = await client.get(url)
+                response = await client.request("HEAD", url)
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
         except (httpx.RequestError, httpx.HTTPError) as e:

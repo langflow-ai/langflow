@@ -328,7 +328,7 @@ def find_validation_error(exc):
     return None
 
 
-@router.get("/sse/", response_class=StreamingResponse)
+@router.get("/sse", response_class=StreamingResponse)
 async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
     logger.warning("Starting SSE connection")
     logger.warning(f"server name: {server.name}")
