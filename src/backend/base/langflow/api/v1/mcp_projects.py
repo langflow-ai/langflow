@@ -384,7 +384,7 @@ def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
     return project_mcp_servers[project_id_str]
 
 
-@router.get("/{project_id}/sse", response_class=StreamingResponse, dependencies=[Depends(get_current_user)])
+@router.get("/{project_id}/sse/", response_class=StreamingResponse, dependencies=[Depends(get_current_user)])
 async def handle_project_sse(
     project_id: UUID,
     request: Request,

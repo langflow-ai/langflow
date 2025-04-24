@@ -237,7 +237,7 @@ class MCPSseClient:
             async with httpx.AsyncClient() as client:
                 try:
                     # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
+                    response = await client.get(url, timeout=5.0)
                     if response.status_code >= HTTP_ERROR_STATUS_CODE:
                         return False, f"Server returned error status: {response.status_code}"
 
@@ -257,7 +257,7 @@ class MCPSseClient:
             return url
         try:
             async with httpx.AsyncClient(follow_redirects=False) as client:
-                response = await client.request("HEAD", url)
+                response = await client.get(url)
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
         except (httpx.RequestError, httpx.HTTPError) as e:
