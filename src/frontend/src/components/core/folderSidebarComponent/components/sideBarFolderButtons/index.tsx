@@ -413,7 +413,7 @@ const SideBarFoldersButtonsComponent = ({
                                   handleKeyDown={handleKeyDown}
                                 />
                               ) : (
-                                <span className="text-mmd block w-0 grow truncate opacity-100">
+                                <span className="block w-0 grow truncate text-mmd opacity-100">
                                   {item.name}
                                 </span>
                               )}

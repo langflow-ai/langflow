@@ -131,7 +131,7 @@ export default function SessionSelector({
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div text-mmd group cursor-pointer rounded-md text-left hover:bg-secondary-hover",
+        "file-component-accordion-div group cursor-pointer rounded-md text-left text-mmd hover:bg-secondary-hover",
         isVisible ? "bg-secondary-hover font-semibold" : "font-normal",
       )}
     >

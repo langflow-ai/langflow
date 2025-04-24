@@ -369,7 +369,7 @@ export default function NodeStatus({
           >
             <div className="cursor-help">
               {conditionSuccess && validationStatus?.data?.duration ? (
-                <div className="font-jetbrains text-xxs mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 font-bold text-accent-emerald-foreground">
+                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-xxs font-bold text-accent-emerald-foreground">
                   <Check className="h-4 w-4 items-center self-center" />
                   <span>
                     {normalizeTimeString(validationStatus?.data?.duration)}
