@@ -73,7 +73,7 @@ export default function ApiModal({
           />
           <span className="pl-2">API access</span>
           {nodes.length > 0 && (
-            <div className="border-r-1 absolute right-12 flex items-center text-[13px] font-medium leading-[16px]">
+            <div className="border-r-1 absolute right-12 flex items-center text-mmd font-medium leading-[16px]">
               <Button
                 variant="ghost"
                 size="icon"

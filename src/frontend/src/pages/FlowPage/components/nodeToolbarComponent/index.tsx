@@ -514,7 +514,7 @@ const NodeToolbarComponent = memo(
                     toolMode ? "text-primary" : "",
                   )}
                 />
-                <span className="text-[13px] font-medium">Tool Mode</span>
+                <span className="text-mmd font-medium">Tool Mode</span>
                 <ToggleShadComponent
                   value={toolMode}
                   editNode={false}

@@ -31,7 +31,7 @@ export const ToolbarButton = memo(
         data-testid={dataTestId}
       >
         <ForwardedIconComponent name={icon} className="h-4 w-4" />
-        {label && <span className="text-[13px] font-medium">{label}</span>}
+        {label && <span className="text-mmd font-medium">{label}</span>}
       </Button>
     </ShadTooltip>
   ),

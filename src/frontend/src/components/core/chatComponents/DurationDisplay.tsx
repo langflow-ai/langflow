@@ -65,7 +65,7 @@ export default function DurationDisplay({
             bounce: 0,
             duration: 300,
           }}
-          className="text-[11px] font-bold tabular-nums"
+          className="text-xxs font-bold tabular-nums"
         />
       </div>
     </div>

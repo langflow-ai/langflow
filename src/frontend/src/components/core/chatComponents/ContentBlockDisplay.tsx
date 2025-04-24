@@ -101,7 +101,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
                 >
                   {headerTitle}
                 </Markdown>
@@ -169,7 +169,7 @@ export function ContentBlockDisplay({
                         className="overflow-hidden pl-4 pt-[16px] font-medium"
                       >
                         <Markdown
-                          className="text-[14px] font-semibold text-foreground"
+                          className="text-sm font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
                           linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}
