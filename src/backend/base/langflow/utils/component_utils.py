@@ -22,12 +22,16 @@ def add_fields(build_config: dotdict, fields: dict[str, Any]) -> dotdict:
 
 def delete_fields(build_config: dotdict, fields: dict[str, Any] | list[str]) -> dotdict:
     """Delete specified fields from build_config."""
+    # Convert dict keys to list if fields is a dict
     if isinstance(fields, dict):
-        fields = list(fields.keys())
+        fields = fields.keys()
 
-    for field in fields:
-        build_config.pop(field, None)
-    return build_config
+    # Convert fields to a set for faster membership testing and removal
+    fields_set = set(fields)
+
+    build_config = {k: v for k, v in build_config.items() if k not in fields_set}
+
+    return dotdict(build_config)
 
 
 def get_fields(build_config: dotdict, fields: list[str] | None = None) -> dict[str, Any]:
