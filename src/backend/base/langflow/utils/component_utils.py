@@ -101,14 +101,7 @@ def set_multiple_field_advanced(
 
 def merge_build_configs(base_config: dotdict, override_config: dotdict) -> dotdict:
     """Merge two build configurations, with override_config taking precedence."""
-    result = dotdict(base_config.copy())
-    for key, value in override_config.items():
-        if key in result and isinstance(value, dict) and isinstance(result[key], dict):
-            # Recursively merge nested dictionaries
-            for sub_key, sub_value in value.items():
-                result[key][sub_key] = sub_value
-        else:
-            result[key] = value
+    result = dotdict(merge_dicts(base_config.copy(), override_config))
     return result
 
 
@@ -130,3 +123,15 @@ def set_current_fields(
         for field in default_fields:
             set_field_display(build_config=build_config, field=field, is_visible=True)
     return build_config
+
+
+def merge_dicts(base: dict, override: dict) -> dict:
+    """Helper function to recursively merge two dictionaries,
+    with values from override taking precedence.
+    """
+    for key, value in override.items():
+        if key in base and isinstance(value, dict) and isinstance(base[key], dict):
+            base[key] = merge_dicts(base[key], value)  # Recursive call for nested dictionary
+        else:
+            base[key] = value
+    return base
