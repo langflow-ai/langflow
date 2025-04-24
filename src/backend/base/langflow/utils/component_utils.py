@@ -78,9 +78,9 @@ def set_multiple_field_display(
 
 def set_field_advanced(build_config: dotdict, field: str, is_advanced: bool | None = None) -> dotdict:
     """Set whether a field is considered 'advanced' in the UI."""
-    if field in build_config and isinstance(build_config[field], dict):
-        build_config[field]["advanced"] = is_advanced
-    return build_config
+    config_field = build_config.get(field)
+    if config_field and isinstance(config_field, dict):
+        config_field["advanced"] = is_advanced
 
 
 def set_multiple_field_advanced(
@@ -90,10 +90,10 @@ def set_multiple_field_advanced(
     field_list: list[str] | None = None,
 ) -> dotdict:
     """Set advanced property for multiple fields at once."""
-    if fields is not None:
+    if fields:
         for field, advanced in fields.items():
             set_field_advanced(build_config, field, advanced)
-    elif field_list is not None:
+    elif field_list:
         for field in field_list:
             set_field_advanced(build_config, field, is_advanced)
     return build_config
