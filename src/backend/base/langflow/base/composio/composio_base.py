@@ -91,7 +91,7 @@ class ComposioBaseComponent(Component):
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""
-        if not self._display_to_key_map:
+        if not self._display_to_key_map or not self._key_to_display_map:
             self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
             self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
             self._sanitized_names = {
@@ -290,6 +290,7 @@ class ComposioBaseComponent(Component):
     async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
         toolset = self._build_wrapper()
+        self.set_default_tools()
         return self.configure_tools(toolset)
 
     @property
@@ -301,3 +302,7 @@ class ComposioBaseComponent(Component):
     @abstractmethod
     def execute_action(self) -> list[dict]:
         """Execute action and return response as Message."""
+
+    @abstractmethod
+    def set_default_tools(self):
+        """Set the default tools."""

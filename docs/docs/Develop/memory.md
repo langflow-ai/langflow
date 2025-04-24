@@ -15,7 +15,13 @@ This page details the following memory configuration options in Langflow.
 
 ## Local Langflow database tables
 
-The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database located at `langflow/src/backend/base/langflow/langflow.db`. The following tables are stored in `langflow.db`:
+The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
+
+- Linux/WSL: `~/.cache/langflow/langflow.db`
+- macOS: `/Users/<username>/Library/Caches/langflow/langflow.db`
+- Windows: `%LOCALAPPDATA%\langflow\langflow\Cache\langflow.db`
+
+The following tables are stored in `langflow.db`:
 
 • **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
 
