@@ -2,7 +2,6 @@ import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useState } from "react";
 import { getComponent } from "../../../controllers/API";
 import useAlertStore from "../../../stores/alertStore";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../stores/storeStore";
 import { FlowType } from "../../../types/flow";
 import { storeComponent } from "../../../types/store";
@@ -42,11 +41,6 @@ export default function StoreCardComponent({
   const [downloadsCount, setDownloadsCount] = useState(
     data?.downloads_count ?? 0,
   );
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-  // const [openPlayground, setOpenPlayground] = useState(false);
-  const [loadingPlayground, setLoadingPlayground] = useState(false);
-  const playground =
-    data.last_tested_version?.includes("1.0.0") && !data.is_component;
 
   const name = data.is_component ? "Component" : "Flow";
 
