@@ -89,16 +89,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   }
 }`;
 
-  const MCP_SERVER_TUTORIAL = {
-    Claude: `- Open **File** -> **Settings**
-- Click on **Developer**
-- Click on **Edit Config**
-- Paste the following JSON and save:`,
-    Cursor: `- Open **Settings** -> **Cursor Settings**
-- Click on **MCP**
-- Click on **Add new global MCP server**
-- Paste the following JSON and save:`,
-    "Raw JSON": `- You need a **Langflow API key** to access the MCP server.`,
+  const MCP_SERVER_TUTORIAL_LINK = {
+    Claude: "https://docs.langflow.org/mcp-server/deploying-mcp-server",
+    Cursor: "https://docs.langflow.org/mcp-server/deploying-mcp-server",
   };
 
   const copyToClipboard = () => {
@@ -170,7 +163,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
         </div>
         <div className="w-2/3 pl-4">
-          <div className="rounded-lg border border-border">
+          <div className="overflow-hidden rounded-lg border border-border">
             <div className="flex flex-row justify-start border-b border-border">
               {[
                 { name: "Cursor", icon: "Cursor" },
@@ -196,67 +189,57 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 </Button>
               ))}
             </div>
-            {(!isAutoLogin || selectedMode !== "Raw JSON") && (
-              <div className="flex flex-row items-start justify-between border-b border-border p-1.5 px-4">
-                {(selectedMode !== "Raw JSON" || !isAutoLogin) && (
-                  <span className="py-2 text-[13px]">
-                    <Markdown
-                      remarkPlugins={[remarkGfm as any]}
-                      rehypePlugins={[rehypeMathjax, rehypeRaw]}
-                      className={cn(
-                        "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
-                      )}
-                    >
-                      {MCP_SERVER_TUTORIAL[selectedMode]}
-                    </Markdown>
-                  </span>
-                )}
-
-                {!isAutoLogin && (
-                  <Button
-                    size="sm"
-                    className="my-2"
-                    disabled={apiKey !== ""}
-                    loading={isGeneratingApiKey}
-                    onClick={() => {
-                      setIsGeneratingApiKey(true);
-                      createApiKey(`MCP Server ${folderName}`)
-                        .then((res) => {
-                          setApiKey(res["api_key"]);
-                        })
-                        .catch((err) => {})
-                        .finally(() => {
-                          setIsGeneratingApiKey(false);
-                        });
-                    }}
-                  >
-                    <span>
-                      {apiKey === "" ? "Generate API key" : "API key generated"}
-                    </span>
-                  </Button>
-                )}
-              </div>
-            )}
-
             <SyntaxHighlighter
               style={syntaxHighlighterStyle}
               CodeTag={({ children }) => (
-                <div className="relative rounded-lg bg-background text-[13px]">
-                  <Button
-                    unstyled
-                    size="icon"
-                    className={cn(
-                      "absolute right-4 top-4 h-4 w-4 text-muted-foreground hover:text-foreground",
-                      selectedMode === "Cursor" && "top-[15px]",
+                <div className="relative bg-background text-[13px]">
+                  <div className="absolute right-4 top-4 flex items-center gap-6">
+                    {!isAutoLogin && (
+                      <Button
+                        unstyled
+                        className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+                        disabled={apiKey !== ""}
+                        loading={isGeneratingApiKey}
+                        onClick={() => {
+                          setIsGeneratingApiKey(true);
+                          createApiKey(`MCP Server ${folderName}`)
+                            .then((res) => {
+                              setApiKey(res["api_key"]);
+                            })
+                            .catch((err) => {})
+                            .finally(() => {
+                              setIsGeneratingApiKey(false);
+                            });
+                        }}
+                      >
+                        <ForwardedIconComponent
+                          name={"key"}
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {apiKey === ""
+                            ? "Generate API key"
+                            : "API key generated"}
+                        </span>
+                      </Button>
                     )}
-                    onClick={copyToClipboard}
-                  >
-                    <ForwardedIconComponent
-                      name={isCopied ? "check" : "copy"}
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    />
-                  </Button>
+                    <Button
+                      unstyled
+                      size="icon"
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground hover:text-foreground",
+                        selectedMode === "Cursor" && "top-[15px]",
+                      )}
+                      onClick={copyToClipboard}
+                    >
+                      <ForwardedIconComponent
+                        name={isCopied ? "check" : "copy"}
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </div>
                   <div className="overflow-x-auto p-4">{children}</div>
                 </div>
               )}
@@ -264,6 +247,18 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             >
               {isAutoLogin ? MCP_SERVER_JSON : MCP_SERVER_JSON_WITH_API_KEY}
             </SyntaxHighlighter>
+          </div>
+          <div className="p-2 text-sm text-muted-foreground">
+            Use this config in your client. Need help? See the{" "}
+            <a
+              href={MCP_SERVER_TUTORIAL_LINK[selectedMode]}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-pink-foreground"
+            >
+              setup guide
+            </a>
+            .
           </div>
         </div>
       </div>
