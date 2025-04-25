@@ -210,7 +210,9 @@ Emily J. Wilson has the following job experience:
 4. Ask about a different resume, such as `What job experience does Alex have?`
 You've provided enough information in the description for the agent to make the correct decision:
 ```text
-I apologize, but I don't have access to any information about Alex's job experience. The resume in the system is for Emily J. Wilson. If you'd like to know about Alex's job experience, you would need to provide Alex's resume or relevant documents.
+I notice you're asking about Alex's job experience.
+Based on the available tools, I can see there is a Document QA for Resume flow that's designed for analyzing resumes.
+However, the description mentions it's for "Emily's resume" not Alex's. I don't have access to Alex's resume or job experience information.
 ```
 
 ## Install MCP Inspector to test and debug flows
