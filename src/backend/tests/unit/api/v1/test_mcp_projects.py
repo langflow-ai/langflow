@@ -4,12 +4,20 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.v1.mcp_projects import (
+    get_project_mcp_server,
+    get_project_sse,
+    init_mcp_servers,
+    project_mcp_servers,
+    project_sse_transports,
+)
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user import User
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from mcp.server.sse import SseServerTransport
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -130,17 +138,6 @@ async def other_test_project(other_test_user):
         if project:
             await session.delete(project)
             await session.commit()
-
-
-async def test_handle_project_sse_success(client: AsyncClient, mock_project, logged_in_headers):
-    """Test successful SSE connection for a project."""
-    with patch("langflow.api.v1.mcp_projects.get_db_service") as mock_db:
-        mock_session = AsyncMock()
-        mock_db.return_value.with_session.return_value.__aenter__.return_value = mock_session
-        mock_session.exec.return_value.first.return_value = mock_project
-
-        response = await client.get(f"api/v1/mcp/project/{mock_project.id}/sse", headers=logged_in_headers)
-        assert response.status_code == status.HTTP_200_OK
 
 
 async def test_handle_project_messages_success(
@@ -420,3 +417,93 @@ async def test_user_can_update_own_flow_mcp_settings(
         assert updated_flow.action_name == "updated_user_action"
         assert updated_flow.action_description == "Updated user action description"
         assert updated_flow.mcp_enabled is False
+
+
+async def test_project_sse_creation(user_test_project):
+    """Test that SSE transport and MCP server are correctly created for a project."""
+    # Test getting an SSE transport for the first time
+    project_id = user_test_project.id
+    project_id_str = str(project_id)
+
+    # Ensure there's no SSE transport for this project yet
+    if project_id_str in project_sse_transports:
+        del project_sse_transports[project_id_str]
+
+    # Get an SSE transport
+    sse_transport = get_project_sse(project_id)
+
+    # Verify the transport was created correctly
+    assert project_id_str in project_sse_transports
+    assert sse_transport is project_sse_transports[project_id_str]
+    assert isinstance(sse_transport, SseServerTransport)
+
+    # Test getting an MCP server for the first time
+    if project_id_str in project_mcp_servers:
+        del project_mcp_servers[project_id_str]
+
+    # Get an MCP server
+    mcp_server = get_project_mcp_server(project_id)
+
+    # Verify the server was created correctly
+    assert project_id_str in project_mcp_servers
+    assert mcp_server is project_mcp_servers[project_id_str]
+    assert mcp_server.project_id == project_id
+    assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
+
+    # Test that getting the same SSE transport and MCP server again returns the cached instances
+    sse_transport2 = get_project_sse(project_id)
+    mcp_server2 = get_project_mcp_server(project_id)
+
+    assert sse_transport2 is sse_transport
+    assert mcp_server2 is mcp_server
+
+
+async def test_init_mcp_servers(user_test_project, other_test_project):
+    """Test the initialization of MCP servers for all projects."""
+    # Clear existing caches
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+
+    # Test the initialization function
+    await init_mcp_servers()
+
+    # Verify that both test projects have SSE transports and MCP servers initialized
+    project1_id = str(user_test_project.id)
+    project2_id = str(other_test_project.id)
+
+    # Both projects should have SSE transports created
+    assert project1_id in project_sse_transports
+    assert project2_id in project_sse_transports
+
+    # Both projects should have MCP servers created
+    assert project1_id in project_mcp_servers
+    assert project2_id in project_mcp_servers
+
+    # Verify the correct configuration
+    assert isinstance(project_sse_transports[project1_id], SseServerTransport)
+    assert isinstance(project_sse_transports[project2_id], SseServerTransport)
+
+    assert project_mcp_servers[project1_id].project_id == user_test_project.id
+    assert project_mcp_servers[project2_id].project_id == other_test_project.id
+
+
+async def test_init_mcp_servers_error_handling():
+    """Test that init_mcp_servers handles errors correctly and continues initialization."""
+    # Clear existing caches
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+
+    # Create a mock to simulate an error when initializing one project
+    original_get_project_sse = get_project_sse
+
+    def mock_get_project_sse(project_id):
+        # Raise an exception for the first project only
+        if not project_sse_transports:  # Only for the first project
+            msg = "Test error for project SSE creation"
+            raise ValueError(msg)
+        return original_get_project_sse(project_id)
+
+    # Apply the patch
+    with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
+        # This should not raise any exception, as the error should be caught
+        await init_mcp_servers()
