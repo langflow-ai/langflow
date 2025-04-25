@@ -33,6 +33,8 @@ test(
 
     await page.getByTestId("refresh-button-command").click();
 
+    await page.waitForTimeout(2000);
+
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
@@ -91,6 +93,8 @@ test(
     await page.getByTestId("fit_view").click();
 
     await page.getByTestId("refresh-button-command").click();
+
+    await page.waitForTimeout(2000);
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
