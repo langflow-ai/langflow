@@ -647,6 +647,16 @@ class FileManipulation(Component):
                             result.extend(await walk_and_search(entry, pattern))
                         elif fnmatch.fnmatch(entry.name, pattern):
                             try:
+                                # Try to read first few bytes to check if it's a text file
+                                async with await anyio.open_file(str(entry), "rb") as f:
+                                    content = await f.read(1024)
+                                    if b"\x00" in content:  # Skip binary files
+                                        continue
+                                    try:
+                                        content.decode("utf-8")
+                                    except UnicodeDecodeError:
+                                        continue
+
                                 async with await anyio.open_file(str(entry), encoding="utf-8") as f:
                                     lines = await f.readlines()
                                 for i, line in enumerate(lines, 1):
