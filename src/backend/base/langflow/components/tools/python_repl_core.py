@@ -89,7 +89,6 @@ class PythonREPLComponent(Component):
             self.log("Code execution completed successfully")
             return Data(data={"result": result})
 
-
         except ImportError as e:
             error_message = f"Import Error: {e!s}"
             self.log(error_message)
