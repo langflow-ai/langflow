@@ -330,7 +330,7 @@ def find_validation_error(exc):
 
 
 @router.head("/sse", response_class=HTMLResponse, include_in_schema=False)
-async def im_alive(request: Request):
+async def im_alive():
     return Response()
 
 

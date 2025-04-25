@@ -22,7 +22,6 @@ from langflow.api.v1.mcp import (
     current_user_ctx,
     get_mcp_config,
     handle_mcp_errors,
-    server,
     with_db_session,
 )
 from langflow.api.v1.schemas import InputValueRequest, MCPSettings
@@ -211,7 +210,7 @@ class ProjectMCPServer:
                 raise
             return resources
 
-        @server.read_resource()
+        @self.server.read_resource()
         async def handle_read_resource(uri: str) -> bytes:
             """Handle resource read requests."""
             try:
@@ -275,9 +274,9 @@ class ProjectMCPServer:
 
                 # Initial progress notification
                 if mcp_config.enable_progress_notifications and (
-                    progress_token := server.request_context.meta.progressToken
+                    progress_token := self.server.request_context.meta.progressToken
                 ):
-                    await server.request_context.session.send_progress_notification(
+                    await self.server.request_context.session.send_progress_notification(
                         progress_token=progress_token, progress=0.0, total=1.0
                     )
 
@@ -290,20 +289,22 @@ class ProjectMCPServer:
                 )
 
                 async def send_progress_updates():
-                    if not (mcp_config.enable_progress_notifications and server.request_context.meta.progressToken):
+                    if not (
+                        mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken
+                    ):
                         return
 
                     try:
                         progress = 0.0
                         while True:
-                            await server.request_context.session.send_progress_notification(
+                            await self.server.request_context.session.send_progress_notification(
                                 progress_token=progress_token, progress=min(0.9, progress), total=1.0
                             )
                             progress += 0.1
                             await asyncio.sleep(1.0)
                     except asyncio.CancelledError:
                         if mcp_config.enable_progress_notifications:
-                            await server.request_context.session.send_progress_notification(
+                            await self.server.request_context.session.send_progress_notification(
                                 progress_token=progress_token, progress=1.0, total=1.0
                             )
                         raise
@@ -357,9 +358,9 @@ class ProjectMCPServer:
 
                 except Exception:
                     if mcp_config.enable_progress_notifications and (
-                        progress_token := server.request_context.meta.progressToken
+                        progress_token := self.server.request_context.meta.progressToken
                     ):
-                        await server.request_context.session.send_progress_notification(
+                        await self.server.request_context.session.send_progress_notification(
                             progress_token=progress_token, progress=1.0, total=1.0
                         )
                     raise
@@ -385,7 +386,7 @@ def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
 
 
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
-async def im_alive(request: Request):
+async def im_alive():
     return Response()
 
 
