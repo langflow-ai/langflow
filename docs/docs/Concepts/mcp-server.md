@@ -214,3 +214,8 @@ To quit MCP Inspector, in the terminal where it's running, enter `Ctrl+C`.
 The Langflow MCP server isn't exposed to the public internet.
 
 To expose it, forward traffic with a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
+
+This example uses Ngrok, but you can use any similar sharing platform.
+This example assumes the default Langflow address of `127.0.0.1:7860`.
+If you're using **Langflow for Desktop**, the address is `127.0.0.1:7868`.
+
