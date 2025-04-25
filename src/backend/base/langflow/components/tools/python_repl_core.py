@@ -3,7 +3,7 @@ import importlib
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.custom import Component
-from langflow.io import CodeInput, Output, StrInput, MultilineInput
+from langflow.io import CodeInput, MultilineInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -82,7 +82,7 @@ class PythonREPLComponent(Component):
         try:
             globals_ = self.get_globals(self.global_imports)
             python_repl = PythonREPL(_globals=globals_)
-            
+
             # Convert input to string representation
             input_str = repr(str(self.input))
             # Replace 'input' in the code with the actual input value
