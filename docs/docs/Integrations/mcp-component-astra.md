@@ -3,6 +3,10 @@ title: Connect an Astra DB MCP server to Langflow
 slug: /mcp-component-astra
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
 Use the [MCP server component](/components-tools#mcp-server) to connect Langflow to a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp).
 
 1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).

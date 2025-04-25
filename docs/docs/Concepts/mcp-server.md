@@ -64,10 +64,10 @@ Choose a client to connect to your MCP server.
 In Cursor, you can configure a Langflow server in the same way as other MCP servers.
 For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 1. Install [Cursor](https://docs.cursor.com/).
-1. Open Cursor, and then go to **Cursor Settings**.
-2. Click MCP, and then click **Add New Global MCP Server**.
+2. Open Cursor, and then go to **Cursor Settings**.
+3. Click MCP, and then click **Add New Global MCP Server**.
 Cursor's MCP servers are listed as JSON objects.
-3. To add a Langflow server, add an entry for your Langflow server's `v1/mcp/project/**PROJECT_ID**/sse` endpoint.
+4. To add a Langflow server, add an entry for your Langflow server's `v1/mcp/project/**PROJECT_ID**/sse` endpoint.
 This example assumes the default Langflow server address of `http://127.0.0.1:7860`.
 Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP Server** page does this automatically.
 ```json
@@ -85,8 +85,8 @@ Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP 
   }
 }
 ```
-4. Save the `mcp.json` file, and then click the **Reload** icon.
-5. Your Langflow server is now available to Cursor as an MCP server, and all of its flows are registered as tools.
+5. Save the `mcp.json` file, and then click the **Reload** icon.
+6. Your Langflow server is now available to Cursor as an MCP server, and all of your project's flows are registered as tools.
 You can now use your flows as tools in Cursor.
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
@@ -103,6 +103,7 @@ For example, on the MacOS menu bar, click **Claude**, and then select **Settings
 This creates a `claude_desktop_config.json` file if you don't already have one.
 4. Add the following code to `claude_desktop_config.json`.
 This command assumes the default Langflow server address of `http://127.0.0.1:7860`.
+Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP Server** page does this automatically.
 ```json
 {
   "mcpServers": {
@@ -119,7 +120,7 @@ This command assumes the default Langflow server address of `http://127.0.0.1:78
 }
 ```
 
-5. Restart Claude for Desktop.
+6. Restart Claude for Desktop.
 Your new tools are available in your chat window, and Langflow is available as an MCP server.
 
   * To view your tools, click the <Icon name="Hammer" aria-label="Tools" /> icon.
@@ -206,7 +207,7 @@ Result:
 What job experience does Emily have?
 Emily J. Wilson has the following job experience:
 ```
-4. Ask about a different resume, such as `What job experience does Emily have?`
+4. Ask about a different resume, such as `What job experience does Alex have?`
 You've provided enough information in the description for the agent to make the correct decision:
 ```text
 I apologize, but I don't have access to any information about Alex's job experience. The resume in the system is for Emily J. Wilson. If you'd like to know about Alex's job experience, you would need to provide Alex's resume or relevant documents.
