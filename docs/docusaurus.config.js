@@ -250,6 +250,10 @@ const config = {
             to: "/components-custom-components",
             from: "/components/custom",
           },
+          {
+            to: "/concepts-mcp-server",
+            from: "/integrations-mcp",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
