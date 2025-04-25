@@ -260,7 +260,7 @@ export default function ToolsTable({
       </main>
       <Sidebar
         side="right"
-        className="flex h-full flex-col border-l border-border"
+        className="flex h-full flex-col overflow-auto border-l border-border"
       >
         <SidebarHeader className="flex-none px-4 py-4">
           <div className="flex flex-col gap-2" data-testid="sidebar_header">
@@ -278,7 +278,7 @@ export default function ToolsTable({
             </p>
           </div>
         </SidebarHeader>
-        <SidebarContent className="flex flex-1 flex-col gap-0 overflow-auto px-2">
+        <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">
           {focusedRow && (
             <div className="flex h-full flex-col gap-4">
               <SidebarGroup className="flex-1">
