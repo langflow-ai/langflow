@@ -107,7 +107,7 @@ export default function ToolsComponent({
         ) : (
           visibleActions.length === 0 &&
           isAction && (
-            <div className="flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
+            <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
               <span className="text-sm text-muted-foreground">
                 No actions added to this server
               </span>
