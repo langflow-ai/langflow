@@ -159,14 +159,6 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
-        {
-          type: 'category',
-          label: 'MCP (Model Context Protocol)',
-          items: [
-            'Integrations/MCP/integrations-mcp',
-            'Integrations/MCP/mcp-component-astra',
-          ],
-        },
         "Integrations/Apify/integrations-apify",
         {
           type: "doc",
@@ -178,6 +170,11 @@ module.exports = {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
           label: "Composio",
+        },
+        {
+          type: "doc",
+          id: "Integrations/mcp-component-astra",
+          label: "Connect an Astra DB MCP server to Langflow",
         },
         {
           type: 'category',
