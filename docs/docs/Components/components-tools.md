@@ -264,7 +264,7 @@ This component allows you to call the Serper.dev Google Search API.
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
 
-## MCP server component
+## MCP server
 
 This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
 
@@ -283,6 +283,12 @@ uvx mcp-server-fetch
 To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
 
+To include environment variables with your server command, add them like this;
+
+```bash
+env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcp
+```
+
 3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
 4. In the **Tool** field, select the server tool you want the component to use.
 The available fields change based on the selected tool.
@@ -297,7 +303,7 @@ The flow looks similar to this:
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
 This confirms the MCP server is connected, and its tools are being used in Langflow.
 
-For more information, see [MCP integrations](/integrations-mcp).
+For more information, see [MCP server](/concepts-mcp-server).
 
 ### MCP Server-Sent Events (SSE) mode
 

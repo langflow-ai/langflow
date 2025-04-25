@@ -46,7 +46,11 @@ Tool names cannot contain spaces.
 5. To modify your **Flow Name** and **Flow Description**, in the **MCP Server Actions** pane, click the **Flow name** or **Action**.
 6. The **Flow Name** field should make it clear what the flow does, both to a user and to the agent. For example, name the action `document_qa_for_resume`.
 7. The **Flow Description** field should include a description of what the action does. For example, describe the flow as `OpenAI LLM Chat with Emily's resume.`
-8. Close the window. You have named and described your flow as an action that your MCP server is exposing.
+8. Optionally, click <Icon name="RefreshCw" aria-label="Refresh"/> to reset the field value to the original name.
+:::tip
+The **Flow Name** and **Flow Description** fields must contain text.
+:::
+9. Close the window. You have named and described your flow as an action that your MCP server is exposing.
 
 ## Connect clients to use the server's actions
 
