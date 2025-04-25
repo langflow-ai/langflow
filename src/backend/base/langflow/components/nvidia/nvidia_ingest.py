@@ -270,7 +270,6 @@ class NvidiaIngestComponent(BaseFileComponent):
 
                     data.append(
                         Data(
-                            #output=f"data:image/png;base64,{image}",
                             text=image_metadata.get("caption", "No caption available"),
                             file_path=source_metadata.get("source_name", ""),
                             document_type=document_type,
@@ -278,7 +277,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                         )
                     )
                 else:
-                    self.log(f"Unsupported document type {document_type}: {element}")
+                    self.log(f"Unsupported document type {document_type}")
 
         self.status = data or "No data"
 
