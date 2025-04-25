@@ -14,12 +14,8 @@ import { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
-import Markdown from "react-markdown";
 import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
-import rehypeMathjax from "rehype-mathjax";
-import rehypeRaw from "rehype-raw";
-import remarkGfm from "remark-gfm";
 
 const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [selectedMode, setSelectedMode] = useState<string>("Cursor");
@@ -168,7 +164,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               {[
                 { name: "Cursor", icon: "Cursor" },
                 { name: "Claude", icon: "Claude" },
-                { name: "Raw JSON", icon: "file-json" },
               ].map((item, index) => (
                 <Button
                   unstyled
