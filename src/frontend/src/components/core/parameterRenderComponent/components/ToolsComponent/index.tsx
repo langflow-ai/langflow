@@ -31,8 +31,12 @@ export default function ToolsComponent({
       };
     });
 
-  const visibleActions = actions?.slice(0, 4) || [];
-  const remainingCount = actions ? Math.max(0, actions.length - 4) : 0;
+  const visibleActionsQt = isAction ? 20 : 4;
+
+  const visibleActions = actions?.slice(0, visibleActionsQt) || [];
+  const remainingCount = actions
+    ? Math.max(0, actions.length - visibleActionsQt)
+    : 0;
 
   return (
     <div
