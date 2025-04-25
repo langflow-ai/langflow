@@ -23,17 +23,17 @@ For an example `npx` server, see [Connect an Astra DB MCP server to Langflow](/m
 
 ## Serve flows as actions from the MCP server
 
-Serve your flows as actions from your MCP server, with a clear name and description for MCP clients to use it as a tool.
+Serve a flow as an action from your MCP server, with a clear name and description for MCP clients to use it as a tool.
 
 1. Navigate to the **MCP** page.
-The **MCP** page is available at the `/mcp` URL. For example, if you're running Langflow at the default `http://127.0.0.1:7860` address, the **mcp** page is located at `http://127.0.0.1:7860/mcp`.
+The **MCP** page is available at the `/mcp` URL. For example, if you're running Langflow at the default `http://127.0.0.1:7860` address, the **MCP** page is located at `http://127.0.0.1:7860/mcp`.
 :::tip
 Alternatively, from the **Workspace**, click **Publish**, and then click **MCP Server**.
 :::
 2. Click the **MCP Server** tab.
 The page presents code templates for connecting your server to client applications.
 Your available flows are listed as actions.
-![MCP server projects page](/img/mcp-server-projects.png)
+![MCP server projects page](/img/mcp-server.png)
 3. To add Actions to your server and expose them to clients, click **Edit Actions**.
 The **MCP Server Actions** pane appears.
 ![MCP server actions](/img/mcp-server-actions.png)
@@ -56,18 +56,13 @@ The **Flow Name** and **Flow Description** fields must contain text.
 
 Connect an MCP client to Langflow to use your flows as actions.
 
-Choose a client to connect to your MCP server.
+This example uses [Cursor](https://docs.cursor.com/), but you can use any [MCP-compatible client](https://modelcontextprotocol.io/clients) to connect to your server.
 
-<Tabs>
-<TabItem value="cursor" label="Cursor">
-
-In Cursor, you can configure a Langflow server in the same way as other MCP servers.
-For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 1. Install [Cursor](https://docs.cursor.com/).
 2. Open Cursor, and then go to **Cursor Settings**.
 3. Click MCP, and then click **Add New Global MCP Server**.
-Cursor's MCP servers are listed as JSON objects.
-4. To add a Langflow server, add an entry for your Langflow server's `v1/mcp/project/**PROJECT_ID**/sse` endpoint.
+Cursor's MCP servers are listed as JSON objects in `mcp.json`.
+4. To add a Langflow server, copy the code template from the **MCP Server** page in Langflow and paste it into `mcp.json`.
 This example assumes the default Langflow server address of `http://127.0.0.1:7860`.
 Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP Server** page does this automatically.
 ```json
@@ -86,54 +81,11 @@ Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP 
 }
 ```
 5. Save the `mcp.json` file, and then click the **Reload** icon.
-6. Your Langflow server is now available to Cursor as an MCP server, and all of your project's flows are registered as tools.
+6. Your Langflow server is now available to Cursor as an MCP server, and your project's added flows are registered as tools.
 You can now use your flows as tools in Cursor.
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
-</TabItem>
-
-<TabItem value="claude for desktop" label="Claude for Desktop">
-
-In Claude for Desktop, you can configure a Langflow server in the same way as other MCP servers.
-For more information, see the [Claude for Desktop MCP documentation](https://modelcontextprotocol.io/quickstart/user).
-1. Install [Claude for Desktop](https://claude.ai/download).
-2. Open Claude for Desktop, and then go to the program settings.
-For example, on the MacOS menu bar, click **Claude**, and then select **Settings**.
-3. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
-This creates a `claude_desktop_config.json` file if you don't already have one.
-4. Add the following code to `claude_desktop_config.json`.
-This command assumes the default Langflow server address of `http://127.0.0.1:7860`.
-Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP Server** page does this automatically.
-```json
-{
-  "mcpServers": {
-    "langflow-my_projects": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "http://127.0.0.1:7860/api/v1/mcp/project/**PROJECT_ID**/sse"
-      ]
-    }
-  }
-}
-```
-
-6. Restart Claude for Desktop.
-Your new tools are available in your chat window, and Langflow is available as an MCP server.
-
-  * To view your tools, click the <Icon name="Hammer" aria-label="Tools" /> icon.
-  * To view a list of connected MCP servers, which includes **langflow-mcp-server**, click the <Icon name="Unplug" aria-label="Connector" /> icon.
-
-You can now use your flows as tools in Claude for Desktop.
-
-Claude determines when to use tools based on your queries, and will request permissions when necessary.
-
-For more information, see [Debugging in Claude for Desktop](https://modelcontextprotocol.io/docs/tools/debugging#debugging-in-claude-desktop).
-
-</TabItem>
-</Tabs>
+For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
 ### Langflow MCP server authentication and environment variables
 
@@ -183,7 +135,7 @@ To include environment variables with your MCP server command, include them like
 
 ## Name and describe your flows for agentic use
 
-MCP clients like Claude for Desktop and Cursor "see" your Langflow project as a single MCP server, with **all** of your enabled flows listed as tools.
+MCP clients Cursor "see" your Langflow project as a single MCP server, with **all** of your enabled flows listed as tools.
 
 This can confuse agents, who don't know that flow `adbbf8c7-0a34-493b-90ea-5e8b42f78b66` is a Document Q&A flow for a specific text file.
 
