@@ -208,3 +208,9 @@ The Langflow server's flows are listed as tools, which confirms MCP Inspector is
 In the **Tools** tab, you can monitor how your flows are being registered as tools by MCP, and run flows with input values.
 
 To quit MCP Inspector, in the terminal where it's running, enter `Ctrl+C`.
+
+## Deploy your server externally
+
+The Langflow MCP server isn't exposed to the public internet.
+
+To expose it, forward traffic with a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
