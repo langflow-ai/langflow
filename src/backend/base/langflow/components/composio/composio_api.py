@@ -161,7 +161,7 @@ class ComposioAPIComponent(LCToolComponent):
             build_config["tool_name"]["options"] = [
                 {
                     "name": app.title(),  # TODO: Switch to app.name
-                    "icon": app.capitalize(),  # Needs Icons Capitalized
+                    "icon": app,  # TODO: Switch to app.name
                     "link": (
                         build_config["tool_name"]["options"][ind]["link"]
                         if build_config["tool_name"]["options"]
