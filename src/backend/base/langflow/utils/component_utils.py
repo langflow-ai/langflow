@@ -103,10 +103,8 @@ def merge_build_configs(base_config: dotdict, override_config: dotdict) -> dotdi
     """Merge two build configurations, with override_config taking precedence."""
     result = dotdict(base_config.copy())
     for key, value in override_config.items():
-        if key in result and isinstance(value, dict) and isinstance(result[key], dict):
-            # Recursively merge nested dictionaries
-            for sub_key, sub_value in value.items():
-                result[key][sub_key] = sub_value
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key].update(value)  # Directly update the nested dictionary
         else:
             result[key] = value
     return result
