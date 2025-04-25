@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to change mode of MCP server without any issues",
-  { tag: ["@release", "@workspace", "@components"] },
+  { tag: ["@release", "@workspace", "@components", "@development"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
@@ -21,9 +21,8 @@ test(
 
     await page
       .getByTestId("toolsMCP Server")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-mcp-server").click();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
       });
 
     await page.getByTestId("fit_view").click();
@@ -48,6 +47,10 @@ test(
     expect(fetchOptionCount).toBeGreaterThan(0);
 
     await page.getByTestId("fetch-0-option").click();
+
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("fit_view").click();
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -83,6 +86,10 @@ test(
 
     await page.getByTestId("tab_0_stdio").click();
 
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("fit_view").click();
+
     await page.getByTestId("refresh-button-command").click();
 
     await page.waitForSelector(
@@ -97,6 +104,10 @@ test(
     fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
     await page.getByTestId("fetch-0-option").click();
+
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("fit_view").click();
 
     expect(fetchOptionCount).toBeGreaterThan(0);
 
