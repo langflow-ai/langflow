@@ -55,11 +55,11 @@ test(
     ).toBe(true);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(2).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(true);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
     ).toBe(true);
 
     await page.locator('input[data-ref="eInput"]').nth(0).click();
@@ -67,11 +67,11 @@ test(
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(2).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(false);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
     ).toBe(false);
 
     await page.getByText("Close").last().click();
@@ -98,19 +98,19 @@ test(
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(2).isChecked(),
-    ).toBe(false);
-
-    expect(
       await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(false);
 
-    await page.locator('input[data-ref="eInput"]').nth(2).click();
+    expect(
+      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
+    ).toBe(false);
+
+    await page.locator('input[data-ref="eInput"]').nth(3).click();
 
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(2).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(true);
 
     await page.getByRole("gridcell").nth(0).click();
