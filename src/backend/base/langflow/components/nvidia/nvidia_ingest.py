@@ -1,7 +1,14 @@
 from urllib.parse import urlparse
 
 from langflow.base.data import BaseFileComponent
-from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, FloatInput, MessageTextInput, SecretStrInput, Output
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    SecretStrInput,
+)
 from langflow.schema import Data
 
 
@@ -187,7 +194,6 @@ class NvidiaIngestComponent(BaseFileComponent):
                     extract_images=self.extract_images,
                     text_depth=self.text_depth,
                 )
-
             )
 
             if self.extract_images:
@@ -211,7 +217,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                     tokenizer="intfloat/e5-large-unsupervised",
                     chunk_size=self.chunk_size,
                     chunk_overlap=self.chunk_overlap,
-                    params={"split_source_types":["PDF"]}
+                    params={"split_source_types": ["PDF"]},
                 )
 
             result = ingestor.ingest()
@@ -248,8 +254,8 @@ class NvidiaIngestComponent(BaseFileComponent):
                 # with extracted text in "table_content"
                 elif document_type == document_type_structured:
                     table_metadata = metadata.get("table_metadata", {})
-                    
-                    #reformat chart/table images as binary data
+
+                    # reformat chart/table images as binary data
                     if "content" in metadata:
                         metadata["content"] = {"$binary": metadata["content"]}
 
@@ -264,7 +270,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                 elif document_type == "image":
                     image_metadata = metadata.get("image_metadata", {})
 
-                    #reformat images as binary data
+                    # reformat images as binary data
                     if "content" in metadata:
                         metadata["content"] = {"$binary": metadata["content"]}
 
