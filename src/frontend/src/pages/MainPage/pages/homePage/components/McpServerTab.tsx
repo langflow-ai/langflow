@@ -111,7 +111,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
           className="text-accent-pink-foreground"
-          href="https://docs.langflow.org/mcp-server/deploying-mcp-server"
+          href="https://docs.langflow.org/mcp-server#deploy-your-server-externally"
           target="_blank"
           rel="noreferrer"
         >
