@@ -384,8 +384,29 @@ def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
     return project_mcp_servers[project_id_str]
 
 
+async def init_mcp_servers():
+    """Initialize MCP servers for all projects."""
+    try:
+        db_service = get_db_service()
+        async with db_service.with_session() as session:
+            projects = (await session.exec(select(Folder))).all()
+
+            for project in projects:
+                try:
+                    get_project_sse(project.id)
+                    get_project_mcp_server(project.id)
+                except Exception as e:
+                    msg = f"Failed to initialize MCP server for project {project.id}: {e}"
+                    logger.exception(msg)
+                    # Continue to next project even if this one fails
+
+    except Exception as e:
+        msg = f"Failed to initialize MCP servers: {e}"
+        logger.exception(msg)
+
+
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
-async def im_alive(request: Request):
+async def im_alive():
     return Response()
 
 
