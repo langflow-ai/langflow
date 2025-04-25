@@ -105,7 +105,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   return (
     <div>
       <div className="text-md -mt-2 pb-2 font-bold">MCP Server</div>
-      <div className="pb-4 text-xs text-muted-foreground">
+      <div className="pb-4 text-sm text-muted-foreground">
         Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
           className="text-accent-pink-foreground"
@@ -124,8 +124,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP actions."
               side="right"
             >
-              <div className="flex items-center text-sm font-normal hover:cursor-help">
-                Server Actions
+              <div className="flex items-center text-sm font-medium hover:cursor-help">
+                Flows/Actions
                 <ForwardedIconComponent
                   name="info"
                   className="ml-1.5 h-4 w-4 text-muted-foreground"
@@ -172,7 +172,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     selectedMode === item.name
                       ? "border-b-2 border-black dark:border-b-white"
                       : "text-muted-foreground hover:text-foreground"
-                  } border-r border-r-border px-3 py-2 text-[13px]`}
+                  } border-r border-r-border px-3 py-2 text-sm`}
                   onClick={() => setSelectedMode(item.name)}
                 >
                   <ForwardedIconComponent
