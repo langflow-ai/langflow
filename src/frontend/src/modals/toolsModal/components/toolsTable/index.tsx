@@ -175,12 +175,12 @@ export default function ToolsTable({
             ? parseString(params.data.name, [
                 "snake_case",
                 "no_blank",
-                "lowercase",
+                "uppercase",
               ])
             : parseString(params.data.display_name, [
                 "snake_case",
                 "no_blank",
-                "lowercase",
+                "uppercase",
               ])
           : params.data.tags.join(", "),
       cellClass: "text-muted-foreground",
