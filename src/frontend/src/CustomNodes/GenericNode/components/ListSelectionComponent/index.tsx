@@ -88,7 +88,7 @@ const ListItem = ({
     >
       <div className="flex w-full items-center gap-2">
         {item.icon && (
-          <div className="flex h-5 w-5 items-center justify-start">
+          <div className="mr-1 flex h-4 w-4 items-center justify-start">
             <ForwardedIconComponent
               name={item?.icon?.charAt(0).toUpperCase() + item?.icon?.slice(1)}
               className="h-4 w-4"
