@@ -314,6 +314,10 @@ For more information, see [MCP server](/mcp-server).
 
 ### MCP Server-Sent Events (SSE) mode
 
+:::important
+If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
+:::
+
 The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
 This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
 

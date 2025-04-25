@@ -23,6 +23,9 @@ For an example `npx` server, see [Connect an Astra DB MCP server to Langflow](/m
 
 ## Serve flows as actions from the MCP server
 
+:::important
+If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
+:::
 Serve a flow as an action from your MCP server, with a clear name and description for MCP clients to use it as a tool.
 
 1. Navigate to the **MCP** page.
@@ -91,6 +94,7 @@ For more information, see the [Cursor MCP documentation](https://docs.cursor.com
 
 If your Langflow server has `LANGFLOW_AUTO_LOGIN` set to `False`, MCP commands require an API key to connect.
 The presented code snippets automatically include the `x-api-key` field, but you need to replace the value for **LANGFLOW_API_KEY** with your Langflow API key.
+To create a Langflow API key, in the **MCP Server** tab, click **Create API key**. The key is added to your server command.
 
 ```json
 {
