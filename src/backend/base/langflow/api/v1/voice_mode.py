@@ -559,7 +559,7 @@ def create_event_logger(session_id: str):
     state = {"last_event_type": None, "event_count": 0}
 
     def log_event(event: dict, direction: str) -> None:
-        event_type = event["type"]
+        event_type = event.get("type", "None")
         event_id = event.get("event_id", "None")
         if event_type != state["last_event_type"]:
             logger.debug(f"Event (id - {event_id}) (session - {session_id}): {direction} {event_type}")
@@ -606,35 +606,49 @@ async def flow_as_tool_websocket(
     try:
         await client_websocket.accept()
 
-        client_lock = asyncio.Lock()
-        openai_lock = asyncio.Lock()
+        openai_send_q: asyncio.Queue[str] = asyncio.Queue()
+        client_send_q: asyncio.Queue[str] = asyncio.Queue()
+
+        async def openai_writer():
+            while True:
+                msg = await openai_send_q.get()
+                if msg is None:
+                    break
+                await openai_ws.send(msg)
+
+        async def client_writer():
+            while True:
+                msg = await client_send_q.get()
+                if msg is None:
+                    break
+                await client_websocket.send_text(msg)
 
         log_event = create_event_logger(session_id)
 
-        async def openai_safe_send(payload):
-            async with openai_lock:
-                log_event(payload, DIRECTION_TO_OPENAI)
-                logger.trace(f"Sending text {DIRECTION_TO_OPENAI}: {payload['type']}")
-                await openai_ws.send(json.dumps(payload))
-                logger.trace("JSON sent.")
+        def openai_send(payload):
+            log_event(payload, DIRECTION_TO_OPENAI)
+            logger.trace(f"Sending text {DIRECTION_TO_OPENAI}: {payload['type']}")
+            openai_send_q.put_nowait(json.dumps(payload))
+            logger.trace("JSON sent.")
 
-        async def client_safe_send(payload):
-            async with client_lock:
-                log_event(payload, DIRECTION_TO_CLIENT)
-                logger.trace(f"Sending JSON {DIRECTION_TO_CLIENT}: {payload['type']}")
-                await client_websocket.send_json(payload)
-                logger.trace("JSON sent.")
+        def client_send(payload):
+            log_event(payload, DIRECTION_TO_CLIENT)
+            logger.trace(f"Sending JSON {DIRECTION_TO_CLIENT}: {payload.get('type', 'None')}")
+            client_send_q.put_nowait(json.dumps(payload))
+            logger.trace("JSON sent.")
 
-        async def safe_close():
-            async with client_lock:
-                await client_websocket.close()
-            async with openai_lock:
-                await openai_ws.close()
+        async def close():
+            openai_send_q.put_nowait(None)
+            client_send_q.put_nowait(None)
+            await openai_writer_task
+            await client_writer_task
+            await client_websocket.close()
+            await openai_ws.close()
 
         vad_task = None
         voice_config = get_voice_config(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_safe_send)
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
         if current_user is None or openai_key is None:
             return
         try:
@@ -650,7 +664,7 @@ async def flow_as_tool_websocket(
                 },
             }
         except Exception as e:  # noqa: BLE001
-            await client_safe_send({"error": f"Failed to load flow: {e!s}"})
+            client_send({"error": f"Failed to load flow: {e!s}"})
             logger.error(f"Failed to load flow: {e}")
             return
 
@@ -667,8 +681,12 @@ async def flow_as_tool_websocket(
 
         async with websockets.connect(url, extra_headers=headers) as openai_ws:
             openai_realtime_session = init_session_dict()
+
+            openai_writer_task = asyncio.create_task(openai_writer())
+            client_writer_task = asyncio.create_task(client_writer())
+
             session_update = {"type": "session.update", "session": openai_realtime_session}
-            await openai_safe_send(session_update)
+            openai_send(session_update)
 
             # Setup for VAD processing.
             vad_queue: asyncio.Queue = asyncio.Queue()
@@ -694,7 +712,7 @@ async def flow_as_tool_websocket(
                                 has_speech = True
                                 logger.trace("!", end="")
                                 if bot_speaking_flag[0]:
-                                    await openai_safe_send({"type": "response.cancel"})
+                                    openai_send({"type": "response.cancel"})
                                     bot_speaking_flag[0] = False
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"[ERROR] VAD processing failed (ValueError): {e}")
@@ -708,7 +726,7 @@ async def flow_as_tool_websocket(
                             logger.trace("_", end="")
 
             def client_send_event_from_thread(event, loop) -> None:
-                return asyncio.run_coroutine_threadsafe(client_safe_send(event), loop).result()
+                return loop.call_soon_threadsafe(client_send, event)
 
             def pass_through(from_dict, to_dict, keys):
                 for key in keys:
@@ -835,14 +853,14 @@ async def flow_as_tool_websocket(
                             # Ensure we're adding to an integer
                             num_audio_samples += len(base64_data)
                             event = {"type": "input_audio_buffer.append", "audio": base64_data}
-                            await openai_safe_send(event)
+                            openai_send(event)
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
                         elif msg.get("type") == "response.create":
-                            await openai_safe_send(common_response_create(session_id, msg))
+                            openai_send(common_response_create(session_id, msg))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
-                                await openai_safe_send(msg)
+                                openai_send(msg)
                                 num_audio_samples = 0
                         elif msg.get("type") == "langflow.voice_mode.config":
                             logger.info(f"langflow.voice_mode.config {msg}")
@@ -856,13 +874,13 @@ async def flow_as_tool_websocket(
                             modalities = ["text"] if voice_config.use_elevenlabs else ["audio", "text"]
                             openai_realtime_session["modalities"] = modalities
                             session_update = {"type": "session.update", "session": openai_realtime_session}
-                            await openai_safe_send(session_update)
+                            openai_send(session_update)
                         elif msg.get("type") == "session.update":
                             openai_realtime_session = update_global_session(msg["session"])
                             session_update = {"type": "session.update", "session": openai_realtime_session}
-                            await openai_safe_send(session_update)
+                            openai_send(session_update)
                         else:
-                            await openai_safe_send(msg)
+                            openai_send(msg)
                 except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                     pass
 
@@ -886,7 +904,7 @@ async def flow_as_tool_websocket(
                         do_forward = do_forward and event_type.find("flow.") != 0
                         
                         if do_forward:
-                            await client_safe_send(event)
+                            client_send(event)
                         if event_type == "response.created":
                             if voice_config.use_elevenlabs:
                                 response_id = event["response"]["id"]
@@ -948,8 +966,8 @@ async def flow_as_tool_websocket(
                                         conversation_id,
                                         session_id,
                                         voice_config,
-                                        client_safe_send,
-                                        openai_safe_send,
+                                        client_send,
+                                        openai_send,
                                     )
                                 )
                                 # Store the task reference to prevent garbage collection
@@ -983,21 +1001,23 @@ async def flow_as_tool_websocket(
                 # Store the task reference to prevent it from being garbage collected
                 vad_task = asyncio.create_task(process_vad_audio())
 
-            await asyncio.gather(
-                forward_to_openai(),
-                forward_to_client(),
-            )
-
+            try:
+                # TaskGroup handles cancellation & error propagation for you
+                async with asyncio.TaskGroup() as tg:
+                    tg.create_task(forward_to_openai())
+                    tg.create_task(forward_to_client())
+                # if both finish normally, TaskGroup exits cleanly here
+            except* Exception as excs:  # noqa: BLE001
+                # handle any exceptions from any task
+                for exc in excs.exceptions:
+                    logger.error("WS loop failed:", exc_info=exc)
+            finally:
+                # shared cleanup for writers & sockets
+                await close()
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Value error: {e}")
+        logger.error(f"Unexpected error: {e}")
         logger.error(traceback.format_exc())
     finally:
-        # Ensure that both websockets are closed.
-        try:
-            await safe_close()
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"{e} ")
-        logger.info("Websocket cleanup complete.")
         # Make sure to clean up the task
         if vad_task and not vad_task.done():
             vad_task.cancel()
@@ -1032,36 +1052,48 @@ async def flow_tts_websocket(
     try:
         await client_websocket.accept()
 
-        send_lock = asyncio.Lock()
-        openai_lock = asyncio.Lock()
+        openai_send_q: asyncio.Queue[str] = asyncio.Queue()
+        client_send_q: asyncio.Queue[str] = asyncio.Queue()
 
-        async def openai_safe_send(payload):
-            async with openai_lock:
-                log_event(payload, DIRECTION_TO_OPENAI)
-                logger.trace(f"Sending text {DIRECTION_TO_OPENAI}: {payload['type']}")
-                await openai_ws.send(json.dumps(payload))
-                logger.trace("JSON sent.")
+        async def openai_writer():
+            while True:
+                msg = await openai_send_q.get()
+                if msg is None:
+                    break
+                await openai_ws.send(msg)
 
-        async def safe_send_json(payload):
-            async with send_lock:
-                log_event(payload, DIRECTION_TO_CLIENT)
-                logger.trace(f"Sending JSON {DIRECTION_TO_CLIENT}: {payload['type']}")
-                await client_websocket.send_json(payload)
-                logger.trace("JSON sent.")
+        async def client_writer():
+            while True:
+                msg = await client_send_q.get()
+                if msg is None:
+                    break
+                await client_websocket.send_text(msg)
 
-        async def safe_send_text(payload):
-            logger.trace("Sending text")
-            async with send_lock:
-                await client_websocket.send_text(payload)
-            logger.trace("Text sent.")
+        log_event = create_event_logger(session_id)
 
-        async def safe_close():
-            async with send_lock:
-                await client_websocket.close()
+        def openai_send(payload):
+            log_event(payload, DIRECTION_TO_OPENAI)
+            logger.trace(f"Sending text {DIRECTION_TO_OPENAI}: {payload['type']}")
+            openai_send_q.put_nowait(json.dumps(payload))
+            logger.trace("JSON sent.")
+
+        def client_send(payload):
+            log_event(payload, DIRECTION_TO_CLIENT)
+            logger.trace(f"Sending JSON {DIRECTION_TO_CLIENT}: {payload['type']}")
+            client_send_q.put_nowait(json.dumps(payload))
+            logger.trace("JSON sent.")
+
+        async def close():
+            openai_send_q.put_nowait(None)
+            client_send_q.put_nowait(None)
+            await openai_writer_task
+            await client_writer_task
+            await client_websocket.close()
+            await openai_ws.close()
 
         log_event = create_event_logger(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, safe_send_json)
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
@@ -1070,8 +1102,12 @@ async def flow_tts_websocket(
 
         tts_config = get_tts_config(session_id, openai_key)
         async with websockets.connect(url, extra_headers=headers) as openai_ws:
+            openai_writer_task = asyncio.create_task(openai_writer())
+            client_writer_task = asyncio.create_task(client_writer())
+
             tts_realtime_session = tts_config.get_session_dict()
-            await openai_safe_send(tts_realtime_session)
+
+            openai_send(tts_realtime_session)
 
             async def forward_to_openai() -> None:
                 try:
@@ -1083,9 +1119,9 @@ async def flow_tts_websocket(
                             if not base64_data:
                                 continue
                             out_event = {"type": "input_audio_buffer.append", "audio": base64_data}
-                            await openai_safe_send(out_event)
+                            openai_send(out_event)
                         elif event.get("type") == "input_audio_buffer.commit":
-                            await openai_safe_send(event)
+                            openai_send(event)
                         elif event.get("type") == "langflow.elevenlabs.config":
                             logger.info(f"langflow.elevenlabs.config {event}")
                             tts_config.use_elevenlabs = event["enabled"]
@@ -1103,7 +1139,7 @@ async def flow_tts_websocket(
                     while True:
                         data = await openai_ws.recv()
                         event = json.loads(data)
-                        await safe_send_text(data)
+                        client_send(event)
                         if event.get("type") == "conversation.item.input_audio_transcription.completed":
                             transcript = event.get("transcript")
                             if transcript is not None and transcript != "":
@@ -1121,7 +1157,7 @@ async def flow_tts_websocket(
                                     if not line:
                                         continue
                                     event_data = json.loads(line)
-                                    await safe_send_json({"type": "flow.build.progress", "data": event_data})
+                                    client_send({"type": "flow.build.progress", "data": event_data})
                                     if event_data.get("event") == "end_vertex":
                                         text = (
                                             event_data.get("data", {})
@@ -1151,7 +1187,7 @@ async def flow_tts_websocket(
                                         for chunk in audio_stream:
                                             base64_audio = base64.b64encode(chunk).decode("utf-8")
                                             audio_event = {"type": "response.audio.delta", "delta": base64_audio}
-                                            await safe_send_json(audio_event)
+                                            client_send(audio_event)
                                     else:
                                         oai_client = tts_config.get_openai_client()
                                         voice = tts_config.get_openai_voice()
@@ -1165,26 +1201,26 @@ async def flow_tts_websocket(
 
                                         base64_audio = base64.b64encode(response.content).decode("utf-8")
                                         audio_event = {"type": "response.audio.delta", "delta": base64_audio}
-                                        await safe_send_json(audio_event)
+                                        client_send(audio_event)
                 except Exception as e:  # noqa: BLE001
                     logger.error(f"Error in WebSocket communication: {e}")
 
-            forward_to_openai_task = asyncio.create_task(forward_to_openai())
-            forward_to_client_task = asyncio.create_task(forward_to_client())
             try:
-                await asyncio.gather(
-                    forward_to_openai_task,
-                    forward_to_client_task,
-                )
-            except Exception as e:  # noqa: BLE001
-                logger.error(f"Error in WebSocket communication: {e}")
-                logger.error(traceback.format_exc())
+                # TaskGroup handles cancellation & error propagation for you
+                async with asyncio.TaskGroup() as tg:
+                    tg.create_task(forward_to_openai())
+                    tg.create_task(forward_to_client())
+                # if both finish normally, TaskGroup exits cleanly here
+            except* Exception as excs:  # noqa: BLE001
+                # handle any exceptions from any task
+                for exc in excs.exceptions:
+                    logger.error("WS loop failed:", exc_info=exc)
             finally:
-                forward_to_openai_task.cancel()
+                # shared cleanup for writers & sockets
+                await close()
     except Exception as e:  # noqa: BLE001
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"Unexpected error: {e}")
         logger.error(traceback.format_exc())
-        await safe_close()
 
 
 def extract_transcript(json_data):
