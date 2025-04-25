@@ -5,7 +5,7 @@ from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 from langflow.custom import Component
 from langflow.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.schema.message import Message
 
 
@@ -37,21 +37,21 @@ class SearchComponent(Component):
     def _build_wrapper(self):
         return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self.fetch_content()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         wrapper = self._build_wrapper()
 
         def search_func(
             query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
-        ) -> list[Data]:
+        ) -> list[JSON]:
             params = params or {}
             full_results = wrapper.results(query=query, **params)
             organic_results = full_results.get("organic_results", [])[:max_results]
 
             return [
-                Data(
+                JSON(
                     text=result.get("snippet", ""),
                     data={
                         "title": result.get("title", "")[:max_snippet_length],

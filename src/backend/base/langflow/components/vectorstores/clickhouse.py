@@ -11,7 +11,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
@@ -88,7 +88,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
@@ -119,7 +119,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
 
         return clickhouse_vs
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

@@ -16,7 +16,7 @@ from langflow.inputs.inputs import InputTypes, MultilineInput
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.logging import logger
 from langflow.memory import delete_message
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.message import Message
 from langflow.template import Output
@@ -114,7 +114,7 @@ class LCAgentComponent(Component):
             }
         return {**base, "agent_executor_kwargs": agent_kwargs}
 
-    def get_chat_history_data(self) -> list[Data] | None:
+    def get_chat_history_data(self) -> list[JSON] | None:
         # might be overridden in subclasses
         return None
 

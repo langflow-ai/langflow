@@ -2,7 +2,7 @@ import re
 
 import pytest
 from langflow.components.processing import UpdateDataComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 @pytest.fixture
@@ -61,11 +61,11 @@ async def test_build_data(update_data_component):
     }
     update_data_component.text_key = "key1"
     update_data_component.text_key_validator = False
-    update_data_component.old_data = Data(data={"key1": "old_value1", "key2": "value2"}, text_key="key2")
+    update_data_component.old_data = JSON(data={"key1": "old_value1", "key2": "value2"}, text_key="key2")
 
     result = await update_data_component.build_data()
 
-    assert isinstance(result, Data)
+    assert isinstance(result, JSON)
     assert result.data == {"key1": "new_value1", "key2": "value2", "key3": "value3"}
     assert result.text_key == "key1"
 
@@ -82,7 +82,7 @@ def test_get_data(update_data_component):
 
 
 def test_validate_text_key_valid(update_data_component):
-    data = Data(data={"key1": "value1", "key2": "value2"}, text_key="key1")
+    data = JSON(data={"key1": "value1", "key2": "value2"}, text_key="key1")
     update_data_component.text_key = "key1"
 
     try:
@@ -92,7 +92,7 @@ def test_validate_text_key_valid(update_data_component):
 
 
 def test_validate_text_key_invalid(update_data_component):
-    data = Data(data={"key1": "value1", "key2": "value2"}, text_key="key1")
+    data = JSON(data={"key1": "value1", "key2": "value2"}, text_key="key1")
     update_data_component.text_key = "invalid_key"
     with pytest.raises(ValueError) as exc_info:  # noqa: PT011
         update_data_component.validate_text_key(data)

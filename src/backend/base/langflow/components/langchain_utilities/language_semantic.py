@@ -10,7 +10,7 @@ from langflow.io import (
     MessageTextInput,
     Output,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class SemanticTextSplitterComponent(LCTextSplitterComponent):
@@ -82,11 +82,11 @@ class SemanticTextSplitterComponent(LCTextSplitterComponent):
         Output(display_name="Chunks", name="chunks", method="split_text"),
     ]
 
-    def _docs_to_data(self, docs: list[Document]) -> list[Data]:
+    def _docs_to_data(self, docs: list[Document]) -> list[JSON]:
         """Convert a list of Document objects to Data objects."""
-        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
+        return [JSON(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def split_text(self) -> list[Data]:
+    def split_text(self) -> list[JSON]:
         """Split the input data into semantically meaningful chunks."""
         try:
             embeddings = getattr(self, "embeddings", None)
@@ -100,7 +100,7 @@ class SemanticTextSplitterComponent(LCTextSplitterComponent):
 
             documents = []
             for _input in self.data_inputs:
-                if isinstance(_input, Data):
+                if isinstance(_input, JSON):
                     documents.append(_input.to_lc_document())
                 else:
                     error_msg = f"Invalid data input type: {_input}"

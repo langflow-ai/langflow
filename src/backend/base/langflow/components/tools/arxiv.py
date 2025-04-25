@@ -6,7 +6,7 @@ from defusedxml.ElementTree import fromstring
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 
 class ArXivComponent(Component):
@@ -105,7 +105,7 @@ class ArXivComponent(Component):
         cat = element.find("arxiv:primary_category", ns)
         return cat.get("term") if cat is not None else None
 
-    def search_papers(self) -> list[Data]:
+    def search_papers(self) -> list[JSON]:
         """Search arXiv and return results."""
         try:
             # Build the query URL
@@ -141,10 +141,10 @@ class ArXivComponent(Component):
             papers = self.parse_atom_response(response_text)
 
             # Convert to Data objects
-            results = [Data(data=paper) for paper in papers]
+            results = [JSON(data=paper) for paper in papers]
             self.status = results
         except (urllib.error.URLError, ValueError) as e:
-            error_data = Data(data={"error": f"Request error: {e!s}"})
+            error_data = JSON(data={"error": f"Request error: {e!s}"})
             self.status = error_data
             return [error_data]
         else:

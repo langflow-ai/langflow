@@ -2,7 +2,7 @@ import re
 
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -33,7 +33,7 @@ class RegexExtractorComponent(Component):
         Output(display_name="Message", name="text", method="get_matches_text"),
     ]
 
-    def extract_matches(self) -> list[Data]:
+    def extract_matches(self) -> list[JSON]:
         if not self.pattern or not self.input_text:
             self.status = []
             return []
@@ -49,14 +49,14 @@ class RegexExtractorComponent(Component):
             filtered_matches = [match for match in matches if match]  # Remove empty matches
 
             # Return empty list for no matches, or list of matches if found
-            result: list = [] if not filtered_matches else [Data(data={"match": match}) for match in filtered_matches]
+            result: list = [] if not filtered_matches else [JSON(data={"match": match}) for match in filtered_matches]
 
         except re.error as e:
             error_message = f"Invalid regex pattern: {e!s}"
-            result = [Data(data={"error": error_message})]
+            result = [JSON(data={"error": error_message})]
         except ValueError as e:
             error_message = f"Error extracting matches: {e!s}"
-            result = [Data(data={"error": error_message})]
+            result = [JSON(data={"error": error_message})]
 
         self.status = result
         return result

@@ -1,5 +1,5 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ListenComponent(CustomComponent):
@@ -17,7 +17,7 @@ class ListenComponent(CustomComponent):
             },
         }
 
-    def build(self, name: str) -> Data:
+    def build(self, name: str) -> JSON:
         state = self.get_state(name)
         self._set_successors_ids()
         self.status = state

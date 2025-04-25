@@ -1,6 +1,6 @@
 import pytest
 from langflow.components.outputs import ChatOutput
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
@@ -50,7 +50,7 @@ class TestChatOutput(ComponentTestBaseWithClient):
     async def test_process_data_input(self, component_class, default_kwargs):
         """Test processing a Data object input."""
         component = component_class(**default_kwargs)
-        data = Data(text="Test data message")
+        data = JSON(text="Test data message")
         component.input_value = data
         result = await component.message_response()
         assert result.text == "Test data message"
@@ -79,7 +79,7 @@ class TestChatOutput(ComponentTestBaseWithClient):
     async def test_process_list_input(self, component_class, default_kwargs):
         """Test processing a list of inputs."""
         component = component_class(**default_kwargs)
-        input_list = ["First message", Data(text="Second message"), Message(text="Third message")]
+        input_list = ["First message", JSON(text="Second message"), Message(text="Third message")]
         component.input_value = input_list
         result = await component.message_response()
         assert "First message" in result.text

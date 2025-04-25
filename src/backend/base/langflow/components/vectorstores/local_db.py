@@ -9,7 +9,7 @@ from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cache
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.template.field.base import Output
 
 
@@ -71,7 +71,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["JSON", "Data", "DataFrame"],
             is_list=True,
             info="Data to store. It will be embedded and indexed for semantic search.",
             show=True,
@@ -222,7 +222,7 @@ class LocalDBComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
         """Adds documents to the Vector Store."""
-        ingest_data: list | Data | DataFrame = self.ingest_data
+        ingest_data: list | JSON | DataFrame = self.ingest_data
         if not ingest_data:
             self.status = ""
             return
@@ -241,7 +241,7 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 if _input not in stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:

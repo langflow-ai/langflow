@@ -1,6 +1,6 @@
 from langflow.custom import Component
-from langflow.io import DataInput, Output
-from langflow.schema import Data
+from langflow.io import JSONInput, Output
+from langflow.schema import JSON
 
 
 class LoopComponent(Component):
@@ -11,7 +11,7 @@ class LoopComponent(Component):
     icon = "infinity"
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data",
             display_name="Data",
             info="The initial list of Data objects to iterate over.",
@@ -43,9 +43,9 @@ class LoopComponent(Component):
 
     def _validate_data(self, data):
         """Validate and return a list of Data objects."""
-        if isinstance(data, Data):
+        if isinstance(data, JSON):
             return [data]
-        if isinstance(data, list) and all(isinstance(item, Data) for item in data):
+        if isinstance(data, list) and all(isinstance(item, JSON) for item in data):
             return data
         msg = "The 'data' input must be a list of Data objects or a single Data object."
         raise TypeError(msg)
@@ -56,14 +56,14 @@ class LoopComponent(Component):
         data_length = len(self.ctx.get(f"{self._id}_data", []))
         return current_index > data_length
 
-    def item_output(self) -> Data:
+    def item_output(self) -> JSON:
         """Output the next item in the list or stop if done."""
         self.initialize_data()
-        current_item = Data(text="")
+        current_item = JSON(text="")
 
         if self.evaluate_stop_loop():
             self.stop("item")
-            return Data(text="")
+            return JSON(text="")
 
         # Get data list and current index
         data_list, current_index = self.loop_variables()
@@ -72,12 +72,12 @@ class LoopComponent(Component):
             try:
                 current_item = data_list[current_index]
             except IndexError:
-                current_item = Data(text="")
+                current_item = JSON(text="")
         self.aggregated_output()
         self.update_ctx({f"{self._id}_index": current_index + 1})
         return current_item
 
-    def done_output(self) -> Data:
+    def done_output(self) -> JSON:
         """Trigger the done output when iteration is complete."""
         self.initialize_data()
 
@@ -87,7 +87,7 @@ class LoopComponent(Component):
 
             return self.ctx.get(f"{self._id}_aggregated", [])
         self.stop("done")
-        return Data(text="")
+        return JSON(text="")
 
     def loop_variables(self):
         """Retrieve loop variables from context."""
@@ -96,7 +96,7 @@ class LoopComponent(Component):
             self.ctx.get(f"{self._id}_index", 0),
         )
 
-    def aggregated_output(self) -> Data:
+    def aggregated_output(self) -> JSON:
         """Return the aggregated list once all items are processed."""
         self.initialize_data()
 

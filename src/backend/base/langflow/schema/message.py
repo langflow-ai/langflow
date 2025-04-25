@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serial
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import ErrorContent
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
 from langflow.schema.validators import timestamp_to_str, timestamp_to_str_validator
@@ -32,7 +32,7 @@ from langflow.utils.constants import (
 from langflow.utils.image import create_data_url
 
 
-class Message(Data):
+class Message(JSON):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
@@ -165,7 +165,7 @@ class Message(Data):
         return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
-    def from_data(cls, data: Data) -> Message:
+    def from_data(cls, data: JSON) -> Message:
         """Converts Data to a Message.
 
         Args:

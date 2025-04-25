@@ -11,7 +11,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class SpiderTool(Component):
@@ -95,7 +95,7 @@ class SpiderTool(Component):
         Output(display_name="Markdown", name="content", method="crawl"),
     ]
 
-    def crawl(self) -> list[Data]:
+    def crawl(self) -> list[JSON]:
         if self.params:
             parameters = self.params["data"]
         else:
@@ -125,7 +125,7 @@ class SpiderTool(Component):
         for record in result:
             if self.metadata:
                 records.append(
-                    Data(
+                    JSON(
                         data={
                             "content": record["content"],
                             "url": record["url"],
@@ -134,7 +134,7 @@ class SpiderTool(Component):
                     )
                 )
             else:
-                records.append(Data(data={"content": record["content"], "url": record["url"]}))
+                records.append(JSON(data={"content": record["content"], "url": record["url"]}))
         return records
 
 

@@ -7,7 +7,7 @@ from typing_extensions import override
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
@@ -122,7 +122,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
         """Adds documents to the Vector Store."""
-        ingest_data: list | Data | DataFrame = self.ingest_data
+        ingest_data: list | JSON | DataFrame = self.ingest_data
         if not ingest_data:
             self.status = ""
             return
@@ -141,7 +141,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 if _input not in stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:

@@ -1,5 +1,5 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ListFlowsComponent(CustomComponent):
@@ -14,7 +14,7 @@ class ListFlowsComponent(CustomComponent):
 
     async def build(
         self,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         flows = await self.alist_flows()
         self.status = flows
         return flows

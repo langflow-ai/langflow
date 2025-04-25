@@ -3,7 +3,7 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from langflow.custom import Component
 from langflow.inputs import IntInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -50,10 +50,10 @@ class DuckDuckGoSearchComponent(Component):
         """Build the DuckDuckGo search wrapper."""
         return DuckDuckGoSearchRun()
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self.fetch_content()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         """Execute the search and return results as Data objects."""
         try:
             wrapper = self._build_wrapper()
@@ -67,7 +67,7 @@ class DuckDuckGoSearchComponent(Component):
                 if result.strip():
                     snippet = result[: self.max_snippet_length]
                     data_results.append(
-                        Data(
+                        JSON(
                             text=snippet,
                             data={
                                 "content": result,
@@ -76,7 +76,7 @@ class DuckDuckGoSearchComponent(Component):
                         )
                     )
         except (ValueError, AttributeError) as e:
-            error_data = [Data(text=str(e), data={"error": str(e)})]
+            error_data = [JSON(text=str(e), data={"error": str(e)})]
             self.status = error_data
             return error_data
         else:

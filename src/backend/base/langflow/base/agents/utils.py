@@ -14,7 +14,7 @@ from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-from langflow.schema import Data
+from langflow.schema import JSON
 
 from .default_prompts import XML_AGENT_PROMPT
 
@@ -35,7 +35,7 @@ class AgentSpec(BaseModel):
     hub_repo: str | None = None
 
 
-def data_to_messages(data: list[Data]) -> list[BaseMessage]:
+def data_to_messages(data: list[JSON]) -> list[BaseMessage]:
     """Convert a list of data to a list of messages.
 
     Args:

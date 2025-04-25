@@ -5,7 +5,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class FirecrawlMapApi(Component):
@@ -51,7 +51,7 @@ class FirecrawlMapApi(Component):
         Output(display_name="Data", name="data", method="map"),
     ]
 
-    def map(self) -> Data:
+    def map(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:
@@ -86,4 +86,4 @@ class FirecrawlMapApi(Component):
 
         map_result = {"success": True, "links": combined_links}
 
-        return Data(data=map_result)
+        return JSON(data=map_result)

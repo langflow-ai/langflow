@@ -1,7 +1,7 @@
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import HandleInput, NestedDictInput, Output, StrInput
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 
 class AlterMetadataComponent(Component):
@@ -61,7 +61,7 @@ class AlterMetadataComponent(Component):
         """Convert a Data object or a standard dictionary to a standard dictionary."""
         if isinstance(obj, dict):
             as_dict = obj
-        elif isinstance(obj, Data):
+        elif isinstance(obj, JSON):
             as_dict = obj.data
         else:
             msg = f"Expected a Data object or a dictionary but got {type(obj)}."
@@ -69,12 +69,12 @@ class AlterMetadataComponent(Component):
 
         return {k: v for k, v in (as_dict or {}).items() if k and k.strip()}
 
-    def process_output(self) -> list[Data]:
+    def process_output(self) -> list[JSON]:
         # Ensure metadata is a dictionary, filtering out any empty keys
         metadata = self._as_clean_dict(self.metadata)
 
         # Convert text_in to a Data object if it exists, and initialize our list of Data objects
-        data_objects = [Data(text=self.text_in)] if self.text_in else []
+        data_objects = [JSON(text=self.text_in)] if self.text_in else []
 
         # Append existing Data objects from input_value, if any
         if self.input_value:

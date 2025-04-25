@@ -2,11 +2,11 @@ from collections import defaultdict
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
-def docs_to_data(documents: list[Document]) -> list[Data]:
+def docs_to_data(documents: list[Document]) -> list[JSON]:
     """Converts a list of Documents to a list of Data.
 
     Args:
@@ -15,10 +15,10 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
     Returns:
         list[Data]: The converted list of Data.
     """
-    return [Data.from_document(document) for document in documents]
+    return [JSON.from_document(document) for document in documents]
 
 
-def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
+def data_to_text_list(template: str, data: JSON | list[JSON]) -> tuple[list[str], list[JSON]]:
     """Format text from Data objects using a template string.
 
     This function processes Data objects and formats their content using a template string.
@@ -68,11 +68,11 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
         raise TypeError(msg)
 
     formatted_text: list[str] = []
-    processed_data: list[Data] = []
+    processed_data: list[JSON] = []
 
-    data_list = [data] if isinstance(data, Data) else data
+    data_list = [data] if isinstance(data, JSON) else data
 
-    data_objects = [item if isinstance(item, Data) else Data(text=str(item)) for item in data_list]
+    data_objects = [item if isinstance(item, JSON) else JSON(text=str(item)) for item in data_list]
 
     for data_obj in data_objects:
         format_dict = {}
@@ -100,7 +100,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
     return formatted_text, processed_data
 
 
-def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
+def data_to_text(template: str, data: JSON | list[JSON], sep: str = "\n") -> str:
     r"""Converts data into a formatted text string based on a given template.
 
     Args:

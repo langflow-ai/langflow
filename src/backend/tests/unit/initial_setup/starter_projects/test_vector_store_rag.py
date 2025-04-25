@@ -14,7 +14,7 @@ from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 
 
@@ -23,7 +23,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
+    file_component.set_on_output(name="data", value=JSON(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
     text_splitter.set(data_inputs=file_component.load_files)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
@@ -34,11 +34,11 @@ def ingestion_graph():
     vector_store = AstraDBVectorStoreComponent(_id="ingestion-vector-store-123")
 
     # Mock search_documents by changing the value otherwise set by the vector_store_connection_decorator
-    vector_store.set_on_output(name="vectorstoreconnection", value=[Data(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="vectorstoreconnection", value=[JSON(text="This is a test file.")], cache=True)
 
-    vector_store.set_on_output(name="vectorstoreconnection", value=[Data(text="This is a test file.")], cache=True)
-    vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
-    vector_store.set_on_output(name="dataframe", value=DataFrame(data=[Data(text="This is a test file.")]), cache=True)
+    vector_store.set_on_output(name="vectorstoreconnection", value=[JSON(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="search_results", value=[JSON(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="dataframe", value=DataFrame(data=[JSON(text="This is a test file.")]), cache=True)
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
@@ -63,8 +63,8 @@ def rag_graph():
     )
     # Mock search_documents
     data_list = [
-        Data(data={"text": "Hello, world!"}),
-        Data(data={"text": "Goodbye, world!"}),
+        JSON(data={"text": "Hello, world!"}),
+        JSON(data={"text": "Goodbye, world!"}),
     ]
     rag_vector_store.set_on_output(
         name="search_results",

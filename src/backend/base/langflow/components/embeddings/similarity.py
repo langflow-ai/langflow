@@ -1,8 +1,8 @@
 import numpy as np
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, Output
-from langflow.schema import Data
+from langflow.io import DropdownInput, JSONInput, Output
+from langflow.schema import JSON
 
 
 class EmbeddingSimilarityComponent(Component):
@@ -11,7 +11,7 @@ class EmbeddingSimilarityComponent(Component):
     icon = "equal"
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="embedding_vectors",
             display_name="Embedding Vectors",
             info="A list containing exactly two data objects with embedding vectors to compare.",
@@ -31,8 +31,8 @@ class EmbeddingSimilarityComponent(Component):
         Output(display_name="Similarity Data", name="similarity_data", method="compute_similarity"),
     ]
 
-    def compute_similarity(self) -> Data:
-        embedding_vectors: list[Data] = self.embedding_vectors
+    def compute_similarity(self) -> JSON:
+        embedding_vectors: list[JSON] = self.embedding_vectors
 
         # Assert that the list contains exactly two Data objects
         if len(embedding_vectors) != 2:  # noqa: PLR2004
@@ -60,7 +60,7 @@ class EmbeddingSimilarityComponent(Component):
                 similarity_score = {"manhattan_distance": score}
 
         # Create a Data object to encapsulate the similarity score and additional information
-        similarity_data = Data(
+        similarity_data = JSON(
             data={
                 "embedding_1": embedding_vectors[0].data["embeddings"],
                 "embedding_2": embedding_vectors[1].data["embeddings"],

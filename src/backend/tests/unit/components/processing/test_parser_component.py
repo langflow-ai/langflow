@@ -1,6 +1,6 @@
 import pytest
 from langflow.components.processing.parser import ParserComponent
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -41,7 +41,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
 
     def test_parse_data_object(self, component_class):
         # Arrange
-        data = Data(text="Hello World")
+        data = JSON(text="Hello World")
         kwargs = {
             "input_data": data,
             "pattern": "text: {text}",
@@ -78,7 +78,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
 
     def test_stringify_data_object(self, component_class):
         # Arrange
-        data = Data(text="Hello\nWorld\nMultiline\nText")
+        data = JSON(text="Hello\nWorld\nMultiline\nText")
         kwargs = {
             "input_data": data,
             "stringify": True,

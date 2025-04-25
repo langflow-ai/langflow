@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from langflow.custom import Component
 from langflow.io import HandleInput, MessageInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 if TYPE_CHECKING:
     from langflow.field_typing import Embeddings
@@ -33,7 +33,7 @@ class TextEmbedderComponent(Component):
         Output(display_name="Embedding Data", name="embeddings", method="generate_embeddings"),
     ]
 
-    def generate_embeddings(self) -> Data:
+    def generate_embeddings(self) -> JSON:
         try:
             embedding_model: Embeddings = self.embedding_model
             message: Message = self.message
@@ -55,9 +55,9 @@ class TextEmbedderComponent(Component):
 
             embedding_vector = embeddings[0]
             self.status = {"text": text_content, "embeddings": embedding_vector}
-            return Data(data={"text": text_content, "embeddings": embedding_vector})
+            return JSON(data={"text": text_content, "embeddings": embedding_vector})
         except Exception as e:
             logging.exception("Error generating embeddings")
-            error_data = Data(data={"text": "", "embeddings": [], "error": str(e)})
+            error_data = JSON(data={"text": "", "embeddings": [], "error": str(e)})
             self.status = {"error": str(e)}
             return error_data

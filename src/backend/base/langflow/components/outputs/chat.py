@@ -5,7 +5,7 @@ from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
 from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, MessageTextInput, Output
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.schema.properties import Source
@@ -28,7 +28,7 @@ class ChatOutput(ChatComponent):
             name="input_value",
             display_name="Text",
             info="Message to be passed as output.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Message"],
             required=True,
         ),
         BoolInput(
@@ -159,18 +159,18 @@ class ChatOutput(ChatComponent):
             msg = "Input data cannot be None"
             raise ValueError(msg)
         if isinstance(self.input_value, list) and not all(
-            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value
+            isinstance(item, Message | JSON | DataFrame | str) for item in self.input_value
         ):
             invalid_types = [
                 type(item).__name__
                 for item in self.input_value
-                if not isinstance(item, Message | Data | DataFrame | str)
+                if not isinstance(item, Message | JSON | DataFrame | str)
             ]
             msg = f"Expected Data or DataFrame or Message or str, got {invalid_types}"
             raise TypeError(msg)
         if not isinstance(
             self.input_value,
-            Message | Data | DataFrame | str | list | Generator | type(None),
+            Message | JSON | DataFrame | str | list | Generator | type(None),
         ):
             type_name = type(self.input_value).__name__
             msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
@@ -183,7 +183,7 @@ class ChatOutput(ChatComponent):
                 return data
             if isinstance(data, Message):
                 return data.get_text()
-            if isinstance(data, Data):
+            if isinstance(data, JSON):
                 if data.get_text() is None:
                     msg = "Empty Data object"
                     raise ValueError(msg)

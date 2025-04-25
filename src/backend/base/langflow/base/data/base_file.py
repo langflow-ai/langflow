@@ -9,7 +9,7 @@ import pandas as pd
 
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -27,7 +27,7 @@ class BaseFileComponent(Component, ABC):
 
         def __init__(
             self,
-            data: Data | list[Data],
+            data: JSON | list[JSON],
             path: Path,
             *,
             delete_after_processing: bool = False,
@@ -39,21 +39,21 @@ class BaseFileComponent(Component, ABC):
             self._silent_errors = silent_errors
 
         @property
-        def data(self) -> list[Data]:
+        def data(self) -> list[JSON]:
             return self._data or []
 
         @data.setter
-        def data(self, value: Data | list[Data]):
-            if isinstance(value, Data):
+        def data(self, value: JSON | list[JSON]):
+            if isinstance(value, JSON):
                 self._data = [value]
-            elif isinstance(value, list) and all(isinstance(item, Data) for item in value):
+            elif isinstance(value, list) and all(isinstance(item, JSON) for item in value):
                 self._data = value
             else:
                 msg = f"data must be a Data object or a list of Data objects. Got: {type(value)}"
                 if not self._silent_errors:
                     raise ValueError(msg)
 
-        def merge_data(self, new_data: Data | list[Data] | None) -> list[Data]:
+        def merge_data(self, new_data: JSON | list[JSON] | None) -> list[JSON]:
             r"""Generate a new list of Data objects by merging `new_data` into the current `data`.
 
             Args:
@@ -66,9 +66,9 @@ class BaseFileComponent(Component, ABC):
             if new_data is None:
                 return self.data
 
-            if isinstance(new_data, Data):
+            if isinstance(new_data, JSON):
                 new_data_list = [new_data]
-            elif isinstance(new_data, list) and all(isinstance(item, Data) for item in new_data):
+            elif isinstance(new_data, list) and all(isinstance(item, JSON) for item in new_data):
                 new_data_list = new_data
             else:
                 msg = "new_data must be a Data object, a list of Data objects, or None."
@@ -77,7 +77,7 @@ class BaseFileComponent(Component, ABC):
                 return self.data
 
             return [
-                Data(data={**data.data, **new_data_item.data}) for data in self.data for new_data_item in new_data_list
+                JSON(data={**data.data, **new_data_item.data}) for data in self.data for new_data_item in new_data_list
             ]
 
         def __str__(self):
@@ -132,7 +132,7 @@ class BaseFileComponent(Component, ABC):
                 " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
             ),
             required=False,
-            input_types=["Data", "Message"],
+            input_types=["Data", "JSON", "Message"],
             is_list=True,
             advanced=True,
         ),
@@ -190,7 +190,7 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
-    def load_files_base(self) -> list[Data]:
+    def load_files_base(self) -> list[JSON]:
         """Loads and parses file(s), including unpacked file bundles.
 
         Returns:
@@ -227,7 +227,7 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_files(self) -> list[Data]:
+    def load_files(self) -> list[JSON]:
         """Load files and return as Data objects.
 
         Returns:
@@ -235,7 +235,7 @@ class BaseFileComponent(Component, ABC):
         """
         data_list = self.load_files_base()
         if not data_list:
-            return [Data()]
+            return [JSON()]
         return data_list
 
     def load_dataframe(self) -> DataFrame:
@@ -325,7 +325,7 @@ class BaseFileComponent(Component, ABC):
     def rollup_data(
         self,
         base_files: list[BaseFile],
-        data_list: list[Data | None],
+        data_list: list[JSON | None],
         path_field: str = SERVER_FILE_PATH_FIELDNAME,
     ) -> list[BaseFile]:
         r"""Rolls up Data objects into corresponding BaseFile objects in order given by `base_files`.
@@ -339,9 +339,9 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A new list of BaseFile objects with merged `data` attributes.
         """
 
-        def _build_data_dict(data_list: list[Data | None], data_list_field: str) -> dict[str, list[Data]]:
+        def _build_data_dict(data_list: list[JSON | None], data_list_field: str) -> dict[str, list[JSON]]:
             """Builds a dictionary grouping Data objects by a specified field."""
-            data_dict: dict[str, list[Data]] = {}
+            data_dict: dict[str, list[JSON]] = {}
             for data in data_list:
                 if data is None:
                     continue
@@ -375,15 +375,15 @@ class BaseFileComponent(Component, ABC):
 
         return updated_base_files
 
-    def _file_path_as_list(self) -> list[Data]:
+    def _file_path_as_list(self) -> list[JSON]:
         file_path = self.file_path
         if not file_path:
             return []
 
-        def _message_to_data(message: Message) -> Data:
-            return Data(**{self.SERVER_FILE_PATH_FIELDNAME: message.text})
+        def _message_to_data(message: Message) -> JSON:
+            return JSON(**{self.SERVER_FILE_PATH_FIELDNAME: message.text})
 
-        if isinstance(file_path, Data):
+        if isinstance(file_path, JSON):
             file_path = [file_path]
         elif isinstance(file_path, Message):
             file_path = [_message_to_data(file_path)]
@@ -398,7 +398,7 @@ class BaseFileComponent(Component, ABC):
         for obj in file_path:
             data_obj = _message_to_data(obj) if isinstance(obj, Message) else obj
 
-            if not isinstance(data_obj, Data):
+            if not isinstance(data_obj, JSON):
                 msg = f"Expected Data object in file_path but got {type(data_obj)}."
                 self.log(msg)
                 if not self.silent_errors:
@@ -419,7 +419,7 @@ class BaseFileComponent(Component, ABC):
         """
         resolved_files = []
 
-        def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
+        def add_file(data: JSON, path: str | Path, *, delete_after_processing: bool):
             resolved_path = Path(self.resolve_path(str(path)))
 
             if not resolved_path.exists():
@@ -437,10 +437,10 @@ class BaseFileComponent(Component, ABC):
             # Wrap self.path into a Data object
             if isinstance(self.path, list):
                 for path in self.path:
-                    data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: path})
+                    data_obj = JSON(data={self.SERVER_FILE_PATH_FIELDNAME: path})
                     add_file(data=data_obj, path=path, delete_after_processing=False)
             else:
-                data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
+                data_obj = JSON(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
                 add_file(data=data_obj, path=self.path, delete_after_processing=False)
         elif file_path:
             for obj in file_path:

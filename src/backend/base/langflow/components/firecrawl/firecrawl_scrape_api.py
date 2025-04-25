@@ -1,12 +1,12 @@
 from langflow.custom import Component
 from langflow.io import (
-    DataInput,
     IntInput,
+    JSONInput,
     MultilineInput,
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class FirecrawlScrapeApi(Component):
@@ -36,12 +36,12 @@ class FirecrawlScrapeApi(Component):
             display_name="Timeout",
             info="Timeout in milliseconds for the request.",
         ),
-        DataInput(
+        JSONInput(
             name="scrapeOptions",
             display_name="Scrape Options",
             info="The page options to send with the request.",
         ),
-        DataInput(
+        JSONInput(
             name="extractorOptions",
             display_name="Extractor Options",
             info="The extractor options to send with the request.",
@@ -52,7 +52,7 @@ class FirecrawlScrapeApi(Component):
         Output(display_name="Data", name="data", method="scrape"),
     ]
 
-    def scrape(self) -> Data:
+    def scrape(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:
@@ -70,4 +70,4 @@ class FirecrawlScrapeApi(Component):
 
         app = FirecrawlApp(api_key=self.api_key)
         results = app.scrape_url(self.url, params=params)
-        return Data(data=results)
+        return JSON(data=results)

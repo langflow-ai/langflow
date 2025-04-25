@@ -3,7 +3,7 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class AssemblyAIListTranscripts(Component):
@@ -51,7 +51,7 @@ class AssemblyAIListTranscripts(Component):
         Output(display_name="Transcript List", name="transcript_list", method="list_transcripts"),
     ]
 
-    def list_transcripts(self) -> list[Data]:
+    def list_transcripts(self) -> list[JSON]:
         aai.settings.api_key = self.api_key
 
         params = aai.ListTranscriptParameters()
@@ -68,7 +68,7 @@ class AssemblyAIListTranscripts(Component):
             transcriber = aai.Transcriber()
 
             def convert_page_to_data_list(page):
-                return [Data(**t.dict()) for t in page.transcripts]
+                return [JSON(**t.dict()) for t in page.transcripts]
 
             if self.limit == 0:
                 # paginate over all pages
@@ -87,7 +87,7 @@ class AssemblyAIListTranscripts(Component):
 
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error listing transcripts")
-            error_data = Data(data={"error": f"An error occurred: {e}"})
+            error_data = JSON(data={"error": f"An error occurred: {e}"})
             self.status = [error_data]
             return [error_data]
 

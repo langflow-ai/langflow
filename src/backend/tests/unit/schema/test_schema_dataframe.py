@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from langchain_core.documents import Document
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 
 
@@ -17,7 +17,7 @@ class TestDataFrameSchema:
         data_frame = DataFrame(sample_dataframe)
         data_list = data_frame.to_data_list()
         assert isinstance(data_list, list)
-        assert all(isinstance(item, Data) for item in data_list)
+        assert all(isinstance(item, JSON) for item in data_list)
         assert len(data_list) == len(sample_dataframe)
         assert data_list[0].data["name"] == "John"
         assert data_list[0].data["text"] == "name is John"
@@ -32,7 +32,7 @@ class TestDataFrameSchema:
         assert new_df.iloc[-1]["text"] == "name is Bob"
 
         # Test adding Data object
-        data_obj = Data(data={"name": "Alice", "text": "name is Alice"})
+        data_obj = JSON(data={"name": "Alice", "text": "name is Alice"})
         new_df = data_frame.add_row(data_obj)
         assert len(new_df) == len(sample_dataframe) + 1
         assert new_df.iloc[-1]["name"] == "Alice"
@@ -41,7 +41,7 @@ class TestDataFrameSchema:
     def test_add_rows(self, sample_dataframe):
         """Test adding multiple rows to DataFrame."""
         data_frame = DataFrame(sample_dataframe)
-        new_rows = [{"name": "Bob", "text": "name is Bob"}, Data(data={"name": "Alice", "text": "name is Alice"})]
+        new_rows = [{"name": "Bob", "text": "name is Bob"}, JSON(data={"name": "Alice", "text": "name is Alice"})]
         new_df = data_frame.add_rows(new_rows)
         assert len(new_df) == len(sample_dataframe) + 2
         assert new_df.iloc[-2:]["name"].tolist() == ["Bob", "Alice"]

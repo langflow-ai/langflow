@@ -4,7 +4,7 @@ import pytest
 from langflow.components.tools import WikipediaComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 # Import the base test class
@@ -85,7 +85,7 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
 
     def test_fetch_content_text(self, component_class):
         component = component_class()
-        component.fetch_content = MagicMock(return_value=[Data(text="First result"), Data(text="Second result")])
+        component.fetch_content = MagicMock(return_value=[JSON(text="First result"), JSON(text="Second result")])
 
         result = component.fetch_content_text()
 

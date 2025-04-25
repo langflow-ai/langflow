@@ -1,6 +1,6 @@
 import pytest
 from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -16,8 +16,8 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "data_list": [
-                Data(text="Row 1", data={"field1": "value1", "field2": 1}),
-                Data(text="Row 2", data={"field1": "value2", "field2": 2}),
+                JSON(text="Row 1", data={"field1": "value1", "field2": 1}),
+                JSON(text="Row 2", data={"field1": "value2", "field2": 2}),
             ]
         }
 
@@ -48,7 +48,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
 
     def test_single_data_input(self, component_class):
         """Test handling single Data object input."""
-        single_data = Data(text="Single Row", data={"field1": "value"})
+        single_data = JSON(text="Single Row", data={"field1": "value"})
         component = component_class()
         component.set_attributes({"data_list": single_data})
 
@@ -69,7 +69,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
 
     def test_data_without_text(self, component_class):
         """Test handling Data objects without text field."""
-        data_without_text = [Data(data={"field1": "value1"}), Data(data={"field1": "value2"})]
+        data_without_text = [JSON(data={"field1": "value1"}), JSON(data={"field1": "value2"})]
         component = component_class()
         component.set_attributes({"data_list": data_without_text})
 
@@ -81,7 +81,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
 
     def test_data_without_data_dict(self, component_class):
         """Test handling Data objects without data dictionary."""
-        data_without_dict = [Data(text="Text 1"), Data(text="Text 2")]
+        data_without_dict = [JSON(text="Text 1"), JSON(text="Text 2")]
         component = component_class()
         component.set_attributes({"data_list": data_without_dict})
 
@@ -94,8 +94,8 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
     def test_mixed_data_fields(self, component_class):
         """Test handling Data objects with different fields."""
         mixed_data = [
-            Data(text="Row 1", data={"field1": "value1", "field2": 1}),
-            Data(text="Row 2", data={"field1": "value2", "field3": "extra"}),
+            JSON(text="Row 1", data={"field1": "value1", "field2": 1}),
+            JSON(text="Row 2", data={"field1": "value2", "field3": "extra"}),
         ]
         component = component_class()
         component.set_attributes({"data_list": mixed_data})

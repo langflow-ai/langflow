@@ -2,8 +2,8 @@ import assemblyai as aai
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, IntInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.io import DropdownInput, IntInput, JSONInput, Output, SecretStrInput
+from langflow.schema import JSON
 
 
 class AssemblyAIGetSubtitles(Component):
@@ -19,7 +19,7 @@ class AssemblyAIGetSubtitles(Component):
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
             required=True,
         ),
-        DataInput(
+        JSONInput(
             name="transcription_result",
             display_name="Transcription Result",
             info="The transcription result from AssemblyAI",
@@ -45,7 +45,7 @@ class AssemblyAIGetSubtitles(Component):
         Output(display_name="Subtitles", name="subtitles", method="get_subtitles"),
     ]
 
-    def get_subtitles(self) -> Data:
+    def get_subtitles(self) -> JSON:
         aai.settings.api_key = self.api_key
 
         # check if it's an error message from the previous step
@@ -60,7 +60,7 @@ class AssemblyAIGetSubtitles(Component):
             error = f"Getting transcription failed: {e}"
             logger.opt(exception=True).debug(error)
             self.status = error
-            return Data(data={"error": error})
+            return JSON(data={"error": error})
 
         if transcript.status == aai.TranscriptStatus.completed:
             subtitles = None
@@ -70,7 +70,7 @@ class AssemblyAIGetSubtitles(Component):
             else:
                 subtitles = transcript.export_subtitles_vtt(chars_per_caption)
 
-            result = Data(
+            result = JSON(
                 subtitles=subtitles,
                 format=self.subtitle_format,
                 transcript_id=transcript_id,
@@ -80,4 +80,4 @@ class AssemblyAIGetSubtitles(Component):
             self.status = result
             return result
         self.status = transcript.error
-        return Data(data={"error": transcript.error})
+        return JSON(data={"error": transcript.error})

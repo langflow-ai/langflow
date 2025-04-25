@@ -6,7 +6,7 @@ from pathlib import Path
 import boto3
 import pytest
 from langflow.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -68,7 +68,7 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
                 temp_files.append(temp_file.name)
 
         data = [
-            Data(data={"file_path": file_path, "text": Path(file_path).read_text(encoding="utf-8")})
+            JSON(data={"file_path": file_path, "text": Path(file_path).read_text(encoding="utf-8")})
             for file_path in temp_files
         ]
 

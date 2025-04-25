@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotionDatabaseProperties(LCToolComponent):
@@ -32,13 +32,13 @@ class NotionDatabaseProperties(LCToolComponent):
     class NotionDatabasePropertiesSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._fetch_database_properties(self.database_id)
         if isinstance(result, str):
             # An error occurred, return it as text
-            return Data(text=result)
+            return JSON(text=result)
         # Success, return the properties
-        return Data(text=str(result), data=result)
+        return JSON(text=str(result), data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(

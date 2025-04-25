@@ -4,7 +4,7 @@ from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput, DictInput, IntInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dotdict import dotdict
 
 
@@ -81,9 +81,9 @@ class CreateDataComponent(Component):
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    async def build_data(self) -> Data:
+    async def build_data(self) -> JSON:
         data = self.get_data()
-        return_data = Data(data=data, text_key=self.text_key)
+        return_data = JSON(data=data, text_key=self.text_key)
         self.status = return_data
         if self.text_key_validator:
             self.validate_text_key()
@@ -96,7 +96,7 @@ class CreateDataComponent(Component):
             if isinstance(value_dict, dict):
                 # Check if the value of the value_dict is a Data
                 value_dict_ = {
-                    key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
+                    key: value.get_text() if isinstance(value, JSON) else value for key, value in value_dict.items()
                 }
                 data.update(value_dict_)
         return data

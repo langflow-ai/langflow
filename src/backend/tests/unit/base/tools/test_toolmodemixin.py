@@ -20,7 +20,7 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 from pydantic import BaseModel
 
 
@@ -98,7 +98,7 @@ class AllInputsComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
-    def build_output(self) -> Data:
+    def build_output(self) -> JSON:
         # Example logic to process inputs and produce an output
         data_dict = {
             "table_input": self.table_input,
@@ -113,7 +113,7 @@ class AllInputsComponent(Component):
             "float_input": self.float_input,
             "bool_input": self.bool_input,
         }
-        data = Data(value=data_dict)
+        data = JSON(value=data_dict)
         self.status = data
         return data
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from langflow.custom import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class CSVToDataComponent(Component):
@@ -43,7 +43,7 @@ class CSVToDataComponent(Component):
         Output(name="data_list", display_name="Data List", method="load_csv_to_data"),
     ]
 
-    def load_csv_to_data(self) -> list[Data]:
+    def load_csv_to_data(self) -> list[JSON]:
         if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:
             msg = "Please provide exactly one of: CSV file, file path, or CSV string."
             raise ValueError(msg)
@@ -72,7 +72,7 @@ class CSVToDataComponent(Component):
 
             if csv_data:
                 csv_reader = csv.DictReader(io.StringIO(csv_data))
-                result = [Data(data=row, text_key=self.text_key) for row in csv_reader]
+                result = [JSON(data=row, text_key=self.text_key) for row in csv_reader]
 
                 if not result:
                     self.status = "The CSV data is empty."

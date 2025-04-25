@@ -5,7 +5,7 @@ from json_repair import repair_json
 
 from langflow.custom import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class JSONToDataComponent(Component):
@@ -40,7 +40,7 @@ class JSONToDataComponent(Component):
         Output(name="data", display_name="Data", method="convert_json_to_data"),
     ]
 
-    def convert_json_to_data(self) -> Data | list[Data]:
+    def convert_json_to_data(self) -> JSON | list[JSON]:
         if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
             msg = "Please provide exactly one of: JSON file, file path, or JSON string."
             self.status = msg
@@ -78,9 +78,9 @@ class JSONToDataComponent(Component):
 
                 # Check if the parsed data is a list
                 if isinstance(parsed_data, list):
-                    result = [Data(data=item) for item in parsed_data]
+                    result = [JSON(data=item) for item in parsed_data]
                 else:
-                    result = Data(data=parsed_data)
+                    result = JSON(data=parsed_data)
                 self.status = result
                 return result
 

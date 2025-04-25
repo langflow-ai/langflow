@@ -15,7 +15,7 @@ from langflow.inputs.inputs import (
     InputTypes,
     MessageInput,
 )
-from langflow.schema import Data, dotdict
+from langflow.schema import JSON, dotdict
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.template import Output
@@ -58,19 +58,19 @@ class RunFlowBaseComponent(Component):
     flow_tweak_data: dict = {}
 
     @abstractmethod
-    async def run_flow_with_tweaks(self) -> list[Data]:
+    async def run_flow_with_tweaks(self) -> list[JSON]:
         """Run the flow with tweaks."""
 
-    async def data_output(self) -> Data:
+    async def data_output(self) -> JSON:
         """Return the data output."""
         run_outputs = await self.run_flow_with_tweaks()
         first_output = run_outputs[0]
 
-        if isinstance(first_output, Data):
+        if isinstance(first_output, JSON):
             return first_output
 
         message_data = first_output.outputs[0].results["message"].data
-        return Data(data=message_data)
+        return JSON(data=message_data)
 
     async def dataframe_output(self) -> DataFrame:
         """Return the dataframe output."""
@@ -101,7 +101,7 @@ class RunFlowBaseComponent(Component):
         flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
-    async def get_flow(self, flow_name_selected: str) -> Data | None:
+    async def get_flow(self, flow_name_selected: str) -> JSON | None:
         # get flow from flow id
         flow_datas = await self.alist_flows()
         for flow_data in flow_datas:

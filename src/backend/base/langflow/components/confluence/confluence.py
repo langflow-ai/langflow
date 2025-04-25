@@ -3,7 +3,7 @@ from langchain_community.document_loaders.confluence import ContentFormat
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ConfluenceComponent(Component):
@@ -76,9 +76,9 @@ class ConfluenceComponent(Component):
             max_pages=self.max_pages,
         )
 
-    def load_documents(self) -> list[Data]:
+    def load_documents(self) -> list[JSON]:
         confluence = self.build_confluence()
         documents = confluence.load()
-        data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data
+        data = [JSON.from_document(doc) for doc in documents]  # Using the from_document method of Data
         self.status = data
         return data

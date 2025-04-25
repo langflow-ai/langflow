@@ -19,7 +19,7 @@ from langchain_core.tools import BaseTool, Tool
 from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -75,7 +75,7 @@ LANGCHAIN_BASE_TYPES = {
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
     "NestedDict": NestedDict,
-    "Data": Data,
+    "Data": JSON,
     "Message": Message,
     "Text": Text,  # noqa: UP019
     "Object": Object,

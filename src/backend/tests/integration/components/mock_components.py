@@ -2,7 +2,7 @@ import json
 
 from langflow.custom import Component
 from langflow.inputs import BoolInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.template import Output
 
 
@@ -15,10 +15,10 @@ class TextToData(Component):
         Output(name="from_text", display_name="From text", method="create_data"),
     ]
 
-    def _to_data(self, text: str) -> Data:
+    def _to_data(self, text: str) -> JSON:
         if self.is_json:
-            return Data(data=json.loads(text))
-        return Data(text=text)
+            return JSON(data=json.loads(text))
+        return JSON(text=text)
 
-    def create_data(self) -> list[Data]:
+    def create_data(self) -> list[JSON]:
         return [self._to_data(t) for t in self.text_data]

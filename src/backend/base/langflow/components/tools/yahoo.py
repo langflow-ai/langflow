@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.schema.message import Message
 
 
@@ -82,7 +82,7 @@ to access financial data and market information from Yahoo Finance."""
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self.fetch_content()
 
     def fetch_content_text(self) -> Message:
@@ -108,7 +108,7 @@ to access financial data and market information from Yahoo Finance."""
             self.status = error_message
             raise ToolException(error_message) from e
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         try:
             return self._yahoo_finance_tool(
                 self.symbol,
@@ -128,17 +128,17 @@ to access financial data and market information from Yahoo Finance."""
         symbol: str,
         method: YahooFinanceMethod,
         num_news: int | None = 5,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         ticker = yf.Ticker(symbol)
         result = self._fetch_yfinance_data(ticker, method, num_news)
 
         if method == YahooFinanceMethod.GET_NEWS:
             data_list = [
-                Data(text=f"{article['title']}: {article['link']}", data=article)
+                JSON(text=f"{article['title']}: {article['link']}", data=article)
                 for article in ast.literal_eval(result)
             ]
         else:
-            data_list = [Data(text=result, data={"result": result})]
+            data_list = [JSON(text=result, data={"result": result})]
 
         return data_list
 

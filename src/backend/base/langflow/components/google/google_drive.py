@@ -9,7 +9,7 @@ from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.template import Output
 
 
@@ -34,7 +34,7 @@ class GoogleDriveComponent(Component):
         Output(display_name="Loaded Documents", name="docs", method="load_documents"),
     ]
 
-    def load_documents(self) -> Data:
+    def load_documents(self) -> JSON:
         class CustomGoogleDriveLoader(GoogleDriveLoader):
             creds: Credentials | None = None
             """Credentials object to be passed directly."""
@@ -88,4 +88,4 @@ class GoogleDriveComponent(Component):
         data = docs_to_data(docs)
         # Return the loaded documents
         self.status = data
-        return Data(data={"text": data})
+        return JSON(data={"text": data})

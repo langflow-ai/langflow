@@ -20,7 +20,7 @@ from pydantic import (
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.type_extraction.type_extraction import post_process_type
 
 
@@ -250,6 +250,6 @@ class Output(BaseModel):
     def apply_options(self, result):
         if not self.options:
             return result
-        if self.options.filter and isinstance(result, Data):
+        if self.options.filter and isinstance(result, JSON):
             return result.filter_data(self.options.filter)
         return result

@@ -8,7 +8,7 @@ import orjson
 import yaml
 from defusedxml import ElementTree
 
-from langflow.schema import Data
+from langflow.schema import JSON
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -89,7 +89,7 @@ def retrieve_file_paths(
     return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
-def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def partition_file_to_data(file_path: str, *, silent_errors: bool) -> JSON | None:
     # Use the partition function to load the file
     from unstructured.partition.auto import partition
 
@@ -105,7 +105,7 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
     text = "\n\n".join([str(el) for el in elements])
     metadata = elements.metadata if hasattr(elements, "metadata") else {}
     metadata["file_path"] = file_path
-    return Data(text=text, data=metadata)
+    return JSON(text=text, data=metadata)
 
 
 def read_text_file(file_path: str) -> str:
@@ -135,7 +135,7 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> JSON | None:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -164,7 +164,7 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
             raise ValueError(msg) from e
         return None
 
-    return Data(data={"file_path": file_path, "text": text})
+    return JSON(data={"file_path": file_path, "text": text})
 
 
 # ! Removing unstructured dependency until
@@ -189,7 +189,7 @@ def parallel_load_data(
     silent_errors: bool,
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
-) -> list[Data | None]:
+) -> list[JSON | None]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
             lambda file_path: load_function(file_path, silent_errors=silent_errors),

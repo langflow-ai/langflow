@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from langflow.components.data import DirectoryComponent
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -337,8 +337,8 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
 
             # Mock parallel_load_data to return some test data
             mock_data = [
-                Data(text="content1", data={"file_path": str(Path(temp_dir) / "test1.txt")}),
-                Data(text="content2", data={"file_path": str(Path(temp_dir) / "test2.txt")}),
+                JSON(text="content1", data={"file_path": str(Path(temp_dir) / "test1.txt")}),
+                JSON(text="content2", data={"file_path": str(Path(temp_dir) / "test2.txt")}),
             ]
             mock_parallel_load.return_value = mock_data
 
@@ -369,7 +369,7 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             assert len(results) == 2, (
                 f"Expected 2 results, got {len(results)}: {[r.data['file_path'] for r in results]}"
             )
-            assert all(isinstance(r, Data) for r in results), (
+            assert all(isinstance(r, JSON) for r in results), (
                 f"All results should be Data objects, got types: {[type(r) for r in results]}"
             )
 

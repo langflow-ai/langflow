@@ -8,7 +8,7 @@ from loguru import logger
 from langflow.custom import Component
 from langflow.inputs import HandleInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -42,11 +42,11 @@ class ParseJSONDataComponent(Component):
     def _parse_data(self, input_value) -> str:
         if isinstance(input_value, Message) and isinstance(input_value.text, str):
             return input_value.text
-        if isinstance(input_value, Data):
+        if isinstance(input_value, JSON):
             return json.dumps(input_value.data)
         return str(input_value)
 
-    def filter_data(self) -> list[Data]:
+    def filter_data(self) -> list[JSON]:
         to_filter = self.input_value
         if not to_filter:
             return []
@@ -87,4 +87,4 @@ class ParseJSONDataComponent(Component):
 
         results = jq.compile(self.query).input_text(full_filter_str).all()
         logger.info("results: ", results)
-        return [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]
+        return [JSON(data=value) if isinstance(value, dict) else JSON(text=str(value)) for value in results]

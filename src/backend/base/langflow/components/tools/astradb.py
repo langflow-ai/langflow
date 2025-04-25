@@ -10,7 +10,7 @@ from langchain_core.tools import StructuredTool, Tool
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
 from langflow.logging import logger
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.table import EditMode
 
 
@@ -369,7 +369,7 @@ class AstraDBToolComponent(LCToolComponent):
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
         return filters
 
-    def run_model(self, **args) -> Data | list[Data]:
+    def run_model(self, **args) -> JSON | list[JSON]:
         """Run the query to get the data from the AstraDB collection."""
         collection = self._build_collection()
         sort = {}
@@ -409,6 +409,6 @@ class AstraDBToolComponent(LCToolComponent):
 
         logger.info(f"Tool {self.tool_name} executed`")
 
-        data: list[Data] = [Data(data=doc) for doc in results]
+        data: list[JSON] = [JSON(data=doc) for doc in results]
         self.status = data
         return data

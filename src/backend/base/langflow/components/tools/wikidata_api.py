@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class WikidataSearchSchema(BaseModel):
@@ -83,14 +83,14 @@ class WikidataAPIComponent(LCToolComponent):
 
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
 
         results = tool.run({"query": self.query})
 
         # Transform the API response into Data objects
         data = [
-            Data(
+            JSON(
                 text=result["label"],
                 metadata=result,
             )

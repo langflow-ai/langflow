@@ -5,7 +5,7 @@ from collections.abc import Callable
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class CalculatorComponent(Component):
@@ -32,7 +32,7 @@ class CalculatorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="result", type_=Data, method="evaluate_expression"),
+        Output(display_name="Data", name="result", type_=JSON, method="evaluate_expression"),
     ]
 
     def _eval_expr(self, node: ast.AST) -> float:
@@ -61,7 +61,7 @@ class CalculatorComponent(Component):
         error_msg = f"Unsupported operation or expression type: {type(node).__name__}"
         raise TypeError(error_msg)
 
-    def evaluate_expression(self) -> Data:
+    def evaluate_expression(self) -> JSON:
         """Evaluate the mathematical expression and return the result."""
         try:
             tree = ast.parse(self.expression, mode="eval")
@@ -71,17 +71,17 @@ class CalculatorComponent(Component):
             self.log(f"Calculation result: {formatted_result}")
 
             self.status = formatted_result
-            return Data(data={"result": formatted_result})
+            return JSON(data={"result": formatted_result})
 
         except ZeroDivisionError:
             error_message = "Error: Division by zero"
             self.status = error_message
-            return Data(data={"error": error_message, "input": self.expression})
+            return JSON(data={"error": error_message, "input": self.expression})
 
         except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:
             error_message = f"Invalid expression: {e!s}"
             self.status = error_message
-            return Data(data={"error": error_message, "input": self.expression})
+            return JSON(data={"error": error_message, "input": self.expression})
 
     def build(self):
         """Return the main evaluation function."""

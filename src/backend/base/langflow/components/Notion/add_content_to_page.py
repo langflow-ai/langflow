@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 MIN_ROWS_IN_TABLE = 3
 
@@ -45,9 +45,9 @@ class AddContentToPage(LCToolComponent):
         markdown_text: str = Field(..., description="The markdown text to convert to Notion blocks.")
         block_id: str = Field(..., description="The ID of the page/block to add the content.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._add_content_to_page(self.markdown_text, self.block_id)
-        return Data(data=result, text=json.dumps(result))
+        return JSON(data=result, text=json.dumps(result))
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(

@@ -16,17 +16,17 @@ from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
-    DataInput,
     DropdownInput,
     FloatInput,
     IntInput,
+    JSONInput,
     MessageTextInput,
     MultilineInput,
     Output,
     StrInput,
     TableInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.dotdict import dotdict
 
@@ -73,7 +73,7 @@ class APIRequestComponent(Component):
             info="Enable cURL mode to populate fields from a cURL command.",
             real_time_refresh=True,
         ),
-        DataInput(
+        JSONInput(
             name="query_params",
             display_name="Query Parameters",
             info="The query parameters to append to the URL.",
@@ -294,7 +294,7 @@ class APIRequestComponent(Component):
                 StrInput: "",
                 MultilineInput: "",
                 DropdownInput: "GET",
-                DataInput: {},
+                JSONInput: {},
             }
 
             for input_field in self.inputs:
@@ -383,7 +383,7 @@ class APIRequestComponent(Component):
         follow_redirects: bool = True,
         save_to_file: bool = False,
         include_httpx_metadata: bool = False,
-    ) -> Data:
+    ) -> JSON:
         method = method.upper()
         if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
             msg = f"Unsupported method: {method}"
@@ -443,7 +443,7 @@ class APIRequestComponent(Component):
                             **({"redirection_history": redirection_history} if redirection_history else {}),
                         }
                     )
-                return Data(data=metadata)
+                return JSON(data=metadata)
 
             if is_binary:
                 result = response.content
@@ -465,9 +465,9 @@ class APIRequestComponent(Component):
                         **({"redirection_history": redirection_history} if redirection_history else {}),
                     }
                 )
-            return Data(data=metadata)
+            return JSON(data=metadata)
         except httpx.TimeoutException:
-            return Data(
+            return JSON(
                 data={
                     "source": url,
                     "headers": headers,
@@ -477,7 +477,7 @@ class APIRequestComponent(Component):
             )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Error making request to {url}")
-            return Data(
+            return JSON(
                 data={
                     "source": url,
                     "headers": headers,
@@ -494,7 +494,7 @@ class APIRequestComponent(Component):
         url_parts[4] = urlencode(query)
         return urlunparse(url_parts)
 
-    async def make_requests(self) -> list[Data]:
+    async def make_requests(self) -> list[JSON]:
         method = self.method
         urls = [url.strip() for url in self.urls if url.strip()]
         headers = self.headers or {}

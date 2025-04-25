@@ -5,7 +5,7 @@ from langchain_core.tools import ToolException
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -29,7 +29,7 @@ class WikidataComponent(Component):
         Output(display_name="Message", name="text", method="fetch_content_text"),
     ]
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         try:
             # Define request parameters for Wikidata API
             params = {
@@ -49,11 +49,11 @@ class WikidataComponent(Component):
             results = response_json.get("search", [])
 
             if not results:
-                return [Data(data={"error": "No search results found for the given query."})]
+                return [JSON(data={"error": "No search results found for the given query."})]
 
             # Transform the API response into Data objects
             data = [
-                Data(
+                JSON(
                     text=f"{result['label']}: {result.get('description', '')}",
                     data={
                         "label": result["label"],

@@ -1,6 +1,6 @@
 from typing import Any
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 
 def convert_to_langchain_type(value):
@@ -17,7 +17,7 @@ def convert_to_langchain_type(value):
             value = value.to_lc_message()
         else:
             value = value.to_lc_document()
-    elif isinstance(value, Data):
+    elif isinstance(value, JSON):
         value = value.to_lc_document() if "text" in value.data else value.data
     return value
 

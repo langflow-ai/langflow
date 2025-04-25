@@ -2,7 +2,7 @@ from langchain_unstructured import UnstructuredLoader
 
 from langflow.base.data import BaseFileComponent
 from langflow.inputs import DropdownInput, MessageTextInput, NestedDictInput, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class UnstructuredComponent(BaseFileComponent):
@@ -111,7 +111,7 @@ class UnstructuredComponent(BaseFileComponent):
 
         documents = loader.load()
 
-        processed_data: list[Data | None] = [Data.from_document(doc) if doc else None for doc in documents]
+        processed_data: list[JSON | None] = [JSON.from_document(doc) if doc else None for doc in documents]
 
         # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`, to avoid conflicts with the `source` field
         for data in processed_data:

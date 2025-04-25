@@ -1,6 +1,6 @@
 from langflow.custom import Component
-from langflow.io import DataInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.io import JSONInput, MessageTextInput, Output
+from langflow.schema import JSON
 
 
 class FilterDataComponent(Component):
@@ -11,7 +11,7 @@ class FilterDataComponent(Component):
     name = "FilterData"
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data",
             display_name="Data",
             info="Data object to filter.",
@@ -28,14 +28,14 @@ class FilterDataComponent(Component):
         Output(display_name="Filtered Data", name="filtered_data", method="filter_data"),
     ]
 
-    def filter_data(self) -> Data:
+    def filter_data(self) -> JSON:
         filter_criteria: list[str] = self.filter_criteria
-        data = self.data.data if isinstance(self.data, Data) else {}
+        data = self.data.data if isinstance(self.data, JSON) else {}
 
         # Filter the data
         filtered = {key: value for key, value in data.items() if key in filter_criteria}
 
         # Create a new Data object with the filtered data
-        filtered_data = Data(data=filtered)
+        filtered_data = JSON(data=filtered)
         self.status = filtered_data
         return filtered_data

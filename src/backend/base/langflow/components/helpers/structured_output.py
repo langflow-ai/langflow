@@ -12,7 +12,7 @@ from langflow.io import (
     Output,
     TableInput,
 )
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
 
@@ -138,7 +138,7 @@ class StructuredOutputComponent(Component):
         ),
     ]
 
-    def build_structured_output_base(self) -> Data:
+    def build_structured_output_base(self) -> JSON:
         schema_name = self.schema_name or "OutputModel"
 
         if not hasattr(self.llm, "with_structured_output"):
@@ -181,10 +181,10 @@ class StructuredOutputComponent(Component):
 
         return result
 
-    def build_structured_output(self) -> Data:
+    def build_structured_output(self) -> JSON:
         output = self.build_structured_output_base()
 
-        return Data(text_key="results", data={"results": output})
+        return JSON(text_key="results", data={"results": output})
 
     def as_dataframe(self) -> DataFrame:
         output = self.build_structured_output_base()

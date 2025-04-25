@@ -21,7 +21,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.utils.version import get_version_info
 
 
@@ -1158,7 +1158,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."
@@ -1221,7 +1221,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return args
 
-    def search_documents(self, vector_store=None) -> list[Data]:
+    def search_documents(self, vector_store=None) -> list[JSON]:
         vector_store = vector_store or self.build_vector_store()
 
         self.log(f"Search input: {self.search_query}")

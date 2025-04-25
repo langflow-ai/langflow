@@ -4,7 +4,7 @@ from loguru import logger
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -80,7 +80,7 @@ class TavilySearchComponent(Component):
         Output(display_name="Text", name="text", method="fetch_content_text"),
     ]
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         try:
             url = "https://api.tavily.com/search"
             headers = {
@@ -107,12 +107,12 @@ class TavilySearchComponent(Component):
             data_results = []
 
             if self.include_answer and search_results.get("answer"):
-                data_results.append(Data(text=search_results["answer"]))
+                data_results.append(JSON(text=search_results["answer"]))
 
             for result in search_results.get("results", []):
                 content = result.get("content", "")
                 data_results.append(
-                    Data(
+                    JSON(
                         text=content,
                         data={
                             "title": result.get("title"),
@@ -124,19 +124,19 @@ class TavilySearchComponent(Component):
                 )
 
             if self.include_images and search_results.get("images"):
-                data_results.append(Data(text="Images found", data={"images": search_results["images"]}))
+                data_results.append(JSON(text="Images found", data={"images": search_results["images"]}))
         except httpx.HTTPStatusError as exc:
             error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
             logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
+            return [JSON(text=error_message, data={"error": error_message})]
         except httpx.RequestError as exc:
             error_message = f"Request error occurred: {exc}"
             logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
+            return [JSON(text=error_message, data={"error": error_message})]
         except ValueError as exc:
             error_message = f"Invalid response format: {exc}"
             logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
+            return [JSON(text=error_message, data={"error": error_message})]
         else:
             self.status = data_results
             return data_results

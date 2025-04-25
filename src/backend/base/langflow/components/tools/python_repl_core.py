@@ -4,7 +4,7 @@ from langchain_experimental.utilities import PythonREPL
 
 from langflow.custom import Component
 from langflow.io import CodeInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class PythonREPLComponent(Component):
@@ -37,7 +37,7 @@ class PythonREPLComponent(Component):
         Output(
             display_name="Results",
             name="results",
-            type_=Data,
+            type_=JSON,
             method="run_python_repl",
         ),
     ]
@@ -70,7 +70,7 @@ class PythonREPLComponent(Component):
             self.log(f"Successfully imported modules: {list(global_dict.keys())}")
             return global_dict
 
-    def run_python_repl(self) -> Data:
+    def run_python_repl(self) -> JSON:
         try:
             globals_ = self.get_globals(self.global_imports)
             python_repl = PythonREPL(_globals=globals_)
@@ -78,22 +78,22 @@ class PythonREPLComponent(Component):
             result = result.strip() if result else ""
 
             self.log("Code execution completed successfully")
-            return Data(data={"result": result})
+            return JSON(data={"result": result})
 
         except ImportError as e:
             error_message = f"Import Error: {e!s}"
             self.log(error_message)
-            return Data(data={"error": error_message})
+            return JSON(data={"error": error_message})
 
         except SyntaxError as e:
             error_message = f"Syntax Error: {e!s}"
             self.log(error_message)
-            return Data(data={"error": error_message})
+            return JSON(data={"error": error_message})
 
         except (NameError, TypeError, ValueError) as e:
             error_message = f"Error during execution: {e!s}"
             self.log(error_message)
-            return Data(data={"error": error_message})
+            return JSON(data={"error": error_message})
 
     def build(self):
         return self.run_python_repl

@@ -2,7 +2,7 @@ from pytube import Playlist  # Ensure you have pytube installed
 
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 from langflow.template import Output
 
 
@@ -29,4 +29,4 @@ class YouTubePlaylistComponent(Component):
         playlist = Playlist(playlist_url)
         video_urls = [video.watch_url for video in playlist.videos]
 
-        return DataFrame([Data(data={"video_url": url}) for url in video_urls])
+        return DataFrame([JSON(data={"video_url": url}) for url in video_urls])

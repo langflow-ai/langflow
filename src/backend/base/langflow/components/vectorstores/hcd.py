@@ -10,7 +10,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class HCDVectorStoreComponent(LCVectorStoreComponent):
@@ -245,7 +245,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
+            if isinstance(_input, JSON):
                 documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."
@@ -280,7 +280,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
                 args["filter"] = clean_filter
         return args
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         self.log(f"Search query: {self.search_query}")

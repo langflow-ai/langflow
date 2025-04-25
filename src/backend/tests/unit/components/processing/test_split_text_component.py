@@ -1,7 +1,7 @@
 import pytest
 from langflow.components.data import URLComponent
 from langflow.components.processing import SplitTextComponent
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -16,7 +16,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "data_inputs": [Data(text="Hello World")],
+            "data_inputs": [JSON(text="Hello World")],
             "chunk_overlap": 200,
             "chunk_size": 1000,
             "separator": "\n",
@@ -41,7 +41,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_text = "This is a test.\nIt has multiple lines.\nEach line should be a chunk."
         component.set_attributes(
             {
-                "data_inputs": [Data(text=test_text)],
+                "data_inputs": [JSON(text=test_text)],
                 "chunk_overlap": 0,
                 "chunk_size": 15,
                 "separator": "\n",
@@ -66,7 +66,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_text = "First chunk.\nSecond chunk.\nThird chunk."
         component.set_attributes(
             {
-                "data_inputs": [Data(text=test_text)],
+                "data_inputs": [JSON(text=test_text)],
                 "chunk_overlap": 5,  # Small overlap to test functionality
                 "chunk_size": 20,
                 "separator": "\n",
@@ -89,7 +89,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_text = "First part|Second part|Third part"
         component.set_attributes(
             {
-                "data_inputs": [Data(text=test_text)],
+                "data_inputs": [JSON(text=test_text)],
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "|",
@@ -112,7 +112,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_text = "Chunk 1\nChunk 2"
         component.set_attributes(
             {
-                "data_inputs": [Data(text=test_text, data=test_metadata)],
+                "data_inputs": [JSON(text=test_text, data=test_metadata)],
                 "chunk_overlap": 0,
                 "chunk_size": 7,
                 "separator": "\n",
@@ -138,7 +138,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_text = "First chunk\nSecond chunk\nThird chunk"
         component.set_attributes(
             {
-                "data_inputs": [Data(text=test_text)],
+                "data_inputs": [JSON(text=test_text)],
                 "chunk_overlap": 0,
                 "chunk_size": 11,
                 "separator": "\n",
@@ -167,7 +167,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component = SplitTextComponent()
         component.set_attributes(
             {
-                "data_inputs": [Data(text="")],
+                "data_inputs": [JSON(text="")],
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "\n",
@@ -186,7 +186,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_text = "Small text"
         component.set_attributes(
             {
-                "data_inputs": [Data(text=test_text)],
+                "data_inputs": [JSON(text=test_text)],
                 "chunk_overlap": 0,
                 "chunk_size": 100,
                 "separator": "\n",
@@ -206,7 +206,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         test_texts = ["First text\nSecond line", "Another text\nAnother line"]
         component.set_attributes(
             {
-                "data_inputs": [Data(text=text) for text in test_texts],
+                "data_inputs": [JSON(text=text) for text in test_texts],
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "\n",
@@ -227,7 +227,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         """Test splitting text with DataFrame input."""
         component = SplitTextComponent()
         test_texts = ["First text\nSecond line", "Another text\nAnother line"]
-        data_frame = DataFrame([Data(text=text) for text in test_texts])
+        data_frame = DataFrame([JSON(text=text) for text in test_texts])
         component.set_attributes(
             {
                 "data_inputs": data_frame,

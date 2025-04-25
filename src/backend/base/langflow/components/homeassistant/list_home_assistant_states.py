@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ListHomeAssistantStates(LCToolComponent):
@@ -49,7 +49,7 @@ class ListHomeAssistantStates(LCToolComponent):
 
         filter_domain: str = Field("", description="Filter domain (e.g., 'light'). If empty, returns all.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         """Execute the LangFlow component.
 
         Uses self.ha_token, self.base_url, self.filter_domain as entered in the UI.
@@ -116,22 +116,22 @@ class ListHomeAssistantStates(LCToolComponent):
             return f"Error processing response: {e}"
         return all_states
 
-    def _make_data_response(self, result: list[Any] | str | dict) -> Data:
+    def _make_data_response(self, result: list[Any] | str | dict) -> JSON:
         """Format the response into a Data object."""
         try:
             if isinstance(result, list):
                 # Wrap list data into a dictionary and convert to text
                 wrapped_result = {"result": result}
-                return Data(data=wrapped_result, text=json.dumps(wrapped_result, indent=2, ensure_ascii=False))
+                return JSON(data=wrapped_result, text=json.dumps(wrapped_result, indent=2, ensure_ascii=False))
             if isinstance(result, dict):
                 # Return dictionary as-is
-                return Data(data=result, text=json.dumps(result, indent=2, ensure_ascii=False))
+                return JSON(data=result, text=json.dumps(result, indent=2, ensure_ascii=False))
             if isinstance(result, str):
                 # Return error messages or strings
-                return Data(data={}, text=result)
+                return JSON(data={}, text=result)
 
             # Handle unexpected data types
-            return Data(data={}, text="Error: Unexpected response format.")
+            return JSON(data={}, text="Error: Unexpected response format.")
         except (TypeError, ValueError) as e:
             # Handle specific exceptions during formatting
-            return Data(data={}, text=f"Error: Failed to process response. Details: {e!s}")
+            return JSON(data={}, text=f"Error: Failed to process response. Details: {e!s}")

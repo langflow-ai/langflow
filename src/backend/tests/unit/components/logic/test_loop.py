@@ -5,7 +5,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.components.logic.loop import LoopComponent
 from langflow.memory import aget_messages
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from langflow.services.database.models.flow import FlowCreate
 
 from tests.base import ComponentTestBaseWithClient
@@ -33,8 +33,8 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "data": [[Data(text="Hello World")]],
-            "loop_input": [Data(text=TEXT)],
+            "data": [[JSON(text="Hello World")]],
+            "loop_input": [JSON(text=TEXT)],
         }
 
     def test_latest_version(self, default_kwargs) -> None:

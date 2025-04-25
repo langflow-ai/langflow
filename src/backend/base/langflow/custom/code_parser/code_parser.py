@@ -19,9 +19,9 @@ class CodeSyntaxError(HTTPException):
 
 
 def get_data_type():
-    from langflow.field_typing import Data
+    from langflow.field_typing import JSON
 
-    return Data
+    return JSON
 
 
 def find_class_ast_node(class_obj):

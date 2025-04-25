@@ -81,7 +81,7 @@ class Data(BaseModel):
         return new_text
 
     @classmethod
-    def from_document(cls, document: Document) -> "Data":
+    def from_document(cls, document: Document) -> "JSON":
         """Converts a Document to a Data.
 
         Args:
@@ -95,7 +95,7 @@ class Data(BaseModel):
         return cls(data=data, text_key="text")
 
     @classmethod
-    def from_lc_message(cls, message: BaseMessage) -> "Data":
+    def from_lc_message(cls, message: BaseMessage) -> "JSON":
         """Converts a BaseMessage to a Data.
 
         Args:
@@ -108,7 +108,7 @@ class Data(BaseModel):
         data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
-    def __add__(self, other: "Data") -> "Data":
+    def __add__(self, other: "JSON") -> "JSON":
         """Combines the data of two data by attempting to add values for overlapping keys.
 
         Combines the data of two data by attempting to add values for overlapping keys
@@ -128,7 +128,7 @@ class Data(BaseModel):
                 # If the key is not in the first record, simply add it
                 combined_data[key] = value
 
-        return Data(data=combined_data)
+        return JSON(data=combined_data)
 
     def to_lc_document(self) -> Document:
         """Converts the Data to a Document.
@@ -214,7 +214,7 @@ class Data(BaseModel):
     def __deepcopy__(self, memo):
         """Custom deepcopy implementation to handle copying of the Data object."""
         # Create a new Data object with a deep copy of the data dictionary
-        return Data(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
+        return JSON(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
 
     # check which attributes the Data has by checking the keys in the data dictionary
     def __dir__(self):
@@ -233,9 +233,9 @@ class Data(BaseModel):
         return key in self.data
 
     def __eq__(self, /, other):
-        return isinstance(other, Data) and self.data == other.data
+        return isinstance(other, JSON) and self.data == other.data
 
-    def filter_data(self, filter_str: str) -> "Data":
+    def filter_data(self, filter_str: str) -> "JSON":
         """Filters the data dictionary based on the filter string.
 
         Args:
@@ -247,6 +247,16 @@ class Data(BaseModel):
         from langflow.template.utils import apply_json_filter
 
         return apply_json_filter(self.data, filter_str)
+
+
+class JSON(Data):
+    # We will phase out the Data class in favor of the JSON class
+    # But they'll have the same interface and will be interchangeable
+    """Represents a JSON object.
+
+    Attributes:
+        data (dict): The JSON data.
+    """
 
 
 def custom_serializer(obj):

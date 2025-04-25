@@ -11,7 +11,7 @@ from langchain_core.tools import StructuredTool, Tool
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput, TableInput
 from langflow.logging import logger
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.table import EditMode
 
 
@@ -300,12 +300,12 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
         return result
 
-    def run_model(self, **args) -> Data | list[Data]:
+    def run_model(self, **args) -> JSON | list[JSON]:
         results = self.astra_rest(args)
-        data: list[Data] = []
+        data: list[JSON] = []
 
         if isinstance(results, list):
-            data = [Data(data=doc) for doc in results]
+            data = [JSON(data=doc) for doc in results]
         else:
             self.status = results
             return []

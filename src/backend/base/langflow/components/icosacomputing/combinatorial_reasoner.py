@@ -5,7 +5,7 @@ from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, SecretStrInput, StrInput
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.message import Message
 
 
@@ -78,7 +78,7 @@ class CombinatorialReasonerComponent(Component):
         self.reasons = response.json()["finalReasons"]
         return prompt
 
-    def build_reasons(self) -> Data:
+    def build_reasons(self) -> JSON:
         # list of selected reasons
         final_reasons = [reason[0] for reason in self.reasons]
-        return Data(value=final_reasons)
+        return JSON(value=final_reasons)

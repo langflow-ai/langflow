@@ -12,7 +12,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
@@ -140,7 +140,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for data in self.ingest_data:
-            if isinstance(data, Data):
+            if isinstance(data, JSON):
                 documents.append(data.to_lc_document())
             else:
                 error_message = "Vector Store Inputs must be Data objects."
@@ -212,14 +212,14 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         return results
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the vector store based on the search input.
 
         If no search input is provided, retrieve all documents.
         """
         results = self.search(self.search_query)
         retrieved_data = [
-            Data(
+            JSON(
                 text=result["page_content"],
                 file_path=result["metadata"].get("file_path", ""),
             )

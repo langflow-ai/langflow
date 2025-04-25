@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from langflow.components.processing.lambda_filter import LambdaFilterComponent
-from langflow.schema import Data
+from langflow.schema import JSON
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -15,7 +15,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "data": [Data(data={"items": [{"name": "test1", "value": 10}, {"name": "test2", "value": 20}]})],
+            "data": [JSON(data={"items": [{"name": "test1", "value": 10}, {"name": "test2", "value": 20}]})],
             "llm": AsyncMock(),
             "filter_instruction": "Filter items with value greater than 15",
             "sample_size": 1000,
@@ -49,7 +49,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
 
     async def test_lambda_with_large_dataset(self, component_class, default_kwargs):
         large_data = {"items": [{"name": f"test{i}", "value": i} for i in range(2000)]}
-        default_kwargs["data"] = [Data(data=large_data)]
+        default_kwargs["data"] = [JSON(data=large_data)]
         default_kwargs["filter_instruction"] = "Filter items with value greater than 1500"
         component = await self.component_setup(component_class, default_kwargs)
         component.llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 1500]"
@@ -69,7 +69,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
                 "B": [{"id": 3, "score": 95}, {"id": 4, "score": 88}],
             }
         }
-        default_kwargs["data"] = [Data(data=complex_data)]
+        default_kwargs["data"] = [JSON(data=complex_data)]
         default_kwargs["filter_instruction"] = "Filter items with score greater than 90"
         component = await self.component_setup(component_class, default_kwargs)
         component.llm.ainvoke.return_value.content = (

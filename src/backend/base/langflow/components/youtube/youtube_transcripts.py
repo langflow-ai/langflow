@@ -5,7 +5,7 @@ from langchain_community.document_loaders.youtube import TranscriptFormat
 
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MultilineInput
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import JSON, DataFrame, Message
 from langflow.template import Output
 
 
@@ -86,7 +86,7 @@ class YouTubeTranscriptsComponent(Component):
             error_msg = f"Failed to get YouTube transcripts: {exc!s}"
             return Message(text=error_msg)
 
-    def get_data_output(self) -> Data:
+    def get_data_output(self) -> JSON:
         """Creates a structured data object with transcript and metadata.
 
         Returns a Data object containing transcript text, video URL, and any error
@@ -101,11 +101,11 @@ class YouTubeTranscriptsComponent(Component):
             transcripts = self._load_transcripts(as_chunks=False)
             if not transcripts:
                 default_data["error"] = "No transcripts found."
-                return Data(data=default_data)
+                return JSON(data=default_data)
 
             # Combine all transcript parts
             full_transcript = " ".join(doc.page_content for doc in transcripts)
-            return Data(data={"transcript": full_transcript, "video_url": self.url})
+            return JSON(data={"transcript": full_transcript, "video_url": self.url})
 
         except (
             youtube_transcript_api.TranscriptsDisabled,
@@ -113,4 +113,4 @@ class YouTubeTranscriptsComponent(Component):
             youtube_transcript_api.CouldNotRetrieveTranscript,
         ) as exc:
             default_data["error"] = str(exc)
-            return Data(data=default_data)
+            return JSON(data=default_data)

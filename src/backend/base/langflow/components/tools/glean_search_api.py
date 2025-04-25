@@ -11,7 +11,7 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import JSON, DataFrame
 
 
 class GleanSearchAPISchema(BaseModel):
@@ -133,7 +133,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
 
         results = tool.run(
@@ -145,7 +145,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         )
 
         # Build the data
-        data = [Data(data=result, text=result["snippets"][0]["text"]) for result in results]
+        data = [JSON(data=result, text=result["snippets"][0]["text"]) for result in results]
         self.status = data  # type: ignore[assignment]
 
         return data

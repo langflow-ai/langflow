@@ -1,8 +1,8 @@
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DataInput, Output
-from langflow.schema import Data
+from langflow.io import JSONInput, Output
+from langflow.schema import JSON
 
 
 class MergeDataComponent(Component):
@@ -19,7 +19,7 @@ class MergeDataComponent(Component):
     icon = "merge"
 
     inputs = [
-        DataInput(
+        JSONInput(
             name="data_inputs",
             display_name="Data Inputs",
             is_list=True,
@@ -35,7 +35,7 @@ class MergeDataComponent(Component):
         ),
     ]
 
-    def merge_data(self) -> list[Data]:
+    def merge_data(self) -> list[JSON]:
         """Merges multiple Data objects into a single list of Data objects.
 
         Ensures that all keys from the input Data objects are present in each merged Data object.
@@ -46,7 +46,7 @@ class MergeDataComponent(Component):
         """
         logger.info("Initiating the data merging process.")
 
-        data_inputs: list[Data] = self.data_inputs
+        data_inputs: list[JSON] = self.data_inputs
         logger.debug(f"Received {len(data_inputs)} data input(s) for merging.")
 
         if not data_inputs:
@@ -56,7 +56,7 @@ class MergeDataComponent(Component):
         # Collect all unique keys from all Data objects
         all_keys: set[str] = set()
         for idx, data_input in enumerate(data_inputs):
-            if not isinstance(data_input, Data):
+            if not isinstance(data_input, JSON):
                 error_message = f"Data input at index {idx} is not of type Data."
                 logger.error(error_message)
                 type_error_message = (
@@ -80,7 +80,7 @@ class MergeDataComponent(Component):
                         logger.debug(log_message)
                     merged_data_dict[key] = value
 
-                merged_data = Data(
+                merged_data = JSON(
                     text_key=data_input.text_key, data=merged_data_dict, default_value=data_input.default_value
                 )
                 merged_data_list.append(merged_data)

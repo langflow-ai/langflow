@@ -3,7 +3,7 @@ from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
 from langflow.memory import aget_messages
-from langflow.schema import Data
+from langflow.schema import JSON
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -74,7 +74,7 @@ class MemoryComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    async def retrieve_messages(self) -> Data:
+    async def retrieve_messages(self) -> JSON:
         sender = self.sender
         sender_name = self.sender_name
         session_id = self.session_id

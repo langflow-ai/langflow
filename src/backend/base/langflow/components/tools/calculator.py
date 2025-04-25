@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MessageTextInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class CalculatorToolComponent(LCToolComponent):
@@ -30,7 +30,7 @@ class CalculatorToolComponent(LCToolComponent):
     class CalculatorToolSchema(BaseModel):
         expression: str = Field(..., description="The arithmetic expression to evaluate.")
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self._evaluate_expression(self.expression)
 
     def build_tool(self) -> Tool:
@@ -60,13 +60,13 @@ class CalculatorToolComponent(LCToolComponent):
         msg = f"Unsupported operation or expression type: {type(node).__name__}"
         raise TypeError(msg)
 
-    def _eval_expr_with_error(self, expression: str) -> list[Data]:
+    def _eval_expr_with_error(self, expression: str) -> list[JSON]:
         try:
             return self._evaluate_expression(expression)
         except Exception as e:
             raise ToolException(str(e)) from e
 
-    def _evaluate_expression(self, expression: str) -> list[Data]:
+    def _evaluate_expression(self, expression: str) -> list[JSON]:
         try:
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")
@@ -76,21 +76,21 @@ class CalculatorToolComponent(LCToolComponent):
             formatted_result = f"{result:.6f}".rstrip("0").rstrip(".")
 
             self.status = formatted_result
-            return [Data(data={"result": formatted_result})]
+            return [JSON(data={"result": formatted_result})]
 
         except (SyntaxError, TypeError, KeyError) as e:
             error_message = f"Invalid expression: {e}"
             self.status = error_message
-            return [Data(data={"error": error_message, "input": expression})]
+            return [JSON(data={"error": error_message, "input": expression})]
         except ZeroDivisionError:
             error_message = "Error: Division by zero"
             self.status = error_message
-            return [Data(data={"error": error_message, "input": expression})]
+            return [JSON(data={"error": error_message, "input": expression})]
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error evaluating expression")
             error_message = f"Error: {e}"
             self.status = error_message
-            return [Data(data={"error": error_message, "input": expression})]
+            return [JSON(data={"error": error_message, "input": expression})]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

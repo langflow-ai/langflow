@@ -11,7 +11,7 @@ from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import BoolInput
 from langflow.io import MultilineInput, Output, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 MAX_DESCRIPTION_LEN = 250
 
@@ -80,7 +80,7 @@ class ApifyActorsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Output", name="output", type_=list[Data], method="run_model"),
+        Output(display_name="Output", name="output", type_=list[JSON], method="run_model"),
         Output(display_name="Tool", name="tool", type_=Tool, method="build_tool"),
     ]
 
@@ -88,14 +88,14 @@ class ApifyActorsComponent(Component):
         super().__init__(*args, **kwargs)
         self._apify_client: ApifyClient | None = None
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         """Run the Actor and return node output."""
         input_ = json.loads(self.run_input)
         fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
         res = self._run_actor(self.actor_id, input_, fields=fields)
         if self.flatten_dataset:
             res = [ApifyActorsComponent.flatten(item) for item in res]
-        data = [Data(data=item) for item in res]
+        data = [JSON(data=item) for item in res]
 
         self.status = data
         return data

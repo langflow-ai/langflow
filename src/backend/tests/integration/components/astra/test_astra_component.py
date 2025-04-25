@@ -6,7 +6,7 @@ from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_core.documents import Document
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 from tests.api_keys import get_astradb_api_endpoint, get_astradb_application_token, get_openai_api_key
 from tests.integration.components.mock_components import TextToData
@@ -110,7 +110,7 @@ def test_astra_vectorize():
         )
 
         documents = [Document(page_content="test1"), Document(page_content="test2")]
-        records = [Data.from_document(d) for d in documents]
+        records = [JSON.from_document(d) for d in documents]
 
         component = AstraDBVectorStoreComponent()
 
@@ -154,7 +154,7 @@ def test_astra_vectorize_with_provider_api_key():
             collection_embedding_api_key=os.getenv("OPENAI_API_KEY"),
         )
         documents = [Document(page_content="test1"), Document(page_content="test2")]
-        records = [Data.from_document(d) for d in documents]
+        records = [JSON.from_document(d) for d in documents]
 
         component = AstraDBVectorStoreComponent()
 
@@ -199,7 +199,7 @@ def test_astra_vectorize_passes_authentication():
         )
 
         documents = [Document(page_content="test1"), Document(page_content="test2")]
-        records = [Data.from_document(d) for d in documents]
+        records = [JSON.from_document(d) for d in documents]
 
         component = AstraDBVectorStoreComponent()
 

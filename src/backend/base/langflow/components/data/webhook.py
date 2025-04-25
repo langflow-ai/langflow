@@ -2,7 +2,7 @@ import json
 
 from langflow.custom import Component
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class WebhookComponent(Component):
@@ -37,17 +37,17 @@ class WebhookComponent(Component):
         Output(display_name="Data", name="output_data", method="build_data"),
     ]
 
-    def build_data(self) -> Data:
-        message: str | Data = ""
+    def build_data(self) -> JSON:
+        message: str | JSON = ""
         if not self.data:
             self.status = "No data provided."
-            return Data(data={})
+            return JSON(data={})
         try:
             body = json.loads(self.data or "{}")
         except json.JSONDecodeError:
             body = {"payload": self.data}
             message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"
-        data = Data(data=body)
+        data = JSON(data=body)
         if not message:
             message = data
         self.status = message

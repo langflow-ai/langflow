@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import DropdownInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class NotionSearch(LCToolComponent):
@@ -49,7 +49,7 @@ class NotionSearch(LCToolComponent):
         filter_value: str = Field(default="page", description="Filter type: 'page' or 'database'.")
         sort_direction: str = Field(default="descending", description="Sort direction: 'ascending' or 'descending'.")
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         results = self._search_notion(self.query, self.filter_value, self.sort_direction)
         records = []
         combined_text = f"Results found: {len(results)}\n\n"
@@ -74,7 +74,7 @@ class NotionSearch(LCToolComponent):
 
             text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
             combined_text += text
-            records.append(Data(text=text, data=result_data))
+            records.append(JSON(text=text, data=result_data))
 
         self.status = records
         return records

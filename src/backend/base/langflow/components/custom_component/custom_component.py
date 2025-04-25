@@ -1,7 +1,7 @@
 # from langflow.field_typing import Data
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import JSON
 
 
 class CustomComponent(Component):
@@ -25,7 +25,7 @@ class CustomComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
-    def build_output(self) -> Data:
-        data = Data(value=self.input_value)
+    def build_output(self) -> JSON:
+        data = JSON(value=self.input_value)
         self.status = data
         return data

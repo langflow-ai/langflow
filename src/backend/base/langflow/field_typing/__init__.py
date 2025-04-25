@@ -1,6 +1,7 @@
 from typing import Any
 
 from .constants import (
+    JSON,
     AgentExecutor,
     BaseChatMemory,
     BaseChatModel,
@@ -16,7 +17,6 @@ from .constants import (
     Chain,
     ChatPromptTemplate,
     Code,
-    Data,
     Document,
     Embeddings,
     LanguageModel,
@@ -59,6 +59,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "JSON",
     "AgentExecutor",
     "BaseChatMemory",
     "BaseChatModel",
@@ -74,7 +75,6 @@ __all__ = [
     "Chain",
     "ChatPromptTemplate",
     "Code",
-    "Data",
     "Document",
     "Embeddings",
     "Input",

@@ -7,7 +7,7 @@ from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs.chat import ChatOutput
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph import Graph
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 from pydantic import BaseModel
 
 
@@ -29,7 +29,7 @@ def test_component_tool():
     assert component_toolkit.component == calculator_component
 
     result = component_tool.invoke(input={"expression": "1+1"})
-    assert isinstance(result[0], Data)
+    assert isinstance(result[0], JSON)
     assert "result" in result[0].data
     assert result[0].result == "2"
 
