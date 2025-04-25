@@ -1175,10 +1175,11 @@ class Component(CustomComponent):
                 "display_name": tool.name,
                 "display_description": tool.description,
                 "args": tool.args,
+                # "args_schema": tool.args_schema,
             }
             for tool in tools
         ]
-        print(tool_data)
+        # print(tool_data)
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
             new_tags = self._extract_tools_tags(tool_data)
