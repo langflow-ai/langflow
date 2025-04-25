@@ -177,7 +177,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 >
                   <ForwardedIconComponent
                     name={item.icon}
-                    className="h-4 w-4"
+                    className={`h-4 w-4 ${
+                      selectedMode === item.name ? "opacity-100" : "opacity-50"
+                    }`}
                     aria-hidden="true"
                   />
                   {item.name}
