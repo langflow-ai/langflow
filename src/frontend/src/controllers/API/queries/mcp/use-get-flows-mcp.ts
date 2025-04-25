@@ -17,10 +17,15 @@ export const useGetFlowsMCP: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const responseFn = async () => {
-    const { data } = await api.get<getFlowsMCPResponse>(
-      `${getURL("MCP")}/${params.projectId}?mcp_enabled=false`,
-    );
-    return data;
+    try {
+      const { data } = await api.get<getFlowsMCPResponse>(
+        `${getURL("MCP")}/${params.projectId}?mcp_enabled=false`,
+      );
+      return data;
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
   };
 
   const queryResult = query(["useGetFlowsMCP", params.projectId], responseFn, {
