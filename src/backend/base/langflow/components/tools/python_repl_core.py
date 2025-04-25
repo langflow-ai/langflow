@@ -3,7 +3,7 @@ import importlib
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.custom import Component
-from langflow.io import CodeInput, Output, StrInput
+from langflow.io import CodeInput, Output, StrInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -16,6 +16,14 @@ class PythonREPLComponent(Component):
     icon = "Python"
 
     inputs = [
+        MultilineInput(
+            name="input",
+            display_name="Input",
+            value="{text}",
+            info="The input in your python code.",
+            is_list=True,
+            required=True,
+        ),
         StrInput(
             name="global_imports",
             display_name="Global Imports",
@@ -74,7 +82,13 @@ class PythonREPLComponent(Component):
         try:
             globals_ = self.get_globals(self.global_imports)
             python_repl = PythonREPL(_globals=globals_)
-            result = python_repl.run(self.python_code)
+            
+            # Convert input to string representation
+            input_str = repr(str(self.input))
+            # Replace 'input' in the code with the actual input value
+            python_code_with_input = self.python_code.replace("input", input_str)
+
+            result = python_repl.run(python_code_with_input)
             result = result.strip() if result else ""
 
             self.log("Code execution completed successfully")
@@ -96,4 +110,4 @@ class PythonREPLComponent(Component):
             return Data(data={"error": error_message})
 
     def build(self):
-        return self.run_python_repl
+        return self.run_python_repl()
