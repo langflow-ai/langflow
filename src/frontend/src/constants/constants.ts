@@ -767,7 +767,9 @@ export const BROKEN_EDGES_WARNING =
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
-export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
+export const IS_MAC =
+  typeof navigator !== "undefined" &&
+  navigator.userAgent.toUpperCase().includes("MAC");
 
 export const defaultShortcuts = [
   {
