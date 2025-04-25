@@ -21,9 +21,8 @@ test(
 
     await page
       .getByTestId("toolsMCP Server")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-mcp-server").click();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
       });
 
     await page.getByTestId("fit_view").click();
@@ -32,14 +31,34 @@ test(
 
     await page.getByTestId("dropdown_str_tool").isDisabled();
 
-    await page.getByTestId("refresh-button-command").click();
+    let attempts = 0;
+    const maxAttempts = 3;
+    let dropdownEnabled = false;
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-      },
-    );
+    while (attempts < maxAttempts && !dropdownEnabled) {
+      await page.getByTestId("refresh-button-command").click();
+      await page.waitForTimeout(3000);
+
+      try {
+        await page.waitForSelector(
+          '[data-testid="dropdown_str_tool"]:not([disabled])',
+          {
+            timeout: 10000,
+            state: "visible",
+          },
+        );
+        dropdownEnabled = true;
+      } catch (error) {
+        attempts++;
+        console.log(`Retry attempt ${attempts} for refresh button`);
+      }
+    }
+
+    if (!dropdownEnabled) {
+      throw new Error(
+        "Dropdown did not become enabled after multiple refresh attempts",
+      );
+    }
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -48,6 +67,10 @@ test(
     expect(fetchOptionCount).toBeGreaterThan(0);
 
     await page.getByTestId("fetch-0-option").click();
+
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("fit_view").click();
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -83,20 +106,47 @@ test(
 
     await page.getByTestId("tab_0_stdio").click();
 
-    await page.getByTestId("refresh-button-command").click();
+    await page.waitForTimeout(2000);
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-      },
-    );
+    await page.getByTestId("fit_view").click();
+
+    attempts = 0;
+    dropdownEnabled = false;
+
+    while (attempts < maxAttempts && !dropdownEnabled) {
+      await page.getByTestId("refresh-button-command").click();
+      await page.waitForTimeout(3000);
+
+      try {
+        await page.waitForSelector(
+          '[data-testid="dropdown_str_tool"]:not([disabled])',
+          {
+            timeout: 10000,
+            state: "visible",
+          },
+        );
+        dropdownEnabled = true;
+      } catch (error) {
+        attempts++;
+        console.log(`Retry attempt ${attempts} for second refresh button`);
+      }
+    }
+
+    if (!dropdownEnabled) {
+      throw new Error(
+        "Dropdown did not become enabled after multiple refresh attempts",
+      );
+    }
 
     await page.getByTestId("dropdown_str_tool").click();
 
     fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
     await page.getByTestId("fetch-0-option").click();
+
+    await page.waitForTimeout(2000);
+
+    await page.getByTestId("fit_view").click();
 
     expect(fetchOptionCount).toBeGreaterThan(0);
 
