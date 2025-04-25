@@ -349,7 +349,7 @@ The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your
 
 The **Retrieve** mode can query your **Chroma DB** collections.
 
-![Local DB retrieving vectors](/img/component-chroma-db.png)
+![Local DB retrieving vectors](/img/component-local-db.png)
 
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
 
