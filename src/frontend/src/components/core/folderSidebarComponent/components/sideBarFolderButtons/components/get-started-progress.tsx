@@ -82,7 +82,7 @@ export const GetStartedProgress: FC<{
   };
 
   return (
-    <div className="mt-3 h-[180px] w-full">
+    <div className="mt-3 h-[168px] w-full">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-semibold">
           {percentageGetStarted >= 100 ? (
@@ -117,7 +117,7 @@ export const GetStartedProgress: FC<{
         </span>
       </div>
 
-      <div className="space-y-1">
+      <div className="mt-2 space-y-1">
         <Button
           data-testid="github_starred_btn_get_started"
           unstyled
@@ -135,7 +135,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              "flex items-center gap-2 rounded-md px-2 py-[10px] hover:bg-muted",
               isGithubStarredChild && "pointer-events-none",
             )}
           >
@@ -177,7 +177,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
               isDiscordJoinedChild && "pointer-events-none",
             )}
           >
@@ -209,7 +209,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
               hasFlows && "pointer-events-none text-muted-foreground",
             )}
             data-testid="create_flow_btn_get_started"

@@ -30,7 +30,7 @@ export const ThemeButtons = () => {
   };
 
   return (
-    <div className="relative ml-auto inline-flex rounded-full border border-border p-0.5">
+    <div className="relative ml-auto inline-flex rounded-full border border-border">
       {/* Sliding Indicator - Behind the Buttons */}
       <div
         className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full bg-amber-400 ${

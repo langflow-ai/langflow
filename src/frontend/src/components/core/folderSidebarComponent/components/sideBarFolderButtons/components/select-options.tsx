@@ -61,15 +61,24 @@ export const SelectOptions = ({
               id="rename-button"
               value="rename"
               data-testid="btn-rename-folder"
+              className="text-xs"
             >
               <FolderSelectItem name="Rename" iconName="SquarePen" />
             </SelectItem>
           )}
-          <SelectItem value="download" data-testid="btn-download-folder">
+          <SelectItem
+            value="download"
+            data-testid="btn-download-folder"
+            className="text-xs"
+          >
             <FolderSelectItem name="Download" iconName="Download" />
           </SelectItem>
           {index > 0 && (
-            <SelectItem value="delete" data-testid="btn-delete-folder">
+            <SelectItem
+              value="delete"
+              data-testid="btn-delete-folder"
+              className="text-xs"
+            >
               <FolderSelectItem name="Delete" iconName="Trash2" />
             </SelectItem>
           )}
