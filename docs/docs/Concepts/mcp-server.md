@@ -213,9 +213,68 @@ To quit MCP Inspector, in the terminal where it's running, enter `Ctrl+C`.
 
 The Langflow MCP server isn't exposed to the public internet.
 
-To expose it, forward traffic with a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
+To expose it, forward traffic with a forwarding platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
-This example uses Ngrok, but you can use any similar sharing platform.
-This example assumes the default Langflow address of `127.0.0.1:7860`.
+This example uses Ngrok, but you can use any similar reverse proxy or forwarding platform.
+This example assumes the default Langflow listening address of `127.0.0.1:7860`.
 If you're using **Langflow for Desktop**, the address is `127.0.0.1:7868`.
 
+1. Install ngrok.
+```
+brew install ngrok
+```
+2. Authenticate your ngrok server with an ngrok authentication token.
+Your token is found in your Ngrok dashboard.
+Replace **NGROK_TOKEN** with your ngrok token.
+```
+ngrok config add-authtoken **NGROK_TOKEN**
+```
+3. Deploy your application.
+This example deploys an ephemeral domain with no authentication.
+```
+ngrok http http://localhost:7860
+```
+The Ngrok session starts in your terminal. The `Forwarding` row displays the forwarding address for your Langflow server, which is acting as a reverse proxy for your server.
+```text
+Forwarding https://94b1-73-64-171-14.ngrok-free.app -> http://localhost:7860
+```
+4. Navigate to the forwarding address.
+5. In Langflow, navigate to the **MCP Server** page.
+6. Copy the **MCP Server** command.
+7. Open Cursor, and then navigate to the `mcp.json` file.
+8. Paste the code template from the **MCP Server** page into the `mcp.json` file.
+Note that the MCP server command now contains your ngrok forwarding address instead of the localhost address.
+```json
+{
+  "mcpServers": {
+    "lf-my_projects": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--sse",
+        "https://94b1-73-64-171-14.ngrok-free.app/api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1/sse"
+      ]
+    }
+  }
+}
+```
+9. Save the `mcp.json` file, and then click the **Reload** icon.
+10. Ask Cursor the same question as before, such as`What job experience does Emily have?`
+The agent asks to call the MCP tool `document_qa_for_resume`, indicating connectivity between your client and the Langflow server through the ngrok proxy.
+The conversation is the same as it was on localhost:
+```text
+{
+  "input_value": "What job experience does Emily have?"
+}
+Result:
+What job experience does Emily have?
+Emily J. Wilson has the following job experience:
+```
+
+The ngrok terminal session displays your requests to your project's endpoint:
+```text
+16:35:48.566 EDT GET /api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1 200 OK
+```
+
+To add authentication or deploy a static domain, see the [Ngrok documentation](https://ngrok.com/docs/).
