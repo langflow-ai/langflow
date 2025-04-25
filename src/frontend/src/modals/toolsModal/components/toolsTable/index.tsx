@@ -92,18 +92,36 @@ export default function ToolsTable({
     if (!open && selectedRows) {
       handleOnNewValue({
         value: data.map((row) => {
-          const processedValue = parseString(row.name, [
-            "snake_case",
-            "no_blank",
-            "lowercase",
-          ]);
+          const processedValue = (
+            row.name !== ""
+              ? parseString(row.name, ["snake_case", "no_blank", "lowercase"])
+              : parseString(row.display_name, [
+                  "snake_case",
+                  "no_blank",
+                  "lowercase",
+                ])
+          ).slice(0, 46);
+
+          const processedDescription =
+            row.description !== "" ? row.description : row.display_description;
+
           return selectedRows?.some(
             (selected) =>
               (selected.display_name ?? selected.name) ===
               (row.display_name ?? row.name),
           )
-            ? { ...row, status: true, name: processedValue }
-            : { ...row, status: false, name: processedValue };
+            ? {
+                ...row,
+                status: true,
+                name: processedValue,
+                description: processedDescription,
+              }
+            : {
+                ...row,
+                status: false,
+                name: processedValue,
+                description: processedDescription,
+              };
         }),
       });
     }
@@ -124,6 +142,20 @@ export default function ToolsTable({
       field: isAction ? "display_name" : "name",
       headerName: isAction ? "Flow" : "Name",
       flex: 1,
+      valueGetter: (params) =>
+        !isAction
+          ? params.data.name !== ""
+            ? parseString(params.data.name, [
+                "snake_case",
+                "no_blank",
+                "lowercase",
+              ])
+            : parseString(params.data.display_name, [
+                "snake_case",
+                "no_blank",
+                "lowercase",
+              ])
+          : params.data.display_name,
     },
     {
       field: isAction ? "name" : "tags",
@@ -131,7 +163,19 @@ export default function ToolsTable({
       flex: 2,
       resizable: false,
       valueGetter: (params) =>
-        isAction ? params.data.name : params.data.tags.join(", "),
+        isAction
+          ? params.data.name !== ""
+            ? parseString(params.data.name, [
+                "snake_case",
+                "no_blank",
+                "lowercase",
+              ])
+            : parseString(params.data.display_name, [
+                "snake_case",
+                "no_blank",
+                "lowercase",
+              ])
+          : params.data.tags.join(", "),
       cellClass: "text-muted-foreground",
     },
     {
@@ -228,42 +272,12 @@ export default function ToolsTable({
                 <SidebarGroupContent className="h-full">
                   <div className="flex h-full flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <label
-                          className="text-sm font-medium"
-                          htmlFor="sidebar-name-input"
-                        >
-                          {isAction ? "Action Name" : "Tool Name"}
-                        </label>
-
-                        <Button
-                          unstyled
-                          onClick={() => {
-                            setSidebarName(focusedRow.display_name);
-                            handleSidebarInputChange(
-                              "name",
-                              focusedRow.display_name,
-                            );
-                          }}
-                          disabled={
-                            sidebarDescription === focusedRow.display_name ||
-                            !focusedRow.name
-                          }
-                          size="iconMd"
-                          className="group/rotate-icon"
-                        >
-                          <ForwardedIconComponent
-                            name="RotateCcw"
-                            className={cn(
-                              "icon-size",
-                              sidebarDescription !==
-                                focusedRow.display_description
-                                ? "text-muted-foreground hover:text-primary"
-                                : "text-input",
-                            )}
-                          />
-                        </Button>
-                      </div>
+                      <label
+                        className="text-sm font-medium"
+                        htmlFor="sidebar-name-input"
+                      >
+                        {isAction ? "Action Name" : "Tool Name"}
+                      </label>
                       <div className="text-xs text-muted-foreground">
                         {isAction
                           ? "Used as the function name when this flow is exposed to clients. Keep it short and descriptive."
@@ -276,49 +290,17 @@ export default function ToolsTable({
                           setSidebarName(e.target.value);
                           handleSidebarInputChange("name", e.target.value);
                         }}
+                        maxLength={46}
                         placeholder="Edit name..."
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <label
-                          className="text-sm font-medium"
-                          htmlFor="sidebar-desc-input"
-                        >
-                          {isAction ? "Action Description" : "Tool Description"}
-                        </label>
-
-                        <Button
-                          unstyled
-                          onClick={() => {
-                            setSidebarDescription(
-                              focusedRow.display_description,
-                            );
-                            handleSidebarInputChange(
-                              "description",
-                              focusedRow.display_description,
-                            );
-                          }}
-                          disabled={
-                            sidebarDescription ===
-                              focusedRow.display_description ||
-                            !focusedRow.description
-                          }
-                          size="iconMd"
-                          className="group/rotate-icon"
-                        >
-                          <ForwardedIconComponent
-                            name="RotateCcw"
-                            className={cn(
-                              "icon-size",
-                              sidebarDescription !==
-                                focusedRow.display_description
-                                ? "text-muted-foreground hover:text-primary"
-                                : "text-input",
-                            )}
-                          />
-                        </Button>
-                      </div>
+                      <label
+                        className="text-sm font-medium"
+                        htmlFor="sidebar-desc-input"
+                      >
+                        {isAction ? "Action Description" : "Tool Description"}
+                      </label>
                       <div className="text-xs text-muted-foreground">
                         {isAction
                           ? "This is the description for the action exposed to the clients. Optimize for clarity and relevance to end users."
