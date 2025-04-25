@@ -9,7 +9,7 @@ export const MCPServerNotice: FC<{
 }> = ({ handleDismissDialog }) => {
   const navigate = useCustomNavigate();
   return (
-    <div className="relative flex flex-col gap-3 rounded-xl border p-4">
+    <div className="relative flex flex-col gap-3 rounded-xl border p-4 shadow-md">
       <Button
         unstyled
         className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
