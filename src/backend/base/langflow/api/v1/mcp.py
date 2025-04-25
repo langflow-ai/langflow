@@ -336,7 +336,6 @@ async def im_alive(request: Request):
 
 @router.get("/sse", response_class=StreamingResponse)
 async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
-
     msg = f"Starting SSE connection, server name: {server.name}"
     logger.info(msg)
     token = current_user_ctx.set(current_user)
