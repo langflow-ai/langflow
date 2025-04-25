@@ -239,7 +239,6 @@ class NvidiaIngestComponent(BaseFileComponent):
                 document_type = element.get("document_type")
                 metadata = element.get("metadata", {})
                 source_metadata = metadata.get("source_metadata", {})
-                content_metadata = metadata.get("content_metadata", {})
 
                 if document_type == document_type_text:
                     data.append(
