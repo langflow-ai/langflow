@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import logging
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
@@ -13,6 +12,7 @@ import pydantic
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
+from loguru import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -32,8 +32,6 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.storage.utils import build_content_type_from_extension
-
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 P = ParamSpec("P")
