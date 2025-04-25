@@ -101,7 +101,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   return (
     <div>
-      <div className="text-md -mt-2 pb-2 font-bold">MCP Server</div>
+      <div
+        className="text-md -mt-2 pb-2 font-bold"
+        data-testid="mcp-server-title"
+      >
+        MCP Server
+      </div>
       <div className="pb-4 text-sm text-muted-foreground">
         Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
