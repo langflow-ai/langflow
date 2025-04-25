@@ -38,7 +38,7 @@ async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
     # Create a project first
     response_ = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
     id_ = response_.json()["id"]
-    
+
     # Get the project
     response = await client.get(f"api/v1/projects/{id_}", headers=logged_in_headers)
     result = response.json()
@@ -50,7 +50,7 @@ async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
         assert response.status_code == status.HTTP_200_OK
         assert isinstance(folder_data, dict), "The folder data must be a dictionary"
         assert "name" in folder_data, "The dictionary must contain a key called 'name'"
-        assert "description" in folder_data, "The dictionary must contain a key called 'description'" 
+        assert "description" in folder_data, "The dictionary must contain a key called 'description'"
         assert "id" in folder_data, "The dictionary must contain a key called 'id'"
     elif isinstance(result, dict) and "project" in result:
         # Handle paginated project response
@@ -72,11 +72,11 @@ async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
 async def test_update_project(client: AsyncClient, logged_in_headers, basic_case):
     update_case = basic_case.copy()
     update_case["name"] = "Updated Project"
-    
+
     # Create a project first
     response_ = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
     id_ = response_.json()["id"]
-    
+
     # Update the project
     response = await client.patch(f"api/v1/projects/{id_}", json=update_case, headers=logged_in_headers)
     result = response.json()
