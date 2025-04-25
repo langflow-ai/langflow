@@ -752,11 +752,15 @@ async def flow_as_tool_websocket(
                 )
                 return new_session
 
-            # --- Spawn a text delta queue and task for TTS ---
-            text_delta_queue: asyncio.Queue = asyncio.Queue()
-            text_delta_task: asyncio.Task | None = None  # Will hold our background task.
 
-            async def process_text_deltas(async_q: asyncio.Queue):
+            class ElevenLabsResponse:
+                def __init__(self, responseId : str):
+                    self.responseId = responseId
+                    self.text_delta_queue = asyncio.Queue()
+                    self.text_delta_task = asyncio.create_task(process_text_deltas(self))
+            eleven_labs_responses = {}
+
+            async def process_text_deltas(rsp : ElevenLabsResponse):
                 """Transfer text deltas from the async queue to a synchronous queue.
 
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
@@ -765,7 +769,7 @@ async def flow_as_tool_websocket(
 
                 async def transfer_text_deltas():
                     while True:
-                        item = await async_q.get()
+                        item = await rsp.text_delta_queue.get()
                         sync_q.put(item)
                         if item is None:
                             break
@@ -800,10 +804,13 @@ async def flow_as_tool_websocket(
                             for chunk in audio_stream:
                                 base64_audio = base64.b64encode(chunk).decode("utf-8")
                                 # Schedule sending the audio chunk in the main event loop.
-                                event = {"type": "response.audio.delta", "delta": base64_audio}
+                                event = {"type": "response.audio.delta",
+                                         "delta": base64_audio,
+                                         "response_id" : rsp.responseId}
                                 client_send_event_from_thread(event, main_loop)
 
-                            event = {"type": "response.done"}
+                            event = {"type": "response.done",
+                                     "response": { "id": rsp.responseId } }
                             client_send_event_from_thread(event, main_loop)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"Error in TTS processing (ValueError): {e}")
@@ -860,12 +867,13 @@ async def flow_as_tool_websocket(
                     pass
 
             async def forward_to_client() -> None:
-                nonlocal bot_speaking_flag, text_delta_queue, text_delta_task
+                nonlocal bot_speaking_flag, eleven_labs_responses
                 function_call = None
                 function_call_args = ""
                 conversation_id = str(uuid4())
                 # Store function call tasks to prevent garbage collection
                 function_call_tasks = []
+                
 
                 try:
                     while True:
@@ -876,21 +884,24 @@ async def flow_as_tool_websocket(
                         do_forward = True
                         do_forward = do_forward and not (event_type == "response.done" and voice_config.use_elevenlabs)
                         do_forward = do_forward and event_type.find("flow.") != 0
+                        
                         if do_forward:
                             await client_safe_send(event)
-                        if event_type == "response.text.delta":
+                        if event_type == "response.created":
+                            if voice_config.use_elevenlabs:
+                                response_id = event["response"]["id"]
+                                eleven_labs_responses[response_id] = ElevenLabsResponse(response_id)
+                        elif event_type == "response.text.delta":
                             if voice_config.use_elevenlabs:
                                 delta = event.get("delta", "")
-                                await text_delta_queue.put(delta)
-                                if text_delta_task is None:
-                                    # if text_delta_task is None or text_delta_task.done():
-                                    text_delta_task = asyncio.create_task(process_text_deltas(text_delta_queue))
+                                rsp : ElevenLabsResponse = eleven_labs_responses[response_id]
+                                await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
                             if voice_config.use_elevenlabs:
-                                await text_delta_queue.put(None)
-                                if text_delta_task and not text_delta_task.done():
-                                    await text_delta_task
-                                text_delta_task = None
+                                rsp : ElevenLabsResponse = eleven_labs_responses[response_id]
+                                await rsp.text_delta_queue.put(None)
+                                if rsp.text_delta_task and not rsp.text_delta_task.done():
+                                    await rsp.text_delta_task
 
                                 try:
                                     message_text = event.get("text", "")
