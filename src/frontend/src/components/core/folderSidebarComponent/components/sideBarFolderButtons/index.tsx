@@ -25,6 +25,7 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_MCP_NOTICE,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -480,7 +481,7 @@ const SideBarFoldersButtonsComponent = ({
         </SidebarGroup>
         <div className="flex-1" />
 
-        {!isDismissedMcpDialog && (
+        {ENABLE_MCP_NOTICE && !isDismissedMcpDialog && (
           <div className="p-2">
             <MCPServerNotice handleDismissDialog={handleDismissMcpDialog} />
           </div>
