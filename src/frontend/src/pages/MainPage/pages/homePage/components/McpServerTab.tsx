@@ -135,11 +135,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP actions."
               side="right"
             >
-              <div className="flex items-center text-sm font-normal">
+              <div className="flex items-center text-sm font-normal hover:cursor-help">
                 Server Actions
                 <ForwardedIconComponent
                   name="info"
-                  className="ml-2 h-4 w-4"
+                  className="ml-1.5 h-4 w-4 text-muted-foreground"
                   aria-hidden="true"
                 />
               </div>
