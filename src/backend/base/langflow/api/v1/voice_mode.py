@@ -373,13 +373,13 @@ async def handle_function_call(
     session_id: str,
     voice_config: VoiceConfig,
     client_safe_send_json,
-    openai_safe_send,
+    openai_send,
 ):
     """Handle function calls from the OpenAI API."""
     try:
         # trigger response that tool was called
         if voice_config.progress_enabled:
-            openai_safe_send(
+            openai_send(
                 {
                     "type": "conversation.item.create",
                     "item": {
@@ -398,7 +398,7 @@ async def handle_function_call(
                     },
                 }
             )
-            openai_safe_send(common_response_create(session_id))
+            openai_send(common_response_create(session_id))
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
@@ -433,8 +433,8 @@ async def handle_function_call(
                 "output": str(result),
             },
         }
-        openai_safe_send(function_output)
-        openai_safe_send(common_response_create(session_id))
+        await openai_send(function_output)
+        await openai_send(common_response_create(session_id))
     except json.JSONDecodeError as e:
         trace = traceback.format_exc()
         logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
@@ -446,7 +446,7 @@ async def handle_function_call(
                 "output": f"Error parsing arguments: {e!s}",
             },
         }
-        openai_safe_send(function_output)
+        await openai_send(function_output)
     except ValueError as e:
         trace = traceback.format_exc()
         logger.error(f"Value error: {e!s}\ntrace: {trace}")
@@ -458,7 +458,7 @@ async def handle_function_call(
                 "output": f"Error with input values: {e!s}",
             },
         }
-        openai_safe_send(function_output)
+        await openai_send(function_output)
     except (ConnectionError, websockets.exceptions.WebSocketException) as e:
         trace = traceback.format_exc()
         logger.error(f"Connection error: {e!s}\ntrace: {trace}")
@@ -470,7 +470,7 @@ async def handle_function_call(
                 "output": f"Connection error: {e!s}",
             },
         }
-        openai_safe_send(function_output)
+        await openai_send(function_output)
     except (KeyError, AttributeError, TypeError) as e:
         logger.error(f"Error executing flow: {e}")
         logger.error(traceback.format_exc())
@@ -482,7 +482,7 @@ async def handle_function_call(
                 "output": f"Error executing flow: {e}",
             },
         }
-        openai_safe_send(function_output)
+        await openai_send(function_output)
 
 
 voice_config_cache: dict[str, VoiceConfig] = {}
