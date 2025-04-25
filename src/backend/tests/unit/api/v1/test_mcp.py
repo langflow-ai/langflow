@@ -1,11 +1,9 @@
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-
 from langflow.services.database.models.user import User
 
 # Mark all tests in this module as asyncio
@@ -62,8 +60,6 @@ async def test_mcp_sse_head_endpoint_no_auth(client: AsyncClient):
     assert response.status_code == status.HTTP_200_OK
 
 
-
-
 async def test_mcp_sse_get_endpoint_invalid_auth(client: AsyncClient):
     """Test GET /sse endpoint with invalid authentication returns 401."""
     headers = {"Authorization": "Bearer invalid_token"}
@@ -71,16 +67,11 @@ async def test_mcp_sse_get_endpoint_invalid_auth(client: AsyncClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-
 # Test the POST / endpoint (handles incoming MCP messages)
 async def test_mcp_post_endpoint_success(client: AsyncClient, logged_in_headers, mock_sse_transport):
     """Test POST / endpoint successfully handles MCP messages."""
     test_message = {"type": "test", "content": "message"}
-    response = await client.post(
-        "api/v1/mcp/",
-        headers=logged_in_headers,
-        json=test_message
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json=test_message)
 
     assert response.status_code == status.HTTP_200_OK
     mock_sse_transport.handle_post_message.assert_called_once()
@@ -94,11 +85,7 @@ async def test_mcp_post_endpoint_no_auth(client: AsyncClient):
 
 async def test_mcp_post_endpoint_invalid_json(client: AsyncClient, logged_in_headers):
     """Test POST / endpoint with invalid JSON returns 400."""
-    response = await client.post(
-        "api/v1/mcp/",
-        headers=logged_in_headers,
-        content="invalid json"
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, content="invalid json")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
@@ -106,11 +93,7 @@ async def test_mcp_post_endpoint_disconnect_error(client: AsyncClient, logged_in
     """Test POST / endpoint handles disconnection errors correctly."""
     mock_sse_transport.handle_post_message.side_effect = BrokenPipeError("Simulated disconnect")
 
-    response = await client.post(
-        "api/v1/mcp/",
-        headers=logged_in_headers,
-        json={"type": "test"}
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json={"type": "test"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "MCP Server disconnected" in response.json()["detail"]
@@ -121,11 +104,7 @@ async def test_mcp_post_endpoint_server_error(client: AsyncClient, logged_in_hea
     """Test POST / endpoint handles server errors correctly."""
     mock_sse_transport.handle_post_message.side_effect = Exception("Internal server error")
 
-    response = await client.post(
-        "api/v1/mcp/",
-        headers=logged_in_headers,
-        json={"type": "test"}
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json={"type": "test"})
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert "Internal server error" in response.json()["detail"]
