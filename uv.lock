@@ -4415,6 +4415,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-docling"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docling" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/59/37/b75a8f55b16c209bb16cfc390fda6598431c5834041ab26b22204ef7c9eb/langchain_docling-0.2.0.tar.gz", hash = "sha256:94d11e5ec611b8a17809de9efba303eef2f0fc817f7ebdc46d737e58ecd88820", size = 4522, upload_time = "2025-01-08T13:32:57.049Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/9f/ee56bbb9d3ad97e5b4d1403e105fa00faf91a23bff1e2a76065735319aeb/langchain_docling-0.2.0-py3-none-any.whl", hash = "sha256:eff3e7cfcbd5bc56b9356108ec0475ee0487ec1227914b3cebb60fe288dae04c", size = 4802, upload_time = "2025-01-08T13:32:54.883Z" },
+]
+
+[[package]]
 name = "langchain-elasticsearch"
 version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4762,6 +4775,7 @@ dependencies = [
     { name = "langchain-chroma" },
     { name = "langchain-cohere" },
     { name = "langchain-community" },
+    { name = "langchain-docling" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
@@ -4955,6 +4969,7 @@ requires-dist = [
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.10" },
+    { name = "langchain-docling", specifier = ">=0.2.0" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },

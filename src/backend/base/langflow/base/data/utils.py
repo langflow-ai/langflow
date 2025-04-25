@@ -127,14 +127,59 @@ def read_docx_file(file_path: str) -> str:
     return "\n\n".join([p.text for p in doc.paragraphs])
 
 
-def parse_pdf_to_text(file_path: str) -> str:
-    from docling.document_converter import DocumentConverter
+def extract_fields(data):
+    extracted = []
+    for item in data:
+        try:
+            # Extract page_content (assuming it's an attribute of the Document object)
+            page_content = getattr(item, "page_content", "")
+
+            # Extract metadata (assuming metadata is an attribute)
+            metadata = getattr(item, "metadata", {})
+
+            # Access dl_meta and doc_items (assuming they are nested attributes or dictionaries)
+            dl_meta = metadata.get("dl_meta", {}) if isinstance(metadata, dict) else getattr(metadata, "dl_meta", {})
+            doc_items = dl_meta.get("doc_items", []) if isinstance(dl_meta, dict) else getattr(dl_meta, "doc_items", [])
+
+            # Extract content_layer and label from doc_items
+            for doc_item in doc_items:
+                # If doc_item is a dictionary
+                if isinstance(doc_item, dict):
+                    content_layer = doc_item.get("content_layer", "")
+                    label = doc_item.get("label", "")
+                else:
+                    # If doc_item is an object, use getattr
+                    content_layer = getattr(doc_item, "content_layer", "")
+                    label = getattr(doc_item, "label", "")
+
+                extracted.append({
+                    "page_content": page_content,
+                    "content_layer": content_layer,
+                    "label": label
+                })
+        except AttributeError as _:
+            continue
+
+    return extracted
+
+
+def parse_pdf_to_text(file_path: str) -> Data:
+    from langchain_docling import DoclingLoader
 
     # Get the source of the PDF file
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
+    loader = DoclingLoader(file_path=file_path)
+    docs = loader.load()
 
-    return Data(file_path=file_path, text=str(result.document.export_to_dict()))
+    # Grab the extract fields from the documents
+    metadata = extract_fields(docs)
+
+    return Data(
+            data={
+                "metadata": {"metadata": metadata},
+                "file_path": file_path,
+                "text": "\n\n".join([record.get("page_content", "") for record in metadata]),
+            }
+        )
 
 
 def handle_json_data(text):
@@ -149,16 +194,12 @@ def handle_json_data(text):
 
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     try:
+        # Special PDF handling with docling
         if file_path.endswith(".pdf"):
-            text = parse_pdf_to_text(file_path)
-        elif file_path.endswith(".docx"):
-            text = read_docx_file(file_path)
-        else:
-            text = read_text_file(file_path)
+            return parse_pdf_to_text(file_path)
 
-        # Check if the text is already a data object
-        if isinstance(text, Data):
-            return text
+        # Check if the file is a docx file
+        text = read_docx_file(file_path) if file_path.endswith(".docx") else read_text_file(file_path)
 
         # if file is json, yaml, or xml, we can parse it
         if file_path.endswith(".json"):
