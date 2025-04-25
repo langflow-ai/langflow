@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import { APITemplateType } from "@/types/api";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { ForwardedRef, forwardRef, useState } from "react";
@@ -21,6 +22,7 @@ interface ToolsModalProps {
   title: string;
   icon?: string;
   isAction?: boolean;
+  template?: APITemplateType;
 }
 
 const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
@@ -29,6 +31,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
       description,
       rows,
       handleOnNewValue,
+      template,
       title,
       icon,
       open,
@@ -69,6 +72,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
               <ToolsTable
                 rows={rows}
                 isAction={isAction}
+                template={template}
                 data={data}
                 setData={setData}
                 open={open}

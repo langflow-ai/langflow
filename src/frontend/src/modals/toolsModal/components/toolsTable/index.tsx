@@ -1,8 +1,4 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import TableComponent, {
-  TableComponentProps,
-} from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Button } from "@/components/ui/button";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Input } from "@/components/ui/input";
 import {
   Sidebar,
@@ -10,27 +6,16 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
-  SidebarMenu,
-  SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { TableOptionsTypeAPI } from "@/types/api";
-import { ToolsModalProps } from "@/types/components";
+import { APITemplateType } from "@/types/api";
 import { parseString } from "@/utils/stringManipulation";
-import { cn } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
-import {
-  ForwardedRef,
-  forwardRef,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function ToolsTable({
   rows,
@@ -39,9 +24,11 @@ export default function ToolsTable({
   isAction,
   open,
   handleOnNewValue,
+  template,
 }: {
   rows: any[];
   data: any[];
+  template?: APITemplateType;
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
@@ -161,7 +148,6 @@ export default function ToolsTable({
       field: "description",
       headerName: "Description",
       flex: 2,
-      resizable: false,
       cellClass: "text-muted-foreground",
     },
     {
@@ -223,6 +209,15 @@ export default function ToolsTable({
     }
   };
 
+  const actionArgs = useMemo(() => {
+    return Object.entries(focusedRow?.args ?? {}).map(
+      ([key, value]: [string, any]) => ({
+        display_name: value.title,
+        name: key,
+      }),
+    );
+  }, [focusedRow]);
+
   return (
     <>
       <main className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
@@ -265,7 +260,7 @@ export default function ToolsTable({
         <SidebarHeader className="flex-none px-4 py-4">
           <div className="flex flex-col gap-2" data-testid="sidebar_header">
             <h3
-              className="text-sm font-semibold"
+              className="text-base font-semibold"
               data-testid="sidebar_header_name"
             >
               {focusedRow?.display_name ?? focusedRow?.name}
@@ -282,14 +277,14 @@ export default function ToolsTable({
           {focusedRow && (
             <div className="flex h-full flex-col gap-4">
               <SidebarGroup className="flex-1">
-                <SidebarGroupContent className="h-full">
+                <SidebarGroupContent className="h-full pb-4">
                   <div className="flex h-full flex-col gap-4">
                     <div className="flex flex-col gap-2">
                       <label
-                        className="text-sm font-medium"
+                        className="text-mmd font-medium"
                         htmlFor="sidebar-name-input"
                       >
-                        {isAction ? "Action Name" : "Tool Name"}
+                        Action Name
                       </label>
 
                       <Input
@@ -305,16 +300,16 @@ export default function ToolsTable({
                       />
                       <div className="text-xs text-muted-foreground">
                         {isAction
-                          ? "Used as the function name when this flow is exposed to clients. Keep it short and descriptive."
-                          : "Used as the function name when this tool is exposed to the agent. Keep it short and descriptive."}
+                          ? "Used as the function name when this flow is exposed to clients."
+                          : "Used as the function name when this tool is exposed to the agent."}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
                       <label
-                        className="text-sm font-medium"
+                        className="text-mmd font-medium"
                         htmlFor="sidebar-desc-input"
                       >
-                        {isAction ? "Action Description" : "Tool Description"}
+                        Action Description
                       </label>
 
                       <Textarea
@@ -333,10 +328,34 @@ export default function ToolsTable({
                       />
                       <div className="text-xs text-muted-foreground">
                         {isAction
-                          ? "This is the description for the action exposed to the clients. Optimize for clarity and relevance to end users."
-                          : "This is the description for the tool exposed to the agents. Optimize for clarity and relevance to end users."}
+                          ? "This is the description for the action exposed to the clients."
+                          : "This is the description for the tool exposed to the agents."}
                       </div>
                     </div>
+                    {actionArgs.length > 0 && (
+                      <label
+                        className="mt-2 text-sm font-semibold"
+                        htmlFor="sidebar-desc-input"
+                      >
+                        Action Parameters
+                      </label>
+                    )}
+                    {actionArgs.map((field) => (
+                      <div key={field.name} className="flex flex-col gap-2">
+                        <label
+                          className="text-mmd font-medium"
+                          htmlFor="sidebar-desc-input"
+                        >
+                          {field.display_name}
+                        </label>
+                        <Input
+                          id="sidebar-desc-input"
+                          disabled
+                          placeholder="Input controlled by the agent"
+                          onChange={(e) => {}}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </SidebarGroupContent>
               </SidebarGroup>
