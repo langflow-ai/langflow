@@ -107,7 +107,7 @@ export const FilesPage = () => {
             </div>
             {params.data.progress !== undefined &&
             params.data.progress === -1 ? (
-              <span className="text-[13px] text-primary">
+              <span className="text-xs text-primary">
                 Upload failed,{" "}
                 <span
                   className="cursor-pointer text-accent-pink-foreground underline"
