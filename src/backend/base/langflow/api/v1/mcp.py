@@ -196,8 +196,9 @@ async def handle_list_tools():
                         inputSchema=json_schema_from_flow(flow),
                     )
                     tools.append(tool)
-                except Exception as e:
-                    logger.warning(f"Error in listing tools: {e!s} from flow: {flow_name}")
+                except Exception as e:  # noqa: BLE001
+                    msg = f"Error in listing tools: {e!s} from flow: {flow_name}"
+                    logger.warning(msg)
                     continue
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
@@ -335,8 +336,9 @@ async def im_alive(request: Request):
 
 @router.get("/sse", response_class=StreamingResponse)
 async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
-    logger.warning("Starting SSE connection")
-    logger.warning(f"server name: {server.name}")
+
+    msg = f"Starting SSE connection, server name: {server.name}"
+    logger.info(msg)
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:

@@ -409,8 +409,8 @@ async def handle_project_sse(
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)
-    logger.info(f"Project MCP server name: {project_server.server.name}")
-    logger.info(f"SSE: {sse}")
+    msg = f"Project MCP server name: {project_server.server.name}"
+    logger.info(msg)
 
     # Set context variables
     user_token = current_user_ctx.set(current_user)
