@@ -140,7 +140,7 @@ export default function ToolsTable({
   const columnDefs: ColDef[] = [
     {
       field: isAction ? "display_name" : "name",
-      headerName: isAction ? "Flow" : "Name",
+      headerName: isAction ? "Flow Name" : "Name",
       flex: 1,
       valueGetter: (params) =>
         !isAction
@@ -158,9 +158,16 @@ export default function ToolsTable({
           : params.data.display_name,
     },
     {
+      field: "description",
+      headerName: "Description",
+      flex: 2,
+      resizable: false,
+      cellClass: "text-muted-foreground",
+    },
+    {
       field: isAction ? "name" : "tags",
       headerName: isAction ? "Action" : "Slug",
-      flex: 2,
+      flex: 1,
       resizable: false,
       valueGetter: (params) =>
         isAction
@@ -278,11 +285,7 @@ export default function ToolsTable({
                       >
                         {isAction ? "Action Name" : "Tool Name"}
                       </label>
-                      <div className="text-xs text-muted-foreground">
-                        {isAction
-                          ? "Used as the function name when this flow is exposed to clients. Keep it short and descriptive."
-                          : "Used as the function name when this tool is exposed to the agent. Keep it short and descriptive."}
-                      </div>
+
                       <Input
                         id="sidebar-name-input"
                         value={sidebarName}
@@ -293,6 +296,11 @@ export default function ToolsTable({
                         maxLength={46}
                         placeholder="Edit name..."
                       />
+                      <div className="text-xs text-muted-foreground">
+                        {isAction
+                          ? "Used as the function name when this flow is exposed to clients. Keep it short and descriptive."
+                          : "Used as the function name when this tool is exposed to the agent. Keep it short and descriptive."}
+                      </div>
                     </div>
                     <div className="flex flex-col gap-2">
                       <label
@@ -301,11 +309,6 @@ export default function ToolsTable({
                       >
                         {isAction ? "Action Description" : "Tool Description"}
                       </label>
-                      <div className="text-xs text-muted-foreground">
-                        {isAction
-                          ? "This is the description for the action exposed to the clients. Optimize for clarity and relevance to end users."
-                          : "This is the description for the tool exposed to the agents. Optimize for clarity and relevance to end users."}
-                      </div>
 
                       <Textarea
                         id="sidebar-desc-input"
@@ -320,6 +323,11 @@ export default function ToolsTable({
                         placeholder="Edit description..."
                         className="h-24"
                       />
+                      <div className="text-xs text-muted-foreground">
+                        {isAction
+                          ? "This is the description for the action exposed to the clients. Optimize for clarity and relevance to end users."
+                          : "This is the description for the tool exposed to the agents. Optimize for clarity and relevance to end users."}
+                      </div>
                     </div>
                   </div>
                 </SidebarGroupContent>
