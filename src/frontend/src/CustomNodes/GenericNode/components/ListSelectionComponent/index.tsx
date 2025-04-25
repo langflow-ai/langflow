@@ -173,7 +173,7 @@ const ListSelectionComponent = ({
               name={nodeClass?.icon || "unknown"}
               className="h-[18px] w-[18px] text-muted-foreground"
             />
-            <div className="text-mmd font-semibold">
+            <div className="text-[13px] font-semibold">
               {nodeClass?.display_name}
             </div>
           </div>

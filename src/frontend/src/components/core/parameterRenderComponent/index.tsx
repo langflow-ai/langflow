@@ -211,6 +211,7 @@ export function ParameterRenderComponent({
             description={templateData.info || "Add or edit data"}
             title={nodeClass?.display_name ?? "Tools"}
             icon={nodeClass?.icon ?? ""}
+            template={nodeClass?.template}
           />
         );
       case "slider":

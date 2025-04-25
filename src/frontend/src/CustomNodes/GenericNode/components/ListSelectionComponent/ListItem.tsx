@@ -76,11 +76,11 @@ const ListItem = ({
           </div>
         )}
         <div className="flex w-full flex-col truncate">
-          <div className="text-md flex w-full truncate font-semibold">
+          <div className="flex w-full truncate text-mmd font-semibold">
             <span className="truncate">{item.name}</span>
           </div>
           {"metaData" in item && item.metaData && (
-            <div className="text-md flex w-full truncate text-gray-500">
+            <div className="flex w-full truncate text-mmd text-gray-500">
               <span className="truncate">{item.metaData}</span>
             </div>
           )}
@@ -88,7 +88,7 @@ const ListItem = ({
 
         {isHovered || isFocused ? (
           <div className="ml-auto flex items-center justify-start rounded-md">
-            <div className="text-md flex items-center pr-1.5 font-semibold text-muted-foreground">
+            <div className="flex items-center pr-1.5 text-mmd font-semibold text-muted-foreground">
               Select
             </div>
             <div className="flex items-center justify-center rounded-md">

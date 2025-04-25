@@ -19,6 +19,7 @@ export default function ToolsComponent({
   title,
   icon,
   disabled = false,
+  template,
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const actions = value
@@ -50,6 +51,7 @@ export default function ToolsComponent({
           setOpen={setIsModalOpen}
           isAction={isAction}
           description={description}
+          template={template}
           rows={value}
           handleOnNewValue={handleOnNewValue}
           title={title}
