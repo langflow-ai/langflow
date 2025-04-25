@@ -56,165 +56,6 @@ For more information on this component, see the [tool calling agent documentatio
 
 </details>
 
-## CSV Agent
-
-This component creates a CSV agent from a CSV file and LLM.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| path | File | Path to the CSV file |
-| agent_type | String | Type of agent to create (zero-shot-react-description, openai-functions, or openai-tools) |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | CSV agent instance |
-
-</details>
-
-## OpenAI Tools Agent
-
-This component creates an OpenAI Tools Agent.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use |
-| tools | List of Tools | Tools to give the agent access to |
-| system_prompt | String | System prompt to provide context to the agent |
-| input_value | String | User's input to the agent |
-| memory | Memory | Memory for the agent to use for context persistence |
-| max_iterations | Integer | Maximum number of iterations to allow the agent to execute |
-| verbose | Boolean | Whether to print out the agent's intermediate steps |
-| handle_parsing_errors | Boolean | Whether to handle parsing errors in the agent |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | OpenAI Tools agent instance |
-| output | String | The output from executing the agent on the input |
-
-</details>
-
-## OpenAPI Agent
-
-This component creates an agent for interacting with OpenAPI services.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use |
-| openapi_spec | String | The OpenAPI specification for the service |
-| base_url | String | Base URL for the API |
-| headers | Dict | Optional headers for API requests |
-| agent_executor_kwargs | Dict | Optional parameters for the agent executor |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | OpenAPI agent instance |
-
-</details>
-
-## SQL Agent
-
-This component creates an agent for interacting with SQL databases.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use |
-| database | Database | The SQL database connection |
-| top_k | Integer | Number of results to return from a SELECT query |
-| use_tools | Boolean | Whether to use tools for query execution |
-| return_intermediate_steps | Boolean | Whether to return the agent's intermediate steps |
-| max_iterations | Integer | Maximum number of iterations to run the agent |
-| max_execution_time | Integer | Maximum execution time in seconds |
-| early_stopping_method | String | Method to use for early stopping |
-| verbose | Boolean | Whether to print the agent's thoughts |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | SQL agent instance |
-
-</details>
-
-## Tool Calling Agent
-
-This component creates an agent for structured tool calling with various language models.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use |
-| tools | List[Tool] | List of tools available to the agent |
-| system_message | String | System message to use for the agent (optional) |
-| return_intermediate_steps | Boolean | Whether to return the agent's intermediate steps |
-| max_iterations | Integer | Maximum number of iterations to run the agent |
-| max_execution_time | Integer | Maximum execution time in seconds |
-| early_stopping_method | String | Method to use for early stopping |
-| verbose | Boolean | Whether to print the agent's thoughts |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | Tool calling agent instance |
-
-</details>
-
-## XML Agent
-
-This component creates an XML Agent using LangChain.
-
-The agent uses XML formatting for tool instructions to the Language Model.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Language model to use for the agent |
-| user_prompt | String | Custom prompt template for the agent (includes XML formatting instructions) |
-| tools | List[Tool] | List of tools available to the agent |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | XML Agent instance |
-
-</details>
-
 ## Legacy components
 
 Legacy components are available to use but no longer supported.
@@ -289,6 +130,7 @@ This component creates a Vector Store Router Agent using LangChain.
 
 The following components are available under **Bundles**.
 
+
 ### CrewAI Agent
 
 This component represents an Agent of CrewAI, allowing for the creation of specialized AI agents with defined roles, goals, and capabilities within a crew.
@@ -350,6 +192,83 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 | Name | Display Name | Info |
 |------|--------------|------|
 | crew | Crew | The constructed Crew object with hierarchical task execution |
+
+</details>
+
+### CSV Agent
+
+This component creates a CSV agent from a CSV file and LLM.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| path | File | Path to the CSV file |
+| agent_type | String | Type of agent to create (zero-shot-react-description, openai-functions, or openai-tools) |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | CSV agent instance |
+
+</details>
+
+### OpenAI Tools Agent
+
+This component creates an OpenAI Tools Agent.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use |
+| tools | List of Tools | Tools to give the agent access to |
+| system_prompt | String | System prompt to provide context to the agent |
+| input_value | String | User's input to the agent |
+| memory | Memory | Memory for the agent to use for context persistence |
+| max_iterations | Integer | Maximum number of iterations to allow the agent to execute |
+| verbose | Boolean | Whether to print out the agent's intermediate steps |
+| handle_parsing_errors | Boolean | Whether to handle parsing errors in the agent |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | OpenAI Tools agent instance |
+| output | String | The output from executing the agent on the input |
+
+</details>
+
+### OpenAPI Agent
+
+This component creates an agent for interacting with OpenAPI services.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use |
+| openapi_spec | String | The OpenAPI specification for the service |
+| base_url | String | Base URL for the API |
+| headers | Dict | Optional headers for API requests |
+| agent_executor_kwargs | Dict | Optional parameters for the agent executor |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | OpenAPI agent instance |
 
 </details>
 
@@ -418,3 +337,84 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 </details>
 
+### SQL Agent
+
+This component creates an agent for interacting with SQL databases.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use |
+| database | Database | The SQL database connection |
+| top_k | Integer | Number of results to return from a SELECT query |
+| use_tools | Boolean | Whether to use tools for query execution |
+| return_intermediate_steps | Boolean | Whether to return the agent's intermediate steps |
+| max_iterations | Integer | Maximum number of iterations to run the agent |
+| max_execution_time | Integer | Maximum execution time in seconds |
+| early_stopping_method | String | Method to use for early stopping |
+| verbose | Boolean | Whether to print the agent's thoughts |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | SQL agent instance |
+
+</details>
+
+### Tool Calling Agent
+
+This component creates an agent for structured tool calling with various language models.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use |
+| tools | List[Tool] | List of tools available to the agent |
+| system_message | String | System message to use for the agent (optional) |
+| return_intermediate_steps | Boolean | Whether to return the agent's intermediate steps |
+| max_iterations | Integer | Maximum number of iterations to run the agent |
+| max_execution_time | Integer | Maximum execution time in seconds |
+| early_stopping_method | String | Method to use for early stopping |
+| verbose | Boolean | Whether to print the agent's thoughts |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | Tool calling agent instance |
+
+</details>
+
+### XML Agent
+
+This component creates an XML Agent using LangChain.
+
+The agent uses XML formatting for tool instructions to the Language Model.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Language model to use for the agent |
+| user_prompt | String | Custom prompt template for the agent (includes XML formatting instructions) |
+| tools | List[Tool] | List of tools available to the agent |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | XML Agent instance |
+
+</details>
