@@ -260,7 +260,7 @@ Note that the MCP server command now contains your ngrok forwarding address inst
 }
 ```
 9. Save the `mcp.json` file, and then click the **Reload** icon.
-10. Ask Cursor the same question as before, such as`What job experience does Emily have?`
+10. Ask Cursor the same question you asked before, such as `What job experience does Emily have?`
 The agent asks to call the MCP tool `document_qa_for_resume`, indicating connectivity between your client and the Langflow server through the ngrok proxy.
 The conversation is the same as it was on localhost:
 ```text
