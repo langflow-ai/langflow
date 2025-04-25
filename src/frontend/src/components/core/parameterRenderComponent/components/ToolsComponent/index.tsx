@@ -41,9 +41,10 @@ export default function ToolsComponent({
 
   return (
     <div
-      className={
-        "flex w-full items-center" + (disabled ? " cursor-not-allowed" : "")
-      }
+      className={cn(
+        "flex w-full items-center",
+        disabled && "cursor-not-allowed",
+      )}
     >
       {value && (
         <ToolsModal
