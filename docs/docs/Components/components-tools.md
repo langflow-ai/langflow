@@ -268,7 +268,7 @@ This component allows you to call the Serper.dev Google Search API.
 
 This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
 
-In addition to being an MCP client that can leverage MCP servers, Langflow is also an MCP server that exposes flows as tools through the `/api/v1/mcp/sse` API endpoint. For more information, see [MCP server](/concepts-mcp-server).
+In addition to being an MCP client that can leverage MCP servers, the MCP component's SSE mode allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
 
 To use the MCP server component with an agent component, follow these steps:
 
@@ -283,11 +283,18 @@ uvx mcp-server-fetch
 To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
 
-To include environment variables with your server command, add them like this;
+To include environment variables with your server command, add them to the **Env** field like this:
+
 
 ```bash
-env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcp
+ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
 ```
+
+:::important
+Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
+To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
+For more information, see [global variables](/configuration-global-variables).
+:::
 
 3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
 4. In the **Tool** field, select the server tool you want the component to use.
@@ -297,13 +304,13 @@ For information on the parameters, see the MCP server's documentation.
 Connect the MCP server component's **Toolset** port to an **Agent** component's **Tools** port.
 
 The flow looks similar to this:
-![MCP server component](/img/mcp-server-component.png)
+![MCP server component](/img/component-mcp-stdio.png)
 
 6. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
 This confirms the MCP server is connected, and its tools are being used in Langflow.
 
-For more information, see [MCP server](/concepts-mcp-server).
+For more information, see [MCP server](/mcp-server).
 
 ### MCP Server-Sent Events (SSE) mode
 
@@ -319,7 +326,7 @@ The default value is `http://localhost:7860/api/v1/mcp/sse`.
 All of your flows are listed as tools.
 5. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
 The flow looks like this:
-![MCP server component](/img/mcp-server-component-sse.png)
+![MCP server component](/img/component-mcp-sse-mode.png)
 6. Open the **Playground** and chat with your tool.
 The agent chooses the correct tool based on your query.
 

@@ -251,7 +251,7 @@ const config = {
             from: "/components/custom",
           },
           {
-            to: "/concepts-mcp-server",
+            to: "/mcp-server",
             from: "/integrations-mcp",
           },
           // add more redirects like this

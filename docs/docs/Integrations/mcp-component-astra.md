@@ -12,7 +12,7 @@ Use the [MCP server component](/components-tools#mcp-server) to connect Langflow
 5. Create a [Simple agent starter project](/starter-projects-simple-agent).
 6. Remove the **URL** tool and replace it with an [MCP server](/components-tools#mcp-server) component.
 The flow should look like this:
-![MCP stdio component connecting to Astra](/img/component-astra-db.png)
+![MCP stdio component connecting to Astra](/img/component-mcp-astra-db.png)
 7. In the **MCP server** component, in the **MCP server** field, add the following code to connect to an Astra DB MCP server:
 ```
 npx -y @datastax/astra-db-mcp

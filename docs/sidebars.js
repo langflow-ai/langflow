@@ -39,7 +39,7 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
-        "Concepts/concepts-mcp-server",
+        "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
       ],
@@ -174,7 +174,7 @@ module.exports = {
         {
           type: "doc",
           id: "Integrations/mcp-component-astra",
-          label: "Connect an Astra DB MCP server to Langflow",
+          label: "Astra DB MCP server",
         },
         {
           type: 'category',

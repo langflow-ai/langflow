@@ -1,6 +1,6 @@
 ---
-title: MCP server
-slug: /concepts-mcp-server
+title: Model Context Protocol (MCP) server
+slug: /mcp-server
 ---
 
 import Tabs from '@theme/Tabs';
