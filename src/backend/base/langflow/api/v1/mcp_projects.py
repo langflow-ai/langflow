@@ -390,7 +390,7 @@ async def im_alive():
     return Response()
 
 
-@router.get("/{project_id}/sse", response_class=StreamingResponse, dependencies=[Depends(get_current_user)])
+@router.get("/{project_id}/sse", dependencies=[Depends(get_current_user)])
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
@@ -442,9 +442,6 @@ async def handle_project_sse(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
-
-    # Return an empty response as the actual streaming is handled by the SSE connection
-    return StreamingResponse(media_type="text/event-stream")
 
 
 @router.post("/{project_id}", dependencies=[Depends(get_current_user)])
