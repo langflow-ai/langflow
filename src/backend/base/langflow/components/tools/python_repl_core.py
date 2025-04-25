@@ -22,7 +22,7 @@ class PythonREPLComponent(Component):
             value="{text}",
             info="The input in your python code.",
             is_list=True,
-            required=True,
+            required=False,
         ),
         StrInput(
             name="global_imports",
