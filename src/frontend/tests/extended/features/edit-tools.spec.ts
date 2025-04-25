@@ -147,8 +147,8 @@ test(
 
     await page.getByRole("gridcell").nth(0).click();
 
-    await page.getByTestId("button_update_name").click();
-    await page.getByTestId("button_update_description").click();
+    await page.getByTestId("input_update_name").fill("");
+    await page.getByTestId("input_update_description").fill("");
 
     await page.getByText("Close").last().click();
 
