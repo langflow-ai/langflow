@@ -130,7 +130,32 @@ For more information, see [Debugging in Claude for Desktop](https://modelcontext
 </TabItem>
 </Tabs>
 
-To add environment variables to your MCP server command, include them like this:
+### Langflow MCP server authentication and environment variables
+
+If your Langflow server has `LANGFLOW_AUTO_LOGIN` set to `False`, MCP commands require an API key to connect.
+The presented code snippets automatically include the `x-api-key` field, but you need to replace the value for **LANGFLOW_API_KEY** with your Langflow API key.
+
+```json
+{
+  "mcpServers": {
+    "lf-my_projects": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--sse",
+        "http://127.0.0.1:7860/api/v1/mcp/project/e91ef0c4-86bc-4c7a-a916-c09e242065bd/sse",
+        "--header",
+        "x-api-key:**LANGFLOW_API_KEY**"
+      ]
+    }
+  }
+}
+```
+
+For more information, see [Authentication](/configuration-api-keys) and [API keys](/configuration-api-keys).
+
+To include environment variables with your MCP server command, include them like this:
 
 ```json
 {
