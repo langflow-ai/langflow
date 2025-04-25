@@ -166,10 +166,8 @@ The tool is listed as:
 ```text
 document_qa_for_resume
 ```
-Your name and description provided the agent with a clear purpose for the tool.
-
 2. Ask Cursor a question specifically about the resume, such as `What job experience does Emily have?`
-The agent asks to call the MCP tool `document_qa_for_resume`.
+The agent asks to call the MCP tool `document_qa_for_resume`, because your name and description provided the agent with a clear purpose for the tool.
 3. Click **Run tool** to continue. The agent requests permissions when necessary.
 ```text
 {
