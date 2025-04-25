@@ -386,6 +386,9 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 async def handle_messages(request: Request):
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)
-    except BrokenResourceError as e:
+    except (BrokenResourceError, BrokenPipeError) as e:
         logger.info("MCP Server disconnected")
         raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e
+    except Exception as e:
+        logger.error(f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e
