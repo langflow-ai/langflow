@@ -1,6 +1,6 @@
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import ToolsModal from "@/modals/toolsModal";
-import { cn } from "@/utils/utils";
+import { cn, testIdCase } from "@/utils/utils";
 import { useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Badge } from "../../../../ui/badge";
@@ -89,6 +89,7 @@ export default function ToolsComponent({
                 variant="secondaryStatic"
                 size="sq"
                 className="truncate font-normal"
+                data-testid={testIdCase(`tool_${action.name}`)}
               >
                 <span className="truncate">{action.name}</span>
               </Badge>
