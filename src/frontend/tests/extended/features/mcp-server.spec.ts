@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to change mode of MCP server without any issues",
-  { tag: ["@release", "@workspace", "@components", "@development"] },
+  { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
