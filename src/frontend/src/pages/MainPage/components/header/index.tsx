@@ -103,7 +103,7 @@ const HeaderComponent = ({
                 value={debouncedSearch}
                 onChange={handleSearch}
               />
-              <div className="relative mr-2 flex rounded-lg border border-muted bg-muted">
+              <div className="relative top-[3px] mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                 {/* Sliding Indicator */}
                 <div
                   className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-background shadow-md transition-transform duration-300 ${
@@ -119,7 +119,7 @@ const HeaderComponent = ({
                     key={viewType}
                     unstyled
                     size="icon"
-                    className={`group relative z-10 mx-[2px] my-[2px] flex-1 rounded-lg p-2 ${
+                    className={`group relative z-10 mx-[2px] my-[3px] flex-1 rounded-lg p-2 ${
                       view === viewType
                         ? "text-foreground"
                         : "text-muted-foreground hover:bg-muted"
