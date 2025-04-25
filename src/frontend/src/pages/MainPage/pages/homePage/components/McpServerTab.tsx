@@ -62,23 +62,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "-y",
         "supergateway",
         "--sse",
-        "${apiUrl}"
-      ]
-    }
-  }
-}`;
-
-  const MCP_SERVER_JSON_WITH_API_KEY = `{
-  "mcpServers": {
-    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "${apiUrl}",
+        "${apiUrl}"${
+          isAutoLogin
+            ? ""
+            : `,
         "--header",
-        "x-api-key:${apiKey || "YOUR_API_KEY"}"
+        "x-api-key:${apiKey || "YOUR_API_KEY"}"`
+        }
       ]
     }
   }
@@ -89,7 +79,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const copyToClipboard = () => {
     navigator.clipboard
-      .writeText(isAutoLogin ? MCP_SERVER_JSON : MCP_SERVER_JSON_WITH_API_KEY)
+      .writeText(MCP_SERVER_JSON)
       .then(() => {
         setIsCopied(true);
         setTimeout(() => {
@@ -217,7 +207,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               )}
               language="json"
             >
-              {isAutoLogin ? MCP_SERVER_JSON : MCP_SERVER_JSON_WITH_API_KEY}
+              {MCP_SERVER_JSON}
             </SyntaxHighlighter>
           </div>
           <div className="p-2 text-sm text-muted-foreground">
