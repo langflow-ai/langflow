@@ -23,7 +23,7 @@ export const useGetFlowsMCP: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetFlowsMCP"], responseFn, {
+  const queryResult = query(["useGetFlowsMCP", params.projectId], responseFn, {
     ...options,
   });
 
