@@ -8,7 +8,7 @@ const ClaudeSVG = (props) => {
       fill="none"
       {...props}
     >
-      <g opacity="0.5" clip-path="url(#clip0_216_1303)">
+      <g clip-path="url(#clip0_216_1303)">
         <path
           fill-rule="evenodd"
           clip-rule="evenodd"
