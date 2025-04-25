@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { GetStartedProgress } from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons/components/get-started-progress";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useUpdateUser } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import { Separator } from "@radix-ui/react-separator";
 import { useState } from "react";
@@ -25,8 +26,19 @@ export const HeaderButtons = ({
   const [isDismissedDialog, setIsDismissedDialog] =
     useState(userDismissedDialog);
 
+  const { mutate: updateUser } = useUpdateUser();
+
   const handleDismissDialog = () => {
     setIsDismissedDialog(true);
+    updateUser({
+      user_id: userData?.id!,
+      user: {
+        optins: {
+          ...userData?.optins,
+          dialog_dismissed: true,
+        },
+      },
+    });
   };
 
   return (

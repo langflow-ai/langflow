@@ -18,7 +18,6 @@ import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
 
 const McpServerTab = ({ folderName }: { folderName: string }) => {
-  const [selectedMode, setSelectedMode] = useState<string>("Cursor");
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -85,10 +84,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   }
 }`;
 
-  const MCP_SERVER_TUTORIAL_LINK = {
-    Claude: "https://docs.langflow.org/mcp-server/deploying-mcp-server",
-    Cursor: "https://docs.langflow.org/mcp-server/deploying-mcp-server",
-  };
+  const MCP_SERVER_TUTORIAL_LINK =
+    "https://docs.langflow.org/mcp-server/deploying-mcp-server";
 
   const copyToClipboard = () => {
     navigator.clipboard
@@ -160,32 +157,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         </div>
         <div className="w-2/3 pl-4">
           <div className="overflow-hidden rounded-lg border border-border">
-            <div className="flex flex-row justify-start border-b border-border">
-              {[
-                { name: "Cursor", icon: "Cursor" },
-                { name: "Claude", icon: "Claude" },
-              ].map((item, index) => (
-                <Button
-                  unstyled
-                  key={item.name}
-                  className={`flex flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent font-medium ${
-                    selectedMode === item.name
-                      ? "border-b-2 border-black dark:border-b-white"
-                      : "text-muted-foreground hover:text-foreground"
-                  } border-r border-r-border px-3 py-2 text-sm`}
-                  onClick={() => setSelectedMode(item.name)}
-                >
-                  <ForwardedIconComponent
-                    name={item.icon}
-                    className={`h-4 w-4 ${
-                      selectedMode === item.name ? "opacity-100" : "opacity-50"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Button>
-              ))}
-            </div>
             <SyntaxHighlighter
               style={syntaxHighlighterStyle}
               CodeTag={({ children }) => (
@@ -226,7 +197,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       size="icon"
                       className={cn(
                         "h-4 w-4 text-muted-foreground hover:text-foreground",
-                        selectedMode === "Cursor" && "top-[15px]",
                       )}
                       onClick={copyToClipboard}
                     >
@@ -248,7 +218,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           <div className="p-2 text-sm text-muted-foreground">
             Use this config in your client. Need help? See the{" "}
             <a
-              href={MCP_SERVER_TUTORIAL_LINK[selectedMode]}
+              href={MCP_SERVER_TUTORIAL_LINK}
               target="_blank"
               rel="noreferrer"
               className="text-accent-pink-foreground"

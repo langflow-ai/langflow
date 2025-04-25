@@ -14,6 +14,7 @@ import {
   DEFAULT_FOLDER,
   DEFAULT_FOLDER_DEPRECATED,
 } from "@/constants/constants";
+import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
   usePostFolders,
@@ -31,6 +32,7 @@ import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
+import useAuthStore from "@/stores/authStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
@@ -44,6 +46,7 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
 import { HeaderButtons } from "./components/header-buttons";
 import { InputEditFolderName } from "./components/input-edit-folder-name";
+import { MCPServerNotice } from "./components/mcp-server-notice";
 import { SelectOptions } from "./components/select-options";
 
 type SideBarFoldersButtonsComponentProps = {
@@ -351,6 +354,27 @@ const SideBarFoldersButtonsComponent = ({
 
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
 
+  const userData = useAuthStore((state) => state.userData);
+  const { mutate: updateUser } = useUpdateUser();
+  const userDismissedMcpDialog = userData?.optins?.mcp_dialog_dismissed;
+
+  const [isDismissedMcpDialog, setIsDismissedMcpDialog] = useState(
+    userDismissedMcpDialog,
+  );
+
+  const handleDismissMcpDialog = () => {
+    setIsDismissedMcpDialog(true);
+    updateUser({
+      user_id: userData?.id!,
+      user: {
+        optins: {
+          ...userData?.optins,
+          mcp_dialog_dismissed: true,
+        },
+      },
+    });
+  };
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -454,6 +478,13 @@ const SideBarFoldersButtonsComponent = ({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        <div className="flex-1" />
+
+        {!isDismissedMcpDialog && (
+          <div className="p-2">
+            <MCPServerNotice handleDismissDialog={handleDismissMcpDialog} />
+          </div>
+        )}
       </SidebarContent>
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">

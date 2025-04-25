@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from langflow.services.auth.utils import get_password_hash
 import pytest
 from fastapi import status
 from httpx import AsyncClient
@@ -12,7 +13,9 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 def mock_user():
-    return User(id=uuid4(), username="testuser", password="password", is_active=True, is_superuser=False)
+    return User(
+        id=uuid4(), username="testuser", password=get_password_hash("testpassword"), is_active=True, is_superuser=False
+    )
 
 
 @pytest.fixture

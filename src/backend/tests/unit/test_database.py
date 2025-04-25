@@ -427,8 +427,8 @@ async def test_get_flows_from_folder_pagination(client: AsyncClient, logged_in_h
         f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 50}
     )
     assert response.status_code == 200
-    assert response.json()["project"]["name"] == folder_name
-    assert response.json()["project"]["description"] == "Test project description"
+    assert response.json()["folder"]["name"] == folder_name
+    assert response.json()["folder"]["description"] == "Test project description"
     assert response.json()["flows"]["page"] == 1
     assert response.json()["flows"]["size"] == 50
     assert response.json()["flows"]["pages"] == 0
@@ -451,8 +451,8 @@ async def test_get_flows_from_folder_pagination_with_params(client: AsyncClient,
         f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"page": 3, "size": 10}
     )
     assert response.status_code == 200
-    assert response.json()["project"]["name"] == folder_name
-    assert response.json()["project"]["description"] == "Test project description"
+    assert response.json()["folder"]["name"] == folder_name
+    assert response.json()["folder"]["description"] == "Test project description"
     assert response.json()["flows"]["page"] == 3
     assert response.json()["flows"]["size"] == 10
     assert response.json()["flows"]["pages"] == 0
@@ -664,10 +664,10 @@ async def test_read_folder_with_pagination(client: AsyncClient, logged_in_header
     assert response.status_code == 200
     folder_data = response.json()
     assert isinstance(folder_data, dict)
-    assert "project" in folder_data
+    assert "folder" in folder_data
     assert "flows" in folder_data
-    assert folder_data["project"]["name"] == folder_name
-    assert folder_data["project"]["description"] == "Test project description"
+    assert folder_data["folder"]["name"] == folder_name
+    assert folder_data["folder"]["description"] == "Test project description"
     assert folder_data["flows"]["page"] == 1
     assert folder_data["flows"]["size"] == 10
     assert isinstance(folder_data["flows"]["items"], list)
