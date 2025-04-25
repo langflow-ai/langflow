@@ -18,7 +18,6 @@ import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
 
 const McpServerTab = ({ folderName }: { folderName: string }) => {
-  const [selectedMode, setSelectedMode] = useState<string>("Cursor");
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -85,10 +84,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   }
 }`;
 
-  const MCP_SERVER_TUTORIAL_LINK = {
-    Claude: "https://docs.langflow.org/mcp-server/deploying-mcp-server",
-    Cursor: "https://docs.langflow.org/mcp-server/deploying-mcp-server",
-  };
+  const MCP_SERVER_TUTORIAL_LINK =
+    "https://docs.langflow.org/mcp-server/deploying-mcp-server";
 
   const copyToClipboard = () => {
     navigator.clipboard
@@ -200,7 +197,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       size="icon"
                       className={cn(
                         "h-4 w-4 text-muted-foreground hover:text-foreground",
-                        selectedMode === "Cursor" && "top-[15px]",
                       )}
                       onClick={copyToClipboard}
                     >
@@ -222,7 +218,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           <div className="p-2 text-sm text-muted-foreground">
             Use this config in your client. Need help? See the{" "}
             <a
-              href={MCP_SERVER_TUTORIAL_LINK[selectedMode]}
+              href={MCP_SERVER_TUTORIAL_LINK}
               target="_blank"
               rel="noreferrer"
               className="text-accent-pink-foreground"
