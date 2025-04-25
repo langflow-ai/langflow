@@ -17,7 +17,7 @@ The flow should look like this:
 Replace the values for `ASTRA_TOKEN` and `ASTRA_ENDPOINT` with the values from your Astra database.
 
 ```text
-env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcpnpx -y @datastax/astra-db-mcp
+env ASTRA_DB_APPLICATION_TOKEN=ASTRA_TOKEN ASTRA_DB_API_ENDPOINT=ASTRA_ENDPOINT npx -y @datastax/astra-db-mcp
 ```
 
 :::important
