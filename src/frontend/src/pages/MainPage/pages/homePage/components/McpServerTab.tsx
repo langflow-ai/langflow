@@ -160,32 +160,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         </div>
         <div className="w-2/3 pl-4">
           <div className="overflow-hidden rounded-lg border border-border">
-            <div className="flex flex-row justify-start border-b border-border">
-              {[
-                { name: "Cursor", icon: "Cursor" },
-                { name: "Claude", icon: "Claude" },
-              ].map((item, index) => (
-                <Button
-                  unstyled
-                  key={item.name}
-                  className={`flex flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent font-medium ${
-                    selectedMode === item.name
-                      ? "border-b-2 border-black dark:border-b-white"
-                      : "text-muted-foreground hover:text-foreground"
-                  } border-r border-r-border px-3 py-2 text-sm`}
-                  onClick={() => setSelectedMode(item.name)}
-                >
-                  <ForwardedIconComponent
-                    name={item.icon}
-                    className={`h-4 w-4 ${
-                      selectedMode === item.name ? "opacity-100" : "opacity-50"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Button>
-              ))}
-            </div>
             <SyntaxHighlighter
               style={syntaxHighlighterStyle}
               CodeTag={({ children }) => (
