@@ -85,7 +85,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 }`;
 
   const MCP_SERVER_TUTORIAL_LINK =
-    "https://docs.langflow.org/mcp-server/deploying-mcp-server";
+    "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions";
 
   const copyToClipboard = () => {
     navigator.clipboard
