@@ -263,11 +263,17 @@ export default function ToolsTable({
         className="flex h-full flex-col border-l border-border"
       >
         <SidebarHeader className="flex-none px-4 py-4">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold">
+          <div className="flex flex-col gap-2" data-testid="sidebar_header">
+            <h3
+              className="text-sm font-semibold"
+              data-testid="sidebar_header_name"
+            >
               {focusedRow?.display_name ?? focusedRow?.name}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p
+              className="text-sm text-muted-foreground"
+              data-testid="sidebar_header_description"
+            >
               {focusedRow?.display_description ?? focusedRow?.description}
             </p>
           </div>
@@ -295,6 +301,7 @@ export default function ToolsTable({
                         }}
                         maxLength={46}
                         placeholder="Edit name..."
+                        data-testid="input_update_name"
                       />
                       <div className="text-xs text-muted-foreground">
                         {isAction
@@ -322,6 +329,7 @@ export default function ToolsTable({
                         }}
                         placeholder="Edit description..."
                         className="h-24"
+                        data-testid="input_update_description"
                       />
                       <div className="text-xs text-muted-foreground">
                         {isAction
