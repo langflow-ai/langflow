@@ -227,14 +227,15 @@ export default function ToolsTable({
               <SidebarGroup className="flex-1">
                 <SidebarGroupContent className="h-full">
                   <div className="flex h-full flex-col gap-4">
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <label
                           className="text-sm font-medium"
                           htmlFor="sidebar-name-input"
                         >
-                          {isAction ? "Flow Name" : "Tool Name"}
+                          {isAction ? "Action Name" : "Tool Name"}
                         </label>
+
                         <Button
                           unstyled
                           onClick={() => {
@@ -263,6 +264,11 @@ export default function ToolsTable({
                           />
                         </Button>
                       </div>
+                      <div className="text-xs text-muted-foreground">
+                        {isAction
+                          ? "Used as the function name when this flow is exposed to clients. Keep it short and descriptive."
+                          : "Used as the function name when this tool is exposed to the agent. Keep it short and descriptive."}
+                      </div>
                       <Input
                         id="sidebar-name-input"
                         value={sidebarName}
@@ -273,14 +279,15 @@ export default function ToolsTable({
                         placeholder="Edit name..."
                       />
                     </div>
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <label
                           className="text-sm font-medium"
                           htmlFor="sidebar-desc-input"
                         >
-                          {isAction ? "Flow Description" : "Tool Description"}
+                          {isAction ? "Action Description" : "Tool Description"}
                         </label>
+
                         <Button
                           unstyled
                           onClick={() => {
@@ -311,6 +318,11 @@ export default function ToolsTable({
                             )}
                           />
                         </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {isAction
+                          ? "This is the description for the action exposed to the clients. Optimize for clarity and relevance to end users."
+                          : "This is the description for the tool exposed to the agents. Optimize for clarity and relevance to end users."}
                       </div>
 
                       <Textarea
