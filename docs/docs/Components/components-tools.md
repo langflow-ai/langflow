@@ -264,11 +264,11 @@ This component allows you to call the Serper.dev Google Search API.
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
 
-## MCP server
+## MCP server component
 
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools.
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
 
-In addition to being an MCP client that can leverage MCP servers, Langflow is also an MCP server that exposes flows as tools through the `/api/v1/mcp/sse` API endpoint. For more information, see [MCP integrations](/integrations-mcp).
+In addition to being an MCP client that can leverage MCP servers, Langflow is also an MCP server that exposes flows as tools through the `/api/v1/mcp/sse` API endpoint. For more information, see [MCP server](/concepts-mcp-server).
 
 To use the MCP server component with an agent component, follow these steps:
 
@@ -300,6 +300,9 @@ This confirms the MCP server is connected, and its tools are being used in Langf
 For more information, see [MCP integrations](/integrations-mcp).
 
 ### MCP Server-Sent Events (SSE) mode
+
+The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
+This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
 
 1. In the **MCP Server** component, select **SSE**.
 A default address appears in the **MCP SSE URL** field.
