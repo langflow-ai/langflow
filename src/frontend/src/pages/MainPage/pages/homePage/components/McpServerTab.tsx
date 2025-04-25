@@ -61,7 +61,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
-    "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
+    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
       "command": "npx",
       "args": [
         "-y",
@@ -75,7 +75,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON_WITH_API_KEY = `{
   "mcpServers": {
-    "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
+    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
       "command": "npx",
       "args": [
         "-y",
