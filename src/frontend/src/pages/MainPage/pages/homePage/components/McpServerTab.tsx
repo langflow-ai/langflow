@@ -1,4 +1,5 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
 import { createApiKey } from "@/controllers/API";
@@ -60,7 +61,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
-    "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
+    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
       "command": "npx",
       "args": [
         "-y",
@@ -74,7 +75,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON_WITH_API_KEY = `{
   "mcpServers": {
-    "langflow-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"])}": {
+    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
       "command": "npx",
       "args": [
         "-y",
@@ -130,7 +131,19 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       <div className="flex flex-row">
         <div className="w-1/3">
           <div className="flex flex-row justify-between">
-            <div className="text-sm font-normal">Flows/Actions</div>
+            <ShadTooltip
+              content="Flows in this project can be exposed as callable MCP actions."
+              side="right"
+            >
+              <div className="flex items-center text-sm font-normal hover:cursor-help">
+                Server Actions
+                <ForwardedIconComponent
+                  name="info"
+                  className="ml-1.5 h-4 w-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </div>
+            </ShadTooltip>
           </div>
           <div className="flex flex-row flex-wrap gap-2 pt-2">
             <ToolsComponent

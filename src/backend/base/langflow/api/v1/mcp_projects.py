@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 from anyio import BrokenResourceError
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -22,7 +22,6 @@ from langflow.api.v1.mcp import (
     current_user_ctx,
     get_mcp_config,
     handle_mcp_errors,
-    server,
     with_db_session,
 )
 from langflow.api.v1.schemas import InputValueRequest, MCPSettings
@@ -211,7 +210,7 @@ class ProjectMCPServer:
                 raise
             return resources
 
-        @server.read_resource()
+        @self.server.read_resource()
         async def handle_read_resource(uri: str) -> bytes:
             """Handle resource read requests."""
             try:
@@ -275,9 +274,9 @@ class ProjectMCPServer:
 
                 # Initial progress notification
                 if mcp_config.enable_progress_notifications and (
-                    progress_token := server.request_context.meta.progressToken
+                    progress_token := self.server.request_context.meta.progressToken
                 ):
-                    await server.request_context.session.send_progress_notification(
+                    await self.server.request_context.session.send_progress_notification(
                         progress_token=progress_token, progress=0.0, total=1.0
                     )
 
@@ -290,20 +289,22 @@ class ProjectMCPServer:
                 )
 
                 async def send_progress_updates():
-                    if not (mcp_config.enable_progress_notifications and server.request_context.meta.progressToken):
+                    if not (
+                        mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken
+                    ):
                         return
 
                     try:
                         progress = 0.0
                         while True:
-                            await server.request_context.session.send_progress_notification(
+                            await self.server.request_context.session.send_progress_notification(
                                 progress_token=progress_token, progress=min(0.9, progress), total=1.0
                             )
                             progress += 0.1
                             await asyncio.sleep(1.0)
                     except asyncio.CancelledError:
                         if mcp_config.enable_progress_notifications:
-                            await server.request_context.session.send_progress_notification(
+                            await self.server.request_context.session.send_progress_notification(
                                 progress_token=progress_token, progress=1.0, total=1.0
                             )
                         raise
@@ -337,12 +338,12 @@ class ProjectMCPServer:
                                     if message:
                                         collected_results.append(types.TextContent(type="text", text=str(message)))
                                 if event_data.get("event") == "error":
-                                    collected_results.append(
-                                        types.TextContent(
-                                            type="text",
-                                            text=str(event_data.get("data", {}).get("error", "Unknown error")),
-                                        )
+                                    content_blocks = event_data.get("data", {}).get("content_blocks", [])
+                                    text = event_data.get("data", {}).get("text", "")
+                                    error_msg = (
+                                        f"Error Executing the {flow.name} tool. Error: {text} Details: {content_blocks}"
                                     )
+                                    collected_results.append(types.TextContent(type="text", text=error_msg))
                             except json.JSONDecodeError:
                                 msg = f"Failed to parse event data: {line}"
                                 logger.warning(msg)
@@ -357,9 +358,9 @@ class ProjectMCPServer:
 
                 except Exception:
                     if mcp_config.enable_progress_notifications and (
-                        progress_token := server.request_context.meta.progressToken
+                        progress_token := self.server.request_context.meta.progressToken
                     ):
-                        await server.request_context.session.send_progress_notification(
+                        await self.server.request_context.session.send_progress_notification(
                             progress_token=progress_token, progress=1.0, total=1.0
                         )
                     raise
@@ -410,7 +411,7 @@ async def im_alive():
     return Response()
 
 
-@router.get("/{project_id}/sse", response_class=StreamingResponse, dependencies=[Depends(get_current_user)])
+@router.get("/{project_id}/sse", dependencies=[Depends(get_current_user)])
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
@@ -462,9 +463,6 @@ async def handle_project_sse(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
-
-    # Return an empty response as the actual streaming is handled by the SSE connection
-    return StreamingResponse(media_type="text/event-stream")
 
 
 @router.post("/{project_id}", dependencies=[Depends(get_current_user)])

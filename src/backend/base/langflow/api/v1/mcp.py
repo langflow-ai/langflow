@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import logging
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
@@ -13,6 +12,7 @@ import pydantic
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
+from loguru import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -32,8 +32,6 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.storage.utils import build_content_type_from_extension
-
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -288,6 +286,11 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                             )
                             if message:
                                 collected_results.append(types.TextContent(type="text", text=str(message)))
+                        if event_data.get("event") == "error":
+                            content_blocks = event_data.get("data", {}).get("content_blocks", [])
+                            text = event_data.get("data", {}).get("text", "")
+                            error_msg = f"Error Executing the {flow.name} tool. Error: {text} Details: {content_blocks}"
+                            collected_results.append(types.TextContent(type="text", text=error_msg))
                     except json.JSONDecodeError:
                         msg = f"Failed to parse event data: {line}"
                         logger.warning(msg)
@@ -330,7 +333,7 @@ def find_validation_error(exc):
 
 
 @router.head("/sse", response_class=HTMLResponse, include_in_schema=False)
-async def im_alive(request: Request):
+async def im_alive():
     return Response()
 
 
