@@ -892,7 +892,7 @@ async def flow_as_tool_websocket(
                 conversation_id = str(uuid4())
                 # Store function call tasks to prevent garbage collection
                 function_call_tasks = []
-                
+
 
                 try:
                     while True:
@@ -903,7 +903,8 @@ async def flow_as_tool_websocket(
                         do_forward = True
                         do_forward = do_forward and not (event_type == "response.done" and voice_config.use_elevenlabs)
                         do_forward = do_forward and event_type.find("flow.") != 0
-                        
+
+                        response_id = None
                         if do_forward:
                             client_send(event)
                         if event_type == "response.created":
