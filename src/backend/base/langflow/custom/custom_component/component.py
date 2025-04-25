@@ -1174,10 +1174,11 @@ class Component(CustomComponent):
                 "status": True,  # Initialize all tools with status True
                 "display_name": tool.name,
                 "display_description": tool.description,
+                "args": tool.args,
             }
             for tool in tools
         ]
-
+        print(tool_data)
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
             new_tags = self._extract_tools_tags(tool_data)
