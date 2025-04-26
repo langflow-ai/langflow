@@ -1,3 +1,5 @@
+from typing import cast
+
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
@@ -114,7 +116,7 @@ class MemoryComponent(Component):
                 order=order,
             )
         self.status = stored
-        return stored
+        return cast(Data, stored)
 
     async def retrieve_messages_as_text(self) -> Message:
         stored_text = data_to_text(self.template, await self.retrieve_messages())
