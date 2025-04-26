@@ -93,6 +93,7 @@ const DropdownComponent = ({
           setOpenDelete(true);
         }}
         className="cursor-pointer text-destructive"
+        data-testid="btn_delete_dropdown_menu"
       >
         <ForwardedIconComponent
           name="Trash2"
