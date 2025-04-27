@@ -12,6 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
+from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
@@ -43,6 +44,12 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.flow_run.crud import (  # Added for async flow runs
+    create_flow_run,
+    update_flow_run_status,
+    get_flow_run,
+)
+from langflow.services.database.models.flow_run.model import FlowRun  # Added for async flow runs
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
@@ -756,3 +763,60 @@ async def get_config():
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+@router.post("/run_async/{flow_id}")
+async def run_async_flow(
+    *,
+    flow_id: UUID,
+    input_request: SimplifiedAPIRequest | None = None,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+    api_key_user: UserRead = Depends(api_key_security),
+):
+    flow: Flow = await get_flow_by_id_or_endpoint_name(flow_id, db)
+    if flow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+    run = await create_flow_run(db, flow_id)
+    # run in background
+    background_tasks.add_task(
+        _run_flow_and_update,
+        db,
+        run.id,
+        flow,
+        input_request,
+        api_key_user,
+    )
+    return {"run_id": str(run.id)}
+
+async def _run_flow_and_update(db: AsyncSession, run_id: UUID, flow: Flow, input_request: SimplifiedAPIRequest, api_key_user: UserRead):
+    try:
+        result = await simple_run_flow(flow, input_request or SimplifiedAPIRequest(), api_key_user=api_key_user)
+        # Ensure result is JSON serializable
+        if hasattr(result, "model_dump"):
+            result_dict = result.model_dump()
+        elif hasattr(result, "dict"):
+            result_dict = result.dict()
+        else:
+            result_dict = dict(result)
+        await update_flow_run_status(db, run_id, "success", result=result_dict)
+    except Exception as exc:
+        await update_flow_run_status(db, id, "failed", error=str(exc))
+
+from sqlalchemy.exc import NoResultFound
+from fastapi import HTTPException
+
+@router.get("/run_status/{run_id}")
+async def get_run_status(run_id: UUID, db: DbSession):
+    try:
+        run = await get_flow_run(db, run_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail=f"Run ID {run_id} not found")
+    return {
+        "run_id": str(run.id),
+        "flow_id": str(run.flow_id),
+        "status": run.status,
+        "result": run.result,
+        "error": run.error,
+        "created_at": run.created_at,
+        "updated_at": run.updated_at,
+    }
