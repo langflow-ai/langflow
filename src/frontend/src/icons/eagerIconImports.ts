@@ -52,6 +52,7 @@ import { HCDIcon } from "@/icons/HCD";
 import { HomeAssistantIcon } from "@/icons/HomeAssistant";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
 import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
+import { WatsonxDataIcon } from "@/icons/IBMWatsonxData";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
@@ -219,6 +220,7 @@ export const eagerIconsMapping = {
   Vectara: VectaraIcon,
   VertexAI: VertexAIIcon,
   WatsonxAI: WatsonxAiIcon,
+  WatsonxData: WatsonxDataIcon,
   Weaviate: WeaviateIcon,
   Wikipedia: WikipediaIcon,
   Wolfram: WolframIcon,
