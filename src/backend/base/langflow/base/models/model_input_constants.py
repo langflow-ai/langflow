@@ -9,6 +9,7 @@ from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai_chat_model import OpenAIModelComponent
 from langflow.components.models.sambanova import SambaNovaComponent
+from langflow.components.models.watsonx import WatsonxAIComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -160,6 +161,17 @@ def _get_sambanova_inputs_and_fields():
     return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
 
 
+def _get_watsonx_inputs_and_fields():
+    try:
+        from langflow.components.models.watsonx import WatsonxAIComponent
+
+        watsonx_input = get_filtered_inputs(WatsonxAIComponent)
+    except ImportError as e:
+        msg = "IBM watsonx is not installed. Please install it with `pip install langchain-ibm`."
+        raise ImportError(msg) from e
+    return watsonx_input, create_input_fields_dict(watsonx_input, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
@@ -259,10 +271,22 @@ try:
 except ImportError:
     pass
 
+try:
+    watsonx_inputs, watsonx_fields = _get_watsonx_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["watsonxAI"] = {
+        "fields": watsonx_fields,
+        "inputs": watsonx_inputs,
+        "prefix": "",
+        "component_class": WatsonxAIComponent(),
+        "icon": WatsonxAIComponent.icon,
+    }
+except ImportError:
+    pass
+
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
+MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name", "watsonx_endpoint"]
 
 
 MODELS_METADATA = {

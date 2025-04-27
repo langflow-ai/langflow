@@ -21,23 +21,25 @@ class WatsonxAIComponent(LCModelComponent):
     beta = False
 
     _default_models = ["ibm/granite-3-2b-instruct", "ibm/granite-3-8b-instruct", "ibm/granite-13b-instruct-v2"]
+    _urls = [
+        "https://us-south.ml.cloud.ibm.com",
+        "https://eu-de.ml.cloud.ibm.com",
+        "https://eu-gb.ml.cloud.ibm.com",
+        "https://au-syd.ml.cloud.ibm.com",
+        "https://jp-tok.ml.cloud.ibm.com",
+        "https://ca-tor.ml.cloud.ibm.com",
+    ]
 
     inputs = [
         *LCModelComponent._base_inputs,
         DropdownInput(
-            name="url",
+            name="watsonx_endpoint",
             display_name="watsonx API Endpoint",
             info="The base URL of the API.",
             value=None,
-            options=[
-                "https://us-south.ml.cloud.ibm.com",
-                "https://eu-de.ml.cloud.ibm.com",
-                "https://eu-gb.ml.cloud.ibm.com",
-                "https://au-syd.ml.cloud.ibm.com",
-                "https://jp-tok.ml.cloud.ibm.com",
-                "https://ca-tor.ml.cloud.ibm.com",
-            ],
+            options=_urls,
             real_time_refresh=True,
+            advanced=False,
         ),
         StrInput(
             name="project_id",
@@ -153,18 +155,20 @@ class WatsonxAIComponent(LCModelComponent):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""
-        logger.info("Updating build config. Field name: %s, Field value: %s", field_name, field_value)
-
-        if field_name == "url" and field_value:
+        if field_name == "watsonx_endpoint" and field_value:
             try:
-                models = self.fetch_models(base_url=build_config.url.value)
-                build_config.model_name.options = models
+                models = self.fetch_models(base_url=field_value)
+                build_config["model_name"]["options"] = models
                 if build_config.model_name.value:
-                    build_config.model_name.value = models[0]
-                info_message = f"Updated model options: {len(models)} models found in {build_config.url.value}"
+                    build_config["model_name"]["value"] = models[0]
+                info_message = f"Updated model options: {len(models)} models found in {field_value}"
                 logger.info(info_message)
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
+        if field_name == "model_name" and field_value and field_value in WatsonxAIComponent._urls:
+            build_config["model_name"]["options"] = self.fetch_models(base_url=field_value)
+            build_config["model_name"]["value"] = ""
+        return build_config
 
     def build_model(self) -> LanguageModel:
         # Parse logit_bias from JSON string if provided
@@ -193,7 +197,7 @@ class WatsonxAIComponent(LCModelComponent):
 
         return ChatWatsonx(
             apikey=SecretStr(self.api_key).get_secret_value(),
-            url=self.url,
+            url=self.watsonx_endpoint,
             project_id=self.project_id,
             model_id=self.model_name,
             params=chat_params,
