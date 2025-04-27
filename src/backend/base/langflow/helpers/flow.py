@@ -280,9 +280,12 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
     async with session_scope() as session:
         endpoint_name = None
         try:
-            flow_id = UUID(flow_id_or_name)
+            if isinstance(flow_id_or_name, UUID):
+                flow_id = flow_id_or_name
+            else:
+                flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
-        except ValueError:
+        except (ValueError, AttributeError):
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
             if user_id:
