@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("group node test", () => {
   /// <reference lib="dom"/>
-  test.skip(
+  test(
     "group and ungroup updating values",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
