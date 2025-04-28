@@ -143,7 +143,7 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 
 ## Combinatorial Reasoner
 
-This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
+This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6
 
 ### Inputs
 
@@ -273,38 +273,40 @@ In addition to being an MCP client that can leverage MCP servers, the MCP compon
 To use the MCP server component with an agent component, follow these steps:
 
 1. Add the MCP server component to your workflow.
+
 2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
 
-```bash
-uvx mcp-server-fetch
-```
+    ```bash
+    uvx mcp-server-fetch
+    ```
 
-`uvx` is included with `uv` in the Langflow package.
-To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+    `uvx` is included with `uv` in the Langflow package.
+    To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+    For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
 
-To include environment variables with your server command, add them to the **Env** field like this:
+    To include environment variables with your server command, add them to the **Env** field like this:
 
+    ```bash
+    ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
+    ```
 
-```bash
-ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
-```
-
-:::important
-Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
-To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
-For more information, see [global variables](/configuration-global-variables).
-:::
+    :::important
+    Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
+    To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
+    For more information, see [global variables](/configuration-global-variables).
+    :::
 
 3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+
 4. In the **Tool** field, select the server tool you want the component to use.
 The available fields change based on the selected tool.
 For information on the parameters, see the MCP server's documentation.
+
 5. In the MCP server component, enable **Tool mode**.
 Connect the MCP server component's **Toolset** port to an **Agent** component's **Tools** port.
 
-The flow looks similar to this:
-![MCP server component](/img/component-mcp-stdio.png)
+    The flow looks similar to this:
+    ![MCP server component](/img/component-mcp-stdio.png)
 
 6. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
