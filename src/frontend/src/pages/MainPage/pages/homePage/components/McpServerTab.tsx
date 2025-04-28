@@ -7,6 +7,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { PROXY_TARGET } from "@/customization/config-constants";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -50,9 +51,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const host = window.location.host;
-  const protocol = window.location.protocol;
-  const apiUrl = `${protocol}//${host}/api/v1/mcp/project/${projectId}/sse`;
+  const apiUrl = `${PROXY_TARGET}/api/v1/mcp/project/${projectId}/sse`;
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
