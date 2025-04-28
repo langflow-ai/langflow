@@ -1172,8 +1172,8 @@ class Component(CustomComponent):
                 "description": tool.description,
                 "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
                 "status": True,  # Initialize all tools with status True
-                "display_name": tool.name,
-                "display_description": tool.description,
+                "display_name": tool.metadata.get("display_name", tool.name),
+                "display_description": tool.metadata.get("display_description", tool.description),
                 "args": tool.args,
                 # "args_schema": tool.args_schema,
             }
