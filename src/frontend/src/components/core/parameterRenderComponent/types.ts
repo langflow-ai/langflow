@@ -1,5 +1,10 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APIClassType, InputFieldType, TableOptionsTypeAPI } from "@/types/api";
+import {
+  APIClassType,
+  APITemplateType,
+  InputFieldType,
+  TableOptionsTypeAPI,
+} from "@/types/api";
 import { RangeSpecType } from "@/types/components";
 import { ColumnField } from "@/types/utils/functions";
 
@@ -38,6 +43,15 @@ export type TableComponentType = {
   trigger_text?: string;
   trigger_icon?: string;
   table_icon?: string;
+};
+
+export type ToolsComponentType = {
+  description: string;
+  title: string;
+  icon?: string;
+  button_description?: string;
+  isAction?: boolean;
+  template?: APITemplateType;
 };
 
 export type FloatComponentType = {

@@ -273,12 +273,14 @@ class ComposioBaseComponent(Component):
 
     def configure_tools(self, toolset: ComposioToolSet) -> list[Tool]:
         tools = toolset.get_tools(actions=self._actions_data.keys())
+        logger.info(f"Tools: {tools}")
         configured_tools = []
         for tool in tools:
             # Set the sanitized name
-            tool.name = self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
+            display_name = self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
             # Set the tags
             tool.tags = [tool.name]
+            tool.metadata = {"display_name": display_name, "display_description": tool.description}
             configured_tools.append(tool)
         return configured_tools
 

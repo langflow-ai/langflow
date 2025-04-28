@@ -42,19 +42,19 @@ def _get_input_type(input_: InputTypes):
 def build_description(component: Component, output: Output) -> str:
     if not output.required_inputs:
         logger.warning(f"Output {output.name} does not have required inputs defined")
-
+    name = component.name or component.__class__.__name__
     if output.required_inputs:
         args = ", ".join(
             sorted(
                 [
-                    f"{input_name}: {_get_input_type(component._inputs[input_name])}"
+                    f"{name}. {input_name}: {_get_input_type(component._inputs[input_name])}"
                     for input_name in output.required_inputs
                 ]
             )
         )
     else:
         args = ""
-    return f"{output.method}({args}) - {component.description}"
+    return f"{name}. {output.method}({args}) - {component.description}"
 
 
 async def send_message_noop(
@@ -239,7 +239,7 @@ class ComponentToolkit:
             else:
                 args_schema = create_input_schema(self.component.inputs)
 
-            name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
+            name = f"{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
             if asyncio.iscoroutinefunction(output_method):
@@ -252,6 +252,10 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
+                        },
                     )
                 )
             else:
@@ -264,6 +268,10 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
+                        },
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):

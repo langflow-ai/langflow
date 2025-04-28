@@ -78,7 +78,11 @@ const RenderInputParameters = ({
     (templateField: string, idx) => {
       const template = data.node?.template[templateField];
 
-      if (!template?.show || template?.advanced) {
+      if (
+        !template?.show ||
+        template?.advanced ||
+        (template?.tool_mode && isToolMode)
+      ) {
         return null;
       }
 
