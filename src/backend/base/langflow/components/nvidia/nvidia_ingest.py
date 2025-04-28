@@ -22,7 +22,8 @@ class NvidiaIngestComponent(BaseFileComponent):
     try:
         from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
-        VALID_EXTENSIONS = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
+        # NOTE: HTML currently not supported, so manually removing it
+        VALID_EXTENSIONS = [ext for ext in EXTENSION_TO_DOCUMENT_TYPE.keys() if ext != "html"]
     except ImportError:
         msg = (
             "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
