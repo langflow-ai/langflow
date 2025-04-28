@@ -80,22 +80,24 @@ export const FilesPage = () => {
       cellRenderer: (params) => {
         const type = params.data.path.split(".")[1]?.toLowerCase();
         return (
-          <div className="flex items-center gap-2 font-medium">
+          <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
             params.data.progress !== -1 ? (
               <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
                 {Math.round(params.data.progress * 100)}%
               </div>
             ) : (
-              <ForwardedIconComponent
-                name={FILE_ICONS[type]?.icon ?? "File"}
-                className={cn(
-                  "h-6 w-6 shrink-0",
-                  params.data.progress !== undefined
-                    ? "text-placeholder-foreground"
-                    : (FILE_ICONS[type]?.color ?? undefined),
-                )}
-              />
+              <div className="file-icon pointer-events-none relative">
+                <ForwardedIconComponent
+                  name={FILE_ICONS[type]?.icon ?? "File"}
+                  className={cn(
+                    "-mx-[3px] h-6 w-6 shrink-0",
+                    params.data.progress !== undefined
+                      ? "text-placeholder-foreground"
+                      : (FILE_ICONS[type]?.color ?? undefined),
+                  )}
+                />
+              </div>
             )}
             <div
               className={cn(
@@ -285,6 +287,7 @@ export const FilesPage = () => {
                     tableOptions={{
                       hide_options: true,
                     }}
+                    suppressRowClickSelection={true}
                     editable={[
                       {
                         field: "name",
@@ -292,7 +295,6 @@ export const FilesPage = () => {
                         editableCell: true,
                       },
                     ]}
-                    enableCellTextSelection={false}
                     rowSelection="multiple"
                     columnDefs={colDefs}
                     rowData={files.sort((a, b) => {
@@ -306,7 +308,6 @@ export const FilesPage = () => {
                     ref={tableRef}
                     quickFilterText={quickFilterText}
                     gridOptions={{
-                      enableCellTextSelection: true,
                       stopEditingWhenCellsLoseFocus: true,
                       ensureDomOrder: true,
                       colResizeDefault: "shift",

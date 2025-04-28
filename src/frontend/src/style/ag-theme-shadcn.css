@@ -99,7 +99,33 @@
   box-shadow: none !important;
   outline: none !important;
 }
-
 .ag-no-border .ag-selection-checkbox {
-  margin-right: 16px !important;
+  margin-right: 0px !important;
+}
+.ag-no-border .ag-selection-checkbox .ag-checkbox {
+  width: 0px !important;
+  margin-right: 0px !important;
+  transition: width 0.1s ease-in-out;
+  opacity: 0;
+}
+.ag-no-border .ag-selection-checkbox:hover .ag-checkbox {
+  opacity: 1;
+}
+
+.ag-no-border .ag-selection-checkbox .ag-checkbox:has(.ag-checked) {
+  width: 32px !important;
+  opacity: 1 !important;
+}
+
+.ag-cell-wrapper:hover:has(.ag-checked) .file-icon {
+  transition: opacity 0.1s ease-in-out;
+}
+
+.ag-checkbox-input-wrapper:focus-within,
+.ag-checkbox-input-wrapper:active {
+  box-shadow: none !important;
+}
+.ag-cell-wrapper:has(.ag-selection-checkbox:hover):not(:has(.ag-checked))
+  .file-icon {
+  opacity: 0;
 }
