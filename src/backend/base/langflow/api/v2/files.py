@@ -267,6 +267,10 @@ async def download_file(
         # Get file stream
         file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
 
+        file_extension = Path(file.path).suffix
+        # Create the filename with extension
+        filename_with_extension = f"{file.name}{file_extension}"
+
         # Ensure file_stream is an async iterator returning bytes
         byte_stream = byte_stream_generator(file_stream)
     except Exception as e:
@@ -276,7 +280,7 @@ async def download_file(
     return StreamingResponse(
         byte_stream,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{file.name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename_with_extension}"'},
     )
 
 
