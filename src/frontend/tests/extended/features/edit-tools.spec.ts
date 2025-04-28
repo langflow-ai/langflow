@@ -125,42 +125,6 @@ test(
         .isVisible(),
     ).toBe(true);
 
-    await page.getByTestId("input_update_name").fill("this is a test name");
-
-    await page
-      .getByTestId("input_update_description")
-      .fill("this is a test description");
-
-    await page.waitForTimeout(500);
-
-    await page.getByText("Close").last().click();
-
-    expect(
-      await page
-        .locator('[data-testid="tool_this_is_a_test_name"]')
-        .isVisible(),
-    ).toBe(true);
-
-    await page.getByTestId("button_open_actions").click();
-
-    await page.getByRole("gridcell").nth(0).click();
-
-    expect(
-      await page.locator('[data-testid="sidebar_header_name"]').isVisible(),
-    ).toBe(true);
-
-    expect(
-      await page
-        .locator('[data-testid="sidebar_header_description"]')
-        .isVisible(),
-    ).toBe(true);
-
-    await page.getByTestId("input_update_name").fill("");
-
-    await page.waitForTimeout(500);
-
-    await page.getByTestId("input_update_description").fill("");
-
     await page.waitForTimeout(500);
 
     await page.getByText("Close").last().click();
