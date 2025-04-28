@@ -8,6 +8,7 @@
   --ag-header-background-color: hsl(var(--background)) !important;
   --ag-tooltip-background-color: hsl(var(--muted)) !important;
   --ag-disabled-foreground-color: hsl(var(--muted-foreground)) !important;
+  --ag-active-color: hsl(var(--foreground)) !important;
   --ag-border-color: hsl(var(--border)) !important;
   --ag-selected-row-background-color: hsl(var(--accent)) !important;
   --ag-menu-background-color: hsl(var(--accent)) !important;
@@ -33,7 +34,6 @@
 .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
   align-items: self-start;
   position: relative;
-  top: 2px;
 }
 
 .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
@@ -98,4 +98,8 @@
   border: 1px solid transparent !important;
   box-shadow: none !important;
   outline: none !important;
+}
+
+.ag-no-border .ag-selection-checkbox {
+  margin-right: 16px !important;
 }
