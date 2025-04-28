@@ -56,6 +56,7 @@ if TYPE_CHECKING:
 
 router = APIRouter(tags=["Base"])
 
+
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
     """Retrieve all component types with compression for better performance.
