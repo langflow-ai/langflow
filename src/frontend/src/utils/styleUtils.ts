@@ -461,6 +461,11 @@ export const eagerLoadedIconsMap = {
   ...lucideIcons,
 };
 
+export const getNodeIconSync = (name: string) => {
+  const iconName = nodeIconToDisplayIconMap[name];
+  return eagerLoadedIconsMap[iconName || name] || null;
+};
+
 // Function to get a lazy-loaded icon component
 export const getNodeIcon = async (name: string) => {
   const iconName = nodeIconToDisplayIconMap[name];

@@ -1,6 +1,6 @@
 import React, { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
-import { getNodeIcon } from "../../../utils/styleUtils";
+import { getNodeIcon, getNodeIconSync } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,14 +36,24 @@ export const ForwardedIconComponent = memo(
 
         // Load the icon if we have a name
         if (name && typeof name === "string") {
-          getNodeIcon(name)
-            .then((component) => {
-              setTargetIcon(component);
-            })
-            .catch((error) => {
-              console.error(`Error loading icon ${name}:`, error);
-              setIconError(true);
-            });
+          const syncIcon = getNodeIconSync(name);
+          if (syncIcon) {
+            setTargetIcon(syncIcon);
+            setShowFallback(false);
+          } else {
+            getNodeIcon(name)
+              .then((component) => {
+                setTargetIcon(component);
+                setShowFallback(false);
+              })
+              .catch((error) => {
+                console.error(`Error loading icon ${name}:`, error);
+                setIconError(true);
+                setShowFallback(false);
+              });
+          }
+        } else {
+          setShowFallback(false);
         }
 
         return () => clearTimeout(timer);
