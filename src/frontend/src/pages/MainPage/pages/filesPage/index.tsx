@@ -72,6 +72,8 @@ export const FilesPage = () => {
       headerName: "Name",
       field: "name",
       flex: 2,
+      headerCheckboxSelection: true,
+      checkboxSelection: true,
       editable: true,
       filter: "agTextColumnFilter",
       cellClass: "cursor-text select-text",
@@ -291,6 +293,7 @@ export const FilesPage = () => {
                       },
                     ]}
                     enableCellTextSelection={false}
+                    rowSelection="multiple"
                     columnDefs={colDefs}
                     rowData={files.sort((a, b) => {
                       return sortByDate(
