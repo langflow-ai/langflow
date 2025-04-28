@@ -8,7 +8,7 @@ export const checkLucideIcons = (iconName: string): boolean => {
     return false;
   }
 
-  return (
+  return !!(
     lucideIcons[iconName] ||
     dynamicIconImports[iconName] ||
     categoryIcons[iconName]
