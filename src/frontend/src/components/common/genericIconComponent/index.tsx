@@ -105,11 +105,9 @@ export const ForwardedIconComponent = memo(
                 className={className}
                 style={style}
                 data-testid={
-                  dataTestId
-                    ? dataTestId
-                    : id
-                      ? `${id}-${name}`
-                      : `icon-${name}`
+                  TargetIcon?.props?.dataTestId || dataTestId || id
+                    ? `${id}-${name}`
+                    : `icon-${name}`
                 }
               >
                 {TargetIcon}
