@@ -825,11 +825,11 @@ async def flow_as_tool_websocket(
                                 # Schedule sending the audio chunk in the main event loop.
                                 event = {"type": "response.audio.delta",
                                          "delta": base64_audio,
-                                         "response_id" : rsp.responseId}
+                                         "response_id" : rsp.response_id}
                                 client_send_event_from_thread(event, main_loop)
 
                             event = {"type": "response.done",
-                                     "response": { "id": rsp.responseId } }
+                                     "response": { "id": rsp.response_id } }
                             client_send_event_from_thread(event, main_loop)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"Error in TTS processing (ValueError): {e}")
