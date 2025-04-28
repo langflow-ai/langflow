@@ -7,9 +7,12 @@ import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
+  useGetDownloadFileV2,
   useGetFilesV2,
   usePostUploadFileV2,
 } from "@/controllers/API/queries/file-management";
+import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
+import { useGetDownloadFilesV2 } from "@/controllers/API/queries/file-management/use-get-download-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
@@ -17,7 +20,11 @@ import useAlertStore from "@/stores/alertStore";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
-import { ColDef, NewValueParams } from "ag-grid-community";
+import {
+  ColDef,
+  NewValueParams,
+  SelectionChangedEvent,
+} from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useMemo, useRef, useState } from "react";
 import { sortByDate } from "../../utils/sort-flows";
@@ -29,7 +36,26 @@ export const FilesPage = () => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
+  const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
+  const [quantitySelected, setQuantitySelected] = useState(0);
+
+  const handleSelectionChanged = (event: SelectionChangedEvent) => {
+    const selectedRows = event.api.getSelectedRows();
+    setSelectedFiles(selectedRows);
+    if (selectedRows.length > 0) {
+      setQuantitySelected(selectedRows.length);
+    } else {
+      setTimeout(() => {
+        setQuantitySelected(0);
+      }, 300);
+    }
+  };
+
   const { mutate: rename } = usePostRenameFileV2();
+
+  const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
+  const { mutate: downloadFiles, isPending: isDownloading } =
+    useGetDownloadFilesV2();
 
   const handleRename = (params: NewValueParams<any, any>) => {
     rename({
@@ -199,6 +225,48 @@ export const FilesPage = () => {
     }
   };
 
+  const handleDownload = () => {
+    console.log(selectedFiles);
+    downloadFiles(
+      {
+        ids: selectedFiles.map((file) => file.id),
+      },
+      {
+        onSuccess: (data) => {
+          setSuccessData({ title: data.message });
+        },
+        onError: (error) => {
+          setErrorData({
+            title: "Error downloading files",
+            list: [
+              error.message || "An error occurred while downloading the files",
+            ],
+          });
+        },
+      },
+    );
+  };
+  const handleDelete = () => {
+    deleteFiles(
+      {
+        ids: selectedFiles.map((file) => file.id),
+      },
+      {
+        onSuccess: (data) => {
+          setSuccessData({ title: data.message });
+        },
+        onError: (error) => {
+          setErrorData({
+            title: "Error deleting files",
+            list: [
+              error.message || "An error occurred while deleting the files",
+            ],
+          });
+        },
+      },
+    );
+  };
+
   const UploadButtonComponent = useMemo(() => {
     return (
       <ShadTooltip content="Upload File" side="bottom">
@@ -280,39 +348,75 @@ export const FilesPage = () => {
                 </div>
               ) : files.length > 0 ? (
                 <DragWrapComponent onFileDrop={onFileDrop}>
-                  <TableComponent
-                    rowHeight={45}
-                    headerHeight={45}
-                    cellSelection={false}
-                    tableOptions={{
-                      hide_options: true,
-                    }}
-                    suppressRowClickSelection={true}
-                    editable={[
-                      {
-                        field: "name",
-                        onUpdate: handleRename,
-                        editableCell: true,
-                      },
-                    ]}
-                    rowSelection="multiple"
-                    columnDefs={colDefs}
-                    rowData={files.sort((a, b) => {
-                      return sortByDate(
-                        a.updated_at ?? a.created_at,
-                        b.updated_at ?? b.created_at,
-                      );
-                    })}
-                    className="ag-no-border w-full"
-                    pagination
-                    ref={tableRef}
-                    quickFilterText={quickFilterText}
-                    gridOptions={{
-                      stopEditingWhenCellsLoseFocus: true,
-                      ensureDomOrder: true,
-                      colResizeDefault: "shift",
-                    }}
-                  />
+                  <div className="relative h-full">
+                    <TableComponent
+                      rowHeight={45}
+                      headerHeight={45}
+                      cellSelection={false}
+                      tableOptions={{
+                        hide_options: true,
+                      }}
+                      suppressRowClickSelection={true}
+                      editable={[
+                        {
+                          field: "name",
+                          onUpdate: handleRename,
+                          editableCell: true,
+                        },
+                      ]}
+                      rowSelection="multiple"
+                      onSelectionChanged={handleSelectionChanged}
+                      columnDefs={colDefs}
+                      rowData={files.sort((a, b) => {
+                        return sortByDate(
+                          a.updated_at ?? a.created_at,
+                          b.updated_at ?? b.created_at,
+                        );
+                      })}
+                      className="ag-no-border w-full"
+                      pagination
+                      ref={tableRef}
+                      quickFilterText={quickFilterText}
+                      gridOptions={{
+                        stopEditingWhenCellsLoseFocus: true,
+                        ensureDomOrder: true,
+                        colResizeDefault: "shift",
+                      }}
+                    />
+
+                    <div
+                      className={cn(
+                        "pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity",
+                        selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
+                      )}
+                    >
+                      <div className="pointer-events-auto ml-12 flex h-full flex-1 items-center justify-between bg-background">
+                        <span className="text-xs text-muted-foreground">
+                          {quantitySelected} selected
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="iconMd"
+                            onClick={handleDownload}
+                            loading={isDownloading}
+                          >
+                            <ForwardedIconComponent name="Download" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="iconMd"
+                            className="px-2.5 !text-mmd"
+                            onClick={handleDelete}
+                            loading={isDeleting}
+                          >
+                            <ForwardedIconComponent name="Trash2" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </DragWrapComponent>
               ) : (
                 <CardsWrapComponent
