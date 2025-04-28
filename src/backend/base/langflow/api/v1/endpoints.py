@@ -57,20 +57,20 @@ if TYPE_CHECKING:
 
 router = APIRouter(tags=["Base"])
 
-def serialize_response(obj):
-    if isinstance(obj, pd.DataFrame):
-        return obj.to_dict(orient='records')
-    return jsonable_encoder(obj)
+# def serialize_response(obj):
+#     if isinstance(obj, pd.DataFrame):
+#         return obj.to_dict(orient='records')
+#     return jsonable_encoder(obj)
 
 
-class CustomRunResponse(RunResponse):
-    @classmethod
-    def model_validate(cls, obj):
-        if isinstance(obj, dict):
-            for key, value in obj.items():
-                if isinstance(value, pd.DataFrame):
-                    obj[key] = value.to_dict(orient='records')
-        return super().model_validate(obj)
+# class CustomRunResponse(RunResponse):
+#     @classmethod
+#     def model_validate(cls, obj):
+#         if isinstance(obj, dict):
+#             for key, value in obj.items():
+#                 if isinstance(value, pd.DataFrame):
+#                     obj[key] = value.to_dict(orient='records')
+#         return super().model_validate(obj)
 
 
 
@@ -284,7 +284,7 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model=CustomRunResponse, response_model_exclude_none=True)
+@router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
