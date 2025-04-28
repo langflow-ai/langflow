@@ -127,8 +127,6 @@ test(
 
     await page.getByTestId("input_update_name").fill("this is a test name");
 
-    await page.waitForTimeout(500);
-
     await page
       .getByTestId("input_update_description")
       .fill("this is a test description");
@@ -147,15 +145,28 @@ test(
 
     await page.getByRole("gridcell").nth(0).click();
 
-    await page.getByTestId("button_update_name").click();
-    await page.getByTestId("button_update_description").click();
+    expect(
+      await page.locator('[data-testid="sidebar_header_name"]').isVisible(),
+    ).toBe(true);
+
+    expect(
+      await page
+        .locator('[data-testid="sidebar_header_description"]')
+        .isVisible(),
+    ).toBe(true);
+
+    await page.getByTestId("input_update_name").fill("");
+
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("input_update_description").fill("");
+
+    await page.waitForTimeout(500);
 
     await page.getByText("Close").last().click();
 
     expect(
-      await page
-        .locator('[data-testid="tool_apirequest-make_requests"]')
-        .isVisible(),
+      await page.locator('[data-testid="tool_make_requests"]').isVisible(),
     ).toBe(true);
   },
 );
