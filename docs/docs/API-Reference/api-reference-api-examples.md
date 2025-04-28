@@ -1316,11 +1316,11 @@ A list of example flows.
 </Tabs>
 
 
-## projects
+## Projects
 
 Use the `/projects` endpoint to create, read, update, and delete projects.
 
-projects store your flows and components.
+Projects store your flows and components.
 
 ### Read projects
 
