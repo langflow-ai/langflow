@@ -3,7 +3,11 @@ import uuid
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, List
+import io
+import zipfile
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -157,6 +161,92 @@ async def list_files(
         return list(results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
+
+
+@router.delete("/batch/", status_code=HTTPStatus.OK)
+async def delete_files_batch(
+    file_ids: list[uuid.UUID],
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+):
+    """Delete multiple files by their IDs."""
+    try:
+        # Fetch all files from the DB
+        stmt = select(UserFile).where(UserFile.id.in_(file_ids), UserFile.user_id == current_user.id)
+        results = await session.exec(stmt)
+        files = results.all()
+
+        if not files:
+            raise HTTPException(status_code=404, detail="No files found")
+
+        # Delete all files from the storage service
+        for file in files:
+            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+            await session.delete(file)
+
+        # Delete all files from the database
+        await session.flush()  # Ensures delete is staged
+        await session.commit()  # Commit deletion
+
+    except Exception as e:
+        await session.rollback()  # Rollback on failure
+        raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
+
+    return {"message": f"{len(files)} files deleted successfully"}
+
+
+@router.post("/batch/", status_code=HTTPStatus.OK)
+async def download_files_batch(
+    file_ids: list[uuid.UUID],
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+):
+    """Download multiple files as a zip file by their IDs."""
+    try:
+        # Fetch all files from the DB
+        stmt = select(UserFile).where(UserFile.id.in_(file_ids), UserFile.user_id == current_user.id)
+        results = await session.exec(stmt)
+        files = results.all()
+
+        if not files:
+            raise HTTPException(status_code=404, detail="No files found")
+
+        # Create a byte stream to hold the ZIP file
+        zip_stream = io.BytesIO()
+
+        # Create a ZIP file
+        with zipfile.ZipFile(zip_stream, "w") as zip_file:
+            for file in files:
+                # Get the file content from storage
+                file_content = await storage_service.get_file(
+                    flow_id=str(current_user.id), file_name=file.path.split("/")[-1]
+                )
+
+                # Get the file extension from the original filename
+                file_extension = Path(file.path).suffix
+                # Create the filename with extension
+                filename_with_extension = f"{file.name}{file_extension}"
+
+                # Write the file to the ZIP with the proper extension
+                zip_file.writestr(filename_with_extension, file_content)
+
+        # Seek to the beginning of the byte stream
+        zip_stream.seek(0)
+
+        # Generate the filename with the current datetime
+        current_time = datetime.now(tz=ZoneInfo("UTC")).astimezone().strftime("%Y%m%d_%H%M%S")
+        filename = f"{current_time}_langflow_files.zip"
+
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading files: {e}") from e
 
 
 @router.get("/{file_id}")
