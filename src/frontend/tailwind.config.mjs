@@ -309,6 +309,8 @@ const config = {
         "slider-input-border": "var(--slider-input-border)",
         "zinc-foreground": "hsl(var(--zinc-foreground))",
         "red-foreground": "hsl(var(--red-foreground))",
+        "indigo-foreground": "hsl(var(--indigo-foreground))",
+        "discord-color": "var(--discord-color)",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -339,6 +341,10 @@ const config = {
         90: "90",
         100: "100",
         999: "999",
+      },
+      fontSize: {
+        "xxs": "11px",
+        "mmd": "13px",
       },
     },
   },

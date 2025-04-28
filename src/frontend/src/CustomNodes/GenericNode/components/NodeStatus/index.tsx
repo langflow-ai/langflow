@@ -87,7 +87,7 @@ export default function NodeStatus({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
   const version = useDarkStore((state) => state.version);
-  const config = useGetConfig();
+  const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const postTemplateValue = usePostTemplateValue({
@@ -95,10 +95,6 @@ export default function NodeStatus({
     nodeId: nodeId,
     node: data.node,
   });
-
-  const shouldStreamEvents = () => {
-    return config.data?.event_delivery === EventDeliveryType.STREAMING;
-  };
 
   // Start polling when connection is initiated
   const startPolling = () => {
@@ -169,8 +165,7 @@ export default function NodeStatus({
     setValidationStatus(null);
     buildFlow({
       stopNodeId: nodeId,
-      stream: shouldStreamEvents(),
-      eventDelivery: config.data?.event_delivery,
+      eventDelivery: eventDeliveryConfig,
     });
   }
 
@@ -265,8 +260,7 @@ export default function NodeStatus({
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
     buildFlow({
       stopNodeId: nodeId,
-      stream: shouldStreamEvents(),
-      eventDelivery: config.data?.event_delivery,
+      eventDelivery: eventDeliveryConfig,
     });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
@@ -375,7 +369,7 @@ export default function NodeStatus({
           >
             <div className="cursor-help">
               {conditionSuccess && validationStatus?.data?.duration ? (
-                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-[11px] font-bold text-accent-emerald-foreground">
+                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-xxs font-bold text-accent-emerald-foreground">
                   <Check className="h-4 w-4 items-center self-center" />
                   <span>
                     {normalizeTimeString(validationStatus?.data?.duration)}
@@ -394,7 +388,7 @@ export default function NodeStatus({
               size="sq"
               className="pointer-events-none mr-1 flex h-[22px] w-10 justify-center rounded-[8px] bg-accent-pink text-accent-pink-foreground"
             >
-              <span className="text-[11px]">Beta</span>
+              <span className="text-xxs">Beta</span>
             </Badge>
           )}
         </div>

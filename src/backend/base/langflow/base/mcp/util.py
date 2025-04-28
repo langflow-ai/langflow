@@ -11,10 +11,9 @@ from httpx import codes as httpx_codes
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
-from pydantic import Field, create_model
+from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
-from langflow.helpers.base_model import BaseModel
 from langflow.services.database.models import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
@@ -78,44 +77,117 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session) -> Flow | N
 
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
-    """Converts a JSON schema into a Pydantic model dynamically.
+    """Dynamically build a Pydantic model from a JSON schema (with $defs).
 
-    Fields not listed as required are wrapped in Optional[...] and default to None if not provided.
-
-    :param schema: The JSON schema as a dictionary.
-    :return: A Pydantic model class.
+    Non-required fields become Optional[...] with default=None.
     """
     if schema.get("type") != "object":
-        msg = "JSON schema must be of type 'object' at the root level."
+        msg = "Root schema must be type 'object'"
         raise ValueError(msg)
 
-    fields = {}
-    properties = schema.get("properties", {})
-    required_fields = set(schema.get("required", []))
+    defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
+    model_cache: dict[str, type[BaseModel]] = {}
 
-    for field_name, field_def in properties.items():
-        # Determine the base type from the JSON schema type string.
-        field_type_str = field_def.get("type", "str")  # Defaults to string if not specified.
-        base_type = {
+    def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
+        """Follow a $ref chain until you land on a real subschema."""
+        if s is None:
+            return {}
+        while "$ref" in s:
+            ref_name = s["$ref"].split("/")[-1]
+            s = defs.get(ref_name)
+            if s is None:
+                msg = f"Definition '{ref_name}' not found"
+                raise ValueError(msg)
+        return s
+
+    def parse_type(s: dict[str, Any] | None) -> Any:
+        """Map a JSON Schema subschema to a Python type (possibly nested)."""
+        if s is None:
+            return None
+        s = resolve_ref(s)
+
+        if "anyOf" in s:
+            subtypes = [parse_type(sub) for sub in s["anyOf"]]
+            return tuple | subtypes
+
+        t = s.get("type", Any)
+        if t == "array":
+            item_schema = s.get("items", {})
+            # schema_type: type[Any]
+            schema_type: Any = parse_type(item_schema)
+
+            return list[schema_type]
+
+        if t == "object":
+            # inline object not in $defs ⇒ anonymous nested model
+            return _build_model(f"AnonModel{len(model_cache)}", s)
+
+        # primitive fallback
+        return {
             "string": str,
-            "str": str,
             "integer": int,
-            "int": int,
             "number": float,
             "boolean": bool,
-            "array": list,
             "object": dict,
-        }.get(field_type_str, Any)
+            "array": list,
+        }.get(t, Any)
+        # if result == "":
+        #     return Any
+        # return result
 
-        field_metadata = {"description": field_def.get("description", "")}
+    def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
+        """Create (or fetch) a BaseModel subclass for the given object schema."""
+        # If this came via a named $ref, use that name
+        if "$ref" in subschema:
+            refname = subschema["$ref"].split("/")[-1]
+            if refname in model_cache:
+                return model_cache[refname]
+            target = defs.get(refname)
+            if not target:
+                msg = f"Definition '{refname}' not found"
+                raise ValueError(msg)
+            cls = _build_model(refname, target)
+            model_cache[refname] = cls
+            return cls
 
-        # For non-required fields, wrap the type in Optional[...] and set a default value.
-        if field_name not in required_fields:
-            field_metadata["default"] = field_def.get("default", None)
+        # Named anonymous or inline: avoid clashes by name
+        if name in model_cache:
+            return model_cache[name]
 
-        fields[field_name] = (base_type, Field(**field_metadata))
+        props = subschema.get("properties", {})
+        reqs = set(subschema.get("required", []))
+        fields: dict[str, Any] = {}
 
-    return create_model("InputSchema", **fields)
+        for prop_name, prop_schema in props.items():
+            py_type = parse_type(prop_schema)
+            is_required = prop_name in reqs
+            if not is_required:
+                py_type = py_type | None
+                default = prop_schema.get("default", None)
+            else:
+                default = ...  # required by Pydantic
+
+            fields[prop_name] = (py_type, Field(default, description=prop_schema.get("description")))
+
+        model_cls = create_model(name, **fields)
+        model_cache[name] = model_cls
+        return model_cls
+
+    # build the top - level “InputSchema” from the root properties
+    top_props = schema.get("properties", {})
+    top_reqs = set(schema.get("required", []))
+    top_fields: dict[str, Any] = {}
+
+    for fname, fdef in top_props.items():
+        py_type = parse_type(fdef)
+        if fname not in top_reqs:
+            py_type = py_type | None
+            default = fdef.get("default", None)
+        else:
+            default = ...
+        top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
+
+    return create_model("InputSchema", **top_fields)
 
 
 class MCPStdioClient:
@@ -123,12 +195,20 @@ class MCPStdioClient:
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
 
-    async def connect_to_server(self, command_str: str):
+    async def connect_to_server(self, command_str: str, env: list[str] | None = None):
+        env_dict: dict[str, str] = {}
+        if env is None:
+            env = []
+        for var in env:
+            if "=" not in var:
+                msg = f"Invalid env var format: {var}. Must be in the format 'VAR_NAME=VAR_VALUE'"
+                raise ValueError(msg)
+            env_dict[var.split("=")[0]] = var.split("=")[1]
         command = command_str.split(" ")
         server_params = StdioServerParameters(
             command=command[0],
             args=command[1:],
-            env={"DEBUG": "true", "PATH": os.environ["PATH"]},
+            env={"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})},
         )
         stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
         self.stdio, self.write = stdio_transport
