@@ -56,22 +56,6 @@ if TYPE_CHECKING:
 
 router = APIRouter(tags=["Base"])
 
-# def serialize_response(obj):
-#     if isinstance(obj, pd.DataFrame):
-#         return obj.to_dict(orient='records')
-#     return jsonable_encoder(obj)
-
-
-# class CustomRunResponse(RunResponse):
-#     @classmethod
-#     def model_validate(cls, obj):
-#         if isinstance(obj, dict):
-#             for key, value in obj.items():
-#                 if isinstance(value, pd.DataFrame):
-#                     obj[key] = value.to_dict(orient='records')
-#         return super().model_validate(obj)
-
-
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
     """Retrieve all component types with compression for better performance.
