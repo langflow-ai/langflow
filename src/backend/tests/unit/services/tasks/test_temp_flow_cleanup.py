@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import datetime
+import logging
 from datetime import timezone
 from uuid import uuid4
-import logging
 
 import pytest
 from langflow.services.database.models.flow import Flow as FlowTable
@@ -105,7 +105,6 @@ async def test_cleanup_worker_run_with_exception(caplog):
 
     await worker.start()
     await worker.stop()
-
 
     # Use substring match for robustness
     assert any("database cleanup worker" in record.message.lower() for record in caplog.records)
