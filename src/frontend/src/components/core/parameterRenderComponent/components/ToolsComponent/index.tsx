@@ -98,7 +98,9 @@ export default function ToolsComponent({
                 className="truncate font-normal"
                 data-testid={testIdCase(`tool_${action.name}`)}
               >
-                <span className="truncate">{action.name.toUpperCase()}</span>
+                <span className="truncate text-xxs font-medium">
+                  {action.name.toUpperCase()}
+                </span>
               </Badge>
             ))}
             {remainingCount > 0 && (
