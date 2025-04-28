@@ -20,8 +20,7 @@ from langflow.services.deps import get_cache_service, session_scope
 
 
 class LangflowRunnerExperimental:
-    """LangflowRunnerExperimental is responsible for orchestrating the execution of flows without the need for a
-    dedicated server.
+    """LangflowRunnerExperimental orchestrates flow execution without a dedicated server.
 
     .. warning::
         This class is currently **experimental** and in a **beta phase**.
@@ -101,10 +100,7 @@ class LangflowRunnerExperimental:
             cache_service.clear()
         async with session_scope() as session:
             flow_id = flow_dict["id"]
-            if isinstance(flow_id, UUID):
-                uuid_obj = flow_id
-            else:
-                uuid_obj = UUID(str(flow_id))
+            uuid_obj = flow_id if isinstance(flow_id, UUID) else UUID(str(flow_id))
             await cascade_delete_flow(session, uuid_obj)
 
     async def init_db_if_needed(self):
