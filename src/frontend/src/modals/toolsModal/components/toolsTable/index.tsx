@@ -134,17 +134,12 @@ export default function ToolsTable({
       flex: 1,
       valueGetter: (params) =>
         !isAction
-          ? params.data.name !== ""
-            ? parseString(params.data.name, [
-                "snake_case",
-                "no_blank",
-                "lowercase",
-              ])
-            : parseString(params.data.display_name, [
-                "snake_case",
-                "no_blank",
-                "lowercase",
-              ])
+          ? parseString(
+              params.data.name !== ""
+                ? params.data.name
+                : params.data.display_name,
+              ["space_case"],
+            )
           : params.data.display_name,
     },
     {
@@ -171,7 +166,10 @@ export default function ToolsTable({
                 "no_blank",
                 "uppercase",
               ])
-          : params.data.tags.join(", "),
+          : parseString(params.data.tags.join(", "), [
+              "snake_case",
+              "uppercase",
+            ]),
       cellClass: "text-muted-foreground",
     },
     {
@@ -262,75 +260,78 @@ export default function ToolsTable({
         className="flex h-full flex-col overflow-auto border-l border-border"
       >
         <SidebarHeader className="flex-none px-4 py-4">
-          {isAction ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label
-                  className="text-mmd font-medium"
-                  htmlFor="sidebar-name-input"
-                >
-                  Name
-                </label>
+          {focusedRow &&
+            (isAction ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <label
+                    className="text-mmd font-medium"
+                    htmlFor="sidebar-name-input"
+                  >
+                    Name
+                  </label>
 
-                <Input
-                  id="sidebar-name-input"
-                  value={sidebarName}
-                  onChange={(e) => {
-                    setSidebarName(e.target.value);
-                    handleSidebarInputChange("name", e.target.value);
-                  }}
-                  maxLength={46}
-                  placeholder="Edit name..."
-                  data-testid="input_update_name"
-                />
-                <div className="text-xs text-muted-foreground">
-                  {isAction
-                    ? "Used as the function name when this flow is exposed to clients."
-                    : "Used as the function name when this tool is exposed to the agent."}
+                  <Input
+                    id="sidebar-name-input"
+                    value={sidebarName}
+                    onChange={(e) => {
+                      setSidebarName(e.target.value);
+                      handleSidebarInputChange("name", e.target.value);
+                    }}
+                    maxLength={46}
+                    placeholder="Edit name..."
+                    data-testid="input_update_name"
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    {isAction
+                      ? "Used as the function name when this flow is exposed to clients."
+                      : "Used as the function name when this tool is exposed to the agent."}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label
+                    className="text-mmd font-medium"
+                    htmlFor="sidebar-desc-input"
+                  >
+                    Description
+                  </label>
+
+                  <Textarea
+                    id="sidebar-desc-input"
+                    value={sidebarDescription}
+                    onChange={(e) => {
+                      setSidebarDescription(e.target.value);
+                      handleSidebarInputChange("description", e.target.value);
+                    }}
+                    placeholder="Edit description..."
+                    className="h-24"
+                    data-testid="input_update_description"
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    {isAction
+                      ? "This is the description for the action exposed to the clients."
+                      : "This is the description for the tool exposed to the agents."}
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label
-                  className="text-mmd font-medium"
-                  htmlFor="sidebar-desc-input"
+            ) : (
+              <div className="flex flex-col gap-1" data-testid="sidebar_header">
+                <h3
+                  className="text-base font-medium"
+                  data-testid="sidebar_header_name"
                 >
-                  Description
-                </label>
-
-                <Textarea
-                  id="sidebar-desc-input"
-                  value={sidebarDescription}
-                  onChange={(e) => {
-                    setSidebarDescription(e.target.value);
-                    handleSidebarInputChange("description", e.target.value);
-                  }}
-                  placeholder="Edit description..."
-                  className="h-24"
-                  data-testid="input_update_description"
-                />
-                <div className="text-xs text-muted-foreground">
-                  {isAction
-                    ? "This is the description for the action exposed to the clients."
-                    : "This is the description for the tool exposed to the agents."}
-                </div>
+                  {parseString(focusedRow?.display_name || focusedRow?.name, [
+                    "space_case",
+                  ])}
+                </h3>
+                <p
+                  className="text-mmd text-muted-foreground"
+                  data-testid="sidebar_header_description"
+                >
+                  {focusedRow?.display_description ?? focusedRow?.description}
+                </p>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1" data-testid="sidebar_header">
-              <h3
-                className="text-base font-medium"
-                data-testid="sidebar_header_name"
-              >
-                {focusedRow?.display_name ?? focusedRow?.name}
-              </h3>
-              <p
-                className="text-mmd text-muted-foreground"
-                data-testid="sidebar_header_description"
-              >
-                {focusedRow?.display_description ?? focusedRow?.description}
-              </p>
-            </div>
-          )}
+            ))}
         </SidebarHeader>
         {!isAction && <Separator />}
         <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">

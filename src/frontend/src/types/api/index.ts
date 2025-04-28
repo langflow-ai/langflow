@@ -326,6 +326,7 @@ export type FieldParserType =
   | "uppercase"
   | "no_blank"
   | "valid_csv"
+  | "space_case"
   | "commands";
 
 export type TableOptionsTypeAPI = {
