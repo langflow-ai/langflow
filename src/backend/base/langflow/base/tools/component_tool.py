@@ -252,7 +252,10 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
-                        metadata={"display_name": formatted_name, "display_description": build_description(self.component, output)},
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
+                        },
                     )
                 )
             else:
@@ -265,7 +268,10 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
-                        metadata={"display_name": formatted_name, "display_description": build_description(self.component, output)},
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
+                        },
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):
