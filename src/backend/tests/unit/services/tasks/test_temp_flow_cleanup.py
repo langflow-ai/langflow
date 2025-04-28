@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+
 from datetime import timezone
 from uuid import uuid4
 
@@ -106,6 +107,7 @@ async def test_cleanup_worker_run_with_exception(mocker):
     # Start and immediately stop the worker
     await worker.start()
     await worker.stop()
+
 
     # Verify the worker was started and stopped properly
     assert worker._task is None
