@@ -19,7 +19,7 @@ The **Chat Input** component provides an interactive chat interface in the **Pla
 
 ## Chat Input
 
-This component collects user input as `Text` strings from the chat and wraps it in a [Message](/concepts-objects) object that includes the input text, sender information, session ID, file attachments, and styling properties.
+This component collects user input as `Text` strings from the chat and wraps it in a [Message](/concepts-objects#message-object) object that includes the input text, sender information, session ID, file attachments, and styling properties.
 
 It can optionally store the message in a chat history.
 
@@ -115,7 +115,7 @@ The component accepts the following input types.
 
 ## Text Output
 
-The **Text Output** takes a single input of text and returns a [Message](/concepts-objects) object containing that text.
+The **Text Output** takes a single input of text and returns a [Message](/concepts-objects#message-object) object containing that text.
 
 The output does not appear in the **Playground**.
 
