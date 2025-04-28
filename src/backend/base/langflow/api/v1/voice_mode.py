@@ -86,12 +86,6 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, safe_s
     Returns a tuple: (current_user, openai_key). If authentication fails, sends an error
     message to the client and returns (None, None).
     """
-    # token = client_websocket.cookies.get("access_token_lf")
-    # current_user = None
-    # if token:
-    #    current_user = await get_current_user_by_jwt(token, session)
-    # if current_user is None:
-    #    current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
     if user is None:
         await safe_send_json(
             {
