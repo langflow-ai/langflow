@@ -15,26 +15,31 @@ export const useGetDownloadFilesV2: useMutationFunctionType<
   const getDownloadFilesFn = async (params) => {
     if (!params) return;
     // need to use fetch because axios convert blob data to string, and this convertion can corrupt the file
-    const response = await fetch(
-      `${getURL("FILE_MANAGEMENT", { mode: "batch/" }, true)}`,
-      {
-        method: "POST",
-        body: JSON.stringify(params.ids),
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/x-zip-compressed",
+    let response;
+    if (params.ids.length === 1) {
+      response = await fetch(
+        `${getURL("FILE_MANAGEMENT", { id: params.ids[0] }, true)}`,
+        {
+          headers: {
+            Accept: "*/*",
+          },
         },
-      },
-    );
-
+      );
+    } else {
+      response = await fetch(
+        `${getURL("FILE_MANAGEMENT", { mode: "batch/" }, true)}`,
+        {
+          method: "POST",
+          body: JSON.stringify(params.ids),
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/x-zip-compressed",
+          },
+        },
+      );
+    }
     if (!response.ok) {
       throw new Error(`Failed to download files: ${response.statusText}`);
-    }
-
-    // Ensure we're getting the correct content type
-    const contentType = response.headers.get("Content-Type");
-    if (contentType !== "application/x-zip-compressed") {
-      throw new Error(`Unexpected content type: ${contentType}`);
     }
 
     const blob = await response.blob();
