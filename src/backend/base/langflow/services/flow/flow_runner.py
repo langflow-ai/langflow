@@ -19,7 +19,25 @@ from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, session_scope
 
 
-class LangFlowRunner:
+class LangflowRunnerExperimental:
+    """
+    LangflowRunnerExperimental is responsible for orchestrating the execution of flows without the need for a 
+    dedicated server.
+
+    .. warning::
+        This class is currently **experimental** and in a **beta phase**. 
+        Its API and behavior may change in future releases. Use with caution in production environments.
+
+    Usage:
+    ------
+    Instantiate the class and call the `run` method with the desired flow and input.
+
+    Example:
+        runner = LangflowRunnerExperimental()
+        result = await runner.run(flow="path/to/flow.json", input_value="Hello", session_id=str(uuid.uuid4()))
+
+    """
+
     should_initialize_db: bool = True
 
     async def run(
@@ -28,7 +46,7 @@ class LangFlowRunner:
         input_value: str,
         input_type: str = "chat",
         output_type: str = "chat",
-        session_id: str | None = None,
+        session_id: str, # UUID required currently
     ):
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
@@ -83,7 +101,12 @@ class LangFlowRunner:
         else:
             cache_service.clear()
         async with session_scope() as session:
-            await cascade_delete_flow(session, UUID(flow_dict["id"]))
+            flow_id = flow_dict["id"]
+            if isinstance(flow_id, UUID):
+                uuid_obj = flow_id
+            else:
+                uuid_obj = UUID(str(flow_id))
+            await cascade_delete_flow(session, uuid_obj)
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
