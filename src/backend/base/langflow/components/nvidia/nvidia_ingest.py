@@ -36,6 +36,7 @@ class NvidiaIngestComponent(BaseFileComponent):
             name="base_url",
             display_name="Base URL",
             info="The URL of the NVIDIA NeMo Retriever Extraction API.",
+            required=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -155,7 +156,6 @@ class NvidiaIngestComponent(BaseFileComponent):
             )
             raise ImportError(msg) from e
 
-        self.base_url: str | None = self.base_url.strip() if self.base_url else None
 
         if not file_list:
             err_msg = "No files to process."
@@ -164,19 +164,21 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         file_paths = [str(file.path) for file in file_list]
 
-        try:
-            urlparse(self.base_url)
-
-        except Exception as e:
-            self.log(f"Error parsing Base URL: {e}")
-            raise
+        if self.base_url:
+            try:
+                self.base_url = self.base_url.strip()
+                urlparse(self.base_url)
+            except Exception as e:
+                self.log(f"Invalid Base URL format: {e}")
+                raise ValueError(f"Invalid Base URL format: {e}") from e
+        else:
+            raise ValueError("Base URL is required")
 
         self.log(
             f"Creating Ingestor for Base URL: {self.base_url!r}",
         )
-        try:
-            from nv_ingest_client.client import Ingestor
 
+        try:
             ingestor = (
                 Ingestor(
                     message_client_kwargs={
@@ -221,7 +223,6 @@ class NvidiaIngestComponent(BaseFileComponent):
                 )
 
             result = ingestor.ingest()
-
         except Exception as e:
             self.log(f"Error during ingestion: {e}")
             raise
