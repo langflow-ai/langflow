@@ -42,11 +42,11 @@ class LangflowRunnerExperimental:
 
     async def run(
         self,
+        session_id: str, # UUID required currently
         flow: Path | str | dict,
         input_value: str,
         input_type: str = "chat",
-        output_type: str = "chat",
-        session_id: str, # UUID required currently
+        output_type: str = "chat"
     ):
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
