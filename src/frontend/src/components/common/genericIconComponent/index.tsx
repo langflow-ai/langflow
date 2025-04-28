@@ -37,22 +37,16 @@ export const ForwardedIconComponent = memo(
 
           // Load the icon if we have a name
           if (name && typeof name === "string") {
-            const syncIcon = getNodeIconSync(name);
-            if (syncIcon) {
-              setTargetIcon(syncIcon);
-              setShowFallback(false);
-            } else {
-              getNodeIcon(name)
-                .then((component) => {
-                  setTargetIcon(component);
-                  setShowFallback(false);
-                })
-                .catch((error) => {
-                  console.error(`Error loading icon ${name}:`, error);
-                  setIconError(true);
-                  setShowFallback(false);
-                });
-            }
+            getNodeIcon(name)
+              .then((component) => {
+                setTargetIcon(component);
+                setShowFallback(false);
+              })
+              .catch((error) => {
+                console.error(`Error loading icon ${name}:`, error);
+                setIconError(true);
+                setShowFallback(false);
+              });
           } else {
             setShowFallback(false);
           }
