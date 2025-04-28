@@ -15,6 +15,7 @@ import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-
 import { useGetDownloadFilesV2 } from "@/controllers/API/queries/file-management/use-get-download-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import useAlertStore from "@/stores/alertStore";
 import { formatFileSize } from "@/utils/stringManipulation";
@@ -403,16 +404,23 @@ export const FilesPage = () => {
                           >
                             <ForwardedIconComponent name="Download" />
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="iconMd"
-                            className="px-2.5 !text-mmd"
-                            onClick={handleDelete}
-                            loading={isDeleting}
+
+                          <DeleteConfirmationModal
+                            onConfirm={handleDelete}
+                            description={
+                              "file" + (quantitySelected > 1 ? "s" : "")
+                            }
                           >
-                            <ForwardedIconComponent name="Trash2" />
-                            Delete
-                          </Button>
+                            <Button
+                              variant="destructive"
+                              size="iconMd"
+                              className="px-2.5 !text-mmd"
+                              loading={isDeleting}
+                            >
+                              <ForwardedIconComponent name="Trash2" />
+                              Delete
+                            </Button>
+                          </DeleteConfirmationModal>
                         </div>
                       </div>
                     </div>
