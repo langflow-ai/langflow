@@ -1,5 +1,6 @@
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -258,92 +259,97 @@ export default function ToolsTable({
         className="flex h-full flex-col overflow-auto border-l border-border"
       >
         <SidebarHeader className="flex-none px-4 py-4">
-          <div className="flex flex-col gap-2" data-testid="sidebar_header">
-            <h3
-              className="text-base font-semibold"
-              data-testid="sidebar_header_name"
-            >
-              {focusedRow?.display_name ?? focusedRow?.name}
-            </h3>
-            <p
-              className="text-sm text-muted-foreground"
-              data-testid="sidebar_header_description"
-            >
-              {focusedRow?.display_description ?? focusedRow?.description}
-            </p>
-          </div>
+          {isAction ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
+                <label
+                  className="text-mmd font-medium"
+                  htmlFor="sidebar-name-input"
+                >
+                  Name
+                </label>
+
+                <Input
+                  id="sidebar-name-input"
+                  value={sidebarName}
+                  onChange={(e) => {
+                    setSidebarName(e.target.value);
+                    handleSidebarInputChange("name", e.target.value);
+                  }}
+                  maxLength={46}
+                  placeholder="Edit name..."
+                  data-testid="input_update_name"
+                />
+                <div className="text-xs text-muted-foreground">
+                  {isAction
+                    ? "Used as the function name when this flow is exposed to clients."
+                    : "Used as the function name when this tool is exposed to the agent."}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label
+                  className="text-mmd font-medium"
+                  htmlFor="sidebar-desc-input"
+                >
+                  Description
+                </label>
+
+                <Textarea
+                  id="sidebar-desc-input"
+                  value={sidebarDescription}
+                  onChange={(e) => {
+                    setSidebarDescription(e.target.value);
+                    handleSidebarInputChange("description", e.target.value);
+                  }}
+                  placeholder="Edit description..."
+                  className="h-24"
+                  data-testid="input_update_description"
+                />
+                <div className="text-xs text-muted-foreground">
+                  {isAction
+                    ? "This is the description for the action exposed to the clients."
+                    : "This is the description for the tool exposed to the agents."}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1" data-testid="sidebar_header">
+              <h3
+                className="text-base font-medium"
+                data-testid="sidebar_header_name"
+              >
+                {focusedRow?.display_name ?? focusedRow?.name}
+              </h3>
+              <p
+                className="text-mmd text-muted-foreground"
+                data-testid="sidebar_header_description"
+              >
+                {focusedRow?.display_description ?? focusedRow?.description}
+              </p>
+            </div>
+          )}
         </SidebarHeader>
+        <Separator />
         <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">
           {focusedRow && (
             <div className="flex h-full flex-col gap-4">
               <SidebarGroup className="flex-1">
                 <SidebarGroupContent className="h-full pb-4">
                   <div className="flex h-full flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label
-                        className="text-mmd font-medium"
-                        htmlFor="sidebar-name-input"
-                      >
-                        Action Name
-                      </label>
-
-                      <Input
-                        id="sidebar-name-input"
-                        value={sidebarName}
-                        onChange={(e) => {
-                          setSidebarName(e.target.value);
-                          handleSidebarInputChange("name", e.target.value);
-                        }}
-                        maxLength={46}
-                        placeholder="Edit name..."
-                        data-testid="input_update_name"
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        {isAction
-                          ? "Used as the function name when this flow is exposed to clients."
-                          : "Used as the function name when this tool is exposed to the agent."}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label
-                        className="text-mmd font-medium"
-                        htmlFor="sidebar-desc-input"
-                      >
-                        Action Description
-                      </label>
-
-                      <Textarea
-                        id="sidebar-desc-input"
-                        value={sidebarDescription}
-                        onChange={(e) => {
-                          setSidebarDescription(e.target.value);
-                          handleSidebarInputChange(
-                            "description",
-                            e.target.value,
-                          );
-                        }}
-                        placeholder="Edit description..."
-                        className="h-24"
-                        data-testid="input_update_description"
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        {isAction
-                          ? "This is the description for the action exposed to the clients."
-                          : "This is the description for the tool exposed to the agents."}
-                      </div>
-                    </div>
                     {actionArgs.length > 0 && (
-                      <label
-                        className="mt-2 text-sm font-semibold"
-                        htmlFor="sidebar-desc-input"
-                      >
-                        Action Parameters
-                      </label>
+                      <div className="flex flex-col gap-1.5">
+                        <h3 className="mt-2 text-base font-medium">
+                          Parameters
+                        </h3>
+                        <p className="text-mmd text-muted-foreground">
+                          Manage inputs for this action
+                        </p>
+                      </div>
                     )}
                     {actionArgs.map((field) => (
                       <div key={field.name} className="flex flex-col gap-2">
                         <label
-                          className="text-mmd font-medium"
+                          className="text-sm font-medium"
                           htmlFor="sidebar-desc-input"
                         >
                           {field.display_name}
