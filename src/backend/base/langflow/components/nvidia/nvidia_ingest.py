@@ -235,55 +235,55 @@ class NvidiaIngestComponent(BaseFileComponent):
         # Result is a list of segments as determined by the text_depth option (if "document" then only one segment)
         # each segment is a list of elements (text, structured, image)
         for segment in result:
-            for element in segment:
-                document_type = element.get("document_type")
-                metadata = element.get("metadata", {})
-                source_metadata = metadata.get("source_metadata", {})
+            if segment:
+                for element in segment:
+                    document_type = element.get("document_type")
+                    metadata = element.get("metadata", {})
+                    source_metadata = metadata.get("source_metadata", {})
 
-                if document_type == document_type_text:
-                    data.append(
-                        Data(
-                            text=metadata.get("content", ""),
-                            file_path=source_metadata.get("source_name", ""),
-                            document_type=document_type,
-                            metadata=metadata,
+                    if document_type == document_type_text:
+                        data.append(
+                            Data(
+                                text=metadata.get("content", ""),
+                                file_path=source_metadata.get("source_name", ""),
+                                document_type=document_type,
+                                metadata=metadata,
+                            )
                         )
-                    )
-                # Both charts and tables are returned as "structured" document type,
-                # with extracted text in "table_content"
-                elif document_type == document_type_structured:
-                    table_metadata = metadata.get("table_metadata", {})
+                    # Both charts and tables are returned as "structured" document type,
+                    # with extracted text in "table_content"
+                    elif document_type == document_type_structured:
+                        table_metadata = metadata.get("table_metadata", {})
 
-                    # reformat chart/table images as binary data
-                    if "content" in metadata:
-                        metadata["content"] = {"$binary": metadata["content"]}
+                        # reformat chart/table images as binary data
+                        if "content" in metadata:
+                            metadata["content"] = {"$binary": metadata["content"]}
 
-                    data.append(
-                        Data(
-                            text=table_metadata.get("table_content", ""),
-                            file_path=source_metadata.get("source_name", ""),
-                            document_type=document_type,
-                            metadata=metadata,
+                        data.append(
+                            Data(
+                                text=table_metadata.get("table_content", ""),
+                                file_path=source_metadata.get("source_name", ""),
+                                document_type=document_type,
+                                metadata=metadata,
+                            )
                         )
-                    )
-                elif document_type == "image":
-                    image_metadata = metadata.get("image_metadata", {})
+                    elif document_type == "image":
+                        image_metadata = metadata.get("image_metadata", {})
 
-                    # reformat images as binary data
-                    if "content" in metadata:
-                        metadata["content"] = {"$binary": metadata["content"]}
+                        # reformat images as binary data
+                        if "content" in metadata:
+                            metadata["content"] = {"$binary": metadata["content"]}
 
-                    data.append(
-                        Data(
-                            text=image_metadata.get("caption", "No caption available"),
-                            file_path=source_metadata.get("source_name", ""),
-                            document_type=document_type,
-                            metadata=metadata,
+                        data.append(
+                            Data(
+                                text=image_metadata.get("caption", "No caption available"),
+                                file_path=source_metadata.get("source_name", ""),
+                                document_type=document_type,
+                                metadata=metadata,
+                            )
                         )
-                    )
-                else:
-                    self.log(f"Unsupported document type {document_type}")
-
+                    else:
+                        self.log(f"Unsupported document type {document_type}")
         self.status = data or "No data"
 
         # merge processed data with BaseFile objects
