@@ -899,7 +899,9 @@
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

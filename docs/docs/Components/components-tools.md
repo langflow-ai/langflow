@@ -143,23 +143,21 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 
 ## Combinatorial Reasoner
 
-This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
+This component runs Icosa's Combinatorial Reasoning pipeline on an input to create a prompt with optimized test-time compute. Users have the choice to use an optimized prompt with any LLM on langflow or use the optimal response generated from an Icosa selected language model. Sign up for access at icosacomputing.com
 
 ### Inputs
 
 | Name                   | Display Name | Description                           |
 |------------------------|--------------|---------------------------------------|
 | prompt                 | Prompt      | Input to run CR on                    |
-| openai_api_key         | OpenAI API Key | OpenAI API key for authentication     |
-| username               | Username       | Username for Icosa API authentication |
-| password               | Password | Password for Icosa API authentication |
-| model_name             | Model Name      | OpenAI LLM to use for reason generation|
+| icosa_api_key         | Icosa API Key | Icosa API key for authentication     |
+| prompt_type             | Type     | Method used to construct optimized prompt|### Outputs
 
 ### Outputs
-
 | Name    | Display Name | Description                          |
 |---------|-----------|--------------------------------------|
 | optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
+| response | Response| A message object containing the optimal response from LLM chosen|
 | reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
 
 ## DuckDuckGo search
