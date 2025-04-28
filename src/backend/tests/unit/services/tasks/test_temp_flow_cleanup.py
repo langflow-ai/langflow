@@ -107,7 +107,6 @@ async def test_cleanup_worker_run_with_exception(mocker):
     await worker.start()
     await worker.stop()
 
-
     # Verify the worker was started and stopped properly
     assert worker._task is None
     assert worker._stop_event.is_set()
