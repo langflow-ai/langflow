@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 from datetime import timezone
 from uuid import uuid4
-import logging
 
 import pytest
 from langflow.services.database.models.flow import Flow as FlowTable
@@ -95,18 +94,24 @@ async def test_cleanup_worker_start_stop():
 
 
 @pytest.mark.asyncio
-async def test_cleanup_worker_run_with_exception(caplog):
+async def test_cleanup_worker_run_with_exception(mocker):
     """Test CleanupWorker handles exceptions gracefully."""
-    caplog.set_level(logging.DEBUG)  # Set to DEBUG to capture all logs
+    # Mock the logger to capture log calls
+    mock_logger = mocker.patch("langflow.services.task.temp_flow_cleanup.logger")
 
     settings = get_settings_service().settings
     settings.public_flow_cleanup_interval = 601  # Minimum valid interval
     worker = CleanupWorker()
 
+    # Start and immediately stop the worker
     await worker.start()
     await worker.stop()
 
+    # Verify the worker was started and stopped properly
+    assert worker._task is None
+    assert worker._stop_event.is_set()
 
-    # Use substring match for robustness
-    assert any("database cleanup worker" in record.message.lower() for record in caplog.records)
-    assert any("stopping database cleanup worker" in record.message.lower() for record in caplog.records)
+    # Verify the expected log messages were called
+    mock_logger.debug.assert_any_call("Started database cleanup worker")
+    mock_logger.debug.assert_any_call("Stopping database cleanup worker...")
+    mock_logger.debug.assert_any_call("Database cleanup worker stopped")
