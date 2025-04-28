@@ -4,7 +4,7 @@ import asyncio
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -13,7 +13,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
-import pandas as pd
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
@@ -71,7 +70,6 @@ router = APIRouter(tags=["Base"])
 #                 if isinstance(value, pd.DataFrame):
 #                     obj[key] = value.to_dict(orient='records')
 #         return super().model_validate(obj)
-
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -773,5 +771,3 @@ async def get_config():
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-

@@ -144,7 +144,7 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
         # For single-element arrays
         if obj.size == 1 and hasattr(obj, "item"):
             return obj.item()
-            
+
         # For multi-element arrays
         if np.issubdtype(obj.dtype, np.number):
             return obj.tolist()  # Convert to Python list
