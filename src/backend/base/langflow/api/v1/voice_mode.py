@@ -433,8 +433,8 @@ async def handle_function_call(
                 "output": str(result),
             },
         }
-        await openai_send(function_output)
-        await openai_send(common_response_create(session_id))
+        openai_send(function_output)
+        openai_send(common_response_create(session_id))
     except json.JSONDecodeError as e:
         trace = traceback.format_exc()
         logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
@@ -446,7 +446,7 @@ async def handle_function_call(
                 "output": f"Error parsing arguments: {e!s}",
             },
         }
-        await openai_send(function_output)
+        openai_send(function_output)
     except ValueError as e:
         trace = traceback.format_exc()
         logger.error(f"Value error: {e!s}\ntrace: {trace}")
@@ -458,7 +458,7 @@ async def handle_function_call(
                 "output": f"Error with input values: {e!s}",
             },
         }
-        await openai_send(function_output)
+        openai_send(function_output)
     except (ConnectionError, websockets.exceptions.WebSocketException) as e:
         trace = traceback.format_exc()
         logger.error(f"Connection error: {e!s}\ntrace: {trace}")
@@ -470,7 +470,7 @@ async def handle_function_call(
                 "output": f"Connection error: {e!s}",
             },
         }
-        await openai_send(function_output)
+        openai_send(function_output)
     except (KeyError, AttributeError, TypeError) as e:
         logger.error(f"Error executing flow: {e}")
         logger.error(traceback.format_exc())
@@ -482,7 +482,7 @@ async def handle_function_call(
                 "output": f"Error executing flow: {e}",
             },
         }
-        await openai_send(function_output)
+        openai_send(function_output)
 
 
 voice_config_cache: dict[str, VoiceConfig] = {}
@@ -771,14 +771,15 @@ async def flow_as_tool_websocket(
                 return new_session
 
 
-            class ElevenLabsResponse:
-                def __init__(self, responseId : str):
-                    self.responseId = responseId
-                    self.text_delta_queue = asyncio.Queue()
-                    self.text_delta_task = asyncio.create_task(process_text_deltas(self))
-            eleven_labs_responses = {}
+            class Response:
+                def __init__(self, response_id : str, use_elevenlabs : bool = False):
+                    self.response_id = response_id
+                    if use_elevenlabs:
+                        self.text_delta_queue = asyncio.Queue()
+                        self.text_delta_task = asyncio.create_task(process_text_deltas(self))
+            responses = {}
 
-            async def process_text_deltas(rsp : ElevenLabsResponse):
+            async def process_text_deltas(rsp : Response):
                 """Transfer text deltas from the async queue to a synchronous queue.
 
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
@@ -864,7 +865,7 @@ async def flow_as_tool_websocket(
                                 num_audio_samples = 0
                         elif msg.get("type") == "langflow.voice_mode.config":
                             logger.info(f"langflow.voice_mode.config {msg}")
-                            voice_config.progress_enabled = msg.get("enabled", True)
+                            voice_config.progress_enabled = msg.get("progress_enabled", True)
                         elif msg.get("type") == "langflow.elevenlabs.config":
                             logger.info(f"langflow.elevenlabs.config {msg}")
                             voice_config.use_elevenlabs = msg["enabled"]
@@ -885,7 +886,7 @@ async def flow_as_tool_websocket(
                     pass
 
             async def forward_to_client() -> None:
-                nonlocal bot_speaking_flag, eleven_labs_responses
+                nonlocal bot_speaking_flag, responses
                 function_call = None
                 function_call_args = ""
                 conversation_id = str(uuid4())
@@ -906,20 +907,22 @@ async def flow_as_tool_websocket(
                         if do_forward:
                             client_send(event)
                         if event_type == "response.created":
-                            if voice_config.use_elevenlabs:
-                                response_id = event["response"]["id"]
-                                eleven_labs_responses[response_id] = ElevenLabsResponse(response_id)
+                            response_id = event["response"]["id"]
+                            responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
                         elif event_type == "response.text.delta":
                             if voice_config.use_elevenlabs:
+                                response_id = event["response_id"]
                                 delta = event.get("delta", "")
-                                rsp : ElevenLabsResponse = eleven_labs_responses[response_id]
+                                rsp : Response = responses[response_id]
                                 await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
                             if voice_config.use_elevenlabs:
-                                rsp : ElevenLabsResponse = eleven_labs_responses[response_id]
+                                response_id = event["response_id"]
+                                rsp : Response = responses[response_id]
                                 await rsp.text_delta_queue.put(None)
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
                                     await rsp.text_delta_task
+                                responses.pop(response_id)
 
                                 try:
                                     message_text = event.get("text", "")
@@ -1011,6 +1014,7 @@ async def flow_as_tool_websocket(
                 # handle any exceptions from any task
                 for exc in excs.exceptions:
                     logger.error("WS loop failed:", exc_info=exc)
+                logger.error(traceback.format_exc())
             finally:
                 # shared cleanup for writers & sockets
                 await close()
