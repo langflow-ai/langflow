@@ -1,3 +1,5 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -215,6 +217,7 @@ export default function ToolsTable({
       ([key, value]: [string, any]) => ({
         display_name: value.title,
         name: key,
+        description: value.description ?? null,
       }),
     );
   }, [focusedRow]);
@@ -260,7 +263,7 @@ export default function ToolsTable({
       >
         <SidebarHeader className="flex-none px-4 py-4">
           {isAction ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <label
                   className="text-mmd font-medium"
@@ -329,7 +332,7 @@ export default function ToolsTable({
             </div>
           )}
         </SidebarHeader>
-        <Separator />
+        {!isAction && <Separator />}
         <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">
           {focusedRow && (
             <div className="flex h-full flex-col gap-4">
@@ -348,11 +351,19 @@ export default function ToolsTable({
                     )}
                     {actionArgs.map((field) => (
                       <div key={field.name} className="flex flex-col gap-2">
-                        <label
-                          className="text-sm font-medium"
-                          htmlFor="sidebar-desc-input"
-                        >
+                        <label className="flex text-sm font-medium">
                           {field.display_name}
+                          {field.description && (
+                            <ShadTooltip content={field.description}>
+                              <div className="flex items-center text-sm font-medium hover:cursor-help">
+                                <ForwardedIconComponent
+                                  name="info"
+                                  className="ml-1.5 h-4 w-4 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                            </ShadTooltip>
+                          )}
                         </label>
                         <Input
                           id="sidebar-desc-input"
