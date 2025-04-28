@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
+import EmptyPageCommunity from "./empty-page";
 import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
@@ -80,7 +81,9 @@ export default function CollectionPage(): JSX.Element {
             {flows?.length !== examples?.length || folders?.length > 1 ? (
               <Outlet />
             ) : (
-              <EmptyPage setOpenModal={setOpenModal} />
+              // <EmptyPage setOpenModal={setOpenModal} />
+
+              <EmptyPageCommunity setOpenModal={setOpenModal} />
             )}
           </div>
         ) : (

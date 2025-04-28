@@ -33,7 +33,7 @@ export const InputEditFolderName = ({
   return (
     <>
       <Input
-        className="h-6 flex-1 focus:border-0"
+        className="h-6 flex-1 text-xs focus:border-0"
         onChange={(e) => {
           handleEditFolderName(e, item.name);
         }}

@@ -72,7 +72,7 @@ dependencies = [
     "nltk==3.9.1",
     "lark==1.2.2",
     "jq==1.8.0",
-    "pydantic-settings==2.4.0",
+    "pydantic-settings>=2.2.0,<3.0.0",
     "ragstack-ai-knowledge-store==0.2.1",
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
@@ -233,7 +233,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 [tool.pytest.ini_options]
 timeout = 120
-tiemout_method = "thread"
+timeout_method = "signal"
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
