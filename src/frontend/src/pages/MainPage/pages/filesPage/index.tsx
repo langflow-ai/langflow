@@ -27,7 +27,7 @@ import {
   SelectionChangedEvent,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { sortByDate } from "../../utils/sort-flows";
 import DragWrapComponent from "./components/dragWrapComponent";
 
@@ -39,6 +39,29 @@ export const FilesPage = () => {
 
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   const handleSelectionChanged = (event: SelectionChangedEvent) => {
     const selectedRows = event.api.getSelectedRows();
@@ -103,7 +126,8 @@ export const FilesPage = () => {
       checkboxSelection: true,
       editable: true,
       filter: "agTextColumnFilter",
-      cellClass: "cursor-text select-text",
+      cellClass:
+        "cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
       cellRenderer: (params) => {
         const type = params.data.path.split(".")[1]?.toLowerCase();
         return (
@@ -128,7 +152,7 @@ export const FilesPage = () => {
             )}
             <div
               className={cn(
-                "flex cursor-text items-center gap-2 text-sm font-medium",
+                "flex items-center gap-2 text-sm font-medium",
                 params.data.progress !== undefined &&
                   params.data.progress === -1 &&
                   "pointer-events-none text-placeholder-foreground",
@@ -168,7 +192,8 @@ export const FilesPage = () => {
       valueFormatter: (params) => {
         return params.value.split(".")[1]?.toUpperCase();
       },
-      cellClass: "text-muted-foreground cursor-text select-text",
+      cellClass:
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
       headerName: "Size",
@@ -178,7 +203,8 @@ export const FilesPage = () => {
         return formatFileSize(params.value);
       },
       editable: false,
-      cellClass: "text-muted-foreground cursor-text select-text",
+      cellClass:
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
       headerName: "Modified",
@@ -191,7 +217,8 @@ export const FilesPage = () => {
       editable: false,
       flex: 1,
       resizable: false,
-      cellClass: "text-muted-foreground cursor-text select-text",
+      cellClass:
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
       maxWidth: 60,
@@ -293,6 +320,7 @@ export const FilesPage = () => {
   }, [uploadFile]);
 
   const [quickFilterText, setQuickFilterText] = useState("");
+
   return (
     <div
       className="flex h-full w-full flex-col overflow-y-auto"
@@ -357,7 +385,7 @@ export const FilesPage = () => {
                       tableOptions={{
                         hide_options: true,
                       }}
-                      suppressRowClickSelection={true}
+                      suppressRowClickSelection={!isShiftPressed}
                       editable={[
                         {
                           field: "name",
@@ -374,7 +402,12 @@ export const FilesPage = () => {
                           b.updated_at ?? b.created_at,
                         );
                       })}
-                      className="ag-no-border w-full"
+                      className={cn(
+                        "ag-no-border group w-full",
+                        isShiftPressed &&
+                          quantitySelected > 0 &&
+                          "no-select-cells",
+                      )}
                       pagination
                       ref={tableRef}
                       quickFilterText={quickFilterText}
