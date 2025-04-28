@@ -14,7 +14,8 @@ class CombinatorialReasonerComponent(Component):
     display_name = "Combinatorial Reasoner"
     description = (
         "Optimize the “thinking” of models at test-time to increase accuracy. Uses Icosa models by default "
-        "but can run on any model by changing base URL in Controls. Sign up for free at icosacomputing.com"
+        "but can run on any model by changing base URL in Controls. Sign up for free at icosacomputing.com. "
+        "Get the Response directly, or use the Optimized Prompt to a model of your choice."
     )
     icon = "Icosa"
     name = "Combinatorial Reasoner"
