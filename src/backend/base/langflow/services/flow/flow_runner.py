@@ -20,12 +20,11 @@ from langflow.services.deps import get_cache_service, session_scope
 
 
 class LangflowRunnerExperimental:
-    """
-    LangflowRunnerExperimental is responsible for orchestrating the execution of flows without the need for a 
+    """LangflowRunnerExperimental is responsible for orchestrating the execution of flows without the need for a
     dedicated server.
 
     .. warning::
-        This class is currently **experimental** and in a **beta phase**. 
+        This class is currently **experimental** and in a **beta phase**.
         Its API and behavior may change in future releases. Use with caution in production environments.
 
     Usage:
@@ -42,11 +41,11 @@ class LangflowRunnerExperimental:
 
     async def run(
         self,
-        session_id: str, # UUID required currently
+        session_id: str,  # UUID required currently
         flow: Path | str | dict,
         input_value: str,
         input_type: str = "chat",
-        output_type: str = "chat"
+        output_type: str = "chat",
     ):
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
