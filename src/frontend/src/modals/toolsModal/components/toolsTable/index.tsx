@@ -240,7 +240,7 @@ export default function ToolsTable({
   };
 
   const rowName = useMemo(() => {
-    return parseString(focusedRow?.display_name || focusedRow?.name, [
+    return parseString(focusedRow?.display_name || focusedRow?.name || "", [
       "space_case",
     ]);
   }, [focusedRow]);

@@ -100,13 +100,7 @@ test(
     expect(isLastChecked).toBeTruthy();
 
     expect(
-      await page.locator('[data-testid="sidebar_header_name"]').isVisible(),
-    ).toBe(true);
-
-    expect(
-      await page
-        .locator('[data-testid="sidebar_header_description"]')
-        .isVisible(),
+      await page.locator('[data-testid="input_update_name"]').isVisible(),
     ).toBe(true);
 
     await page.getByTestId("input_update_name").fill("mcp test name");
@@ -145,7 +139,7 @@ test(
     await expect(page.getByText("setup guide")).toBeVisible();
     await expect(page.getByText("setup guide")).toHaveAttribute(
       "href",
-      "https://docs.langflow.org/mcp-server/deploying-mcp-server",
+      "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions",
     );
 
     await awaitBootstrapTest(page);
