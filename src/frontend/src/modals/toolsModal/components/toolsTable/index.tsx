@@ -220,6 +220,33 @@ export default function ToolsTable({
     );
   }, [focusedRow]);
 
+  const handleDescriptionChange = (e) => {
+    setSidebarDescription(e.target.value);
+    handleSidebarInputChange("description", e.target.value);
+  };
+
+  const handleNameChange = (e) => {
+    setSidebarName(e.target.value);
+    handleSidebarInputChange("name", e.target.value);
+  };
+
+  const handleSearchChange = (e) => setSearchQuery(e.target.value);
+
+  const tableOptions = {
+    block_hide: true,
+  };
+
+  const handleRowClicked = (event) => {
+    setFocusedRow(event.data);
+    setSidebarOpen(true);
+  };
+
+  const rowName = useMemo(() => {
+    return parseString(focusedRow?.display_name || focusedRow?.name, [
+      "space_case",
+    ]);
+  }, [focusedRow]);
+
   return (
     <>
       <main className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
@@ -229,7 +256,7 @@ export default function ToolsTable({
             placeholder="Search actions..."
             inputClassName="h-8"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
         <div className="flex-1 overflow-auto">
@@ -244,13 +271,8 @@ export default function ToolsTable({
             headerHeight={32}
             rowHeight={32}
             onSelectionChanged={handleSelectionChanged}
-            tableOptions={{
-              block_hide: true,
-            }}
-            onRowClicked={(event) => {
-              setFocusedRow(event.data);
-              setSidebarOpen(true);
-            }}
+            tableOptions={tableOptions}
+            onRowClicked={handleRowClicked}
             getRowId={getRowId}
           />
         </div>
@@ -274,10 +296,7 @@ export default function ToolsTable({
                   <Input
                     id="sidebar-name-input"
                     value={sidebarName}
-                    onChange={(e) => {
-                      setSidebarName(e.target.value);
-                      handleSidebarInputChange("name", e.target.value);
-                    }}
+                    onChange={handleNameChange}
                     maxLength={46}
                     placeholder="Edit name..."
                     data-testid="input_update_name"
@@ -299,10 +318,7 @@ export default function ToolsTable({
                   <Textarea
                     id="sidebar-desc-input"
                     value={sidebarDescription}
-                    onChange={(e) => {
-                      setSidebarDescription(e.target.value);
-                      handleSidebarInputChange("description", e.target.value);
-                    }}
+                    onChange={handleDescriptionChange}
                     placeholder="Edit description..."
                     className="h-24"
                     data-testid="input_update_description"
@@ -320,9 +336,7 @@ export default function ToolsTable({
                   className="text-base font-medium"
                   data-testid="sidebar_header_name"
                 >
-                  {parseString(focusedRow?.display_name || focusedRow?.name, [
-                    "space_case",
-                  ])}
+                  {rowName}
                 </h3>
                 <p
                   className="text-mmd text-muted-foreground"
@@ -350,8 +364,8 @@ export default function ToolsTable({
                         </p>
                       </div>
                     )}
-                    {actionArgs.map((field) => (
-                      <div key={field.name} className="flex flex-col gap-2">
+                    {actionArgs.map((field, index) => (
+                      <div key={index} className="flex flex-col gap-2">
                         <label className="flex text-sm font-medium">
                           {field.display_name}
                           {field.description && (
