@@ -93,14 +93,34 @@ export const ForwardedIconComponent = memo(
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
           <ErrorBoundary onError={handleError}>
-            <TargetIcon
-              className={className}
-              style={style}
-              ref={ref}
-              data-testid={
-                dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
-              }
-            />
+            {TargetIcon?.render || TargetIcon?._payload ? (
+              <TargetIcon
+                className={className}
+                style={style}
+                ref={ref}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              />
+            ) : (
+              <div
+                className={className}
+                style={style}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              >
+                {TargetIcon}
+              </div>
+            )}
           </ErrorBoundary>
         </Suspense>
       );
