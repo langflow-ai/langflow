@@ -199,23 +199,22 @@ const SideBarFoldersButtonsComponent = ({
     );
   };
 
-  function addNewFolder() {
-    mutateAddFolder(
-      {
-        data: {
-          name: "New Folder",
-          parent_id: null,
-          description: "",
-        },
+  function addNewFolder(folderName: string) {
+    mutateAddFolder({
+      data: {
+        name: folderName, // use dynamic name
+        parent_id: null,
+        description: "",
       },
-      {
-        onSuccess: (folder) => {
-          track("Create New Folder");
-          handleChangeFolder!(folder.id);
-        },
+    },
+    {
+      onSuccess: (folder) => {
+        track("Create New Folder");
+        handleChangeFolder!(folder.id);
       },
-    );
+    });
   }
+  
 
   function handleEditFolderName(e, name): void {
     const {
