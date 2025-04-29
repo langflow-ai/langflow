@@ -211,12 +211,6 @@ async def handle_on_chain_stream(
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
-        # # First chunk should trigger the streaming timer
-        # if not agent_message.text:
-        #     agent_message.duration = None  # This will trigger the frontend timer
-        #     agent_message.properties.state = "partial"
-        #     agent_message = await send_message_method(message=agent_message)
-
         agent_message.text += data_chunk.content
         agent_message.properties.state = "partial"  # Keep state as partial during streaming
         agent_message.duration = None  # Don't send duration with streaming chunks - let frontend handle timing
