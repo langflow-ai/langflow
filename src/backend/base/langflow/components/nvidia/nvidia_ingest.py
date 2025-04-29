@@ -22,8 +22,8 @@ class NvidiaIngestComponent(BaseFileComponent):
     try:
         from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
-        # NOTE: HTML currently not supported, so manually removing it
-        VALID_EXTENSIONS = [ext for ext in EXTENSION_TO_DOCUMENT_TYPE.keys() if ext != "html"]
+        # Supported file extensions from https://github.com/NVIDIA/nv-ingest/blob/main/README.md
+        VALID_EXTENSIONS = ["pdf", "docx", "pptx", "jpeg", "png", "svg", "tiff", "txt"]
     except ImportError:
         msg = (
             "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
@@ -169,10 +169,12 @@ class NvidiaIngestComponent(BaseFileComponent):
                 self.base_url = self.base_url.strip()
                 urlparse(self.base_url)
             except Exception as e:
-                self.log(f"Invalid Base URL format: {e}")
-                raise ValueError(f"Invalid Base URL format: {e}") from e
+                error_msg = f"Invalid Base URL format: {e}"
+                self.log(error_msg)
+                raise ValueError(error_msg) from e
         else:
-            raise ValueError("Base URL is required")
+            base_url_error = "Base URL is required"
+            raise ValueError(base_url_error)
 
         self.log(
             f"Creating Ingestor for Base URL: {self.base_url!r}",
@@ -224,7 +226,8 @@ class NvidiaIngestComponent(BaseFileComponent):
 
             result = ingestor.ingest()
         except Exception as e:
-            self.log(f"Error during ingestion: {e}")
+            ingest_error = f"Error during ingestion: {e}"
+            self.log(ingest_error)
             raise
 
         self.log(f"Results: {result}")
