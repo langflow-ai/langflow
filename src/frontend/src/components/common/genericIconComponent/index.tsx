@@ -23,11 +23,13 @@ export const ForwardedIconComponent = memo(
     ) => {
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
+      const [initialName, setInitialName] = useState(name);
       const [TargetIcon, setTargetIcon] = useState<any>(null);
 
       useEffect(() => {
         // Reset states when icon name changes
-        if (!TargetIcon) {
+        if (!TargetIcon || initialName !== name) {
+          setInitialName(name);
           setIconError(false);
           setTargetIcon(null);
 

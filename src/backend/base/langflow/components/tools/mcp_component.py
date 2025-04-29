@@ -77,8 +77,8 @@ class MCPToolsComponent(Component):
         "headers_input",
     ]
 
-    display_name = "MCP Server"
-    description = "Connect to an MCP server and expose tools."
+    display_name = "MCP Connection"
+    description = "Connect to an MCP server to use its tools."
     icon = "Mcp"
     name = "MCPTools"
 

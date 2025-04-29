@@ -157,14 +157,14 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp server");
+    await page.getByTestId("sidebar-search-input").fill("mcp connection");
 
-    await page.waitForSelector('[data-testid="toolsMCP Server"]', {
+    await page.waitForSelector('[data-testid="toolsMCP Connection"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("toolsMCP Server")
+      .getByTestId("toolsMCP Connection")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
