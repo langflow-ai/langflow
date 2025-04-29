@@ -4,8 +4,8 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 
 export const checkLucideIcons = (iconName: string): boolean => {
   return (
-    lucideIcons[iconName] ||
-    dynamicIconImports[iconName] ||
-    categoryIcons[iconName]
+    !!lucideIcons[iconName] ||
+    !!dynamicIconImports[iconName] ||
+    !!categoryIcons[iconName]
   );
 };
