@@ -441,7 +441,7 @@ const NodeToolbarComponent = memo(
         data.node.edited = true;
       }
       return isCustom;
-    }, [data.type]);
+    }, [data.type, data.node]);
 
     const renderToolbarButtons = useMemo(
       () => (
