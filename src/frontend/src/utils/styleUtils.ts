@@ -230,6 +230,11 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  {
+    display_name: "Googlecalendar",
+    name: "googlecalendar",
+    icon: "Googlecalendar",
+  },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -421,6 +426,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ScrapeGraphMarkdownifyApi: "ScrapeGraph",
   Unlink: "UnlinkIcon",
   note: "StickyNote",
+  TwitterXIcon: "TwitterXIcon",
 };
 
 export const getLucideIconName = (name: string): string => {
