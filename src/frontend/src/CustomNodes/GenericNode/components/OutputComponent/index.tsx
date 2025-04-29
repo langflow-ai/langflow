@@ -52,24 +52,20 @@ export default function OutputComponent({
       </DropdownMenuTrigger>
       <DropdownMenuContent forceMount>
         <DropdownMenuItem
-          className="deploy-dropdown-item group"
+          className="deploy-dropdown-item"
           onClick={() => {
             setSelectedName("Button");
           }}
         >
-          <div className="group-hover:bg-accent">
-            <span>Auto-detect</span>
-          </div>
+          <div className="text-[13px] font-medium">Auto-detect</div>
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="deploy-dropdown-item group"
+          className="deploy-dropdown-item"
           onClick={() => {
             setSelectedName(name);
           }}
         >
-          <div className="group-hover:bg-accent">
-            <span>{name}</span>
-          </div>
+          <span>{name}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>,
