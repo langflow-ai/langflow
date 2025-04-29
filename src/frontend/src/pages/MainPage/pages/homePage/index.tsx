@@ -125,8 +125,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                   {isLoading ? (
                     view === "grid" ? (
                       <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        <GridSkeleton />
-                        <GridSkeleton />
+                        <ListSkeleton />
+                        <ListSkeleton />
                       </div>
                     ) : (
                       <div className="flex flex-col">
@@ -140,9 +140,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     data &&
                     data.pagination.total > 0 ? (
                     view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
                         {data.flows.map((flow) => (
-                          <GridComponent key={flow.id} flowData={flow} />
+                          <ListComponent key={flow.id} flowData={flow} />
                         ))}
                       </div>
                     ) : (
