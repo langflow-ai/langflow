@@ -3,11 +3,6 @@ title: Create custom Python components
 slug: /components-custom-components
 ---
 
----
-title: Custom components
-slug: /components-custom-components
----
-
 Custom Components extend Langflow's functionality through Python classes that inherit from `Component`. This enables integration of new features, data manipulation, external services, and specialized tools.
 
 ## Overview
