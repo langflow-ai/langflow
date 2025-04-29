@@ -17,9 +17,9 @@ Flows are created in the **workspace** with components dragged from the componen
 
 A flow can be as simple as the [basic prompting flow](/get-started-quickstart), which creates an OpenAI chatbot with four components.
 
-* Each component in a flow is a **node** that performs a specific task, like an AI model or a data source.
-* Each component has a **Configuration** menu. Click the <Icon name="Code" aria-hidden="true"/> **Code** button on a component to see its underlying Python code.
-* Components are connected with **edges** to form flows.
+- Each component in a flow is a **node** that performs a specific task, like an AI model or a data source.
+- Each component has a **Configuration** menu. Click the <Icon name="Code" aria-hidden="true"/> **Code** button on a component to see its underlying Python code.
+- Components are connected with **edges** to form flows.
 
 If you're familiar with [React Flow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
 
@@ -27,8 +27,8 @@ When a flow is run, Langflow builds a Directed Acyclic Graph (DAG) graph object 
 
 Flows are stored on local disk at the following default locations:
 
-* **Linux and WSL**: `home/<username>/.cache/langflow/`
-* **macOS**: `/Users/<username>/Library/Caches/langflow/`
+- **Linux and WSL**: `home/<username>/.cache/langflow/`
+- **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
 The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
 
@@ -42,11 +42,11 @@ Langflow has four distinct regions: the [workspace](#workspace) is the main area
 
 The **workspace** is where you create AI applications by connecting and running components in flows.
 
-* Click and drag the workspace to move it left, right, up, and down.
-* Scroll up and down to zoom in and out of the workspace, or use the <Icon name="ZoomIn" aria-hidden="true"/> **Zoom In** and <Icon name="ZoomOut" aria-hidden="true"/> **Zoom Out** controls.
-* Click <Icon name="Maximize" aria-hidden="true"/> **Fit To Zoom** to center the workspace on the current flow.
-* Click <Icon name="LockOpen" aria-hidden="true"/> **Lock** to lock the workspace in place, preventing accidental movement.
-* Click <Icon name="StickyNote" aria-hidden="true"/> **Add Note** to add a note to your flow, similar to commenting in code.
+- Click and drag the workspace to move it left, right, up, and down.
+- Scroll up and down to zoom in and out of the workspace, or use the <Icon name="ZoomIn" aria-hidden="true"/> **Zoom In** and <Icon name="ZoomOut" aria-hidden="true"/> **Zoom Out** controls.
+- Click <Icon name="Maximize" aria-hidden="true"/> **Fit To Zoom** to center the workspace on the current flow.
+- Click <Icon name="LockOpen" aria-hidden="true"/> **Lock** to lock the workspace in place, preventing accidental movement.
+- Click <Icon name="StickyNote" aria-hidden="true"/> **Add Note** to add a note to your flow, similar to commenting in code.
 
 ![Empty langflow workspace](/img/workspace.png)
 
@@ -94,9 +94,9 @@ Langflow stores logs at the location specified in the `LANGFLOW_CONFIG_DIR` envi
 
 This directory's default location depends on your operating system.
 
-* **Linux and WSL**: `~/.cache/langflow/`
-* **macOS**: `/Users/<username>/Library/Caches/langflow/`
-* **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
+- **Linux and WSL**: `~/.cache/langflow/`
+- **macOS**: `/Users/<username>/Library/Caches/langflow/`
+- **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
 
 To modify the location of your log file:
 
@@ -104,6 +104,8 @@ To modify the location of your log file:
 2. To start Langflow with the values from your `.env` file, start Langflow with `uv run langflow run --env-file .env`.
 
 An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+
+## Projects
 
 ## Projects
 
@@ -127,18 +129,15 @@ For more on managing your files, see [Manage files](/concepts-file-management).
 
 The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace:
 
-* <Icon name="Plus" aria-hidden="true"/> **New**: Create a new flow from scratch.
-* <Icon name="SquarePen" aria-hidden="true"/> **Edit Details**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
-* <Icon name="ScrollText" aria-hidden="true"/> **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
-* <Icon name="FileUp" aria-hidden="true"/> **Import**: Import a flow or component from a JSON file into the workspace.
-* <Icon name="FileDown" aria-hidden="true"/> **Export**: Export the current flow as a JSON file.
-* <Icon name="Undo" aria-hidden="true"/> **Undo**: Revert the last action taken in the project. Keyboard shortcut: <kbd>Control+Z</kbd> (or <kbd>Command+Z</kbd> on macOS).
-* <Icon name="Redo" aria-hidden="true"/> **Redo**: Reapply a previously undone action. Keyboard shortcut: <kbd>Control+Y</kbd> (or <kbd>Command+Y</kbd> on macOS).
-* <Icon name="RefreshCcw" aria-hidden="true"/> **Refresh All**: Refresh all components and delete cache.
+- <Icon name="Plus" aria-hidden="true"/> **New**: Create a new flow from scratch.
+- <Icon name="SquarePen" aria-hidden="true"/> **Edit Details**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
+- <Icon name="ScrollText" aria-hidden="true"/> **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
+- <Icon name="FileUp" aria-hidden="true"/> **Import**: Import a flow or component from a JSON file into the workspace.
+- <Icon name="FileDown" aria-hidden="true"/> **Export**: Export the current flow as a JSON file.
+- <Icon name="Undo" aria-hidden="true"/> **Undo**: Revert the last action taken in the project. Keyboard shortcut: <kbd>Control+Z</kbd> (or <kbd>Command+Z</kbd> on macOS).
+- <Icon name="Redo" aria-hidden="true"/> **Redo**: Reapply a previously undone action. Keyboard shortcut: <kbd>Control+Y</kbd> (or <kbd>Command+Y</kbd> on macOS).
+- <Icon name="RefreshCcw" aria-hidden="true"/> **Refresh All**: Refresh all components and delete cache.
 
 ## Settings
 
 Click <Icon name="Settings" aria-hidden="true"/> **Settings** to access **Global variables**, **Langflow API keys**, **Shortcuts**, and **Messages**.
-
-
-

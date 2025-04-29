@@ -86,14 +86,15 @@ LANGFLOW_DB_CONNECT_TIMEOUT=20
 
 Langflow provides multiple caching options that can be configured using the `LANGFLOW_CACHE_TYPE` environment variable.
 
-| Type | Description | Storage Location | Persistence |
-|------|-------------|------------------|-------------|
-| `async` (default) | Asynchronous in-memory cache | Application memory | Cleared on restart |
-| `memory` | Thread-safe in-memory cache | Application memory | Cleared on restart |
-| `disk` | File system-based cache | System cache directory* | Persists after restart |
-| `redis` | Distributed cache | Redis server | Persists in Redis |
+| Type              | Description                  | Storage Location         | Persistence            |
+| ----------------- | ---------------------------- | ------------------------ | ---------------------- |
+| `async` (default) | Asynchronous in-memory cache | Application memory       | Cleared on restart     |
+| `memory`          | Thread-safe in-memory cache  | Application memory       | Cleared on restart     |
+| `disk`            | File system-based cache      | System cache directory\* | Persists after restart |
+| `redis`           | Distributed cache            | Redis server             | Persists in Redis      |
 
-*System cache directory locations:
+\*System cache directory locations:
+
 - Linux/WSL: `~/.cache/langflow/`
 - macOS: `/Users/<username>/Library/Caches/langflow/`
 - Windows: `%LOCALAPPDATA%\langflow\langflow\Cache`
