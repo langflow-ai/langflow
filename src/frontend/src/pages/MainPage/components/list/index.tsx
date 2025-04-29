@@ -28,10 +28,12 @@ const ListComponent = ({
   flowData,
   selected,
   setSelected,
+  shiftPressed,
 }: {
   flowData: FlowType;
   selected: boolean;
   setSelected: (selected: boolean) => void;
+  shiftPressed: boolean;
 }) => {
   const navigate = useCustomNavigate();
   const [openDelete, setOpenDelete] = useState(false);
@@ -49,9 +51,13 @@ const ListComponent = ({
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
   const handleClick = async () => {
-    if (!isComponent) {
-      await setFlowToCanvas(flowData);
-      navigate(editFlowLink);
+    if (shiftPressed) {
+      setSelected(!selected);
+    } else {
+      if (!isComponent) {
+        await setFlowToCanvas(flowData);
+        navigate(editFlowLink);
+      }
     }
   };
 
@@ -115,10 +121,10 @@ const ListComponent = ({
             >
               <Checkbox
                 checked={selected}
-                onCheckedChange={setSelected}
+                onCheckedChange={(checked) => setSelected(checked as boolean)}
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "ml-2 transition-opacity",
+                  "ml-2 transition-opacity focus-visible:ring-0",
                   !selected && "opacity-0 group-hover/checkbox:opacity-100",
                 )}
               />

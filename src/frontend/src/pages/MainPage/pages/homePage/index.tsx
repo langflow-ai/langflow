@@ -95,21 +95,68 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, [isEmptyFolder]);
 
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
+    null,
+  );
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   const setSelectedFlow = useCallback(
-    (selected: boolean, flowId: string) => {
-      if (selected) {
-        setSelectedFlows([...selectedFlows, flowId]);
+    (selected: boolean, flowId: string, index: number) => {
+      setLastSelectedIndex(index);
+      if (isShiftPressed && lastSelectedIndex !== null) {
+        // Find the indices of the last selected and current flow
+        const flows = data.flows;
+
+        // Determine the range to select
+        const start = Math.min(lastSelectedIndex, index);
+        const end = Math.max(lastSelectedIndex, index);
+        // Get all flow IDs in the range
+        const flowsToSelect = flows
+          .slice(start, end + 1)
+          .map((flow) => flow.id);
+
+        // Update selection
+        if (selected) {
+          setSelectedFlows((prev) =>
+            Array.from(new Set([...prev, ...flowsToSelect])),
+          );
+        } else {
+          setSelectedFlows((prev) =>
+            prev.filter((id) => !flowsToSelect.includes(id)),
+          );
+        }
       } else {
-        setSelectedFlows(selectedFlows.filter((id) => id !== flowId));
+        if (selected) {
+          setSelectedFlows([...selectedFlows, flowId]);
+        } else {
+          setSelectedFlows(selectedFlows.filter((id) => id !== flowId));
+        }
       }
     },
-    [selectedFlows],
+    [selectedFlows, lastSelectedIndex, data.flows, isShiftPressed],
   );
-
-  const handleDelete = useCallback(() => {
-    console.log("delete", selectedFlows);
-  }, []);
 
   return (
     <CardsWrapComponent
@@ -158,27 +205,29 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     data.pagination.total > 0 ? (
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        {data.flows.map((flow) => (
+                        {data.flows.map((flow, index) => (
                           <ListComponent
                             key={flow.id}
                             flowData={flow}
                             selected={selectedFlows.includes(flow.id)}
                             setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id)
+                              setSelectedFlow(selected, flow.id, index)
                             }
+                            shiftPressed={isShiftPressed}
                           />
                         ))}
                       </div>
                     ) : (
                       <div className="mt-4 flex flex-col gap-1">
-                        {data.flows.map((flow) => (
+                        {data.flows.map((flow, index) => (
                           <ListComponent
                             key={flow.id}
                             flowData={flow}
                             selected={selectedFlows.includes(flow.id)}
                             setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id)
+                              setSelectedFlow(selected, flow.id, index)
                             }
+                            shiftPressed={isShiftPressed}
                           />
                         ))}
                       </div>
