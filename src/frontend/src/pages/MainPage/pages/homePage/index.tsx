@@ -104,9 +104,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         className="flex h-full w-full flex-col overflow-y-auto"
         data-testid="cards-wrapper"
       >
-        <div className="flex h-full w-full flex-col xl:container">
+        <div className="flex h-full w-full flex-col">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
-          <div className="flex flex-1 flex-col justify-start px-5 pt-10">
+          <div className="flex flex-1 flex-col justify-start p-4">
             <div className="flex h-full flex-col justify-start">
               <HeaderComponent
                 folderName={folderName}
@@ -121,7 +121,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
-                <div className="mt-6">
+                <div className="">
                   {isLoading ? (
                     view === "grid" ? (
                       <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -140,13 +140,13 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     data &&
                     data.pagination.total > 0 ? (
                     view === "grid" ? (
-                      <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                         {data.flows.map((flow) => (
                           <GridComponent key={flow.id} flowData={flow} />
                         ))}
                       </div>
                     ) : (
-                      <div className="flex flex-col">
+                      <div className="mt-4 flex flex-col gap-1">
                         {data.flows.map((flow) => (
                           <ListComponent key={flow.id} flowData={flow} />
                         ))}
