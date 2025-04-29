@@ -8,6 +8,7 @@ import {
   DEFAULT_FOLDER_DEPRECATED,
 } from "@/constants/constants";
 import { ENABLE_MCP } from "@/customization/feature-flags";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
@@ -22,6 +23,7 @@ interface HeaderComponentProps {
   folderName?: string;
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
+  selectedFlows: string[];
 }
 
 const HeaderComponent = ({
@@ -33,6 +35,7 @@ const HeaderComponent = ({
   setNewProjectModal,
   setSearch,
   isEmptyFolder,
+  selectedFlows,
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
@@ -68,6 +71,17 @@ const HeaderComponent = ({
 
   // Determine which tabs to show based on feature flag
   const tabTypes = isMCPEnabled ? ["mcp", "flows"] : ["components", "flows"];
+
+  const handleDownload = () => {
+    console.log("download");
+  };
+
+  const handleDelete = () => {
+    console.log("delete");
+  };
+
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   return (
     <>
@@ -161,24 +175,57 @@ const HeaderComponent = ({
                   ))}
                 </div>
               </div>
-              <ShadTooltip content="New Flow" side="bottom">
-                <Button
-                  variant="default"
-                  className="!px-3 md:!px-4 md:!pl-3.5"
-                  onClick={() => setNewProjectModal(true)}
-                  id="new-project-btn"
-                  data-testid="new-project-btn"
+              <div className="flex items-center">
+                <div
+                  className={cn(
+                    "-mr-4 flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
+                    selectedFlows.length > 0 && "w-36 opacity-100",
+                  )}
                 >
-                  <ForwardedIconComponent
-                    name="Plus"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                  />
-                  <span className="hidden whitespace-nowrap font-semibold md:inline">
-                    New Flow
-                  </span>
-                </Button>
-              </ShadTooltip>
+                  <Button
+                    variant="outline"
+                    size="iconMd"
+                    onClick={handleDownload}
+                    loading={isDownloading}
+                  >
+                    <ForwardedIconComponent name="Download" />
+                  </Button>
+
+                  <DeleteConfirmationModal
+                    onConfirm={handleDelete}
+                    description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
+                  >
+                    <Button
+                      variant="destructive"
+                      size="iconMd"
+                      className="px-2.5 !text-mmd"
+                      loading={isDeleting}
+                    >
+                      <ForwardedIconComponent name="Trash2" />
+                      Delete
+                    </Button>
+                  </DeleteConfirmationModal>
+                </div>
+                <ShadTooltip content="New Flow" side="bottom">
+                  <Button
+                    variant="default"
+                    size="iconMd"
+                    className="z-50 px-2.5 !text-mmd"
+                    onClick={() => setNewProjectModal(true)}
+                    id="new-project-btn"
+                    data-testid="new-project-btn"
+                  >
+                    <ForwardedIconComponent
+                      name="Plus"
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    />
+                    <span className="hidden whitespace-nowrap font-semibold md:inline">
+                      New Flow
+                    </span>
+                  </Button>
+                </ShadTooltip>
+              </div>
             </div>
           )}
         </>
