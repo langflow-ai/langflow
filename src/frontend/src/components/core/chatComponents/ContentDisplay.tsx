@@ -11,10 +11,12 @@ export default function ContentDisplay({
   content,
   chatId,
   playgroundPage,
+  isPartial = false,
 }: {
   content: ContentType;
   chatId: string;
   playgroundPage?: boolean;
+  isPartial?: boolean;
 }) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
@@ -43,7 +45,11 @@ export default function ContentDisplay({
   );
   const renderDuration = content.duration !== undefined && !playgroundPage && (
     <div className="absolute right-2 top-4">
-      <DurationDisplay duration={content.duration} chatId={chatId} />
+      <DurationDisplay 
+        duration={content.duration} 
+        chatId={chatId} 
+        forceLoading={isPartial} 
+      />
     </div>
   );
 

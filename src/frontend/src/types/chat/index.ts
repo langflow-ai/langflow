@@ -69,6 +69,7 @@ export type FlowPoolObjectType = {
 export interface BaseContent {
   type: string;
   duration?: number;
+  state?: "partial" | "complete";
   header?: {
     title?: string;
     icon?: string;

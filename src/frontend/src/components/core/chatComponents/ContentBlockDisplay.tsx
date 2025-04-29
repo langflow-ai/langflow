@@ -50,6 +50,9 @@ export function ContentBlockDisplay({
   // show the block title only if state === "partial"
   const showBlockTitle = state === "partial";
 
+  // Debug state and duration
+  console.log("ContentBlockDisplay state:", state, "totalDuration:", totalDuration);
+
   return (
     <div className="relative py-3">
       <motion.div
@@ -110,7 +113,11 @@ export function ContentBlockDisplay({
           </div>
           <div className="flex items-center gap-2">
             {!playgroundPage && (
-              <DurationDisplay duration={totalDuration} chatId={chatId} />
+              <DurationDisplay 
+                duration={totalDuration} 
+                chatId={chatId} 
+                forceLoading={state === "partial"}
+              />
             )}
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -205,6 +212,7 @@ export function ContentBlockDisplay({
                           playgroundPage={playgroundPage}
                           content={content}
                           chatId={`${chatId}-${index}`}
+                          isPartial={state === "partial"}
                         />
                       </motion.div>
                     ))}

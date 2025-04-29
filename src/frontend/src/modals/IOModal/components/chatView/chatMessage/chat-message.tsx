@@ -32,6 +32,14 @@ export default function ChatMessage({
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
+  // Debug logs
+  console.log("ChatMessage props:", {
+    state: chat.properties?.state,
+    isStreaming: !!chat.stream_url,
+    duration: chat.duration,
+    contentBlocks: chat.content_blocks
+  });
+  
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
