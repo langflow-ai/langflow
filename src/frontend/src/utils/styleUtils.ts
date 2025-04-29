@@ -399,27 +399,12 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   wrappers: "Gift",
   unknown: "HelpCircle",
   custom: "Edit",
-  BotMessageSquareIcon: "BotMessageSquare",
-  TextSearchIcon: "TextSearch",
-  ChevronsUpDown: "ChevronsUpDown",
-  SunIcon: "Sun",
-  MoonIcon: "Moon",
-  FolderIcon: "FolderIcon",
-  GradientSave: "GradientSave",
-  FolderPlusIcon: "FolderPlus",
-  PaperclipIcon: "Paperclip",
-  TerminalIcon: "TerminalIcon",
-  OptionIcon: "Option",
-  Option: "OptionIcon",
-  GlobeOkIcon: "GlobeOk",
   ThumbDownIconCustom: "ThumbDownCustom",
   ThumbUpIconCustom: "ThumbUpCustom",
   ScrapeGraphAI: "ScrapeGraph",
   ScrapeGraphSmartScraperApi: "ScrapeGraph",
   ScrapeGraphMarkdownifyApi: "ScrapeGraph",
-  Unlink: "UnlinkIcon",
   note: "StickyNote",
-  TwitterXIcon: "TwitterXIcon",
 };
 
 export const getLucideIconName = (name: string): string => {
@@ -430,6 +415,7 @@ export const getLucideIconName = (name: string): string => {
     Wand2: "wand-sparkles",
   };
   const kebabCaseName = name
+    .replace(/Icon/g, "")
     .replace(/([a-z])([A-Z])/g, "$1-$2")
     .replace(/(\d)/g, "-$1")
     .replace(/\s+/g, "-")
@@ -443,10 +429,6 @@ const iconMappingsPromise = import("../icons/lazyIconImports").then(
 );
 
 export const eagerLoadedIconsMap = {
-  // Custom icons
-  GradientSave: GradientSave,
-  BotMessageSquareIcon: BotMessageSquareIcon,
-
   // React icons
   FaApple: FaApple,
   FaDiscord: FaDiscord,
@@ -454,14 +436,12 @@ export const eagerLoadedIconsMap = {
   TwitterLogoIcon: TwitterLogoIcon,
 };
 
-export const getNodeIconSync = (name: string) => {
-  const iconName = nodeIconToDisplayIconMap[name];
-  return eagerLoadedIconsMap[iconName || name] || null;
-};
-
 // Function to get a lazy-loaded icon component
 export const getNodeIcon = async (name: string) => {
   const iconName = nodeIconToDisplayIconMap[name];
+  if (eagerLoadedIconsMap[iconName || name]) {
+    return eagerLoadedIconsMap[iconName || name];
+  }
 
   const iconMappings = await iconMappingsPromise;
 
