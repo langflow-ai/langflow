@@ -32,6 +32,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
+  const handleOnNewValue = (value) => {
+    const flowsMCPData: MCPSettingsType[] = value.value.map((flow) => ({
+      id: flow.id,
+      action_name: flow.name,
+      action_description: flow.description,
+      mcp_enabled: flow.status,
+    }));
+    patchFlowsMCP(flowsMCPData);
+  };
+
   const flowsMCPData = flowsMCP?.map((flow) => ({
     id: flow.id,
     name: flow.action_name,
@@ -76,6 +86,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const MCP_SERVER_TUTORIAL_LINK =
     "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions";
 
+  const MCP_SERVER_DEPLOY_TUTORIAL_LINK =
+    "https://docs.langflow.org/mcp-server#deploy-your-server-externally";
+
   const copyToClipboard = () => {
     navigator.clipboard
       .writeText(MCP_SERVER_JSON)
@@ -86,6 +99,18 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         }, 1000);
       })
       .catch((err) => console.error("Failed to copy text: ", err));
+  };
+
+  const generateApiKey = () => {
+    setIsGeneratingApiKey(true);
+    createApiKey(`MCP Server ${folderName}`)
+      .then((res) => {
+        setApiKey(res["api_key"]);
+      })
+      .catch((err) => {})
+      .finally(() => {
+        setIsGeneratingApiKey(false);
+      });
   };
 
   return (
@@ -100,7 +125,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
           className="text-accent-pink-foreground"
-          href="https://docs.langflow.org/mcp-server#deploy-your-server-externally"
+          href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
           target="_blank"
           rel="noreferrer"
         >
@@ -130,17 +155,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               value={flowsMCPData}
               title="MCP Server Actions"
               description="Select actions to add to this server"
-              handleOnNewValue={(value) => {
-                const flowsMCPData: MCPSettingsType[] = value.value.map(
-                  (flow) => ({
-                    id: flow.id,
-                    action_name: flow.name,
-                    action_description: flow.description,
-                    mcp_enabled: flow.status,
-                  }),
-                );
-                patchFlowsMCP(flowsMCPData);
-              }}
+              handleOnNewValue={handleOnNewValue}
               id="mcp-server-tools"
               button_description="Edit Actions"
               editNode={false}
@@ -162,17 +177,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
                         disabled={apiKey !== ""}
                         loading={isGeneratingApiKey}
-                        onClick={() => {
-                          setIsGeneratingApiKey(true);
-                          createApiKey(`MCP Server ${folderName}`)
-                            .then((res) => {
-                              setApiKey(res["api_key"]);
-                            })
-                            .catch((err) => {})
-                            .finally(() => {
-                              setIsGeneratingApiKey(false);
-                            });
-                        }}
+                        onClick={generateApiKey}
                       >
                         <ForwardedIconComponent
                           name={"key"}
