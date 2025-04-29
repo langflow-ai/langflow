@@ -208,12 +208,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    # nv-ingest-client 2025.2.7.dev0 does not correctly install its
-    # dependencies, so we need to install some manually.
-    "nv-ingest-client==2025.2.7.dev0",
-    "python-pptx==0.6.23",
-    "pymilvus[bulk_writer,model]==2.5.0",
-    "llama-index-embeddings-nvidia==0.1.5",
+    "nv-ingest-api==2025.4.22.dev20250422",
+    "nv-ingest-client==2025.4.22.dev20250422",
 ]
 
 postgresql = [
