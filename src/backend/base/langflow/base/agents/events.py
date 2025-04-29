@@ -217,7 +217,6 @@ async def handle_on_chain_stream(
         agent_message.text += data_chunk.content
         agent_message.properties.state = "complete"
         agent_message = await send_message_method(message=agent_message)
-        start_time = perf_counter()
     return agent_message, start_time
 
 
