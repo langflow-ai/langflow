@@ -145,6 +145,7 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
     redis_url: str | None = None
+    redis_password: str | None = None
     redis_cache_expire: int = 3600
 
     # Sentry
