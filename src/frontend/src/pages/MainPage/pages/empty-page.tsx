@@ -1,12 +1,11 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import logoDarkPng from "@/assets/logo_dark.png";
 import logoLightPng from "@/assets/logo_light.png";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { Button } from "@/components/ui/button";
 import { DotBackgroundDemo } from "@/components/ui/dot-background";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
-import { EnhancedBeamEffect } from "@/pages/MainPage/pages/enchanced-beam-effect";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -26,7 +25,7 @@ const EMPTY_PAGE_DISCORD_DESCRIPTION =
 const EMPTY_PAGE_DRAG_AND_DROP_TEXT =
   "Already have a flow? Drag and drop to upload.";
 const EMPTY_PAGE_FOLDER_DESCRIPTION = "Empty folder";
-const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = <>+&nbsp; Create first flow</>;
+const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = "Create first flow";
 
 const EXTERNAL_LINK_ICON_CLASS =
   "absolute right-6 top-[35px] h-4 w-4 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
@@ -102,7 +101,7 @@ export const EmptyPageCommunity = ({
               </span>
             </div>
 
-            <div className="flex w-full max-w-[510px] flex-col gap-12 sm:gap-[29px]">
+            <div className="flex w-full max-w-[510px] flex-col gap-7 sm:gap-[29px]">
               <Button
                 unstyled
                 className="group mx-3 h-[84px] sm:mx-0"
@@ -170,6 +169,11 @@ export const EmptyPageCommunity = ({
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
               >
+                <ForwardedIconComponent
+                  name="Plus"
+                  aria-hidden="true"
+                  className="relative left-1 h-4 w-4"
+                />
                 <span>{EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT}</span>
               </Button>
             </div>
@@ -177,7 +181,7 @@ export const EmptyPageCommunity = ({
         </div>
         <p
           data-testid="empty_page_drag_and_drop_text"
-          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-xs text-muted-foreground"
+          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-xxs text-muted-foreground"
         >
           {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>
