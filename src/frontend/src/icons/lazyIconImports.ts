@@ -258,6 +258,10 @@ export const lazyIconsMapping = {
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbUpIconCustom,
     })),
+  TwitterX: () =>
+    import("@/icons/Twitter X").then((mod) => ({
+      default: mod.TwitterXIcon,
+    })),
   Unstructured: () =>
     import("@/icons/Unstructured").then((mod) => ({
       default: mod.UnstructuredIcon,
