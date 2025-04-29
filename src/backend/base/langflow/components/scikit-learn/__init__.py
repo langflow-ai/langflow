@@ -1,10 +1,13 @@
 from .dataset import SklearnDatasetComponent
-
-# from .split import TrainTestSplitComponent
-# from .model import SklearnModelComponent
+from .evaluator import ClassificationReportComponent
+from .model import SklearnModelComponent
+from .scaler import DataScalerComponent
+from .split import TrainTestSplitComponent
 
 __all__ = [
+    "ClassificationReportComponent",
+    "DataScalerComponent",
     "SklearnDatasetComponent",
-    #     "TrainTestSplitComponent",
-    #     "SklearnModelComponent"
+    "SklearnModelComponent",
+    "TrainTestSplitComponent",
 ]
