@@ -62,30 +62,31 @@ export default function OutputComponent({
       </DropdownMenuTrigger>
       <DropdownMenuContent forceMount className="min-w-[200px]">
         <DropdownMenuItem
-          className="deploy-dropdown-item"
           onClick={() => {
             setSelectedName("Auto-detect");
           }}
         >
-          <div
-            className="text-[13px] font-medium"
-            style={{
-              color: "transparent",
-              backgroundClip: "text",
-              backgroundImage:
-                "linear-gradient(90deg, #F472B6 0%, #C084FC 50%)",
-            }}
-          >
-            Auto-detect
+          <div className="w-full p-1 text-[13px] font-medium hover:bg-muted">
+            <span
+              style={{
+                color: "transparent",
+                backgroundClip: "text",
+                backgroundImage:
+                  "linear-gradient(90deg, #F472B6 0%, #C084FC 50%)",
+              }}
+            >
+              Auto-detect
+            </span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="deploy-dropdown-item"
           onClick={() => {
             setSelectedName(name);
           }}
         >
-          <span>{name}</span>
+          <div className="w-full p-1 text-[13px] font-medium hover:bg-muted">
+            <span>{name}</span>
+          </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>,
