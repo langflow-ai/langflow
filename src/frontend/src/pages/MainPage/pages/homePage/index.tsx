@@ -99,17 +99,22 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     null,
   );
   const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Shift") {
         setIsShiftPressed(true);
+      } else if (e.key === "Control" || e.key === "Meta") {
+        setIsCtrlPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Shift") {
         setIsShiftPressed(false);
+      } else if (e.key === "Control" || e.key === "Meta") {
+        setIsCtrlPressed(false);
       }
     };
 
@@ -213,7 +218,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                             setSelected={(selected) =>
                               setSelectedFlow(selected, flow.id, index)
                             }
-                            shiftPressed={isShiftPressed}
+                            shiftPressed={isShiftPressed || isCtrlPressed}
                           />
                         ))}
                       </div>
@@ -227,7 +232,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                             setSelected={(selected) =>
                               setSelectedFlow(selected, flow.id, index)
                             }
-                            shiftPressed={isShiftPressed}
+                            shiftPressed={isShiftPressed || isCtrlPressed}
                           />
                         ))}
                       </div>
