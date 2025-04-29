@@ -32,6 +32,10 @@ export const lazyIconsMapping = {
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  BotMessageSquareIcon: () =>
+    import("@/icons/BotMessageSquare").then((mod) => ({
+      default: mod.BotMessageSquareIcon,
+    })),
   BWPython: () =>
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
@@ -108,6 +112,10 @@ export const lazyIconsMapping = {
   GradientUngroup: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
+    })),
+  GradientSave: () =>
+    import("@/icons/GradientSparkles").then((mod) => ({
+      default: mod.GradientSave,
     })),
   GridHorizontal: () =>
     import("@/icons/GridHorizontal").then((mod) => ({
