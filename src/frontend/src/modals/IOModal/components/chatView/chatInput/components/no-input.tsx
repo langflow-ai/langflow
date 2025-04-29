@@ -38,9 +38,9 @@ const NoInputView: React.FC<NoInputViewProps> = ({
             unstyled
             className="form-modal-send-button cursor-pointer bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input"
           >
-            <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
+            <div className="flex items-center gap-2 rounded-md text-sm font-medium">
               Stop
-              <Loading className="h-[16px] w-[16px]" />
+              <Loading className="h-4 w-4" />
             </div>
           </Button>
         )}

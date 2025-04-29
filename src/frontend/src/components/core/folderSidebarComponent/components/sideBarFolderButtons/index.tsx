@@ -18,8 +18,10 @@ import {
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
 import {
   ENABLE_CUSTOM_PARAM,
+  ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
 } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
@@ -55,6 +57,8 @@ const SideBarFoldersButtonsComponent = ({
   const folders = useFolderStore((state) => state.folders);
   const loading = !folders;
   const refInput = useRef<HTMLInputElement>(null);
+
+  const navigate = useCustomNavigate();
 
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
@@ -348,7 +352,7 @@ const SideBarFoldersButtonsComponent = ({
       collapsible={isMobile ? "offcanvas" : "none"}
       data-testid="folder-sidebar"
     >
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="px-4 py-1">
         <HeaderButtons
           handleUploadFlowsToFolder={handleUploadFlowsToFolder}
           isUpdatingFolder={isUpdatingFolder}
@@ -409,7 +413,7 @@ const SideBarFoldersButtonsComponent = ({
                                   handleKeyDown={handleKeyDown}
                                 />
                               ) : (
-                                <span className="block w-0 grow truncate text-[13px] opacity-100">
+                                <span className="block w-0 grow truncate text-xs opacity-100">
                                   {item.name}
                                 </span>
                               )}
@@ -447,14 +451,31 @@ const SideBarFoldersButtonsComponent = ({
       </SidebarContent>
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">
-          <div className="flex w-full items-center gap-2 p-2">
+          <div className="grid w-full items-center gap-2 p-2">
+            {!ENABLE_DATASTAX_LANGFLOW && (
+              <div
+                className="flex w-full items-center"
+                data-testid="button-store"
+              >
+                <SidebarMenuButton
+                  size="md"
+                  className="text-xs"
+                  onClick={() => {
+                    window.open("/store", "_blank");
+                  }}
+                >
+                  <ForwardedIconComponent name="Store" className="h-4 w-4" />
+                  Store
+                </SidebarMenuButton>
+              </div>
+            )}
             <SidebarMenuButton
               isActive={checkPathFiles}
               onClick={() => handleFilesClick?.()}
               size="md"
-              className="text-[13px]"
+              className="text-xs"
             >
-              <ForwardedIconComponent name="File" />
+              <ForwardedIconComponent name="File" className="h-4 w-4" />
               My Files
             </SidebarMenuButton>
           </div>
