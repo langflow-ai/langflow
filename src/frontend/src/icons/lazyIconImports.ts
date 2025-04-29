@@ -25,9 +25,17 @@ export const lazyIconsMapping = {
   Athena: () =>
     import("@/icons/athena").then((mod) => ({ default: mod.AthenaIcon })),
   AWS: () => import("@/icons/AWS").then((mod) => ({ default: mod.AWSIcon })),
+  AWSInverted: () =>
+    import("@/icons/AWSInverted").then((mod) => ({
+      default: mod.AWSInvertedIcon,
+    })),
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  BotMessageSquareIcon: () =>
+    import("@/icons/BotMessageSquare").then((mod) => ({
+      default: mod.BotMessageSquareIcon,
+    })),
   BWPython: () =>
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
@@ -108,6 +116,10 @@ export const lazyIconsMapping = {
   GradientUngroup: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
+    })),
+  GradientSave: () =>
+    import("@/icons/GradientSparkles").then((mod) => ({
+      default: mod.GradientSave,
     })),
   GridHorizontal: () =>
     import("@/icons/GridHorizontal").then((mod) => ({

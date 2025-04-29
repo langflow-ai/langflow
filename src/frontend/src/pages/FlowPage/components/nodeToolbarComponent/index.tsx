@@ -477,7 +477,7 @@ const NodeToolbarComponent = memo(
                 });
               }}
               shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("freeze path"),
+                s.name.toLowerCase().startsWith("freeze"),
               )}
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
             />
@@ -684,8 +684,9 @@ const NodeToolbarComponent = memo(
                   <SelectItem value="freezeAll">
                     <ToolbarSelectItem
                       shortcut={
-                        shortcuts.find((obj) => obj.name === "Freeze")
-                          ?.shortcut!
+                        shortcuts.find((obj) =>
+                          obj.name.toLowerCase().startsWith("freeze"),
+                        )?.shortcut!
                       }
                       value={"Freeze"}
                       icon={"FreezeAll"}
