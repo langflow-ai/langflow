@@ -153,6 +153,7 @@ export const lazyIconsMapping = {
     import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
   Maritalk: () =>
     import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
+  Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
   Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
   Midjourney: () =>
@@ -256,6 +257,10 @@ export const lazyIconsMapping = {
   ThumbUpCustom: () =>
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbUpIconCustom,
+    })),
+  TwitterX: () =>
+    import("@/icons/Twitter X").then((mod) => ({
+      default: mod.TwitterXIcon,
     })),
   Unstructured: () =>
     import("@/icons/Unstructured").then((mod) => ({

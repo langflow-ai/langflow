@@ -15,8 +15,7 @@ def update_fields(build_config: dotdict, fields: dict[str, Any]) -> dotdict:
 
 def add_fields(build_config: dotdict, fields: dict[str, Any]) -> dotdict:
     """Add new fields to build_config."""
-    for key, value in fields.items():
-        build_config[key] = value
+    build_config.update(fields)
     return build_config
 
 

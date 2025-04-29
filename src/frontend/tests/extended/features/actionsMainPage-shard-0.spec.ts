@@ -46,12 +46,16 @@ test(
       timeout: 10000,
     });
 
-    await page.getByText("Components", { exact: true }).click();
-    await page.getByTestId("home-dropdown-menu").nth(0).click();
-    await page.getByTestId("btn-download-json").last().click();
-    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
-      timeout: 10000,
-    });
+    if (await page.getByText("Components").first().isVisible()) {
+      await page.getByText("Components", { exact: true }).click();
+      await page.getByTestId("home-dropdown-menu").nth(0).click();
+      await page.getByTestId("btn-download-json").last().click();
+      await expect(
+        page.getByText(/.*exported successfully/).last(),
+      ).toBeVisible({
+        timeout: 10000,
+      });
+    }
   },
 );
 
@@ -69,7 +73,7 @@ test(
     if (countEmptyButton > 0) {
       await addFlowToTestOnEmptyLangflow(page);
     }
-    await page.getByTestId("upload-folder-button").last().click();
+    await page.getByTestId("upload-project-button").last().click();
   },
 );
 

@@ -33,6 +33,7 @@ export type FlowType = {
   locked?: boolean | null;
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  mcp_enabled?: boolean;
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;

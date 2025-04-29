@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
 import EmptyPageCommunity from "./empty-page";
-import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
   const [openModal, setOpenModal] = useState(false);
@@ -40,14 +39,14 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: "Folder deleted successfully.",
+            title: "Project deleted successfully.",
           });
           navigate("/all");
         },
         onError: (err) => {
           console.error(err);
           setErrorData({
-            title: "Error deleting folder.",
+            title: "Error deleting project.",
           });
         },
       },

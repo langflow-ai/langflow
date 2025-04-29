@@ -17,9 +17,9 @@ Flows are created in the **workspace** with components dragged from the componen
 
 A flow can be as simple as the [basic prompting flow](/get-started-quickstart), which creates an OpenAI chatbot with four components.
 
-* Each component in a flow is a **node** that performs a specific task, like an AI model or a data source.
-* Each component has a **Configuration** menu. Click the **Code** pane to see a component's underlying Python code.
-* Components are connected with **edges** to form flows.
+- Each component in a flow is a **node** that performs a specific task, like an AI model or a data source.
+- Each component has a **Configuration** menu. Click the **Code** pane to see a component's underlying Python code.
+- Components are connected with **edges** to form flows.
 
 If you're familiar with [React Flow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
 
@@ -27,8 +27,8 @@ When a flow is run, Langflow builds a Directed Acyclic Graph (DAG) graph object 
 
 Flows are stored on local disk at these default locations:
 
-* **Linux or WSL on Windows**: `home/<username>/.cache/langflow/`
-* **MacOS**: `/Users/<username>/Library/Caches/langflow/`
+- **Linux or WSL on Windows**: `home/<username>/.cache/langflow/`
+- **MacOS**: `/Users/<username>/Library/Caches/langflow/`
 
 The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
 
@@ -46,8 +46,8 @@ The **workspace** is where you create AI applications by connecting and running 
 
 The workspace controls allow you to adjust your view and lock your flows in place.
 
-* Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
-* To access the [Settings](#settings) menu, click <Icon name="Settings" aria-label="Gear icon" /> **Settings**.
+- Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
+- To access the [Settings](#settings) menu, click <Icon name="Settings" aria-label="Gear icon" /> **Settings**.
 
 This menu contains configuration for **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
@@ -95,9 +95,9 @@ Langflow stores logs at the location specified in the `LANGFLOW_CONFIG_DIR` envi
 
 This directory's default location depends on your operating system.
 
-* **Linux/WSL**: `~/.cache/langflow/`
-* **macOS**: `/Users/<username>/Library/Caches/langflow/`
-* **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
+- **Linux/WSL**: `~/.cache/langflow/`
+- **macOS**: `/Users/<username>/Library/Caches/langflow/`
+- **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
 
 To modify the location of your log file:
 
@@ -106,25 +106,25 @@ To modify the location of your log file:
 
 An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
-## Projects and folders
+## Projects
 
 The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
 
 ![](/img/my-projects.png)
 
-**My Projects** is the default folder where all new projects and components are initially stored.
+**My Projects** is the default project where all new projects and components are initially stored.
 
-Projects, folders, and flows are exchanged as JSON objects.
+Projects and flows are exchanged as JSON objects.
 
-* To create a new folder, click 📁 **New Folder**.
+- To create a new project, click 📁 **New Project**.
 
-* To rename a folder, double-click the folder name.
+- To rename a project, double-click the project name.
 
-* To download a folder, click 📥 **Download**.
+- To download a project, click 📥 **Download**.
 
-* To upload a folder, click 📤 **Upload**. The default maximum file upload size is 100 MB.
+- To upload a project, click 📤 **Upload**. The default maximum file upload size is 100 MB.
 
-* To move a flow or component, drag and drop it into the desired folder.
+- To move a flow or component, drag and drop it into the desired project.
 
 ## File management
 
@@ -136,18 +136,15 @@ For more on managing your files, see [Manage files](/concepts-file-management).
 
 The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace.
 
-* **New**: Create a new flow from scratch.
-* **Settings**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
-* **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
-* **Import**: Import a flow or component from a JSON file into the workspace.
-* **Export**: Export the current flow as a JSON file.
-* **Undo (⌘Z)**: Revert the last action taken in the project.
-* **Redo (⌘Y)**: Reapply a previously undone action.
-* **Refresh All**: Refresh all components and delete cache.
+- **New**: Create a new flow from scratch.
+- **Settings**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
+- **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
+- **Import**: Import a flow or component from a JSON file into the workspace.
+- **Export**: Export the current flow as a JSON file.
+- **Undo (⌘Z)**: Revert the last action taken in the project.
+- **Redo (⌘Y)**: Reapply a previously undone action.
+- **Refresh All**: Refresh all components and delete cache.
 
 ## Settings
 
 Click <Icon name="Settings" aria-label="Gear icon" /> **Settings** to access **Global variables**, **Langflow API**, **Shortcuts**, and **Messages**.
-
-
-

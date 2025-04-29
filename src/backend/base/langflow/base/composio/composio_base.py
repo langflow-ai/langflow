@@ -182,8 +182,13 @@ class ComposioBaseComponent(Component):
         # Build the action maps before using them
         self._build_action_maps()
 
+        # Update the action options
         build_config["action"]["options"] = [
-            {"name": self.sanitize_action_name(action)} for action in self._actions_data
+            {
+                "name": self.sanitize_action_name(action),
+                "metaData": action,
+            }
+            for action in self._actions_data
         ]
 
         try:

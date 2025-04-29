@@ -20,9 +20,9 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("add-folder-button").click();
+    await page.getByTestId("add-project-button").click();
 
-    await page.getByText("New Folder").last().click();
+    await page.getByText("New Project").last().click();
 
     await page.waitForSelector("text=new flow", { timeout: 30000 });
 
