@@ -163,6 +163,12 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     [selectedFlows, lastSelectedIndex, data.flows, isShiftPressed],
   );
 
+  useEffect(() => {
+    setSelectedFlows((old) =>
+      old.filter((id) => data.flows.some((flow) => flow.id === id)),
+    );
+  }, [data.flows]);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
