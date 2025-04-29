@@ -659,6 +659,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "connect",
   "auth",
   "query",
+  "tools",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
