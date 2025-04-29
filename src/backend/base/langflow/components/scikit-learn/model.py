@@ -91,6 +91,7 @@ class SklearnModelComponent(Component):
         return model
 
     def predict(self) -> DataFrame:
+        self.train_model()
         if not hasattr(self, "TrainedModel"):
             msg = "No trained model provided. Please connect a train-test split component."
             raise ValueError(msg)

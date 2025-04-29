@@ -4,7 +4,7 @@ from sklearn.metrics import classification_report
 
 from langflow.custom import Component
 from langflow.io import BoolInput, HandleInput, Output
-from langflow.schema import DataFrame
+from langflow.schema import DataFrame, Data
 
 
 class ClassificationReportComponent(Component):
@@ -64,14 +64,14 @@ class ClassificationReportComponent(Component):
         self.report_data = classification_report(
             y_true,
             y_pred,
-            output_dict=self.output_dict,
+            output_dict=True
         )
 
-    def get_classification_report(self) -> dict:
+    def get_classification_report(self) -> Data:
         """Return the classification report as a dictionary."""
         if self.report_data is None:
             self.generate_report()
-        return self.report_data
+        return Data(result=self.report_data)
 
     def get_report_dataframe(self) -> DataFrame:
         """Return the classification report as a formatted DataFrame."""
@@ -84,14 +84,7 @@ class ClassificationReportComponent(Component):
 
         # Convert dictionary to DataFrame
         df_report = pd.DataFrame(self.report_data).transpose()
-
-        # Reorder columns to a more logical sequence if they exist
-        preferred_order = ["precision", "recall", "f1-score", "support"]
-        columns = [col for col in preferred_order if col in df_report.columns]
-        df_report = df_report[columns]
-
-        # Convert support to integer if it exists
-        if "support" in df_report.columns:
-            df_report["support"] = df_report["support"].astype(int)
+        df_report["index"] = df_report.index
+        df_report = df_report.reset_index(drop=True)
 
         return DataFrame(df_report)
