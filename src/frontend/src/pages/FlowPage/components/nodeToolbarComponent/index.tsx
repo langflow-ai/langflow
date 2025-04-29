@@ -436,15 +436,19 @@ const NodeToolbarComponent = memo(
     };
 
     const isCustomComponent = useMemo(() => {
-      return data.type === "CustomComponent" && !data.node?.edited;
-    }, [data.type, data.node?.edited]);
+      const isCustom = data.type === "CustomComponent" && !data.node?.edited;
+      if (isCustom) {
+        data.node.edited = true;
+      }
+      return isCustom;
+    }, [data.type, data.node]);
 
     const renderToolbarButtons = useMemo(
       () => (
         <>
           {hasCode && (
             <ToolbarButton
-              className={isCustomComponent ? "!bg-accent-pink" : ""}
+              className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
               label="Code"
               onClick={() => setOpenModal(true)}

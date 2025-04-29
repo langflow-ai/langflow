@@ -132,7 +132,7 @@ export default function PublishDropdown() {
               >
                 <IconComponent
                   name="Mcp"
-                  className={`${groupStyle} icon-size mr-2 fill-muted-foreground group-hover:fill-white`}
+                  className={`${groupStyle} icon-size mr-2 fill-muted-foreground group-hover:fill-foreground`}
                 />
                 <span>MCP Server</span>
                 <IconComponent
