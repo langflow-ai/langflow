@@ -581,6 +581,6 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
 
     def set_default_tools(self):
         self._default_tools = {
-            self.sanitize_action_name("SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL").replace(" ", "-"),
-            self.sanitize_action_name("SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY").replace(" ", "-"),
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
         }
