@@ -45,6 +45,7 @@ test(
 
     // Click on Edit Actions button
     await page.getByTestId("button_open_actions").click();
+    await page.waitForTimeout(500);
 
     // Verify actions modal is open
     await expect(page.getByText("MCP Server Actions")).toBeVisible();
@@ -57,6 +58,7 @@ test(
     expect(cellsCount).toBeGreaterThan(0);
 
     await page.getByRole("gridcell").first().click();
+    await page.waitForTimeout(500);
 
     const isChecked = await page
       .locator('input[data-ref="eInput"]')
@@ -65,6 +67,7 @@ test(
 
     if (!isChecked) {
       await page.locator('input[data-ref="eInput"]').first().click();
+      await page.waitForTimeout(500);
     }
     const isCheckedAgain = await page
       .locator('input[data-ref="eInput"]')
@@ -73,6 +76,7 @@ test(
 
     if (isCheckedAgain) {
       await page.locator('input[data-ref="eInput"]').first().click();
+      await page.waitForTimeout(500);
     }
 
     const isCheckedAgainAgain = await page
@@ -87,10 +91,13 @@ test(
       .locator('input[data-ref="eInput"]')
       .nth(rowsCount + 1)
       .click();
+    await page.waitForTimeout(500);
+
     await page
       .getByRole("gridcell")
       .nth(cellsCount - 1)
       .click();
+    await page.waitForTimeout(500);
 
     const isLastChecked = await page
       .locator('input[data-ref="eInput"]')
@@ -104,9 +111,11 @@ test(
     ).toBe(true);
 
     await page.getByTestId("input_update_name").fill("mcp test name");
+    await page.waitForTimeout(500);
 
     // Close the modal
     await page.getByText("Close").last().click();
+    await page.waitForTimeout(500);
 
     // Verify the selected action is visible in the tab
     await expect(page.getByTestId("div-mcp-server-tools")).toBeVisible();
@@ -146,6 +155,7 @@ test(
 
     // Create a new flow with MCP component
     await page.getByTestId("blank-flow").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp server");
 
@@ -164,6 +174,7 @@ test(
 
     // Switch to SSE tab and paste the URL
     await page.getByTestId("tab_1_sse").click();
+
     await page.waitForSelector('[data-testid="textarea_str_sse_url"]', {
       state: "visible",
       timeout: 30000,
@@ -202,6 +213,7 @@ test(
 
     // Verify tools are available
     await page.getByTestId("dropdown_str_tool").click();
+
     const fetchOptionCount = await page.getByText("mcp_test_name").count();
     expect(fetchOptionCount).toBeGreaterThan(0);
   },
