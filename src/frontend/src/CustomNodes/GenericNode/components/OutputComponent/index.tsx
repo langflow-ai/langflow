@@ -21,7 +21,7 @@ export default function OutputComponent({
   proxy,
   isToolMode = false,
 }: outputComponentType) {
-  const [selectedName, setSelectedName] = useState("Button");
+  const [selectedName, setSelectedName] = useState("Auto-detect");
 
   const displayProxy = (children) => {
     if (proxy) {
@@ -41,6 +41,16 @@ export default function OutputComponent({
         <Button
           unstyled
           className="item-center group flex text-[13px] font-medium"
+          style={
+            selectedName === "Auto-detect"
+              ? {
+                  color: "transparent",
+                  backgroundClip: "text",
+                  backgroundImage:
+                    "linear-gradient(90deg, #F472B6 0%, #C084FC 50%)",
+                }
+              : {}
+          }
         >
           {selectedName}
           <ForwardedIconComponent
@@ -50,14 +60,24 @@ export default function OutputComponent({
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent forceMount>
+      <DropdownMenuContent forceMount className="min-w-[200px]">
         <DropdownMenuItem
           className="deploy-dropdown-item"
           onClick={() => {
-            setSelectedName("Button");
+            setSelectedName("Auto-detect");
           }}
         >
-          <div className="text-[13px] font-medium">Auto-detect</div>
+          <div
+            className="text-[13px] font-medium"
+            style={{
+              color: "transparent",
+              backgroundClip: "text",
+              backgroundImage:
+                "linear-gradient(90deg, #F472B6 0%, #C084FC 50%)",
+            }}
+          >
+            Auto-detect
+          </div>
         </DropdownMenuItem>
         <DropdownMenuItem
           className="deploy-dropdown-item"
