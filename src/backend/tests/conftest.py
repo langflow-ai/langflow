@@ -88,17 +88,6 @@ def blockbuster(request):
                 .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
             )
 
-            # Allow SQLite operations
-            for method in ["execute", "fetchone", "fetchall"]:
-                bb.functions[f"sqlite3.Cursor.{method}"].can_block_in(
-                    "sqlalchemy/dialects/sqlite/pysqlite.py", {"create_connect_args", "get_isolation_level"}
-                )
-
-                # Handle rollback on the connection object
-                bb.functions["sqlite3.Connection.rollback"].can_block_in(
-                    "sqlalchemy/dialects/sqlite/pysqlite.py", {"create_connect_args", "get_isolation_level"}
-                )
-
             yield bb
 
 

@@ -1,24 +1,48 @@
+import sqlite3
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from langflow.components.data.sql_executor import SQLComponent
-from langflow.schema import Message
+from langflow.schema import Data, DataFrame, Message
 
 from tests.base import ComponentTestBaseWithoutClient
-from tests.unit.mock_sql_database import MockSQLDatabase
 
 
 class TestSQLComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def test_db(self):
+        """Fixture that creates a temporary SQLite database for testing."""
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "data"
+        db_path = test_data_dir / "test.db"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS test (
+                id INTEGER PRIMARY KEY,
+                name TEXT
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO test (id, name)
+            VALUES (1, 'name_test')
+        """)
+        conn.commit()
+        conn.close()
+        yield str(db_path)
+
+        Path(db_path).unlink()
+
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
         return SQLComponent
 
     @pytest.fixture
-    def default_kwargs(self):
+    def default_kwargs(self, test_db):
         """Return the default kwargs for the component."""
         return {
-            "database_url": "sqlite:///:memory:",
+            "database_url": f"sqlite:///{test_db}",
             "query": "SELECT * FROM test",
             "include_columns": True,
             "add_error": False,
@@ -35,25 +59,64 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         with patch("langchain_community.utilities.SQLDatabase") as mock:
             yield mock
 
-    def test_successful_query_with_columns(self, component_class: type[SQLComponent], mock_sql_db_class):
+    def test_successful_query_with_columns(self, component_class: type[SQLComponent], default_kwargs):
         """Test a successful SQL query with columns included."""
-        mock_db = MockSQLDatabase(mock_results=[{"id": 1, "name": "Test"}])
-        mock_sql_db_class.from_uri.return_value = mock_db
-
-        component = component_class(
-            database_url="sqlite:///:memory:",
-            query="SELECT * FROM test",
-            include_columns=True,
-            add_error=False,
-        )
+        component = component_class(**default_kwargs)
 
         result = component.build_component()
 
         assert isinstance(result, Message)
         assert isinstance(result.text, str)
-        assert "id | name" in result.text
-        assert "1 | Test" in result.text
-        assert mock_db.run_called
-        assert mock_db.run_args == "SELECT * FROM test"
-        assert mock_db.run_kwargs is not None
-        assert mock_db.run_kwargs["include_columns"] is True
+        assert result.text == "[{'id': 1, 'name': 'name_test'}]"
+
+    def test_successful_query_without_columns(self, component_class: type[SQLComponent], default_kwargs):
+        """Test a successful SQL query without columns included."""
+        default_kwargs["include_columns"] = False
+        component = component_class(**default_kwargs)
+
+        result = component.build_component()
+
+        assert isinstance(result, Message)
+        assert isinstance(result.text, str)
+        assert result.text == "[(1, 'name_test')]"
+        assert component.status == "[(1, 'name_test')]"
+        assert component.query == "SELECT * FROM test"
+
+    def test_query_error_with_add_error(self, component_class: type[SQLComponent], default_kwargs):
+        """Test a SQL query that raises an error with add_error=True."""
+        default_kwargs["add_error"] = True
+        default_kwargs["query"] = "SELECT * FROM non_existent_table"
+        component = component_class(**default_kwargs)
+
+        result = component.build_component()
+
+        assert isinstance(result, Message)
+        assert isinstance(result.text, str)
+        assert "no such table: non_existent_table" in result.text
+        assert "Error:" in result.text
+        assert "Query: SELECT * FROM non_existent_table" in result.text
+
+    def test_build_dataframe(self, component_class: type[SQLComponent], default_kwargs):
+        """Test building a DataFrame from a SQL query."""
+        component = component_class(**default_kwargs)
+
+        result = component.build_dataframe()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
+        assert "id" in result.columns
+        assert "name" in result.columns
+        assert result.iloc[0]["id"] == 1
+        assert result.iloc[0]["name"] == "name_test"
+
+    def test_build_data(self, component_class: type[SQLComponent], default_kwargs):
+        """Test building a Data object from a SQL query."""
+        component = component_class(**default_kwargs)
+
+        result = component.build_data()
+
+        assert isinstance(result, Data)
+        assert "result" in result.data
+        assert len(result.data["result"]) == 1
+        assert result.data["result"][0]["id"] == 1
+        assert result.data["result"][0]["name"] == "name_test"
