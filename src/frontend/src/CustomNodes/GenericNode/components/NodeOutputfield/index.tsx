@@ -124,7 +124,7 @@ const InspectButton = memo(
     ) => (
       <Button
         ref={ref}
-        disabled={!disabled}
+        disabled={disabled}
         data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
         unstyled
         onClick={onClick}
