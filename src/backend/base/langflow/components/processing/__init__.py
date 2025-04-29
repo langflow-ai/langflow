@@ -14,6 +14,7 @@ from .parser import ParserComponent
 from .regex import RegexExtractorComponent
 from .select_data import SelectDataComponent
 from .split_text import SplitTextComponent
+from .type_converter import TypeConverterComponent
 from .update_data import UpdateDataComponent
 
 __all__ = [
@@ -34,5 +35,6 @@ __all__ = [
     "RegexExtractorComponent",
     "SelectDataComponent",
     "SplitTextComponent",
+    "TypeConverterComponent",
     "UpdateDataComponent",
 ]
