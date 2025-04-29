@@ -1,5 +1,6 @@
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
@@ -105,7 +106,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Shift") {
         setIsShiftPressed(true);
-      } else if (e.key === "Control" || e.key === "Meta") {
+      } else if ((!IS_MAC && e.key === "Control") || e.key === "Meta") {
         setIsCtrlPressed(true);
       }
     };
@@ -113,7 +114,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Shift") {
         setIsShiftPressed(false);
-      } else if (e.key === "Control" || e.key === "Meta") {
+      } else if ((!IS_MAC && e.key === "Control") || e.key === "Meta") {
         setIsCtrlPressed(false);
       }
     };
