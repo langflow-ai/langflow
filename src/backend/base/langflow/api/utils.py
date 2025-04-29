@@ -20,6 +20,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
+from ast import literal_eval
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
@@ -280,11 +281,18 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
 def parse_value(value: Any, input_type: str) -> Any:
     """Helper function to parse the value based on input type."""
     if value == "":
-        return value
+        return {} if input_type == "DictInput" else value
     if input_type == "IntInput":
         return int(value) if value is not None else None
     if input_type == "FloatInput":
         return float(value) if value is not None else None
+    if input_type == "DictInput":
+        if isinstance(value, dict):
+            return value
+        try:
+            return literal_eval(value) if value is not None else {}
+        except (ValueError, SyntaxError):
+            return {}
     return value
 
 
