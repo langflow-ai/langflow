@@ -135,9 +135,9 @@ export default function ToolsTable({
       valueGetter: (params) =>
         !isAction
           ? parseString(
-              params.data.name !== ""
-                ? params.data.name
-                : params.data.display_name,
+              params.data.display_name !== ""
+                ? params.data.display_name
+                : params.data.name,
               ["space_case"],
             )
           : params.data.display_name,
