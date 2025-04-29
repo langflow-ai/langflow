@@ -1,6 +1,5 @@
 import sqlite3
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from langflow.components.data.sql_executor import SQLComponent
@@ -52,12 +51,6 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
-
-    @pytest.fixture
-    def mock_sql_db_class(self):
-        """Return a mock SQLDatabase class."""
-        with patch("langchain_community.utilities.SQLDatabase") as mock:
-            yield mock
 
     def test_successful_query_with_columns(self, component_class: type[SQLComponent], default_kwargs):
         """Test a successful SQL query with columns included."""
