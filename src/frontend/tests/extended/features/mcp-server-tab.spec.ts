@@ -181,6 +181,7 @@ test(
     });
 
     await page.getByTestId("textarea_str_sse_url").fill(sseUrl);
+    await page.waitForTimeout(2000);
 
     // Wait for the tools to become available
     let attempts = 0;
@@ -213,6 +214,7 @@ test(
 
     // Verify tools are available
     await page.getByTestId("dropdown_str_tool").click();
+    await page.waitForTimeout(2000);
 
     const fetchOptionCount = await page.getByText("mcp_test_name").count();
     expect(fetchOptionCount).toBeGreaterThan(0);
