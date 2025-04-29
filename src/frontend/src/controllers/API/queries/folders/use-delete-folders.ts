@@ -20,7 +20,7 @@ export const useDeleteFolders: useMutationFunctionType<
   const deleteFolder = async ({
     folder_id,
   }: DeleteFoldersParams): Promise<any> => {
-    await api.delete(`${getURL("FOLDERS")}/${folder_id}`);
+    await api.delete(`${getURL("PROJECTS")}/${folder_id}`);
     setFolders(folders.filter((f) => f.id !== folder_id));
     return folder_id;
   };
