@@ -130,9 +130,6 @@ async def handle_on_tool_start(
     if not agent_message.content_blocks:
         agent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
 
-    duration = _calculate_duration(start_time)
-    new_start_time = perf_counter()  # Get new start time for next operation
-
     # Create new tool content with the input exactly as received
     tool_content = ToolContent(
         type="tool_use",
@@ -141,7 +138,7 @@ async def handle_on_tool_start(
         output=None,
         error=None,
         header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
-        duration=duration,  # Store the actual duration
+        duration=None,  # Start with None to trigger frontend timer
     )
 
     # Store in map and append to message
@@ -151,7 +148,7 @@ async def handle_on_tool_start(
     agent_message = await send_message_method(message=agent_message)
     if agent_message.content_blocks and agent_message.content_blocks[0].contents:
         tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
-    return agent_message, new_start_time
+    return agent_message, start_time
 
 
 async def handle_on_tool_end(
@@ -168,8 +165,7 @@ async def handle_on_tool_end(
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.output = event["data"].get("output")
-        duration = _calculate_duration(start_time)
-        tool_content.duration = duration
+        tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
 
         agent_message = await send_message_method(message=agent_message)
@@ -211,11 +207,19 @@ async def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
+        agent_message.duration = _calculate_duration(start_time)
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
+        # # First chunk should trigger the streaming timer
+        # if not agent_message.text:
+        #     agent_message.duration = None  # This will trigger the frontend timer
+        #     agent_message.properties.state = "partial"
+        #     agent_message = await send_message_method(message=agent_message)
+
         agent_message.text += data_chunk.content
-        agent_message.properties.state = "complete"
+        agent_message.properties.state = "partial"  # Keep state as partial during streaming
+        agent_message.duration = None  # Don't send duration with streaming chunks - let frontend handle timing
         agent_message = await send_message_method(message=agent_message)
     return agent_message, start_time
 
