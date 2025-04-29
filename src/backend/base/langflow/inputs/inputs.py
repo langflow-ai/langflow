@@ -87,6 +87,21 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
+class ToolsInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents an Input that contains a list of tools to activate, deactivate, or edit.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input.
+        value (list[dict]): The value of the input.
+
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TOOLS
+    value: list[dict] = Field(default_factory=list)
+    is_list: bool = True
+    real_time_refresh: bool = True
+
+
 class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
     """Represents an Input that has a Handle that receives a Data object.
 
@@ -644,6 +659,7 @@ InputTypes: TypeAlias = (
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
+    | ToolsInput
     | PromptInput
     | CodeInput
     | SecretStrInput
