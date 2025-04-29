@@ -1,4 +1,3 @@
-
 import pandas as pd
 import pytest
 from langflow.components.processing.convertor import TypeConverterComponent
@@ -8,7 +7,6 @@ from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
-
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
