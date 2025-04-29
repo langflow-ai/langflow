@@ -22,6 +22,7 @@ from .upstash import UpstashVectorStoreComponent
 from .vectara import VectaraVectorStoreComponent
 from .vectara_rag import VectaraRagComponent
 from .vectara_self_query import VectaraSelfQueryRetriverComponent
+from .watsonx_milvus import WatsonxDataMilvusVectorStoreComponent
 from .weaviate import WeaviateVectorStoreComponent
 
 __all__ = [
@@ -49,5 +50,6 @@ __all__ = [
     "VectaraRagComponent",
     "VectaraSelfQueryRetriverComponent",
     "VectaraVectorStoreComponent",
+    "WatsonxDataMilvusVectorStoreComponent",
     "WeaviateVectorStoreComponent",
 ]
