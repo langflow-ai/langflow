@@ -5,6 +5,7 @@ import { CustomBanner } from "@/customization/components/custom-banner";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { FlowType } from "@/types/flow";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import HeaderComponent from "../../components/header";
@@ -93,6 +94,23 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     }
   }, [isEmptyFolder]);
 
+  const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
+
+  const setSelectedFlow = useCallback(
+    (selected: boolean, flowId: string) => {
+      if (selected) {
+        setSelectedFlows([...selectedFlows, flowId]);
+      } else {
+        setSelectedFlows(selectedFlows.filter((id) => id !== flowId));
+      }
+    },
+    [selectedFlows],
+  );
+
+  const handleDelete = useCallback(() => {
+    console.log("delete", selectedFlows);
+  }, []);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
@@ -115,6 +133,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                 setNewProjectModal={setNewProjectModal}
                 setSearch={onSearch}
                 isEmptyFolder={isEmptyFolder}
+                selectedFlows={selectedFlows}
               />
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
@@ -140,13 +159,27 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
                         {data.flows.map((flow) => (
-                          <ListComponent key={flow.id} flowData={flow} />
+                          <ListComponent
+                            key={flow.id}
+                            flowData={flow}
+                            selected={selectedFlows.includes(flow.id)}
+                            setSelected={(selected) =>
+                              setSelectedFlow(selected, flow.id)
+                            }
+                          />
                         ))}
                       </div>
                     ) : (
                       <div className="mt-4 flex flex-col gap-1">
                         {data.flows.map((flow) => (
-                          <ListComponent key={flow.id} flowData={flow} />
+                          <ListComponent
+                            key={flow.id}
+                            flowData={flow}
+                            selected={selectedFlows.includes(flow.id)}
+                            setSelected={(selected) =>
+                              setSelectedFlow(selected, flow.id)
+                            }
+                          />
                         ))}
                       </div>
                     )
