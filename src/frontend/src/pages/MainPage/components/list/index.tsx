@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,9 +24,16 @@ import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
-const ListComponent = ({ flowData }: { flowData: FlowType }) => {
+const ListComponent = ({
+  flowData,
+  selected,
+  setSelected,
+}: {
+  flowData: FlowType;
+  selected: boolean;
+  setSelected: (selected: boolean) => void;
+}) => {
   const navigate = useCustomNavigate();
-
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
@@ -98,17 +106,38 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             isComponent ? "cursor-default" : "cursor-pointer"
           } items-center gap-4`}
         >
-          <div
-            className={cn(
-              `item-center flex justify-center rounded-lg p-1.5`,
-              swatchColors[swatchIndex],
-            )}
-          >
-            <ForwardedIconComponent
-              name={flowData?.icon || icon}
-              aria-hidden="true"
-              className="flex h-5 w-5 items-center justify-center"
-            />
+          <div className="group/checkbox relative flex items-center">
+            <div
+              className={cn(
+                "z-20 flex w-0 items-center transition-all duration-300",
+                selected && "w-10",
+              )}
+            >
+              <Checkbox
+                checked={selected}
+                onCheckedChange={setSelected}
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  "ml-2 transition-opacity",
+                  !selected && "opacity-0 group-hover/checkbox:opacity-100",
+                )}
+              />
+            </div>
+            <div
+              className={cn(
+                `item-center flex justify-center rounded-lg p-1.5 transition-opacity duration-200`,
+                swatchColors[swatchIndex],
+                selected
+                  ? "duration-300"
+                  : "group-hover/checkbox:pointer-events-none group-hover/checkbox:opacity-0",
+              )}
+            >
+              <ForwardedIconComponent
+                name={flowData?.icon || icon}
+                aria-hidden="true"
+                className="flex h-5 w-5 items-center justify-center"
+              />
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-col justify-start">
