@@ -115,13 +115,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   return (
     <div>
-      <div
-        className="text-md -mt-2 pb-2 font-bold"
-        data-testid="mcp-server-title"
-      >
+      <div className="pb-2 text-sm font-medium" data-testid="mcp-server-title">
         MCP Server
       </div>
-      <div className="pb-4 text-sm text-muted-foreground">
+      <div className="pb-4 text-mmd text-muted-foreground">
         Access your Project's flows as Actions within a MCP Server. Learn how to
         <a
           className="text-accent-pink-foreground"
@@ -140,7 +137,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP actions."
               side="right"
             >
-              <div className="flex items-center text-sm font-medium hover:cursor-help">
+              <div className="flex items-center text-mmd font-medium hover:cursor-help">
                 Flows/Actions
                 <ForwardedIconComponent
                   name="info"
@@ -214,7 +211,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               {MCP_SERVER_JSON}
             </SyntaxHighlighter>
           </div>
-          <div className="p-2 text-sm text-muted-foreground">
+          <div className="p-2 text-mmd text-muted-foreground">
             Use this config in your client. Need help? See the{" "}
             <a
               href={MCP_SERVER_TUTORIAL_LINK}
