@@ -82,7 +82,7 @@ export const GetStartedProgress: FC<{
   };
 
   return (
-    <div className="mt-3 h-[168px] w-full">
+    <div className="mt-3 h-[180px] w-full">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-semibold">
           {percentageGetStarted >= 100 ? (
@@ -110,7 +110,7 @@ export const GetStartedProgress: FC<{
           />
         </div>
         <span
-          className="text-xs text-muted-foreground"
+          className="text-sm text-muted-foreground"
           data-testid="get_started_progress_percentage"
         >
           {percentageGetStarted}%
@@ -151,7 +151,7 @@ export const GetStartedProgress: FC<{
             )}
             <span
               className={cn(
-                "text-xs",
+                "text-sm",
                 isGithubStarredChild && "text-muted-foreground line-through",
               )}
             >
@@ -193,7 +193,7 @@ export const GetStartedProgress: FC<{
             )}
             <span
               className={cn(
-                "text-xs",
+                "text-sm",
                 isDiscordJoinedChild && "text-muted-foreground line-through",
               )}
             >
@@ -223,7 +223,7 @@ export const GetStartedProgress: FC<{
                 )}
               />
             </span>
-            <span className={cn("text-xs", hasFlows && "line-through")}>
+            <span className={cn("text-sm", hasFlows && "line-through")}>
               Create a flow
             </span>
           </div>
