@@ -88,9 +88,9 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-2 flex flex-row bg-background ${
+        className={`flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
+        } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
         data-testid="list-card"
       >
         <div
@@ -100,7 +100,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           <div
             className={cn(
-              `item-center flex justify-center rounded-lg p-3`,
+              `item-center flex justify-center rounded-lg p-1.5`,
               swatchColors[swatchIndex],
             )}
           >
@@ -113,14 +113,14 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
           <div className="flex min-w-0 flex-col justify-start">
             <div className="line-clamp-1 flex min-w-0 items-baseline truncate max-md:flex-col">
-              <div className="text-md flex truncate pr-2 font-semibold max-md:w-full">
+              <div className="flex truncate pr-2 text-sm font-semibold max-md:w-full">
                 <span className="truncate">{flowData.name}</span>
               </div>
               <div className="item-baseline flex text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="overflow-hidden text-sm text-primary">
+            <div className="overflow-hidden text-mmd text-muted-foreground">
               <span className="block max-w-[110ch] truncate">
                 {flowData.description}
               </span>
