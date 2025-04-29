@@ -82,9 +82,17 @@ export const GetStartedProgress: FC<{
   };
 
   return (
-    <div className="h-[180px] w-full">
+    <div className="mt-3 h-[168px] w-full">
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-[14px]">Get started</span>
+        <span className="text-sm font-semibold">
+          {percentageGetStarted >= 100 ? (
+            <>
+              <span>All Set</span> <span className="pl-1"> 🎉 </span>
+            </>
+          ) : (
+            "Get started"
+          )}
+        </span>
         <button
           onClick={() => handleUserTrack("dialog_dismissed")}
           className="text-muted-foreground hover:text-foreground"
@@ -94,7 +102,7 @@ export const GetStartedProgress: FC<{
         </button>
       </div>
 
-      <div className="mb-1 flex items-center justify-between gap-3">
+      <div className="mb-1 mt-2 flex items-center justify-between gap-3">
         <div className="h-1 w-full rounded-full bg-muted">
           <div
             className="h-1 w-[33%] rounded-full bg-accent-pink-foreground"
@@ -109,7 +117,7 @@ export const GetStartedProgress: FC<{
         </span>
       </div>
 
-      <div className="space-y-1">
+      <div className="mt-2 space-y-1">
         <Button
           data-testid="github_starred_btn_get_started"
           unstyled
@@ -127,7 +135,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              "flex items-center gap-2 rounded-md px-2 py-[10px] hover:bg-muted",
               isGithubStarredChild && "pointer-events-none",
             )}
           >
@@ -143,7 +151,7 @@ export const GetStartedProgress: FC<{
             )}
             <span
               className={cn(
-                "text-sm",
+                "text-xs",
                 isGithubStarredChild && "text-muted-foreground line-through",
               )}
             >
@@ -169,7 +177,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
               isDiscordJoinedChild && "pointer-events-none",
             )}
           >
@@ -185,7 +193,7 @@ export const GetStartedProgress: FC<{
             )}
             <span
               className={cn(
-                "text-sm",
+                "text-xs",
                 isDiscordJoinedChild && "text-muted-foreground line-through",
               )}
             >
@@ -201,7 +209,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 hover:bg-muted",
+              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
               hasFlows && "pointer-events-none text-muted-foreground",
             )}
             data-testid="create_flow_btn_get_started"
@@ -215,7 +223,7 @@ export const GetStartedProgress: FC<{
                 )}
               />
             </span>
-            <span className={cn("text-sm", hasFlows && "line-through")}>
+            <span className={cn("text-xs", hasFlows && "line-through")}>
               Create a flow
             </span>
           </div>

@@ -659,6 +659,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "connect",
   "auth",
   "query",
+  "tools",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -1073,5 +1074,7 @@ export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
 export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
 export const TWITTER_URL = "https://x.com/langflow_ai";
 export const DOCS_URL = "https://docs.langflow.org";
+export const DATASTAX_DOCS_URL =
+  "https://docs.datastax.com/en/langflow/index.html";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
