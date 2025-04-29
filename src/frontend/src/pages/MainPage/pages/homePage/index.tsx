@@ -7,8 +7,6 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import GridComponent from "../../components/grid";
-import GridSkeleton from "../../components/gridSkeleton";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
@@ -124,12 +122,12 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                 <div className="">
                   {isLoading ? (
                     view === "grid" ? (
-                      <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
                         <ListSkeleton />
                         <ListSkeleton />
                       </div>
                     ) : (
-                      <div className="flex flex-col">
+                      <div className="mt-4 flex flex-col gap-1">
                         <ListSkeleton />
                         <ListSkeleton />
                       </div>
