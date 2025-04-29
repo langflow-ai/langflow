@@ -79,7 +79,7 @@ class MCPToolsComponent(Component):
 
     display_name = "MCP Server"
     description = "Connect to an MCP server and expose tools."
-    icon = "server"
+    icon = "Mcp"
     name = "MCPTools"
 
     inputs = [

@@ -59,8 +59,8 @@ export const InputEditFolderName = ({
           refInput.current?.blur();
         }}
         value={foldersNames[item.name]}
-        id={`input-folder-${item.name}`}
-        data-testid={`input-folder`}
+        id={`input-project-${item.name}`}
+        data-testid={`input-project`}
       />
     </>
   );
