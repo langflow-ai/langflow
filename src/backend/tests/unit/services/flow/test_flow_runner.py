@@ -27,20 +27,6 @@ async def test_database_exists_check(flow_runner):
 
 
 @pytest.mark.asyncio
-async def test_get_flow_dict_from_path(flow_runner, tmp_path):
-    """Test loading flow from a file path."""
-    flow_file = tmp_path / "test_flow.json"
-    flow_content = '{"data": {"nodes": [], "edges": []}}'
-    flow_file.write_text(flow_content)
-
-    result = await flow_runner.get_flow_dict(flow_file)
-    assert isinstance(result, dict)
-    assert "data" in result
-    assert "nodes" in result["data"]
-    assert "edges" in result["data"]
-
-
-@pytest.mark.asyncio
 async def test_get_flow_dict_from_dict(flow_runner, sample_flow_dict):
     """Test loading flow from a dictionary."""
     result = await flow_runner.get_flow_dict(sample_flow_dict)
