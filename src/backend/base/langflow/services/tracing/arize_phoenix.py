@@ -245,8 +245,7 @@ class ArizePhoenixTracer(BaseTracer):
             self._convert_to_arize_phoenix_types({log.get("name"): log for log in logs_dicts}) if logs else {}
         )
         if processed_logs:
-            for key, value in processed_logs.items():
-                child_span.set_attribute(f"logs.{key}", value)
+            child_span.set_attribute("logs", self._safe_json_dumps(processed_logs))
 
         self._set_span_status(child_span, error)
         child_span.end(end_time=self._get_current_timestamp())
