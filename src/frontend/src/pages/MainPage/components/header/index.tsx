@@ -72,7 +72,7 @@ const HeaderComponent = ({
   return (
     <>
       <div
-        className="flex items-center pb-8 text-xl font-semibold"
+        className="flex items-center pb-4 text-sm font-medium"
         data-testid="mainpage_title"
       >
         <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
@@ -90,12 +90,7 @@ const HeaderComponent = ({
       </div>
       {!isEmptyFolder && (
         <>
-          <div
-            className={cn(
-              "flex flex-row-reverse",
-              flowType !== "mcp" && "pb-8",
-            )}
-          >
+          <div className={cn("flex flex-row-reverse pb-4")}>
             <div className="w-full border-b dark:border-border" />
             {tabTypes.map((type) => (
               <Button
@@ -110,7 +105,7 @@ const HeaderComponent = ({
                   flowType === type
                     ? "border-b-2 border-foreground text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground"
-                } text-nowrap px-3 pb-2 text-sm`}
+                } text-nowrap px-2 pb-2 pt-1 text-mmd`}
               >
                 <div className={flowType === type ? "-mb-px" : ""}>
                   {type === "mcp"
@@ -130,13 +125,14 @@ const HeaderComponent = ({
                   type="text"
                   placeholder={`Search ${flowType}...`}
                   className="mr-2"
+                  inputClassName="!text-mmd"
                   value={debouncedSearch}
                   onChange={handleSearch}
                 />
-                <div className="relative top-[3px] mr-2 flex h-fit rounded-lg border border-muted bg-muted">
+                <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                   {/* Sliding Indicator */}
                   <div
-                    className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-background shadow-md transition-transform duration-300 ${
+                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
                       view === "list"
                         ? "left-[2px] translate-x-0"
                         : "left-[6px] translate-x-full"
@@ -149,7 +145,7 @@ const HeaderComponent = ({
                       key={viewType}
                       unstyled
                       size="icon"
-                      className={`group relative z-10 mx-[2px] my-[3px] flex-1 rounded-lg p-2 ${
+                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
                         view === viewType
                           ? "text-foreground"
                           : "text-muted-foreground hover:bg-muted"
@@ -159,7 +155,7 @@ const HeaderComponent = ({
                       <ForwardedIconComponent
                         name={viewType === "list" ? "Menu" : "LayoutGrid"}
                         aria-hidden="true"
-                        className="relative bottom-[1px] h-4 w-4 group-hover:text-foreground"
+                        className="h-4 w-4 group-hover:text-foreground"
                       />
                     </Button>
                   ))}
