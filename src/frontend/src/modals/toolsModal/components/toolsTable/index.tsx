@@ -27,11 +27,9 @@ export default function ToolsTable({
   isAction,
   open,
   handleOnNewValue,
-  template,
 }: {
   rows: any[];
   data: any[];
-  template?: APITemplateType;
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
