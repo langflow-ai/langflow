@@ -22,7 +22,6 @@ interface ToolsModalProps {
   title: string;
   icon?: string;
   isAction?: boolean;
-  template?: APITemplateType;
 }
 
 const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
@@ -31,7 +30,6 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
       description,
       rows,
       handleOnNewValue,
-      template,
       title,
       icon,
       open,
@@ -72,7 +70,6 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
               <ToolsTable
                 rows={rows}
                 isAction={isAction}
-                template={template}
                 data={data}
                 setData={setData}
                 open={open}
