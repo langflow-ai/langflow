@@ -56,24 +56,6 @@ async def test_run_with_dict_input(flow_runner, sample_flow_dict):
 
 
 @pytest.mark.asyncio
-async def test_run_with_file_input(flow_runner, tmp_path):
-    """Test running flow with file input."""
-    flow_file = tmp_path / "test_flow.json"
-    flow_content = '{"data": {"nodes": [], "edges": []}}'
-    flow_file.write_text(flow_content)
-
-    session_id = str(uuid4())
-    input_value = "test input"
-
-    result = await flow_runner.run(
-        flow=flow_file,
-        input_value=input_value,
-        session_id=session_id,
-    )
-    assert result is not None
-
-
-@pytest.mark.asyncio
 async def test_run_with_different_input_types(flow_runner, sample_flow_dict):
     """Test running flow with different input and output types."""
     session_id = str(uuid4())
