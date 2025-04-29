@@ -216,6 +216,8 @@ function GenericNode({
     callback: toggleEditNameDescription,
   });
 
+  console.log({ outputs: data.node?.outputs });
+
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
       return outputs?.map((output, idx) => (

@@ -73,7 +73,7 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="cursor-pointer"
+      className="group cursor-pointer"
     >
       <ShadTooltip
         content={disabled ? null : hidden ? "Show output" : "Hide output"}
@@ -82,14 +82,14 @@ const HideShowButton = memo(
           <EyeIcon
             hidden={hidden}
             className={cn(
-              "icon-size",
+              "icon-size text-muted-foreground group-hover:text-foreground",
               disabled
                 ? isToolMode
-                  ? "text-placeholder-foreground opacity-60"
-                  : "text-placeholder-foreground hover:text-foreground"
+                  ? "text-placeholder-foreground"
+                  : ""
                 : isToolMode
                   ? "text-background hover:text-secondary-hover"
-                  : "text-placeholder-foreground hover:text-primary-hover",
+                  : "",
             )}
           />
         </div>
@@ -124,23 +124,23 @@ const InspectButton = memo(
     ) => (
       <Button
         ref={ref}
-        disabled={disabled}
+        disabled={!disabled}
         data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
         unstyled
         onClick={onClick}
       >
         <IconComponent
           name="TextSearchIcon"
-          strokeWidth={ICON_STROKE_WIDTH}
+          strokeWidth={2}
           className={cn(
-            "icon-size",
+            "icon-size h-4.5 w-4.5 text-muted-foreground hover:text-foreground",
             isToolMode
               ? displayOutputPreview && !unknownOutput
                 ? "text-background hover:text-secondary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+                : "cursor-not-allowed"
               : displayOutputPreview && !unknownOutput
                 ? "text-foreground hover:text-primary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-60",
+                : "cursor-not-allowed",
             errorOutput ? "text-destructive" : "",
           )}
         />
@@ -415,7 +415,7 @@ function NodeOutputField({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
               proxy={outputProxy}

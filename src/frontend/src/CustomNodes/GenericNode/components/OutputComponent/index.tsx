@@ -1,3 +1,12 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
@@ -12,6 +21,8 @@ export default function OutputComponent({
   proxy,
   isToolMode = false,
 }: outputComponentType) {
+  const [selectedName, setSelectedName] = useState("Button");
+
   const displayProxy = (children) => {
     if (proxy) {
       return (
@@ -25,15 +36,52 @@ export default function OutputComponent({
   };
 
   return displayProxy(
-    <span
-      className={cn(
-        "text-xs font-medium",
-        isToolMode && "text-secondary",
-        frozen ? "text-ice" : "",
-      )}
-    >
-      {name}
-    </span>,
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          unstyled
+          className="item-center group flex text-[13px] font-medium"
+        >
+          {selectedName}
+          <ForwardedIconComponent
+            name="ChevronDown"
+            className="icon-size h-4.5 w-4.5 mx-1 font-medium text-muted-foreground group-hover:text-foreground"
+            strokeWidth={2}
+          />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent forceMount>
+        <DropdownMenuItem
+          className="deploy-dropdown-item group"
+          onClick={() => {
+            setSelectedName("Button");
+          }}
+        >
+          <div className="group-hover:bg-accent">
+            <span>Auto-detect</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="deploy-dropdown-item group"
+          onClick={() => {
+            setSelectedName(name);
+          }}
+        >
+          <div className="group-hover:bg-accent">
+            <span>{name}</span>
+          </div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>,
+    // <span
+    //   className={cn(
+    //     "text-xs font-medium",
+    //     isToolMode && "text-secondary",
+    //     frozen ? "text-ice" : "",
+    //   )}
+    // >
+    //   {name}
+    // </span>,
   );
 
   // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION
