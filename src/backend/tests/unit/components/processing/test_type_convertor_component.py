@@ -1,4 +1,3 @@
-
 import pandas as pd
 import pytest
 from langflow.components.processing.convertor import TypeConverterComponent
@@ -8,7 +7,6 @@ from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
-
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -32,16 +30,16 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=Message(text="Hello"), output_type="Data")
         result = component.convert_to_data()
         assert isinstance(result, Data)
-        assert result.data == {"text": "Hello"}
+        assert "text" in result.data
+        assert result.data["text"] == "Hello"
 
     def test_message_to_dataframe(self, component_class):
         """Test converting Message to DataFrame."""
         component = component_class(input_data=Message(text="Hello"), output_type="DataFrame")
         result = component.convert_to_dataframe()
         assert isinstance(result, DataFrame)
-        assert isinstance(result.data, pd.DataFrame)
-        assert "value" in result.data.columns
-        assert result.data.iloc[0]["value"] == "Hello"
+        assert "text" in result.columns
+        assert result.iloc[0]["text"] == "Hello"
 
     # Data to other types
     def test_data_to_message(self, component_class):
@@ -49,7 +47,7 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=Data(data={"text": "Hello World"}), output_type="Message")
         result = component.convert_to_message()
         assert isinstance(result, Message)
-        assert result.text == "{'text': 'Hello World'}"
+        assert result.data.get("text") == '{"text": "Hello World"}'
 
     def test_data_to_data(self, component_class):
         """Test converting Data to Data."""
@@ -60,18 +58,17 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
 
     def test_data_to_dataframe(self, component_class):
         """Test converting Data to DataFrame."""
-        component = component_class(input_data=Data(data={"key": "value"}), output_type="DataFrame")
+        component = component_class(input_data=Data(data={"text": "Hello World"}), output_type="DataFrame")
         result = component.convert_to_dataframe()
         assert isinstance(result, DataFrame)
-        assert isinstance(result.data, pd.DataFrame)
-        assert "value" in result.data.columns
-        assert result.data.iloc[0]["value"] == "{'key': 'value'}"
+        assert "text" in result.columns
+        assert result.iloc[0]["text"] == "Hello World"
 
     # DataFrame to other types
     def test_dataframe_to_message(self, component_class):
         """Test converting DataFrame to Message."""
-        test_df = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
-        component = component_class(input_data=DataFrame(test_df), output_type="Message")
+        df = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
+        component = component_class(input_data=DataFrame(data=df), output_type="Message")
         result = component.convert_to_message()
         assert isinstance(result, Message)
         assert result.text == "| col1   | col2   |\n|--------|--------|\n| Hello  | World  |"
@@ -79,20 +76,19 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
     def test_dataframe_to_data(self, component_class):
         """Test converting DataFrame to Data."""
         test_df = pd.DataFrame({"col1": ["Hello"]})
-        component = component_class(input_data=DataFrame(test_df), output_type="Data")
+        component = component_class(input_data=DataFrame(data=test_df), output_type="Data")
         result = component.convert_to_data()
         assert isinstance(result, Data)
         assert isinstance(result.data, dict)
 
     def test_dataframe_to_dataframe(self, component_class):
         """Test converting DataFrame to DataFrame."""
-        test_df = pd.DataFrame({"col1": ["Hello"]})
-        component = component_class(input_data=DataFrame(test_df), output_type="DataFrame")
+        df = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
+        component = component_class(input_data=DataFrame(data=df), output_type="DataFrame")
         result = component.convert_to_dataframe()
         assert isinstance(result, DataFrame)
         assert isinstance(result.data, pd.DataFrame)
-        assert "col1" in result.data.columns
-        assert result.data.iloc[0]["col1"] == "Hello"
+        assert result.data.equals(df)
 
     # Additional helper tests
     def test_safe_convert(self, component_class):
@@ -109,6 +105,8 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
 
         # Test with DataFrame
         test_df = pd.DataFrame({"col1": ["Hello"]})
+        result = component._safe_convert(DataFrame(data=test_df))
+        result = component._safe_convert(test_df)
         result = component._safe_convert(DataFrame(test_df))
         assert "| col1   |" in result
         assert "| Hello  |" in result

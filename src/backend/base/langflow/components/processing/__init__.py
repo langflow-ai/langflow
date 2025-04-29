@@ -1,5 +1,6 @@
 from .alter_metadata import AlterMetadataComponent
 from .combine_text import CombineTextComponent
+from .convertor import TypeConverterComponent
 from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
@@ -14,7 +15,6 @@ from .parser import ParserComponent
 from .regex import RegexExtractorComponent
 from .select_data import SelectDataComponent
 from .split_text import SplitTextComponent
-from .type_converter import TypeConverterComponent
 from .update_data import UpdateDataComponent
 
 __all__ = [
