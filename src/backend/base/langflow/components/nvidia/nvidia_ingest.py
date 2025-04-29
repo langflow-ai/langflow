@@ -164,9 +164,9 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         file_paths = [str(file.path) for file in file_list]
 
+        self.base_url: str | None = self.base_url.strip() if self.base_url else None
         if self.base_url:
             try:
-                self.base_url = self.base_url.strip()
                 urlparse(self.base_url)
             except Exception as e:
                 error_msg = f"Invalid Base URL format: {e}"
