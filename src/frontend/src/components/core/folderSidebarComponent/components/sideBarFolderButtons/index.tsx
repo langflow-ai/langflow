@@ -199,11 +199,11 @@ const SideBarFoldersButtonsComponent = ({
     );
   };
 
-  function addNewFolder() {
+  function addNewFolder(folderName: string) {
     mutateAddFolder(
       {
         data: {
-          name: "New Folder",
+          name: folderName, // use dynamic name
           parent_id: null,
           description: "",
         },

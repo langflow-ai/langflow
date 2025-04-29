@@ -16,7 +16,7 @@ export const HeaderButtons = ({
   handleUploadFlowsToFolder: () => void;
   isUpdatingFolder: boolean;
   isPending: boolean;
-  addNewFolder: () => void;
+  addNewFolder: (folderName: string) => void;
 }) => {
   const userData = useAuthStore((state) => state.userData);
   const userDismissedDialog = userData?.optins?.dialog_dismissed;
