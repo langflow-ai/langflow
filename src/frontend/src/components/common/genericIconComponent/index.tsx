@@ -27,26 +27,32 @@ export const ForwardedIconComponent = memo(
 
       useEffect(() => {
         // Reset states when icon name changes
-        setIconError(false);
-        setTargetIcon(null);
+        if (!TargetIcon) {
+          setIconError(false);
+          setTargetIcon(null);
 
-        const timer = setTimeout(() => {
-          setShowFallback(true);
-        }, 30);
+          const timer = setTimeout(() => {
+            setShowFallback(true);
+          }, 30);
 
-        // Load the icon if we have a name
-        if (name && typeof name === "string") {
-          getNodeIcon(name)
-            .then((component) => {
-              setTargetIcon(component);
-            })
-            .catch((error) => {
-              console.error(`Error loading icon ${name}:`, error);
-              setIconError(true);
-            });
+          // Load the icon if we have a name
+          if (name && typeof name === "string") {
+            getNodeIcon(name)
+              .then((component) => {
+                setTargetIcon(component);
+                setShowFallback(false);
+              })
+              .catch((error) => {
+                console.error(`Error loading icon ${name}:`, error);
+                setIconError(true);
+                setShowFallback(false);
+              });
+          } else {
+            setShowFallback(false);
+          }
+
+          return () => clearTimeout(timer);
         }
-
-        return () => clearTimeout(timer);
       }, [name]);
 
       const style = {

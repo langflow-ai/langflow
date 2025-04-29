@@ -64,13 +64,13 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], session) -> Ca
     return tool_func
 
 
-async def get_flow_snake_case(flow_name: str, user_id: str, session) -> Flow | None:
+async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
-        this_flow_name = "_".join(flow.name.lower().split())
+        this_flow_name = flow.action_name if is_action and flow.action_name else "_".join(flow.name.lower().split())
         if this_flow_name == flow_name:
             return flow
     return None
@@ -173,7 +173,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         model_cache[name] = model_cls
         return model_cls
 
-    # build the top - level “InputSchema” from the root properties
+    # build the top - level "InputSchema" from the root properties
     top_props = schema.get("properties", {})
     top_reqs = set(schema.get("required", []))
     top_fields: dict[str, Any] = {}
