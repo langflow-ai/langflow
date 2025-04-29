@@ -442,7 +442,7 @@ const SideBarFoldersButtonsComponent = ({
                                   handleKeyDown={handleKeyDown}
                                 />
                               ) : (
-                                <span className="block w-0 grow truncate text-xs opacity-100">
+                                <span className="block w-0 grow truncate text-sm opacity-100">
                                   {item.name === DEFAULT_FOLDER_DEPRECATED
                                     ? DEFAULT_FOLDER
                                     : item.name}
@@ -497,7 +497,7 @@ const SideBarFoldersButtonsComponent = ({
               >
                 <SidebarMenuButton
                   size="md"
-                  className="text-xs"
+                  className="text-sm"
                   onClick={() => {
                     window.open("/store", "_blank");
                   }}
@@ -511,7 +511,7 @@ const SideBarFoldersButtonsComponent = ({
               isActive={checkPathFiles}
               onClick={() => handleFilesClick?.()}
               size="md"
-              className="text-xs"
+              className="text-sm"
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
               My Files
