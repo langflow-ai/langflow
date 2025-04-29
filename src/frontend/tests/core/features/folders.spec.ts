@@ -19,7 +19,11 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
     await page.getByPlaceholder("Search flows").first().isVisible();
     await page.getByText("Flows").first().isVisible();
-    await page.getByText("Components").first().isVisible();
+    if (await page.getByText("Components").first().isVisible()) {
+      await page.getByText("Components").first().isVisible();
+    } else {
+      await page.getByText("MCP Server").first().isVisible();
+    }
     await page.getByText("All").first().isVisible();
     await page.getByText("Select All").first().isVisible();
 
@@ -137,9 +141,11 @@ test("change flow folder", async ({ page }) => {
 
   await page.getByPlaceholder("Search flows").isVisible();
   await page.getByText("Flows").first().isVisible();
-  await page.getByText("Components").first().isVisible();
-  await page.getByText("All").first().isVisible();
-  await page.getByText("Select All").first().isVisible();
+  if (await page.getByText("Components").first().isVisible()) {
+    await page.getByText("Components").first().isVisible();
+  } else {
+    await page.getByText("MCP Server").first().isVisible();
+  }
 
   await page.getByTestId("add-project-button").click();
   await page
