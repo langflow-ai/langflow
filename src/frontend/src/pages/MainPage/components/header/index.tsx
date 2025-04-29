@@ -7,6 +7,8 @@ import {
   DEFAULT_FOLDER,
   DEFAULT_FOLDER_DEPRECATED,
 } from "@/constants/constants";
+import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
+import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { cn } from "@/utils/utils";
@@ -47,6 +49,10 @@ const HeaderComponent = ({
     [setSearch],
   );
 
+  const { mutate: downloadFlows, isPending: isDownloading } =
+    useGetDownloadFlows();
+  const { mutate: deleteFlows, isPending: isDeleting } = useDeleteDeleteFlows();
+
   useEffect(() => {
     debouncedSetSearch(debouncedSearch);
 
@@ -73,15 +79,12 @@ const HeaderComponent = ({
   const tabTypes = isMCPEnabled ? ["mcp", "flows"] : ["components", "flows"];
 
   const handleDownload = () => {
-    console.log("download");
+    downloadFlows({ ids: selectedFlows });
   };
 
   const handleDelete = () => {
-    console.log("delete");
+    deleteFlows({ flow_ids: selectedFlows });
   };
-
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   return (
     <>
