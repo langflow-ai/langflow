@@ -126,9 +126,9 @@ class TypeConverterComponent(Component):
                 self.log(f"Error converting to DataFrame: {e!s}")
                 import pandas as pd
 
-                return DataFrame.from_pandas(pd.DataFrame({"value": [str(input_data)]}))
+                return DataFrame(pd.DataFrame({"value": [str(input_data)]}))
 
         # Default fallback
         import pandas as pd
 
-        return DataFrame.from_pandas(pd.DataFrame({"value": [str(input_data)]}))
+        return DataFrame(pd.DataFrame({"value": [str(input_data)]}))
