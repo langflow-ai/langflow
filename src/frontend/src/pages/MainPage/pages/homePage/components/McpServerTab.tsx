@@ -122,7 +122,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         MCP Server
       </div>
       <div className="pb-4 text-sm text-muted-foreground">
-        Access your Project's flows as Actions within a MCP Server. Learn how to
+        Access your Project's flows as Actions within a MCP Server. Learn more
+        in our
         <a
           className="text-accent-pink-foreground"
           href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
@@ -130,7 +131,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           rel="noreferrer"
         >
           {" "}
-          deploy your MCP server to the internet.
+          Projects as MCP Servers guide.
         </a>
       </div>
       <div className="flex flex-row">
@@ -215,7 +216,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             </SyntaxHighlighter>
           </div>
           <div className="p-2 text-sm text-muted-foreground">
-            Use this config in your client. Need help? See the{" "}
+            Add this config to your client of choice. Need help? See the{" "}
             <a
               href={MCP_SERVER_TUTORIAL_LINK}
               target="_blank"
