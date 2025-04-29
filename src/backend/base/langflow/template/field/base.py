@@ -20,6 +20,7 @@ from pydantic import (
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
+from langflow.schema.data import Data
 from langflow.type_extraction.type_extraction import post_process_type
 
 
@@ -89,6 +90,7 @@ class Input(BaseModel):
 
     refresh_button: bool | None = None
     """Specifies if the field should have a refresh button. Defaults to False."""
+
     refresh_button_text: str | None = None
     """Specifies the text for the refresh button. Defaults to None."""
 
@@ -97,6 +99,7 @@ class Input(BaseModel):
 
     load_from_db: bool = False
     """Specifies if the field should be loaded from the database. Defaults to False."""
+
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
@@ -170,6 +173,11 @@ class Input(BaseModel):
         return v
 
 
+class OutputOptions(BaseModel):
+    filter: str | None = None
+    """Filter to be applied to the output data."""
+
+
 class Output(BaseModel):
     types: list[str] = Field(default=[])
     """List of output types for the field."""
@@ -200,6 +208,9 @@ class Output(BaseModel):
     allows_loop: bool = Field(default=False)
     """Specifies if the output allows looping."""
 
+    options: OutputOptions | None = Field(default=None)
+    """Options for the output."""
+
     tool_mode: bool = Field(default=True)
     """Specifies if the output should be used as a tool"""
 
@@ -220,7 +231,6 @@ class Output(BaseModel):
         result = handler(self)
         if self.value == UNDEFINED:
             result["value"] = UNDEFINED.value
-
         return result
 
     @model_validator(mode="after")
@@ -232,4 +242,14 @@ class Output(BaseModel):
             raise ValueError(msg)
         if self.display_name is None:
             self.display_name = self.name
+        # Convert dict options to OutputOptions model
+        if isinstance(self.options, dict):
+            self.options = OutputOptions(**self.options)
         return self
+
+    def apply_options(self, result):
+        if not self.options:
+            return result
+        if self.options.filter and isinstance(result, Data):
+            return result.filter_data(self.options.filter)
+        return result

@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "User should be able to use components as tool",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
@@ -132,7 +132,10 @@ test(
 
     // Move the Agent node a bit
 
-    await page.getByTestId("handle-url-shownode-toolset-right").first().click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-toolset-right")
+      .first()
+      .click();
 
     await page.getByTestId("handle-agent-shownode-tools-left").first().click();
 

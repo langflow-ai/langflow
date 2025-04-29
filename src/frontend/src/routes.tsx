@@ -15,7 +15,7 @@ import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
-  ENABLE_HOMEPAGE,
+  ENABLE_FILE_MANAGEMENT,
 } from "./customization/feature-flags";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
@@ -23,10 +23,9 @@ import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
-import MyCollectionComponent from "./pages/MainPage/oldComponents/myCollectionComponent";
-import OldHomePage from "./pages/MainPage/oldPages/mainPage";
-import CollectionPage from "./pages/MainPage/pages";
+import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
+import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
@@ -41,15 +40,25 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
-// const PlaygroundPage = lazy(() => import("./pages/Playground"));
+const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
+    <Route path="/playground/:id/">
+      <Route
+        path=""
+        element={
+          <ContextWrapper key={1}>
+            <PlaygroundPage />
+          </ContextWrapper>
+        }
+      />
+    </Route>,
     <Route
       path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
       element={
-        <ContextWrapper>
+        <ContextWrapper key={2}>
           <Outlet />
         </ContextWrapper>
       }
@@ -66,83 +75,39 @@ const router = createBrowserRouter(
           >
             <Route path="" element={<AppAuthenticatedPage />}>
               <Route path="" element={<DashboardWrapperPage />}>
-                <Route
-                  path=""
-                  element={
-                    ENABLE_HOMEPAGE ? <CollectionPage /> : <OldHomePage />
-                  }
-                >
+                <Route path="" element={<CollectionPage />}>
                   <Route
                     index
                     element={<CustomNavigate replace to={"flows"} />}
                   />
+                  {ENABLE_FILE_MANAGEMENT && (
+                    <Route path="files" element={<FilesPage />} />
+                  )}
                   <Route
                     path="flows/"
-                    element={
-                      ENABLE_HOMEPAGE ? (
-                        <HomePage key="flows" type="flows" />
-                      ) : (
-                        <MyCollectionComponent key="flows" type="flows" />
-                      )
-                    }
+                    element={<HomePage key="flows" type="flows" />}
                   >
                     <Route
                       path="folder/:folderId"
-                      element={
-                        ENABLE_HOMEPAGE ? (
-                          <HomePage key="flows" type="flows" />
-                        ) : (
-                          <MyCollectionComponent key="flows" type="flows" />
-                        )
-                      }
+                      element={<HomePage key="flows" type="flows" />}
                     />
                   </Route>
                   <Route
                     path="components/"
-                    element={
-                      ENABLE_HOMEPAGE ? (
-                        <HomePage key="components" type="components" />
-                      ) : (
-                        <MyCollectionComponent
-                          key="components"
-                          type="component"
-                        />
-                      )
-                    }
+                    element={<HomePage key="components" type="components" />}
                   >
                     <Route
                       path="folder/:folderId"
-                      element={
-                        ENABLE_HOMEPAGE ? (
-                          <HomePage key="components" type="components" />
-                        ) : (
-                          <MyCollectionComponent
-                            key="components"
-                            type="component"
-                          />
-                        )
-                      }
+                      element={<HomePage key="components" type="components" />}
                     />
                   </Route>
                   <Route
                     path="all/"
-                    element={
-                      ENABLE_HOMEPAGE ? (
-                        <HomePage key="flows" type="flows" />
-                      ) : (
-                        <MyCollectionComponent key="all" type="all" />
-                      )
-                    }
+                    element={<HomePage key="flows" type="flows" />}
                   >
                     <Route
                       path="folder/:folderId"
-                      element={
-                        ENABLE_HOMEPAGE ? (
-                          <HomePage key="flows" type="flows" />
-                        ) : (
-                          <MyCollectionComponent key="all" type="all" />
-                        )
-                      }
+                      element={<HomePage key="flows" type="flows" />}
                     />
                   </Route>
                 </Route>
@@ -203,9 +168,6 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>
-              {/* <Route path="playground/:id/">
-                <Route path="" element={<PlaygroundPage />} />
-              </Route> */}
             </Route>
           </Route>
           <Route

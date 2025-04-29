@@ -10,7 +10,8 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByText("API", { exact: true }).click();
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
     await page.getByRole("tab", { name: "cURL" }).click();
     await page.getByTestId("icon-Copy").click();
     const handle = await page.evaluateHandle(() =>
@@ -19,7 +20,7 @@ test(
     const clipboardContent = await handle.jsonValue();
     const oldValue = clipboardContent;
     expect(clipboardContent.length).toBeGreaterThan(0);
-    await page.getByRole("tab", { name: "Tweaks" }).click();
+    await page.getByTestId("tweaks-button").click();
     await page
       .getByRole("heading", { name: "OpenAi" })
       .locator("div")
@@ -37,6 +38,8 @@ test(
       .getByTestId("popover-anchor-input-openai_api_base-edit")
       .first()
       .fill("teste");
+
+    await page.getByText("Close").last().click();
 
     await page.getByRole("tab", { name: "cURL" }).click();
     await page.getByTestId("icon-Copy").click();
@@ -92,25 +95,41 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
   const focusElementsOnBoard = async ({ page }) => {
-    await page.waitForSelector("text=API", { timeout: 30000 });
-    const focusElements = await page.getByText("API", { exact: true }).first();
+    const focusElements = await page.getByTestId("publish-button").first();
     await focusElements.click();
   };
 
   await focusElementsOnBoard({ page });
 
-  await page.getByText("Tweaks").nth(1).click();
+  await page.getByTestId("api-access-item").click();
+
+  await page.getByTestId("tweaks-button").click();
+
+  await page
+    .getByRole("heading", { name: "Chroma" })
+    .locator("div")
+    .first()
+    .click();
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
-  await page.getByText("Python API", { exact: true }).click();
+  await page.getByText("Close").last().click();
+
+  await page.getByText("Python", { exact: true }).click();
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
-  await page.getByText("Python Code", { exact: true }).click();
+  await page.getByText("JavaScript", { exact: true }).click();
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
+
+  await page.getByText("cURL", { exact: true }).click();
+
+  await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
+  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
+
+  expect(await page.getByText("Tweaks (2)", { exact: true }).isVisible());
 });

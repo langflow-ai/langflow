@@ -16,7 +16,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../hooks/use-description-modal";
 import { useGetTemplateStyle } from "../../utils/get-template-style";
@@ -39,6 +39,12 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   );
 
   const { getIcon } = useGetTemplateStyle(flowData);
+
+  const [icon, setIcon] = useState<string>("");
+
+  useEffect(() => {
+    getIcon().then(setIcon);
+  }, [getIcon]);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
@@ -91,7 +97,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         <div className="flex w-full items-center gap-4">
           <div className={cn(`flex rounded-lg p-3`, swatchColors[swatchIndex])}>
             <ForwardedIconComponent
-              name={getIcon()}
+              name={flowData?.icon || icon}
               aria-hidden="true"
               className="h-5 w-5"
             />
@@ -137,7 +143,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        <div className="line-clamp-2 h-full pt-5 text-sm text-primary">
+        <div className="line-clamp-2 h-full pt-3 text-sm text-primary">
           {flowData.description}
         </div>
       </Card>

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user should be able to interact with sticky notes",
@@ -52,9 +53,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     });
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
+    await zoomOut(page, 6);
     await page.getByTestId("note_node").click();
 
     await page.locator(".generic-node-desc-text").last().dblclick();
@@ -122,8 +121,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByText("Copy").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
 
     //double click
     await targetElement.click();

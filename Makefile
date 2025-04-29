@@ -65,7 +65,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen
+	@uv sync --frozen --extra "postgresql" $(EXTRA_ARGS)
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -142,7 +142,7 @@ coverage: ## run the tests and generate a coverage report
 	@uv run coverage erase
 
 unit_tests: ## run unit tests
-	@uv sync --extra dev --frozen
+	@uv sync --frozen
 	@EXTRA_ARGS=""
 	@if [ "$(async)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
@@ -198,7 +198,7 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
-	@uv run ruff check . --fix --ignore EXE002
+	@uv run ruff check . --fix
 	@uv run ruff format . --config pyproject.toml
 
 format_frontend: ## frontend code formatters

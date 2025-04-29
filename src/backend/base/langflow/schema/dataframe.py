@@ -72,6 +72,9 @@ class DataFrame(pandas_DataFrame):
 
     @text_key.setter
     def text_key(self, value: str) -> None:
+        if value not in self.columns:
+            msg = f"Text key '{value}' not found in DataFrame columns"
+            raise ValueError(msg)
         self._text_key = value
 
     @property
@@ -165,3 +168,13 @@ class DataFrame(pandas_DataFrame):
             DataFrame: A new DataFrame with the converted Documents
         """
         return DataFrame(docs)
+
+    def __eq__(self, other):
+        """Override equality to handle comparison with empty DataFrames and non-DataFrame objects."""
+        if self.empty:
+            return False
+        if isinstance(other, list) and not other:  # Empty list case
+            return False
+        if not isinstance(other, DataFrame | pd.DataFrame):  # Non-DataFrame case
+            return False
+        return super().__eq__(other)

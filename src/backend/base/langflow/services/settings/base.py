@@ -10,9 +10,14 @@ import orjson
 import yaml
 from aiofile import async_open
 from loguru import logger
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 from typing_extensions import override
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
@@ -215,6 +220,14 @@ class Settings(BaseSettings):
     """The maximum number of vertex builds to keep in the database."""
     max_vertex_builds_per_vertex: int = 2
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
+    webhook_polling_interval: int = 5000
+    """The polling interval for the webhook in ms."""
+    fs_flows_polling_interval: int = 10000
+    """The polling interval in milliseconds for synchronizing flows from the file system."""
+    ssl_cert_file: str | None = None
+    """Path to the SSL certificate file on the local system."""
+    ssl_key_file: str | None = None
+    """Path to the SSL key file on the local system."""
 
     # MCP Server
     mcp_server_enabled: bool = True
@@ -222,8 +235,29 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
-    event_delivery: Literal["polling", "streaming"] = "streaming"
-    """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
+    # Public Flow Settings
+    public_flow_cleanup_interval: int = Field(default=3600, gt=600)
+    """The interval in seconds at which public temporary flows will be cleaned up.
+    Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes)."""
+    public_flow_expiration: int = Field(default=86400, gt=600)
+    """The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup.
+    Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes)."""
+    event_delivery: Literal["polling", "streaming", "direct"] = "polling"
+    """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
+    lazy_load_components: bool = False
+    """If set to True, Langflow will only partially load components at startup and fully load them on demand.
+    This significantly reduces startup time but may cause a slight delay when a component is first used."""
+
+    @field_validator("event_delivery", mode="before")
+    @classmethod
+    def set_event_delivery(cls, value, info):
+        # If workers > 1, we need to use direct delivery
+        # because polling and streaming are not supported
+        # in multi-worker environments
+        if info.data.get("workers", 1) > 1:
+            logger.warning("Multi-worker environment detected, using direct event delivery")
+            return "direct"
+        return value
 
     @field_validator("dev")
     @classmethod

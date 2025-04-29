@@ -11,7 +11,6 @@ class LocalStorageService(StorageService):
     def __init__(self, session_service, settings_service) -> None:
         """Initialize the local storage service with session and settings services."""
         super().__init__(session_service, settings_service)
-        self.data_dir = anyio.Path(settings_service.settings.config_dir)
         self.set_ready()
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
@@ -88,7 +87,12 @@ class LocalStorageService(StorageService):
             msg = f"Flow {flow_id} directory does not exist."
             raise FileNotFoundError(msg)
 
-        files = [file.name async for file in folder_path.iterdir() if await file.is_file()]
+        files = [
+            file.name
+            async for file in await anyio.to_thread.run_sync(folder_path.iterdir)
+            if await anyio.Path(file).is_file()
+        ]
+
         logger.info(f"Listed {len(files)} files in flow {flow_id}.")
         return files
 

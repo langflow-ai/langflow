@@ -145,7 +145,7 @@ export default function CodeAreaModal({
   useEffect(() => {
     // Function to be executed after the state changes
     const delayedFunction = setTimeout(() => {
-      if (error?.detail.error !== undefined) {
+      if (error?.detail?.error !== undefined) {
         //trigger to update the height, does not really apply any height
         setHeight("90%");
       }

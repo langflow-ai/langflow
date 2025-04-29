@@ -145,7 +145,7 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
     if np.issubdtype(obj.dtype, np.bool_):
         return bool(obj)
     if np.issubdtype(obj.dtype, np.complexfloating):
-        return complex(cast(complex, obj))
+        return complex(cast("complex", obj))
     if np.issubdtype(obj.dtype, np.str_):
         return _serialize_str(str(obj), max_length, max_items)
     if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
@@ -209,7 +209,7 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
                 if np.issubdtype(obj.dtype, np.bool_):
                     return bool(obj)
                 if np.issubdtype(obj.dtype, np.complexfloating):
-                    return complex(cast(complex, obj))
+                    return complex(cast("complex", obj))
                 if np.issubdtype(obj.dtype, np.str_):
                     return str(obj)
                 if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):

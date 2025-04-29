@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import Any
 
 from langflow.base.io.chat import ChatComponent
@@ -118,7 +119,6 @@ class ChatOutput(ChatComponent):
     async def message_response(self) -> Message:
         # First convert the input to string if needed
         text = self.convert_to_string()
-
         # Get source properties
         source, icon, display_name, source_id = self.get_properties_from_source_component()
         background_color = self.background_color
@@ -158,8 +158,22 @@ class ChatOutput(ChatComponent):
         if self.input_value is None:
             msg = "Input data cannot be None"
             raise ValueError(msg)
-        if not isinstance(self.input_value, Data | DataFrame | Message | str | list):
-            msg = f"Expected Data or DataFrame or Message or str, got {type(self.input_value).__name__}"
+        if isinstance(self.input_value, list) and not all(
+            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value
+        ):
+            invalid_types = [
+                type(item).__name__
+                for item in self.input_value
+                if not isinstance(item, Message | Data | DataFrame | str)
+            ]
+            msg = f"Expected Data or DataFrame or Message or str, got {invalid_types}"
+            raise TypeError(msg)
+        if not isinstance(
+            self.input_value,
+            Message | Data | DataFrame | str | list | Generator | type(None),
+        ):
+            type_name = type(self.input_value).__name__
+            msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
             raise TypeError(msg)
 
     def _safe_convert(self, data: Any) -> str:
@@ -182,15 +196,25 @@ class ChatOutput(ChatComponent):
                     data = data.replace(r"^\s*$", "", regex=True)
                     # Replace multiple newlines with a single newline
                     data = data.replace(r"\n+", "\n", regex=True)
-                return data.to_markdown(index=False)
+
+                # Replace pipe characters to avoid markdown table issues
+                processed_data = data.replace(r"\|", r"\\|", regex=True)
+
+                processed_data = processed_data.map(
+                    lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
+                )
+
+                return processed_data.to_markdown(index=False)
             return str(data)
         except (ValueError, TypeError, AttributeError) as e:
             msg = f"Error converting data: {e!s}"
             raise ValueError(msg) from e
 
-    def convert_to_string(self) -> str:
+    def convert_to_string(self) -> str | Generator[Any, None, None]:
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
             return "\n".join([self._safe_convert(item) for item in self.input_value])
+        if isinstance(self.input_value, Generator):
+            return self.input_value
         return self._safe_convert(self.input_value)

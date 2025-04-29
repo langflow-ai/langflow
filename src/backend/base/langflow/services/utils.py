@@ -9,6 +9,7 @@ from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
 from langflow.services.auth.utils import create_super_user, verify_password
+from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -228,8 +229,12 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
-    # Test cache connection
-    get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
+    cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
+    # Test external cache connection
+    if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
+        msg = "Cache service failed to connect to external database"
+        raise ConnectionError(msg)
+
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()

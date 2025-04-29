@@ -1,12 +1,14 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { removeCountFromString } from "@/utils/utils";
+import { disableItem } from "../../helpers/disable-item";
+import { getDisabledTooltip } from "../../helpers/get-disabled-tooltip";
 import SidebarDraggableComponent from "../sidebarDraggableComponent";
 
 const SidebarItemsList = ({
   item,
   dataFilter,
   nodeColors,
-  chatInputAdded,
+  uniqueInputsComponents,
   onDragStart,
   sensitiveSort,
 }) => {
@@ -16,6 +18,17 @@ const SidebarItemsList = ({
         .sort((a, b) => {
           const itemA = dataFilter[item.name][a];
           const itemB = dataFilter[item.name][b];
+
+          // Sort by priority if available
+          if (itemA.priority !== undefined || itemB.priority !== undefined) {
+            const priorityA = itemA.priority ?? Number.MAX_SAFE_INTEGER;
+            const priorityB = itemB.priority ?? Number.MAX_SAFE_INTEGER;
+            if (priorityA !== priorityB) {
+              return priorityA - priorityB;
+            }
+          }
+
+          // Otherwise use the existing sorting logic
           return itemA.score && itemB.score
             ? itemA.score - itemB.score
             : sensitiveSort(itemA.display_name, itemB.display_name);
@@ -46,8 +59,11 @@ const SidebarItemsList = ({
                 official={currentItem.official === false ? false : true}
                 beta={currentItem.beta ?? false}
                 legacy={currentItem.legacy ?? false}
-                disabled={SBItemName === "ChatInput" && chatInputAdded}
-                disabledTooltip="Chat input already added"
+                disabled={disableItem(SBItemName, uniqueInputsComponents)}
+                disabledTooltip={getDisabledTooltip(
+                  SBItemName,
+                  uniqueInputsComponents,
+                )}
               />
             </ShadTooltip>
           );

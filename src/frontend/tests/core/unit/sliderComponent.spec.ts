@@ -35,15 +35,31 @@ test(
 
     let cleanCode = await extractAndCleanCode(page);
 
-    // Replace the import statement
-    cleanCode = cleanCode.replace(
-      'name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)',
-      'name="temperature", display_name="Temperature", value=0.2, range_spec=RangeSpec(min=3, max=30, step=1), min_label="test", max_label="test2", min_label_icon="pencil-ruler", max_label_icon="palette", slider_buttons=False, slider_buttons_options=[], slider_input=False,',
+    // Replace the multiline string in the code
+    const newCode = cleanCode.replace(
+      `name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,`,
+      `name="temperature",
+            display_name="Temperature",
+            value=0.2,
+            range_spec=RangeSpec(min=3, max=30, step=1),
+            min_label="test",
+            max_label="test2",
+            min_label_icon="pencil-ruler",
+            max_label_icon="palette",
+            slider_buttons=False,
+            slider_buttons_options=[],
+            slider_input=False,
+            advanced=False,`,
     );
-
+    // make sure codes are different
+    expect(cleanCode).not.toEqual(newCode);
     await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
-    await page.locator("textarea").last().fill(cleanCode);
+    await page.locator("textarea").last().fill(newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
     await page.getByTestId("fit_view").click();

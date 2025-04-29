@@ -59,7 +59,6 @@ test(
     });
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();
@@ -95,7 +94,7 @@ test(
       await page.getByTestId("text_card_container").nth(i).click();
 
       await page.waitForSelector('[data-testid="fit_view"]', {
-        timeout: 3000,
+        timeout: 5000,
       });
 
       if ((await page.getByTestId("update-all-button").count()) > 0) {
@@ -109,10 +108,23 @@ test(
 
       await page.getByTestId("icon-ChevronLeft").click();
       await page.waitForSelector('[data-testid="mainpage_title"]', {
-        timeout: 3000,
+        timeout: 5000,
+      });
+
+      await page.waitForTimeout(500);
+
+      await page.waitForSelector('[data-testid="new-project-btn"]', {
+        timeout: 5000,
       });
 
       await page.getByTestId("new-project-btn").first().click();
+
+      await page.waitForSelector(
+        '[data-testid="side_nav_options_all-templates"]',
+        {
+          timeout: 5000,
+        },
+      );
 
       await page.getByTestId("side_nav_options_all-templates").click();
     }

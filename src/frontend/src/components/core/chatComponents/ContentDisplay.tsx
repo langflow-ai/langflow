@@ -10,9 +10,11 @@ import DurationDisplay from "./DurationDisplay";
 export default function ContentDisplay({
   content,
   chatId,
+  playgroundPage,
 }: {
   content: ContentType;
   chatId: string;
+  playgroundPage?: boolean;
 }) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
@@ -30,7 +32,7 @@ export default function ContentDisplay({
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full text-[14px] font-semibold text-foreground"
+              className="inline-block w-fit max-w-full text-sm font-semibold text-foreground"
             >
               {content.header.title}
             </Markdown>
@@ -39,7 +41,7 @@ export default function ContentDisplay({
       </div>
     </>
   );
-  const renderDuration = content.duration !== undefined && (
+  const renderDuration = content.duration !== undefined && !playgroundPage && (
     <div className="absolute right-2 top-4">
       <DurationDisplay duration={content.duration} chatId={chatId} />
     </div>
@@ -55,7 +57,7 @@ export default function ContentDisplay({
             remarkPlugins={[remarkGfm]}
             linkTarget="_blank"
             rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+            className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
               p({ node, ...props }) {
                 return (
@@ -152,7 +154,7 @@ export default function ContentDisplay({
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               components={{
                 pre({ node, ...props }) {
                   return <>{props.children}</>;
@@ -201,7 +203,7 @@ export default function ContentDisplay({
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+            className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
           >
             **Input:**
           </Markdown>
@@ -214,7 +216,7 @@ export default function ContentDisplay({
               <Markdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeMathjax]}
-                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+                className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               >
                 **Output:**
               </Markdown>
@@ -226,7 +228,7 @@ export default function ContentDisplay({
               <Markdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeMathjax]}
-                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+                className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               >
                 **Error:**
               </Markdown>

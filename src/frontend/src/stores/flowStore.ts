@@ -23,7 +23,7 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
@@ -58,6 +58,10 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  playgroundPage: false,
+  setPlaygroundPage: (playgroundPage) => {
+    set({ playgroundPage });
+  },
   positionDictionary: {},
   setPositionDictionary: (positionDictionary) => {
     set({ positionDictionary });
@@ -448,7 +452,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Add the new node to the list of nodes in state
       newNodes = newNodes
         .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
+        .concat({ ...newNode, selected: true });
     });
     get().setNodes(newNodes);
 
@@ -595,6 +599,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent,
     session,
     stream = true,
+    eventDelivery = EventDeliveryType.STREAMING,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -603,7 +608,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent?: boolean;
     session?: string;
     stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => {
+    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
@@ -827,7 +834,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
-      stream,
+      playgroundPage,
+      eventDelivery,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
@@ -963,6 +971,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   currentBuildingNodeId: undefined,
   setCurrentBuildingNodeId: (nodeIds) => {
     set({ currentBuildingNodeId: nodeIds });
+  },
+  resetFlowState: () => {
+    set({
+      nodes: [],
+      edges: [],
+      flowState: undefined,
+      hasIO: false,
+      inputs: [],
+      outputs: [],
+      flowPool: {},
+      currentFlow: undefined,
+      reactFlowInstance: null,
+      lastCopiedSelection: null,
+      verticesBuild: null,
+      flowBuildStatus: {},
+      isBuilding: false,
+      isPending: true,
+      positionDictionary: {},
+      componentsToUpdate: [],
+    });
   },
 }));
 

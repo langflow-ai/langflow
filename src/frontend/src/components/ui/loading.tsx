@@ -18,6 +18,7 @@ export const Loading = ({ size = 24, ...props }: LoadingProps) => (
     strokeLinejoin="round"
     className="feather feather-circle"
     {...props}
+    data-testid="loading-icon"
   >
     <circle cx={12} cy={12} r={10} strokeDasharray={63} strokeDashoffset={21}>
       <animateTransform

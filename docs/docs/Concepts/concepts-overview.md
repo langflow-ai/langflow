@@ -21,7 +21,7 @@ A flow can be as simple as the [basic prompting flow](/get-started-quickstart), 
 * Each component has a **Configuration** menu. Click the **Code** pane to see a component's underlying Python code.
 * Components are connected with **edges** to form flows.
 
-If you're familiar with [ReactFlow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
+If you're familiar with [React Flow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
 
 When a flow is run, Langflow builds a Directed Acyclic Graph (DAG) graph object from the nodes (components) and edges (connections between components), with the nodes sorted to determine the order of execution. The graph build calls the individual components' `def_build` functions to validate and prepare the nodes. This graph is then processed in dependency order. Each node is built and executed sequentially, with results from each built node being passed to nodes that are dependent on the previous node's results.
 
@@ -36,7 +36,7 @@ The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/envi
 
 If you're new to Langflow, it's OK to feel a bit lost at first. We’ll take you on a tour, so you can orient yourself and start creating applications quickly.
 
-Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [API pane](#api-pane) are available in the upper right corner.
+Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [Publish pane](#publish-pane) are available in the upper right corner.
 
 ![](/img/workspace.png)
 
@@ -75,11 +75,11 @@ For more information, see the [Playground](/concepts-playground).
 
 ![](/img/playground.png)
 
-## API pane {#api-pane}
+## Publish pane {#publish-pane}
 
-The **API** pane provides code templates to integrate your flows into external applications.
+The **Publish** pane provides code templates to integrate your flows into external applications.
 
-For more information, see the [API pane](/concepts-api).
+For more information, see the [Publish pane](/concepts-publish).
 
 ![](/img/api-pane.png)
 
@@ -125,6 +125,12 @@ Projects, folders, and flows are exchanged as JSON objects.
 * To upload a folder, click 📤 **Upload**. The default maximum file upload size is 100 MB.
 
 * To move a flow or component, drag and drop it into the desired folder.
+
+## File management
+
+Upload, store, and manage files in Langflow's **File management** system.
+
+For more on managing your files, see [Manage files](/concepts-file-management).
 
 ## Options menu
 

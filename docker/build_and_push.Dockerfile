@@ -30,7 +30,6 @@ RUN apt-get update \
     npm \
     # gcc
     gcc \
-
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -41,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable
+    uv sync --frozen --no-install-project --no-editable --extra postgresql
 
 COPY ./src /app/src
 
@@ -59,7 +58,7 @@ COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable
+    uv sync --frozen --no-editable --extra postgresql
 
 ################################
 # RUNTIME
@@ -69,7 +68,9 @@ FROM python:3.12.3-slim AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install git -y \
+    && apt-get install -y curl git libpq5 gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data

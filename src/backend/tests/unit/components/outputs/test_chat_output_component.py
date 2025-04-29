@@ -94,5 +94,5 @@ class TestChatOutput(ComponentTestBaseWithClient):
             await component.message_response()
 
         component.input_value = 123  # Invalid type
-        with pytest.raises(TypeError, match="Expected Data or DataFrame or Message or str"):
+        with pytest.raises(TypeError, match="Expected Data or DataFrame or Message or str, Generator or None"):
             await component.message_response()

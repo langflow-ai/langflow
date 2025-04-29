@@ -4,12 +4,20 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
+from langflow.serialization import constants as serialization_constants
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
@@ -371,9 +379,21 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
+    serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
+    serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
-    event_delivery: Literal["polling", "streaming"]
+    webhook_polling_interval: int
+    public_flow_cleanup_interval: int
+    public_flow_expiration: int
+    event_delivery: Literal["polling", "streaming", "direct"]
+
+
+class CancelFlowResponse(BaseModel):
+    """Response model for flow build cancellation."""
+
+    success: bool
+    message: str

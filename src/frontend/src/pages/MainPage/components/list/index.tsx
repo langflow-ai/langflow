@@ -16,7 +16,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../hooks/use-description-modal";
 import { useGetTemplateStyle } from "../../utils/get-template-style";
@@ -75,6 +75,12 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
       : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;
 
+  const [icon, setIcon] = useState<string>("");
+
+  useEffect(() => {
+    getIcon().then(setIcon);
+  }, [getIcon]);
+
   return (
     <>
       <Card
@@ -87,13 +93,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
         data-testid="list-card"
       >
-        {/* left side */}
         <div
           className={`flex min-w-0 ${
             isComponent ? "cursor-default" : "cursor-pointer"
           } items-center gap-4`}
         >
-          {/* Icon */}
           <div
             className={cn(
               `item-center flex justify-center rounded-lg p-3`,
@@ -101,7 +105,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             )}
           >
             <ForwardedIconComponent
-              name={flowData?.icon || getIcon()}
+              name={flowData?.icon || icon}
               aria-hidden="true"
               className="flex h-5 w-5 items-center justify-center"
             />
@@ -124,7 +128,6 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        {/* right side */}
         <div className="ml-5 flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

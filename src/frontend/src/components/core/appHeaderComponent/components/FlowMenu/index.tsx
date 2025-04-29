@@ -4,7 +4,6 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { customStringify } from "@/utils/reactflowUtils";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import IconComponent from "@/components/common/genericIconComponent";
@@ -22,6 +21,7 @@ import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import ExportModal from "@/modals/exportModal";
 import FlowLogsModal from "@/modals/flowLogsModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
@@ -30,8 +30,10 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { cn } from "@/utils/utils";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { useShallow } from "zustand/react/shallow";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
@@ -49,18 +51,36 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const saveFlow = useSaveFlow();
   const queryClient = useQueryClient();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
-  const currentFlow = useFlowStore((state) => state.currentFlow);
-  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const updatedAt = currentSavedFlow?.updated_at;
+  const {
+    currentFlowName,
+    currentFlowId,
+    currentFlowFolderId,
+    currentFlowIcon,
+    currentFlowGradient,
+  } = useFlowStore(
+    useShallow((state) => ({
+      currentFlowName: state.currentFlow?.name,
+      currentFlowId: state.currentFlow?.id,
+      currentFlowFolderId: state.currentFlow?.folder_id,
+      currentFlowIcon: state.currentFlow?.icon,
+      currentFlowGradient: state.currentFlow?.gradient,
+    })),
+  );
+  const { updated_at: updatedAt } = useFlowsManagerStore(
+    useShallow((state) => ({
+      updated_at: state.currentFlow?.updated_at,
+    })),
+  );
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const [editingName, setEditingName] = useState(false);
-  const [flowName, setFlowName] = useState(currentFlow?.name ?? "");
+  const [flowName, setFlowName] = useState(currentFlowName ?? "");
   const [isInvalidName, setIsInvalidName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
+  const changesNotSaved = useUnsavedChanges();
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -72,9 +92,9 @@ export const MenuBar = ({}: {}): JSX.Element => {
       flows.forEach((flow) => {
         tempNameList.push(flow.name);
       });
-      setNameList(tempNameList.filter((name) => name !== currentFlow?.name));
+      setNameList(tempNameList.filter((name) => name !== currentFlowName));
     }
-  }, [flows, currentFlow?.name]);
+  }, [flows, currentFlowName]);
 
   useGetRefreshFlowsQuery(
     {
@@ -85,12 +105,9 @@ export const MenuBar = ({}: {}): JSX.Element => {
   );
 
   const currentFolder = useMemo(
-    () => folders?.find((f) => f.id === currentFlow?.folder_id),
-    [folders, currentFlow?.folder_id],
+    () => folders?.find((f) => f.id === currentFlowFolderId),
+    [folders, currentFlowFolderId],
   );
-
-  const changesNotSaved =
-    customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
   useEffect(() => {
     if (measureRef.current) {
@@ -126,7 +143,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div
         data-testid="menu_status_saved_flow_button"
         id="menu_status_saved_flow_button"
-        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
+        className="shrink-0 text-sm font-medium text-accent-emerald-foreground"
       >
         Saved
       </div>
@@ -162,30 +179,34 @@ export const MenuBar = ({}: {}): JSX.Element => {
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Escape") {
         setEditingName(false);
-        setFlowName(currentFlow?.name ?? "");
+        setFlowName(currentFlowName ?? "");
         setIsInvalidName(false);
       }
       if (e.key === "Enter") {
         nameInputRef.current?.blur();
       }
     },
-    [currentFlow?.name],
+    [currentFlowName],
   );
 
-  const handleNameSubmit = useCallback(() => {
+  const handleNameSubmit = useCallback(async () => {
     if (
       flowName.trim() !== "" &&
-      flowName !== currentFlow?.name &&
+      flowName !== currentFlowName &&
       !isInvalidName
     ) {
+      // Get a one-time snapshot of currentFlow using get()
+      const currentFlowSnapshot = useFlowStore.getState().currentFlow;
+
       const newFlow = {
-        ...currentFlow!,
+        ...currentFlowSnapshot!,
         name: flowName,
-        id: currentFlow!.id,
+        id: currentFlowId!,
       };
-      setCurrentFlow(newFlow);
+
       saveFlow(newFlow)
         .then(() => {
+          setCurrentFlow(newFlow);
           setSuccessData({ title: "Flow name updated successfully" });
         })
         .catch((error) => {
@@ -193,22 +214,23 @@ export const MenuBar = ({}: {}): JSX.Element => {
             title: "Error updating flow name",
             list: [(error as Error).message],
           });
-          setFlowName(currentFlow?.name ?? "");
+          setFlowName(currentFlowName ?? "");
         });
     } else if (isInvalidName) {
       setErrorData({
         title: "Invalid flow name",
         list: ["Name already exists"],
       });
-      setFlowName(currentFlow?.name ?? "");
+      setFlowName(currentFlowName ?? "");
     } else {
-      setFlowName(currentFlow?.name ?? "");
+      setFlowName(currentFlowName ?? "");
     }
     setEditingName(false);
     setIsInvalidName(false);
   }, [
     flowName,
-    currentFlow,
+    currentFlowName,
+    currentFlowId,
     setCurrentFlow,
     saveFlow,
     setSuccessData,
@@ -217,10 +239,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
   ]);
 
   useEffect(() => {
-    if (currentFlow && !editingName) {
-      setFlowName(currentFlow.name);
+    if (currentFlowName && !editingName) {
+      setFlowName(currentFlowName);
     }
-  }, [currentFlow, editingName]);
+  }, [currentFlowName, editingName]);
 
   useEffect(() => {
     if (measureRef.current) {
@@ -228,9 +250,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
     }
   }, [flowName]);
 
-  return currentFlow && onFlowPage ? (
+  const swatchIndex =
+    (currentFlowGradient && !isNaN(parseInt(currentFlowGradient))
+      ? parseInt(currentFlowGradient)
+      : getNumberFromString(currentFlowGradient ?? currentFlowId ?? "")) %
+    swatchColors.length;
+
+  return currentFlowName && onFlowPage ? (
     <div
-      className="flex items-center justify-center gap-2 truncate"
+      className="flex w-full items-center justify-center gap-2"
       data-testid="menu_bar_wrapper"
     >
       <div
@@ -241,7 +269,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-sm text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -261,17 +289,23 @@ export const MenuBar = ({}: {}): JSX.Element => {
       >
         /
       </div>
+      <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
+        <IconComponent
+          name={currentFlowIcon ?? "Workflow"}
+          className="h-3.5 w-3.5"
+        />
+      </div>
 
       <div
-        className="overflow-hidden truncate text-sm sm:whitespace-normal"
+        className="shrink-0 overflow-hidden text-sm sm:whitespace-normal"
         data-testid="menu_bar_display"
       >
         <div
-          className="header-menu-bar-display-2 truncate"
+          className="header-menu-bar-display-2 shrink-0"
           data-testid="menu_bar_display_wrapper"
         >
           <div
-            className="header-menu-flow-name-2 truncate"
+            className="header-menu-flow-name-2 shrink-0"
             data-testid="flow-configuration-button"
           >
             <div
@@ -280,7 +314,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <Input
                 className={cn(
-                  "h-6 w-full cursor-text font-semibold",
+                  "text- h-6 w-full shrink-0 cursor-text font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
@@ -292,7 +326,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 onKeyDown={handleKeyDown}
                 onFocus={() => {
                   setEditingName(true);
-                  setFlowName(currentFlow.name);
+                  setFlowName(currentFlowName);
                 }}
                 onBlur={handleNameSubmit}
                 value={flowName}
@@ -301,7 +335,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre pl-1 font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-sm font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
@@ -501,8 +535,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 </h2>
                 <p className="text-muted-foreground">
                   <a
-                    href="https://docs.langflow.org/configuration-auto-saving"
-                    className="text-primary underline"
+                    href="https://docs.langflow.org/configuration-auto-save"
+                    className="text-secondary underline"
                   >
                     Enable auto-saving
                   </a>{" "}
@@ -516,7 +550,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         >
           <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
             <div className="flex cursor-default items-center gap-2 truncate text-sm">
-              <div className="w-full truncate text-xs">
+              <div className="w-full truncate text-sm">
                 {printByBuildStatus()}
               </div>
             </div>
@@ -530,7 +564,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "hidden items-center gap-1.5 text-xs text-status-red sm:flex"
+                  ? "hidden items-center gap-1.5 text-sm text-status-red sm:flex"
                   : "hidden"
               }
             >

@@ -3,7 +3,11 @@ from typing import Any
 import requests
 from loguru import logger
 
-from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
+from langflow.base.models.anthropic_constants import (
+    ANTHROPIC_MODELS,
+    TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS,
+    TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS,
+)
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -48,6 +52,7 @@ class AnthropicModelComponent(LCModelComponent):
             value=0.1,
             info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
         MessageTextInput(
             name="base_url",
@@ -98,24 +103,41 @@ class AnthropicModelComponent(LCModelComponent):
 
             client = anthropic.Anthropic(api_key=self.api_key)
             models = client.models.list(limit=20).data
-            model_ids = [model.id for model in models]
+            model_ids = ANTHROPIC_MODELS + [model.id for model in models]
         except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = ANTHROPIC_MODELS
+
         if tool_model_enabled:
             try:
                 from langchain_anthropic.chat_models import ChatAnthropic
             except ImportError as e:
                 msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
                 raise ImportError(msg) from e
+
+            # Create a new list instead of modifying while iterating
+            filtered_models = []
             for model in model_ids:
+                if model in TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS:
+                    filtered_models.append(model)
+                    continue
+
                 model_with_tool = ChatAnthropic(
-                    model=self.model_name,
+                    model=model,  # Use the current model being checked
                     anthropic_api_key=self.api_key,
                     anthropic_api_url=self.base_url,
                 )
-                if not self.supports_tool_calling(model_with_tool):
-                    model_ids.remove(model)
+
+                if (
+                    not self.supports_tool_calling(model_with_tool)
+                    or model in TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS
+                ):
+                    continue
+
+                filtered_models.append(model)
+
+            return filtered_models
+
         return model_ids
 
     def _get_exception_message(self, exception: Exception) -> str | None:
@@ -138,7 +160,7 @@ class AnthropicModelComponent(LCModelComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 if len(self.api_key) == 0:
                     ids = ANTHROPIC_MODELS
@@ -150,6 +172,7 @@ class AnthropicModelComponent(LCModelComponent):
                         ids = ANTHROPIC_MODELS
                 build_config["model_name"]["options"] = ids
                 build_config["model_name"]["value"] = ids[0]
+                build_config["model_name"]["combobox"] = True
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e

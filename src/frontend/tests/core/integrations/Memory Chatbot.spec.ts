@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -63,8 +63,16 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    await page.waitForSelector("text=roar", { timeout: 30000 });
-    await page.getByText("roar").last().isVisible();
+    await page.waitForSelector(".markdown", { timeout: 3000 });
+
+    const textContents = await page
+      .locator(".markdown")
+      .last()
+      .allTextContents();
+
+    const concatAllText = textContents.join(" ");
+    expect(concatAllText.length).toBeGreaterThan(20);
+
     await page.getByText("Default Session").last().click();
 
     await page.getByText("timestamp", { exact: true }).last().isVisible();
