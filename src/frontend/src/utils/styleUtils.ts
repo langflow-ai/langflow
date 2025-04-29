@@ -431,6 +431,7 @@ export const getLucideIconName = (name: string): string => {
   };
   const kebabCaseName = name
     .replace(/([a-z])([A-Z])/g, "$1-$2")
+    .replace(/(\d)/g, "-$1")
     .replace(/\s+/g, "-")
     .toLowerCase();
   return map[name] || kebabCaseName;
