@@ -1,17 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
 
 export const AddFolderButton = ({
   onClick,
   disabled,
   loading,
 }: {
-  onClick: (folderName: string) => void;  // Update: accept folder name
+  onClick: (folderName: string) => void; // Update: accept folder name
   disabled: boolean;
   loading: boolean;
 }) => {
@@ -24,9 +29,9 @@ export const AddFolderButton = ({
 
   const handleCreateFolder = () => {
     if (folderName.trim()) {
-      onClick(folderName); 
-      setFolderName("");   
-      setOpen(false);      
+      onClick(folderName);
+      setFolderName("");
+      setOpen(false);
     }
   };
 
@@ -57,13 +62,13 @@ export const AddFolderButton = ({
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreateFolder(); 
+                if (e.key === "Enter") handleCreateFolder();
               }}
               placeholder="Enter Folder Name"
-              className="w-full p-2 border rounded"
+              className="w-full rounded border p-2"
             />
             <button
-              className="mt-2 w-full bg-primary hover:bg-primary-hover text-white p-2 rounded"
+              className="mt-2 w-full rounded bg-primary p-2 text-white hover:bg-primary-hover"
               onClick={handleCreateFolder}
             >
               Create
