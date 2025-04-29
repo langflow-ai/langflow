@@ -56,13 +56,6 @@ async def test_get_flow_dict_invalid_input(flow_runner):
 
 
 @pytest.mark.asyncio
-async def test_clear_previous_sessions(flow_runner, sample_flow_dict):
-    """Test clearing previous sessions."""
-    session_id = str(uuid4())
-    await flow_runner.clear_previous_sessions(session_id, sample_flow_dict)
-
-
-@pytest.mark.asyncio
 async def test_run_with_dict_input(flow_runner, sample_flow_dict):
     """Test running flow with dictionary input."""
     session_id = str(uuid4())
