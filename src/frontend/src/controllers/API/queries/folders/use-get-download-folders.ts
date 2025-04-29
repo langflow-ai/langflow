@@ -18,7 +18,7 @@ export const useGetDownloadFolders: useMutationFunctionType<
     payload: IGetDownloadFolders,
   ): Promise<any> => {
     const response = await api.get<any>(
-      `${getURL("FOLDERS")}/download/${payload.folderId}`,
+      `${getURL("PROJECTS")}/download/${payload.folderId}`,
       {
         responseType: "blob",
         headers: {
