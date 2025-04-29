@@ -1,6 +1,6 @@
 import React, { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
-import { getNodeIcon, getNodeIconSync } from "../../../utils/styleUtils";
+import { getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
 import { Skeleton } from "@/components/ui/skeleton";
