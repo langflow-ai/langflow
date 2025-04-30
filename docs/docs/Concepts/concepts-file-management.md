@@ -15,11 +15,11 @@ To upload a file from your local machine:
 
 1. From the **My Files** window at `http://127.0.0.1:7860/files`, click **Upload**.
 2. Select the file to upload.
-The file is uploaded to Langflow.
+   The file is uploaded to Langflow.
 
 Files stored in **My Files** can be renamed, downloaded, duplicated, or deleted.
 
-Files are available to flows stored in different folders.
+Files are available to flows stored in different projects.
 
 ## Use uploaded files in a flow
 
@@ -40,6 +40,7 @@ If you prefer a one-time upload, the [File](/components-data#file) component sti
 The maximum supported file size is 100 MB.
 
 Text files:
+
 - `.txt` - Text files
 - `.md`, `.mdx` - Markdown files
 - `.csv` - CSV files
@@ -56,12 +57,9 @@ Text files:
 - `.ts`, `.tsx` - TypeScript files
 
 Archive formats (for bundling multiple files):
+
 - `.zip` - ZIP archives
 - `.tar` - TAR archives
 - `.tgz` - Gzipped TAR archives
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
-
-
-
-

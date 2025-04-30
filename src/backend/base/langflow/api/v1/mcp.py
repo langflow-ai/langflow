@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import logging
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
@@ -11,8 +10,9 @@ from uuid import uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, StreamingResponse
+from loguru import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -32,8 +32,6 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.storage.utils import build_content_type_from_extension
-
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -187,14 +185,19 @@ async def handle_list_tools():
                     continue
 
                 flow_name = "_".join(flow.name.lower().split())
-                tool = types.Tool(
-                    name=flow_name,
-                    description=f"{flow.id}: {flow.description}"
-                    if flow.description
-                    else f"Tool generated from flow: {flow_name}",
-                    inputSchema=json_schema_from_flow(flow),
-                )
-                tools.append(tool)
+                try:
+                    tool = types.Tool(
+                        name=flow_name,
+                        description=f"{flow.id}: {flow.description}"
+                        if flow.description
+                        else f"Tool generated from flow: {flow_name}",
+                        inputSchema=json_schema_from_flow(flow),
+                    )
+                    tools.append(tool)
+                except Exception as e:  # noqa: BLE001
+                    msg = f"Error in listing tools: {e!s} from flow: {flow_name}"
+                    logger.warning(msg)
+                    continue
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         logger.exception(msg)
@@ -283,6 +286,11 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                             )
                             if message:
                                 collected_results.append(types.TextContent(type="text", text=str(message)))
+                        if event_data.get("event") == "error":
+                            content_blocks = event_data.get("data", {}).get("content_blocks", [])
+                            text = event_data.get("data", {}).get("text", "")
+                            error_msg = f"Error Executing the {flow.name} tool. Error: {text} Details: {content_blocks}"
+                            collected_results.append(types.TextContent(type="text", text=error_msg))
                     except json.JSONDecodeError:
                         msg = f"Failed to parse event data: {line}"
                         logger.warning(msg)
@@ -324,8 +332,15 @@ def find_validation_error(exc):
     return None
 
 
+@router.head("/sse", response_class=HTMLResponse, include_in_schema=False)
+async def im_alive():
+    return Response()
+
+
 @router.get("/sse", response_class=StreamingResponse)
 async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+    msg = f"Starting SSE connection, server name: {server.name}"
+    logger.info(msg)
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
@@ -371,6 +386,9 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 async def handle_messages(request: Request):
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)
-    except BrokenResourceError as e:
+    except (BrokenResourceError, BrokenPipeError) as e:
         logger.info("MCP Server disconnected")
         raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e
+    except Exception as e:
+        logger.error(f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e
