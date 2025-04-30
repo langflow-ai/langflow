@@ -25,9 +25,9 @@
         "id": "reactflow__edge-SearchComponent-kgsWf{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-kgsWfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-H916j{œfieldNameœ:œtoolsœ,œidœ:œAgent-H916jœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SearchComponent-kgsWf",
-        "sourceHandle": "{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-kgsWfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-kgsWfœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-H916j",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-H916jœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-H916jœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-6dlgJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-6dlgJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-H916j{œfieldNameœ:œinput_valueœ,œidœ:œAgent-H916jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-6dlgJ",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-6dlgJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-6dlgJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-H916j",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-H916jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-H916jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-Agent-H916j{œdataTypeœ:œAgentœ,œidœ:œAgent-H916jœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-zFKST{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zFKSTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-H916j",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-H916jœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-H916jœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-zFKST",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zFKSTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-zFKSTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-Agent-zFKST{œdataTypeœ:œAgentœ,œidœ:œAgent-zFKSTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-3tuWs{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3tuWsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-zFKST",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-zFKSTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-zFKSTœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-3tuWs",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3tuWsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3tuWsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-Agent-3tuWs{œdataTypeœ:œAgentœ,œidœ:œAgent-3tuWsœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-n7Oik{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n7Oikœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-3tuWs",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-3tuWsœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3tuWsœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-n7Oik",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n7Oikœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-n7Oikœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -166,9 +166,9 @@
         "id": "xy-edge__URL-4LSRv{œdataTypeœ:œURLœ,œidœ:œURL-4LSRvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-zFKST{œfieldNameœ:œtoolsœ,œidœ:œAgent-zFKSTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-4LSRv",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-4LSRvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-4LSRvœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-zFKST",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-zFKSTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-zFKSTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -193,9 +193,9 @@
         "id": "xy-edge__CalculatorComponent-hlWP4{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hlWP4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3tuWs{œfieldNameœ:œtoolsœ,œidœ:œAgent-3tuWsœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-hlWP4",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hlWP4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-hlWP4œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-3tuWs",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-3tuWsœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3tuWsœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -232,7 +232,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1698,7 +1697,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -2398,7 +2396,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -3098,7 +3095,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
