@@ -382,6 +382,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
             result_data = result.get("data", {})
             actions_data = self._actions_data.get(action_key, {})
+            # If 'get_result_field' is True and 'result_field' is specified, extract the data
+            # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.
             if actions_data.get("get_result_field") and actions_data.get("result_field"):
                 result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
             if len(result_data) != 1 and not actions_data.get("result_field") and actions_data.get("get_result_field"):
