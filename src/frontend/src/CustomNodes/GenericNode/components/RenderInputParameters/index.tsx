@@ -74,13 +74,15 @@ const RenderInputParameters = ({
     return keyMap;
   }, [templateFields, data.id, data.node?.template]);
 
-  console.log({ data });
-
   const renderInputParameter = templateFields.map(
     (templateField: string, idx) => {
       const template = data.node?.template[templateField];
 
-      if (!template?.show || template?.advanced) {
+      if (
+        !template?.show ||
+        template?.advanced ||
+        (template?.tool_mode && isToolMode)
+      ) {
         return null;
       }
 
