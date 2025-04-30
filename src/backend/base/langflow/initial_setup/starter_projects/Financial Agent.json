@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-xrxwy",
+            "id": "SambaNovaModel-NEyqD",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-o90sI",
+            "id": "ChatOutput-XjOH3",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-xrxwy{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-xrxwyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-o90sI{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-o90sIœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-NEyqD{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-NEyqDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XjOH3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XjOH3œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-xrxwy",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-xrxwyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-o90sI",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-o90sIœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-NEyqD",
+        "sourceHandle": "{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-NEyqDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-XjOH3",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XjOH3œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-3LGwC",
+            "id": "ChatInput-X83ni",
             "name": "message",
             "output_types": [
               "Message"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-dJhhP",
+            "id": "Agent-cGZsD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-3LGwC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3LGwCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dJhhP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dJhhPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-cGZsD{œfieldNameœ:œinput_valueœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-3LGwC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3LGwCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-dJhhP",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-dJhhPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-X83ni",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-cGZsD",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-mhlb1",
+            "id": "TavilySearchComponent-7Y3yy",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-dJhhP",
+            "id": "Agent-cGZsD",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-mhlb1{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-mhlb1œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dJhhP{œfieldNameœ:œtoolsœ,œidœ:œAgent-dJhhPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-7Y3yy{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-7Y3yyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-cGZsD{œfieldNameœ:œtoolsœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-mhlb1",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-mhlb1œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-dJhhP",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-dJhhPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-7Y3yy",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-7Y3yyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-cGZsD",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-CnHS6",
+            "id": "URL-N9CXl",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -101,27 +101,194 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-VPh4g",
+            "id": "Agent-wqbpC",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-CnHS6{œdataTypeœ:œURLœ,œidœ:œURL-CnHS6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-VPh4g{œfieldNameœ:œtoolsœ,œidœ:œAgent-VPh4gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-N9CXl{œdataTypeœ:œURLœ,œidœ:œURL-N9CXlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wqbpC{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-CnHS6",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-CnHS6œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-VPh4g",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-VPh4gœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-N9CXl",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-N9CXlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-wqbpC",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
         "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-X83ni",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-wqbpC",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-wqbpC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-X83ni",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-wqbpC",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-wqbpC",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "first_text",
+            "id": "Prompt-er8QV",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-wqbpC{œdataTypeœ:œAgentœ,œidœ:œAgent-wqbpCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-er8QV{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-wqbpC",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-wqbpCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-er8QV",
+        "targetHandle": "{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-cGZsD",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "second_text",
+            "id": "Prompt-er8QV",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-cGZsD{œdataTypeœ:œAgentœ,œidœ:œAgent-cGZsDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-er8QV{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-cGZsD",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-cGZsDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-er8QV",
+        "targetHandle": "{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-er8QV",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "second_text",
+            "id": "Prompt-AdpTy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-er8QV{œdataTypeœ:œPromptœ,œidœ:œPrompt-er8QVœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Prompt-AdpTy{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-er8QV",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-er8QVœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-AdpTy",
+        "targetHandle": "{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-X83ni",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "first_text",
+            "id": "Prompt-AdpTy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AdpTy{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-X83ni",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-AdpTy",
+        "targetHandle": "{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-AdpTy",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "SambaNovaModel-NEyqD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-AdpTy{œdataTypeœ:œPromptœ,œidœ:œPrompt-AdpTyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-NEyqD{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-NEyqDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-AdpTy",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-AdpTyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "SambaNovaModel-NEyqD",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-NEyqDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-6g0oy",
+            "id": "YfinanceComponent-KpeWR",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -129,188 +296,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-VPh4g",
+            "id": "Agent-wqbpC",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-6g0oy{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-6g0oyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-VPh4g{œfieldNameœ:œtoolsœ,œidœ:œAgent-VPh4gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__YfinanceComponent-KpeWR{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-KpeWRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wqbpC{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-6g0oy",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-6g0oyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-VPh4g",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-VPh4gœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-3LGwC",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-VPh4g",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-3LGwC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3LGwCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-VPh4g{œfieldNameœ:œinput_valueœ,œidœ:œAgent-VPh4gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-3LGwC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3LGwCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-VPh4g",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-VPh4gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-VPh4g",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "first_text",
-            "id": "Prompt-35Sox",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Agent-VPh4g{œdataTypeœ:œAgentœ,œidœ:œAgent-VPh4gœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-35Sox{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-35Soxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-VPh4g",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-VPh4gœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-35Sox",
-        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-35Soxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-dJhhP",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "second_text",
-            "id": "Prompt-35Sox",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Agent-dJhhP{œdataTypeœ:œAgentœ,œidœ:œAgent-dJhhPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-35Sox{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-35Soxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-dJhhP",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-dJhhPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-35Sox",
-        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-35Soxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-35Sox",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "second_text",
-            "id": "Prompt-Rrcfy",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-35Sox{œdataTypeœ:œPromptœ,œidœ:œPrompt-35Soxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Prompt-Rrcfy{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-Rrcfyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-35Sox",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-35Soxœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Rrcfy",
-        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-Rrcfyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-3LGwC",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "first_text",
-            "id": "Prompt-Rrcfy",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__ChatInput-3LGwC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3LGwCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Rrcfy{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-Rrcfyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-3LGwC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3LGwCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Rrcfy",
-        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-Rrcfyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-Rrcfy",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "SambaNovaModel-xrxwy",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-Rrcfy{œdataTypeœ:œPromptœ,œidœ:œPrompt-Rrcfyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-xrxwy{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-xrxwyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-Rrcfy",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Rrcfyœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-xrxwy",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-xrxwyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "YfinanceComponent-KpeWR",
+        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-KpeWRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-wqbpC",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-3LGwC",
+          "id": "ChatInput-X83ni",
           "node": {
             "base_classes": [
               "Message"
@@ -605,7 +609,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-3LGwC",
+        "id": "ChatInput-X83ni",
         "measured": {
           "height": 66,
           "width": 192
@@ -619,7 +623,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-mhlb1",
+          "id": "TavilySearchComponent-7Y3yy",
           "node": {
             "base_classes": [
               "Data",
@@ -973,9 +977,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-mhlb1",
+        "id": "TavilySearchComponent-7Y3yy",
         "measured": {
-          "height": 437,
+          "height": 354,
           "width": 320
         },
         "position": {
@@ -989,7 +993,7 @@
         "data": {
           "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
           "display_name": "Yahoo Finance",
-          "id": "YfinanceComponent-6g0oy",
+          "id": "YfinanceComponent-KpeWR",
           "node": {
             "base_classes": [
               "Data",
@@ -1142,11 +1146,11 @@
                 "value": ""
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1154,110 +1158,63 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "name": "YfinanceComponent-fetch_content",
+                    "args": {
+                      "symbol": {
+                        "default": "",
+                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+                        "title": "Symbol",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YfinanceComponent. fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "YfinanceComponent. fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
                     "status": true,
                     "tags": [
-                      "YfinanceComponent-fetch_content"
+                      "fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "name": "YfinanceComponent-fetch_content_text",
+                    "args": {
+                      "symbol": {
+                        "default": "",
+                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+                        "title": "Symbol",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YfinanceComponent. fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "YfinanceComponent. fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "fetch_content_text",
+                    "name": "fetch_content_text",
                     "status": true,
                     "tags": [
-                      "YfinanceComponent-fetch_content_text"
+                      "fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "name": "YfinanceComponent-as_dataframe",
+                    "args": {
+                      "symbol": {
+                        "default": "",
+                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+                        "title": "Symbol",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YfinanceComponent. as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "YfinanceComponent. as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
                     "status": true,
                     "tags": [
-                      "YfinanceComponent-as_dataframe"
+                      "as_dataframe"
                     ]
                   }
                 ]
@@ -1269,9 +1226,9 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-6g0oy",
+        "id": "YfinanceComponent-KpeWR",
         "measured": {
-          "height": 519,
+          "height": 461,
           "width": 320
         },
         "position": {
@@ -1283,7 +1240,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-o90sI",
+          "id": "ChatOutput-XjOH3",
           "node": {
             "base_classes": [
               "Message"
@@ -1578,7 +1535,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-o90sI",
+        "id": "ChatOutput-XjOH3",
         "measured": {
           "height": 66,
           "width": 192
@@ -1592,7 +1549,7 @@
       },
       {
         "data": {
-          "id": "URL-CnHS6",
+          "id": "URL-N9CXl",
           "node": {
             "base_classes": [
               "Data",
@@ -1721,11 +1678,11 @@
                 "value": "\n\n"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1733,110 +1690,72 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-fetch_content",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
                     "status": true,
                     "tags": [
-                      "URL-fetch_content"
+                      "fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-fetch_content_text",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "fetch_content_text",
+                    "name": "fetch_content_text",
                     "status": true,
                     "tags": [
-                      "URL-fetch_content_text"
+                      "fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-as_dataframe",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
                     "status": true,
                     "tags": [
-                      "URL-as_dataframe"
+                      "as_dataframe"
                     ]
                   }
                 ]
@@ -1871,9 +1790,9 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-CnHS6",
+        "id": "URL-N9CXl",
         "measured": {
-          "height": 590,
+          "height": 523,
           "width": 320
         },
         "position": {
@@ -1885,7 +1804,7 @@
       },
       {
         "data": {
-          "id": "note-S7zus",
+          "id": "note-tZG9P",
           "node": {
             "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [SambaNova API key](https://cloud.sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components and **SambaNova** component, add your SambaNova API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Tavily Search** component, add your **Tavily API key**.\n4. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
@@ -1898,7 +1817,7 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-S7zus",
+        "id": "note-tZG9P",
         "measured": {
           "height": 630,
           "width": 479
@@ -1914,7 +1833,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-xrxwy",
+          "id": "SambaNovaModel-NEyqD",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1950,6 +1869,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
+                "hidden": false,
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -1987,7 +1907,7 @@
                 "dynamic": false,
                 "info": "The Sambanova API Key to use for the Sambanova model.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1995,7 +1915,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SAMBANOVA_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -2215,7 +2135,7 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-xrxwy",
+        "id": "SambaNovaModel-NEyqD",
         "measured": {
           "height": 525,
           "width": 320
@@ -2229,7 +2149,7 @@
       },
       {
         "data": {
-          "id": "Agent-dJhhP",
+          "id": "Agent-cGZsD",
           "node": {
             "base_classes": [
               "Message"
@@ -2283,9 +2203,10 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
+                "hidden": null,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
@@ -2409,10 +2330,8 @@
                 "display_name": "Sambanova API Key",
                 "dynamic": false,
                 "info": "The Sambanova API Key to use for the Sambanova model.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
+                "input_types": [],
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2420,7 +2339,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SAMBANOVA_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -2593,6 +2512,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2866,7 +2786,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-dJhhP",
+        "id": "Agent-cGZsD",
         "measured": {
           "height": 624,
           "width": 320
@@ -2875,12 +2795,12 @@
           "x": -114.7705455447527,
           "y": 395.9726937371793
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-VPh4g",
+          "id": "Agent-wqbpC",
           "node": {
             "base_classes": [
               "Message"
@@ -2934,9 +2854,10 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
+                "hidden": null,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
@@ -3060,10 +2981,8 @@
                 "display_name": "Sambanova API Key",
                 "dynamic": false,
                 "info": "The Sambanova API Key to use for the Sambanova model.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
+                "input_types": [],
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3071,7 +2990,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SAMBANOVA_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -3082,7 +3001,7 @@
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "base_url",
                 "placeholder": "",
                 "required": false,
@@ -3244,6 +3163,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -3517,7 +3437,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-VPh4g",
+        "id": "Agent-wqbpC",
         "measured": {
           "height": 624,
           "width": 320
@@ -3531,7 +3451,7 @@
       },
       {
         "data": {
-          "id": "Prompt-35Sox",
+          "id": "Prompt-er8QV",
           "node": {
             "base_classes": [
               "Message"
@@ -3569,6 +3489,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
+                "hidden": false,
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
@@ -3693,7 +3614,7 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-35Sox",
+        "id": "Prompt-er8QV",
         "measured": {
           "height": 433,
           "width": 320
@@ -3707,7 +3628,7 @@
       },
       {
         "data": {
-          "id": "Prompt-Rrcfy",
+          "id": "Prompt-AdpTy",
           "node": {
             "base_classes": [
               "Message"
@@ -3745,6 +3666,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
+                "hidden": false,
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
@@ -3869,7 +3791,7 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-Rrcfy",
+        "id": "Prompt-AdpTy",
         "measured": {
           "height": 433,
           "width": 320
@@ -3883,14 +3805,13 @@
       }
     ],
     "viewport": {
-      "x": 289.9389060027373,
-      "y": 214.7118605705939,
-      "zoom": 0.6329643482266742
+      "x": 402.8529727761044,
+      "y": 359.62391032755147,
+      "zoom": 0.5103514759965421
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
-  "id": "a3040ec9-8742-4990-bc16-7e783f8d56d9",
   "is_component": false,
   "last_tested_version": "1.3.4",
   "name": "Financial Agent",
