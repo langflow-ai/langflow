@@ -18,7 +18,7 @@ import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
-from fastapi import APIRouter, BackgroundTasks, Security
+from fastapi import APIRouter, BackgroundTasks
 from openai import OpenAI
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -29,7 +29,11 @@ from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
-from langflow.services.auth.utils import api_key_header, api_key_query, api_key_security, get_current_user_by_jwt
+from langflow.services.auth.utils import (
+    API_KEY_NAME,
+    api_key_security,
+    get_current_user_by_jwt,
+)
 from langflow.services.database.models import MessageTable
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
@@ -89,7 +93,10 @@ async def authenticate_and_get_openai_key(client_websocket: WebSocket, session: 
     if token:
         current_user = await get_current_user_by_jwt(token, session)
     if current_user is None:
-        current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
+        # Extract API key from query parameters or headers directly
+        query_param = client_websocket.query_params.get(API_KEY_NAME)
+        header_param = client_websocket.headers.get(API_KEY_NAME)
+        current_user = await api_key_security(query_param, header_param)
         if current_user is None:
             await client_websocket.send_json(
                 {
