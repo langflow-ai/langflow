@@ -560,7 +560,7 @@ def create_event_logger(session_id: str):
             state["last_event_type"] = event_type
             state["event_count"] = 0
             if event_type == "response.created":
-                response_id = event.get("response").get("id")
+                response_id = event.get("response", {}).get("id")
                 logger.debug(f"response_id: {response_id}")
             if "error" in event_type:
                 logger.debug(f"Error {event}")
@@ -619,7 +619,7 @@ async def flow_as_tool_websocket(
 
         log_event = create_event_logger(session_id)
 
-        response_q = asyncio.Queue(maxsize=1)
+        response_q: asyncio.Queue = asyncio.Queue()
         await response_q.put(None)
 
         async def openai_send(payload):
@@ -780,7 +780,7 @@ async def flow_as_tool_websocket(
                         use_elevenlabs = False
                     self.response_id = response_id
                     if use_elevenlabs:
-                        self.text_delta_queue = asyncio.Queue()
+                        self.text_delta_queue: asyncio.Queue = asyncio.Queue()
                         self.text_delta_task = asyncio.create_task(process_text_deltas(self))
 
             responses = {}
@@ -925,7 +925,7 @@ async def flow_as_tool_websocket(
                         elif event_type == "response.text.done":
                             if voice_config.use_elevenlabs:
                                 response_id = event["response_id"]
-                                rsp: Response = responses[response_id]
+                                rsp = responses[response_id]
                                 await rsp.text_delta_queue.put(None)
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
                                     await rsp.text_delta_task
