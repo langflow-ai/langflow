@@ -469,8 +469,7 @@ function GenericNode({
 
   // Compute node color based on status
   const nodeStatusColor = useMemo(() => {
-    if (hasBreakingChange) return "border-destructive";
-    if (isOutdated) return "border-warning";
+    if (hasBreakingChange) return "border-warning";
     return "";
   }, [hasBreakingChange, isOutdated]);
 
@@ -486,7 +485,7 @@ function GenericNode({
         className={cn(
           nodeStatusColor,
           showNode ? "w-80" : `w-48`,
-          "generic-node-div group/node relative rounded-xl shadow-sm hover:shadow-md",
+          "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >

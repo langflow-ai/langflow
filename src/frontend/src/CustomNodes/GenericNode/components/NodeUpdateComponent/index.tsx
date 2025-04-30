@@ -19,44 +19,37 @@ export default function NodeUpdateComponent({
   return (
     <div
       className={cn(
-        "flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] p-2 px-4",
-        hasBreakingChange
-          ? "bg-destructive text-destructive-foreground"
-          : "bg-warning text-warning-foreground",
+        "flex w-full items-center gap-3 rounded-t-[0.69rem] border-b bg-muted p-2 px-4 py-2",
       )}
     >
-      <ForwardedIconComponent
-        name="AlertTriangle"
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="icon-size shrink-0"
+      <div
+        className={cn(
+          "h-2.5 w-2.5 rounded-full",
+          hasBreakingChange ? "bg-warning" : "bg-status-green",
+        )}
       />
-      <span className="flex-1 truncate text-sm font-medium">
-        {showNode && (hasBreakingChange ? "Breaking Change" : "Update Ready")}
-      </span>
+      <div className="mb-px flex-1 truncate text-mmd font-medium">
+        {showNode && (hasBreakingChange ? "Update available" : "Update ready")}
+      </div>
 
       <Button
-        variant={hasBreakingChange ? "destructive" : "warning"}
-        size="iconMd"
-        className="shrink-0 px-2.5 text-xs"
-        onClick={handleUpdateCode}
-        loading={loadingUpdate}
-        data-testid="update-button"
-      >
-        Update
-      </Button>
-      <Button
         variant="ghost"
-        size="iconSm"
-        className="ml-2 shrink-0 px-2.5 text-xs"
+        size="icon"
+        className="shrink-0 !text-mmd"
         onClick={() => setDismissAll(true)}
         aria-label="Dismiss warning bar"
         data-testid="dismiss-warning-bar"
       >
-        <ForwardedIconComponent
-          name="X"
-          strokeWidth={ICON_STROKE_WIDTH}
-          className="icon-size"
-        />
+        Dismiss
+      </Button>
+      <Button
+        size="sm"
+        className="!h-8 shrink-0 !text-mmd"
+        onClick={handleUpdateCode}
+        loading={loadingUpdate}
+        data-testid="update-button"
+      >
+        {hasBreakingChange ? "Review" : "Update"}
       </Button>
     </div>
   );
