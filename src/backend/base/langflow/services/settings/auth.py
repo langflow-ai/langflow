@@ -14,6 +14,12 @@ from langflow.services.settings.utils import read_secret_from_file, write_secret
 class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
+    # This must come before `SECRET_KEY` as Pydantic field validation is performed in the order fields are defined.
+    SECRET_KEY_DIR: str = Field(
+        default="",
+        description="Directory for local secret key file. If not provided, CONFIG_DIR will be used.",
+        frozen=False,
+    )
     SECRET_KEY: SecretStr = Field(
         default=SecretStr(""),
         description="Secret key for JWT. If not provided, a random one will be generated.",
@@ -81,12 +87,16 @@ class AuthSettings(BaseSettings):
     @classmethod
     def get_secret_key(cls, value, info):
         config_dir = info.data.get("CONFIG_DIR")
+        secret_key_dir = info.data.get("SECRET_KEY_DIR")
 
-        if not config_dir:
-            logger.debug("No CONFIG_DIR provided, not saving secret key")
+        if not config_dir and not secret_key_dir:
+            logger.debug("No CONFIG_DIR or SECRET_KEY_DIR provided, not saving secret key")
             return value or secrets.token_urlsafe(32)
 
-        secret_key_path = Path(config_dir) / "secret_key"
+        if secret_key_dir:
+            secret_key_path = Path(secret_key_dir).expanduser() / "secret_key"
+        else:
+            secret_key_path = Path(config_dir) / "secret_key"
 
         if value:
             logger.debug("Secret key provided")
