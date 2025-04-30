@@ -62,7 +62,7 @@ dependencies = [
     "kubernetes==31.0.0",
     "json_repair==0.30.3",
     "langwatch==0.1.16",
-    "langsmith==0.1.147",
+    "langsmith>=0.1.147,<1.0.0",
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]~=2.2.12",
