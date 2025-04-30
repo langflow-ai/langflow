@@ -211,18 +211,14 @@ async def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
-        # agent_message.duration = _calculate_duration(start_time)
-        agent_message.content_blocks[0].contents[-1].duration = _calculate_duration(start_time)
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         agent_message.text += data_chunk.content
         agent_message.properties.state = "partial"
-        # agent_message.duration = _calculate_duration(start_time)
-        agent_message.content_blocks[0].contents[-1].duration = _calculate_duration(start_time)
-        agent_message.content_blocks[0].contents[-1].header = {"title": "Streaming", "icon": "MessageSquare"}
         agent_message = await send_message_method(message=agent_message)
-        # start_time = perf_counter()
+        if not agent_message.text:
+            start_time = perf_counter()
     return agent_message, start_time
 
 
