@@ -4,7 +4,7 @@ from time import perf_counter
 from typing import Any, Protocol
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessageChunk, BaseMessage
 from typing_extensions import TypedDict
 
 from langflow.schema.content_block import ContentBlock
@@ -213,6 +213,11 @@ async def handle_on_chain_stream(
         agent_message.properties.state = "complete"
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
+    elif isinstance(data_chunk, AIMessageChunk):
+        agent_message.text += data_chunk.content
+        agent_message.properties.state = "complete"
+        agent_message = await send_message_method(message=agent_message)
+        start_time = perf_counter()
     return agent_message, start_time
 
 
@@ -244,6 +249,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_start": handle_on_chain_start,
     "on_chain_end": handle_on_chain_end,
     "on_chain_stream": handle_on_chain_stream,
+    "on_chat_model_stream": handle_on_chain_stream,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {

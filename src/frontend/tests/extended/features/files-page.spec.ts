@@ -13,7 +13,7 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     const firstRunLangflow = await page
-      .getByTestId("empty-folder-description")
+      .getByTestId("empty-project-description")
       .count();
 
     if (firstRunLangflow > 0) {
@@ -58,7 +58,7 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     const firstRunLangflow = await page
-      .getByTestId("empty-folder-description")
+      .getByTestId("empty-project-description")
       .count();
 
     if (firstRunLangflow > 0) {
@@ -101,7 +101,7 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     const firstRunLangflow = await page
-      .getByTestId("empty-folder-description")
+      .getByTestId("empty-project-description")
       .count();
 
     if (firstRunLangflow > 0) {
@@ -169,7 +169,7 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     const firstRunLangflow = await page
-      .getByTestId("empty-folder-description")
+      .getByTestId("empty-project-description")
       .count();
 
     if (firstRunLangflow > 0) {
@@ -241,7 +241,7 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     const firstRunLangflow = await page
-      .getByTestId("empty-folder-description")
+      .getByTestId("empty-project-description")
       .count();
 
     if (firstRunLangflow > 0) {
