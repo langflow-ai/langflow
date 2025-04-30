@@ -29,6 +29,13 @@ from langflow.io import (
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.dotdict import dotdict
+from langflow.services.settings.base import Settings
+
+# Create settings instance or use a pre-configured one
+settings = Settings()
+
+# Access settings properties
+user_agent = settings.user_agent
 
 
 class APIRequestComponent(Component):
@@ -118,15 +125,7 @@ class APIRequestComponent(Component):
                     "description": "Header value",
                 },
             ],
-            value=[
-                {
-                    "key": "User-Agent",
-                    "value": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/115.0.0.0 Safari/537.36"
-                    ),
-                }
-            ],
+            value=[{"key": "User-Agent", "value": user_agent}],
             advanced=True,
             input_types=["Data"],
         ),
