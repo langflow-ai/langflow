@@ -12,7 +12,13 @@ from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Ou
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.services.settings.base import Settings
 
+# Create settings instance or use a pre-configured one
+settings = Settings()
+
+# Access settings properties
+user_agent = settings.user_agent
 
 class URLComponent(Component):
     """A component that loads and parses child links from a root URL recursively."""
@@ -104,10 +110,7 @@ class URLComponent(Component):
             value=[
                 {
                     "key": "User-Agent",
-                    "value": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/115.0.0.0 Safari/537.36"
-                    ),
+                    "value": user_agent,
                 }
             ],
             advanced=True,
