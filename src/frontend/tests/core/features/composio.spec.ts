@@ -45,8 +45,6 @@ test(
 
     await page.getByTestId("button_open_list_selection").click();
 
-    await page.getByTestId("search_bar_input").fill("fetch emails");
-
     await page.getByTestId(`list_item_fetch_emails`).click();
 
     await page.getByTestId("int_int_max_results").fill("10");
