@@ -1012,15 +1012,13 @@ async def flow_as_tool_websocket(
                 vad_task = asyncio.create_task(process_vad_audio())
 
             try:
-                # TaskGroup handles cancellation & error propagation for you
-                async with asyncio.TaskGroup() as tg:
-                    tg.create_task(forward_to_openai())
-                    tg.create_task(forward_to_client())
-                # if both finish normally, TaskGroup exits cleanly here
-            except* Exception as excs:  # noqa: BLE001
+                # Create tasks and gather them for concurrent execution
+                task1 = asyncio.create_task(forward_to_openai())
+                task2 = asyncio.create_task(forward_to_client())
+                await asyncio.gather(task1, task2)
+            except Exception as exc:  # noqa: BLE001
                 # handle any exceptions from any task
-                for exc in excs.exceptions:
-                    logger.error("WS loop failed:", exc_info=exc)
+                logger.error("WS loop failed:", exc_info=exc)
                 logger.error(traceback.format_exc())
             finally:
                 # shared cleanup for writers & sockets
@@ -1217,15 +1215,13 @@ async def flow_tts_websocket(
                     logger.error(f"Error in WebSocket communication: {e}")
 
             try:
-                # TaskGroup handles cancellation & error propagation for you
-                async with asyncio.TaskGroup() as tg:
-                    tg.create_task(forward_to_openai())
-                    tg.create_task(forward_to_client())
-                # if both finish normally, TaskGroup exits cleanly here
-            except* Exception as excs:  # noqa: BLE001
+                # Create tasks and gather them for concurrent execution
+                task1 = asyncio.create_task(forward_to_openai())
+                task2 = asyncio.create_task(forward_to_client())
+                await asyncio.gather(task1, task2)
+            except Exception as exc:  # noqa: BLE001
                 # handle any exceptions from any task
-                for exc in excs.exceptions:
-                    logger.error("WS loop failed:", exc_info=exc)
+                logger.error("WS loop failed:", exc_info=exc)
             finally:
                 # shared cleanup for writers & sockets
                 await close()
