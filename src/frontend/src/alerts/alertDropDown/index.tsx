@@ -53,7 +53,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
             Notifications
             <div className="flex gap-3 pr-3">
               <button
-                className="text-foreground hover:text-status-red"
+                className="text-muted-foreground hover:text-status-red"
                 onClick={() => {
                   setOpen(false);
                   setTimeout(clearNotificationList, 100);

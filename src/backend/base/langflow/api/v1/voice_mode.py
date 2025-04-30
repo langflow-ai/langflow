@@ -86,12 +86,6 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, safe_s
     Returns a tuple: (current_user, openai_key). If authentication fails, sends an error
     message to the client and returns (None, None).
     """
-    # token = client_websocket.cookies.get("access_token_lf")
-    # current_user = None
-    # if token:
-    #    current_user = await get_current_user_by_jwt(token, session)
-    # if current_user is None:
-    #    current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
     if user is None:
         await safe_send_json(
             {
@@ -379,7 +373,7 @@ async def handle_function_call(
     try:
         # trigger response that tool was called
         if voice_config.progress_enabled:
-            openai_send(
+            await openai_send(
                 {
                     "type": "conversation.item.create",
                     "item": {
@@ -398,7 +392,7 @@ async def handle_function_call(
                     },
                 }
             )
-            openai_send(common_response_create(session_id))
+            await openai_send(common_response_create(session_id))
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
@@ -414,7 +408,7 @@ async def handle_function_call(
             if not line:
                 continue
             event_data = json.loads(line)
-            await client_safe_send_json({"type": "flow.build.progress", "data": event_data})
+            client_safe_send_json({"type": "flow.build.progress", "data": event_data})
             if event_data.get("event") == "end_vertex":
                 text_part = (
                     event_data.get("data", {})
@@ -625,15 +619,25 @@ async def flow_as_tool_websocket(
 
         log_event = create_event_logger(session_id)
 
-        def openai_send(payload):
+        response_q = asyncio.Queue(maxsize=1)
+        await response_q.put(None)
+
+        async def openai_send(payload):
             log_event(payload, DIRECTION_TO_OPENAI)
             logger.trace(f"Sending text {DIRECTION_TO_OPENAI}: {payload['type']}")
+            if payload.get("type") == "response.create":
+                await response_q.get()
             openai_send_q.put_nowait(json.dumps(payload))
             logger.trace("JSON sent.")
 
         def client_send(payload):
             log_event(payload, DIRECTION_TO_CLIENT)
             logger.trace(f"Sending JSON {DIRECTION_TO_CLIENT}: {payload.get('type', 'None')}")
+            if payload.get("type") == "response.done":
+                try:
+                    response_q.put_nowait(None)
+                except asyncio.QueueFull:
+                    logger.warning("Queue is full, skipping put_nowait")
             client_send_q.put_nowait(json.dumps(payload))
             logger.trace("JSON sent.")
 
@@ -686,7 +690,7 @@ async def flow_as_tool_websocket(
             client_writer_task = asyncio.create_task(client_writer())
 
             session_update = {"type": "session.update", "session": openai_realtime_session}
-            openai_send(session_update)
+            await openai_send(session_update)
 
             # Setup for VAD processing.
             vad_queue: asyncio.Queue = asyncio.Queue()
@@ -712,7 +716,7 @@ async def flow_as_tool_websocket(
                                 has_speech = True
                                 logger.trace("!", end="")
                                 if bot_speaking_flag[0]:
-                                    openai_send({"type": "response.cancel"})
+                                    await openai_send({"type": "response.cancel"})
                                     bot_speaking_flag[0] = False
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"[ERROR] VAD processing failed (ValueError): {e}")
@@ -770,11 +774,18 @@ async def flow_as_tool_websocket(
                 )
                 return new_session
 
-            # --- Spawn a text delta queue and task for TTS ---
-            text_delta_queue: asyncio.Queue = asyncio.Queue()
-            text_delta_task: asyncio.Task | None = None  # Will hold our background task.
+            class Response:
+                def __init__(self, response_id: str, use_elevenlabs: bool | None = None):
+                    if use_elevenlabs is None:
+                        use_elevenlabs = False
+                    self.response_id = response_id
+                    if use_elevenlabs:
+                        self.text_delta_queue = asyncio.Queue()
+                        self.text_delta_task = asyncio.create_task(process_text_deltas(self))
 
-            async def process_text_deltas(async_q: asyncio.Queue):
+            responses = {}
+
+            async def process_text_deltas(rsp: Response):
                 """Transfer text deltas from the async queue to a synchronous queue.
 
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
@@ -783,7 +794,7 @@ async def flow_as_tool_websocket(
 
                 async def transfer_text_deltas():
                     while True:
-                        item = await async_q.get()
+                        item = await rsp.text_delta_queue.get()
                         sync_q.put(item)
                         if item is None:
                             break
@@ -818,10 +829,14 @@ async def flow_as_tool_websocket(
                             for chunk in audio_stream:
                                 base64_audio = base64.b64encode(chunk).decode("utf-8")
                                 # Schedule sending the audio chunk in the main event loop.
-                                event = {"type": "response.audio.delta", "delta": base64_audio}
+                                event = {
+                                    "type": "response.audio.delta",
+                                    "delta": base64_audio,
+                                    "response_id": rsp.response_id,
+                                }
                                 client_send_event_from_thread(event, main_loop)
 
-                            event = {"type": "response.done"}
+                            event = {"type": "response.done", "response": {"id": rsp.response_id}}
                             client_send_event_from_thread(event, main_loop)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"Error in TTS processing (ValueError): {e}")
@@ -846,18 +861,18 @@ async def flow_as_tool_websocket(
                             # Ensure we're adding to an integer
                             num_audio_samples += len(base64_data)
                             event = {"type": "input_audio_buffer.append", "audio": base64_data}
-                            openai_send(event)
+                            await openai_send(event)
                             if voice_config.barge_in_enabled:
                                 await vad_queue.put(base64_data)
                         elif msg.get("type") == "response.create":
-                            openai_send(common_response_create(session_id, msg))
+                            await openai_send(common_response_create(session_id, msg))
                         elif msg.get("type") == "input_audio_buffer.commit":
                             if num_audio_samples > AUDIO_SAMPLE_THRESHOLD:
-                                openai_send(msg)
+                                await openai_send(msg)
                                 num_audio_samples = 0
                         elif msg.get("type") == "langflow.voice_mode.config":
                             logger.info(f"langflow.voice_mode.config {msg}")
-                            voice_config.progress_enabled = msg.get("enabled", True)
+                            voice_config.progress_enabled = msg.get("progress_enabled", True)
                         elif msg.get("type") == "langflow.elevenlabs.config":
                             logger.info(f"langflow.elevenlabs.config {msg}")
                             voice_config.use_elevenlabs = msg["enabled"]
@@ -867,18 +882,18 @@ async def flow_as_tool_websocket(
                             modalities = ["text"] if voice_config.use_elevenlabs else ["audio", "text"]
                             openai_realtime_session["modalities"] = modalities
                             session_update = {"type": "session.update", "session": openai_realtime_session}
-                            openai_send(session_update)
+                            await openai_send(session_update)
                         elif msg.get("type") == "session.update":
                             openai_realtime_session = update_global_session(msg["session"])
                             session_update = {"type": "session.update", "session": openai_realtime_session}
-                            openai_send(session_update)
+                            await openai_send(session_update)
                         else:
-                            openai_send(msg)
+                            await openai_send(msg)
                 except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                     pass
 
             async def forward_to_client() -> None:
-                nonlocal bot_speaking_flag, text_delta_queue, text_delta_task
+                nonlocal bot_speaking_flag, responses
                 function_call = None
                 function_call_args = ""
                 conversation_id = str(uuid4())
@@ -894,21 +909,27 @@ async def flow_as_tool_websocket(
                         do_forward = True
                         do_forward = do_forward and not (event_type == "response.done" and voice_config.use_elevenlabs)
                         do_forward = do_forward and event_type.find("flow.") != 0
+
+                        response_id = None
                         if do_forward:
                             client_send(event)
-                        if event_type == "response.text.delta":
+                        if event_type == "response.created":
+                            response_id = event["response"]["id"]
+                            responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
+                        elif event_type == "response.text.delta":
                             if voice_config.use_elevenlabs:
+                                response_id = event["response_id"]
                                 delta = event.get("delta", "")
-                                await text_delta_queue.put(delta)
-                                if text_delta_task is None:
-                                    # if text_delta_task is None or text_delta_task.done():
-                                    text_delta_task = asyncio.create_task(process_text_deltas(text_delta_queue))
+                                rsp: Response = responses[response_id]
+                                await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
                             if voice_config.use_elevenlabs:
-                                await text_delta_queue.put(None)
-                                if text_delta_task and not text_delta_task.done():
-                                    await text_delta_task
-                                text_delta_task = None
+                                response_id = event["response_id"]
+                                rsp: Response = responses[response_id]
+                                await rsp.text_delta_queue.put(None)
+                                if rsp.text_delta_task and not rsp.text_delta_task.done():
+                                    await rsp.text_delta_task
+                                responses.pop(response_id)
 
                                 try:
                                     message_text = event.get("text", "")
@@ -1000,6 +1021,7 @@ async def flow_as_tool_websocket(
                 # handle any exceptions from any task
                 for exc in excs.exceptions:
                     logger.error("WS loop failed:", exc_info=exc)
+                logger.error(traceback.format_exc())
             finally:
                 # shared cleanup for writers & sockets
                 await close()
