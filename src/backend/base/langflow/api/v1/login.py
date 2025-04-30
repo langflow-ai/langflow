@@ -67,7 +67,7 @@ async def login_to_get_access_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         await get_variable_service().initialize_user_variables(user.id, db)
-        # Create default folder for user if it doesn't exist
+        # Create default project for user if it doesn't exist
         _ = await get_or_create_default_folder(db, user.id)
         return tokens
     raise HTTPException(
