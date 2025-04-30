@@ -26,9 +26,9 @@
         "id": "xy-edge__Agent-qYZ9W{œdataTypeœ:œAgentœ,œidœ:œAgent-qYZ9Wœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-aHj8n{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-aHj8nœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-qYZ9W",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-qYZ9Wœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-qYZ9Wœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-aHj8n",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-aHj8nœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-aHj8nœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__CalculatorComponent-15FSE{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-15FSEœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qYZ9W{œfieldNameœ:œtoolsœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-15FSE",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-15FSEœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-15FSEœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-qYZ9W",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qYZ9Wœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -80,9 +80,9 @@
         "id": "xy-edge__URL-o7GEq{œdataTypeœ:œURLœ,œidœ:œURL-o7GEqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qYZ9W{œfieldNameœ:œtoolsœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-o7GEq",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-o7GEqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-o7GEqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-qYZ9W",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qYZ9Wœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -105,9 +105,9 @@
         },
         "id": "xy-edge__ChatInput-2YUmA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2YUmAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-qYZ9W{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-2YUmA",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2YUmAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-2YUmAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-qYZ9W",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-qYZ9Wœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1238,7 +1238,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",

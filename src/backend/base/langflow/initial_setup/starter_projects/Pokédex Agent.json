@@ -24,9 +24,9 @@
         "id": "xy-edge__APIRequest-Yr0ij{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-Yr0ijœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-iU8sJ{œfieldNameœ:œtoolsœ,œidœ:œAgent-iU8sJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "APIRequest-Yr0ij",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-Yr0ijœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-Yr0ijœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-iU8sJ",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-iU8sJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-iU8sJœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -51,9 +51,9 @@
         "id": "xy-edge__ChatInput-ZNO2E{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ZNO2Eœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-iU8sJ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-iU8sJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-ZNO2E",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ZNO2Eœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ZNO2Eœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-iU8sJ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-iU8sJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-iU8sJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -80,9 +80,9 @@
         "id": "xy-edge__Agent-iU8sJ{œdataTypeœ:œAgentœ,œidœ:œAgent-iU8sJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-79PxR{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-79PxRœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-iU8sJ",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-iU8sJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-iU8sJœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-79PxR",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-79PxRœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-79PxRœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1313,7 +1313,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
