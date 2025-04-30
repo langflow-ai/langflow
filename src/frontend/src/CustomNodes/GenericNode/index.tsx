@@ -30,6 +30,7 @@ import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
 import NodeStatus from "./components/NodeStatus";
+import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
@@ -491,49 +492,13 @@ function GenericNode({
       >
         {memoizedNodeToolbarComponent}
         {(isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll && (
-          <div
-            className={cn(
-              "flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] p-2 px-4",
-              hasBreakingChange
-                ? "bg-destructive text-destructive-foreground"
-                : "bg-warning text-warning-foreground",
-            )}
-          >
-            <ForwardedIconComponent
-              name="AlertTriangle"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="icon-size shrink-0"
-            />
-            <span className="flex-1 truncate text-sm font-medium">
-              {showNode &&
-                (hasBreakingChange ? "Breaking Change" : "Update Ready")}
-            </span>
-
-            <Button
-              variant={hasBreakingChange ? "destructive" : "warning"}
-              size="iconMd"
-              className="shrink-0 px-2.5 text-xs"
-              onClick={handleUpdateCode}
-              loading={loadingUpdate}
-              data-testid="update-button"
-            >
-              Update
-            </Button>
-            <Button
-              variant="ghost"
-              size="iconSm"
-              className="ml-2 shrink-0 px-2.5 text-xs"
-              onClick={() => setDismissAll(true)}
-              aria-label="Dismiss warning bar"
-              data-testid="dismiss-warning-bar"
-            >
-              <ForwardedIconComponent
-                name="X"
-                strokeWidth={ICON_STROKE_WIDTH}
-                className="icon-size"
-              />
-            </Button>
-          </div>
+          <NodeUpdateComponent
+            hasBreakingChange={hasBreakingChange}
+            showNode={showNode}
+            handleUpdateCode={handleUpdateCode}
+            loadingUpdate={loadingUpdate}
+            setDismissAll={setDismissAll}
+          />
         )}
         <div
           data-testid={`${data.id}-main-node`}
