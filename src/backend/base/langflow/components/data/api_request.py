@@ -285,7 +285,6 @@ class APIRequestComponent(Component):
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-
         if field_name == "use_curl" and field_value:
             # if we remove field value from validation, this gets validated every time
             build_config = self._update_curl_mode(build_config, use_curl=field_value)
