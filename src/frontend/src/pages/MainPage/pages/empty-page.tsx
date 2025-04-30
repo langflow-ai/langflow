@@ -164,7 +164,7 @@ export const EmptyPageCommunity = ({
 
               <Button
                 variant="default"
-                className="z-10 m-auto mt-3 h-10 w-full max-w-[155px] rounded-lg font-bold transition-all duration-300"
+                className="z-10 m-auto mt-3 h-10 w-full max-w-[10rem] rounded-lg font-bold transition-all duration-300"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
@@ -172,7 +172,7 @@ export const EmptyPageCommunity = ({
                 <ForwardedIconComponent
                   name="Plus"
                   aria-hidden="true"
-                  className="relative left-1 h-4 w-4"
+                  className="h-4 w-4"
                 />
                 <span>{EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT}</span>
               </Button>
