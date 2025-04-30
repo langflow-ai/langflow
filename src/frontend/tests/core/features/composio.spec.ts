@@ -5,7 +5,7 @@ import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 
 test(
   "user should be able to interact with composio component",
-  { tag: ["@release", "@workspace", "@api"] },
+  { tag: ["@release", "@workspace", "@api", "@components"] },
   async ({ page, context }) => {
     test.skip(
       !process?.env?.COMPOSIO_API_KEY,
