@@ -82,7 +82,7 @@ const HideShowButton = memo(
           <EyeIcon
             hidden={hidden}
             className={cn(
-              "icon-size text-muted-foreground group-hover:text-foreground",
+              "icon-size text-placeholder-foreground group-hover:text-foreground",
               disabled
                 ? isToolMode
                   ? "text-placeholder-foreground"
@@ -133,7 +133,7 @@ const InspectButton = memo(
           name="TextSearchIcon"
           strokeWidth={2}
           className={cn(
-            "icon-size h-4.5 w-4.5 text-muted-foreground hover:text-foreground",
+            "icon-size h-4.5 w-4.5 text-placeholder-foreground hover:text-foreground",
             isToolMode
               ? displayOutputPreview && !unknownOutput
                 ? "text-background hover:text-secondary-hover"
@@ -418,6 +418,7 @@ function NodeOutputField({
         <div className="flex items-center">
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
+              outputs={data.node?.outputs}
               proxy={outputProxy}
               idx={index}
               types={type?.split("|") ?? []}

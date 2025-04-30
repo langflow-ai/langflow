@@ -145,6 +145,7 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  outputs?: any;
 };
 
 export type DisclosureComponentType = {

@@ -20,6 +20,7 @@ export default function OutputComponent({
   name,
   proxy,
   isToolMode = false,
+  outputs,
 }: outputComponentType) {
   const [selectedName, setSelectedName] = useState("Auto-detect");
 
@@ -79,15 +80,19 @@ export default function OutputComponent({
             </span>
           </div>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            setSelectedName(name);
-          }}
-        >
-          <div className="w-full p-1 text-[13px] font-medium hover:bg-muted">
-            <span>{name}</span>
-          </div>
-        </DropdownMenuItem>
+        {outputs &&
+          outputs?.map((item) => (
+            <DropdownMenuItem
+              key={item.name}
+              onClick={() => {
+                setSelectedName(item.display_name);
+              }}
+            >
+              <div className="w-full p-1 text-[13px] font-medium hover:bg-muted">
+                <span>{item.display_name}</span>
+              </div>
+            </DropdownMenuItem>
+          ))}
       </DropdownMenuContent>
     </DropdownMenu>,
     // <span
