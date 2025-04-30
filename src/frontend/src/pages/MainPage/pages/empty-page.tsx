@@ -1,5 +1,6 @@
 import logoDarkPng from "@/assets/logo_dark.png";
 import logoLightPng from "@/assets/logo_light.png";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { Button } from "@/components/ui/button";
 import { DotBackgroundDemo } from "@/components/ui/dot-background";
@@ -24,7 +25,7 @@ const EMPTY_PAGE_DISCORD_DESCRIPTION =
 const EMPTY_PAGE_DRAG_AND_DROP_TEXT =
   "Already have a flow? Drag and drop to upload.";
 const EMPTY_PAGE_FOLDER_DESCRIPTION = "Empty folder";
-const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = <>+&nbsp; Create first flow</>;
+const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = "Create first flow";
 
 const EXTERNAL_LINK_ICON_CLASS =
   "absolute right-6 top-[35px] h-4 w-4 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
@@ -163,11 +164,16 @@ export const EmptyPageCommunity = ({
 
               <Button
                 variant="default"
-                className="z-10 m-auto mt-3 h-10 w-full max-w-[155px] rounded-lg font-bold transition-all duration-300"
+                className="z-10 m-auto mt-3 h-10 w-full max-w-[10rem] rounded-lg font-bold transition-all duration-300"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
               >
+                <ForwardedIconComponent
+                  name="Plus"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
                 <span>{EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT}</span>
               </Button>
             </div>
