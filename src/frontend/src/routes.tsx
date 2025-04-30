@@ -23,9 +23,9 @@ import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
-import CollectionPage from "./pages/MainPage/pages";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
+import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
@@ -86,12 +86,7 @@ const router = createBrowserRouter(
                   <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}
-                  >
-                    <Route
-                      path="folder/:folderId"
-                      element={<HomePage key="flows" type="flows" />}
-                    />
-                  </Route>
+                  />
                   <Route
                     path="components/"
                     element={<HomePage key="components" type="components" />}
@@ -108,6 +103,15 @@ const router = createBrowserRouter(
                     <Route
                       path="folder/:folderId"
                       element={<HomePage key="flows" type="flows" />}
+                    />
+                  </Route>
+                  <Route
+                    path="mcp/"
+                    element={<HomePage key="mcp" type="mcp" />}
+                  >
+                    <Route
+                      path="folder/:folderId"
+                      element={<HomePage key="mcp" type="mcp" />}
                     />
                   </Route>
                 </Route>
