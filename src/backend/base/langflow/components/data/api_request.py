@@ -29,13 +29,11 @@ from langflow.io import (
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.dotdict import dotdict
-from langflow.services.settings.base import Settings
+from langflow.services.deps import get_settings_service
 
-# Create settings instance or use a pre-configured one
-settings = Settings()
-
-# Access settings properties
-user_agent = settings.user_agent
+# Get settings using the service
+settings_service = get_settings_service()
+user_agent = settings_service.settings.user_agent
 
 
 class APIRequestComponent(Component):
@@ -106,11 +104,12 @@ class APIRequestComponent(Component):
             value=[],
             input_types=["Data"],
             advanced=True,
+            real_time_refresh=True,
         ),
         TableInput(
             name="headers",
             display_name="Headers",
-            info="The headers to send with the request as a dictionary.",
+            info="The headers to send with the request",
             table_schema=[
                 {
                     "name": "key",
@@ -128,11 +127,12 @@ class APIRequestComponent(Component):
             value=[{"key": "User-Agent", "value": user_agent}],
             advanced=True,
             input_types=["Data"],
+            real_time_refresh=True,
         ),
         IntInput(
             name="timeout",
             display_name="Timeout",
-            value=5,
+            value=30,
             info="The timeout to use for the request.",
             advanced=True,
         ),
@@ -285,7 +285,9 @@ class APIRequestComponent(Component):
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "use_curl":
+
+        if field_name == "use_curl" and field_value:
+            # if we remove field value from validation, this gets validated every time
             build_config = self._update_curl_mode(build_config, use_curl=field_value)
 
             # Fields that should not be reset
@@ -310,9 +312,11 @@ class APIRequestComponent(Component):
                     reset_value = type_reset_mapping.get(type(input_field), None)
                     build_config[input_field.name]["value"] = reset_value
                     self.log(f"Reset field {input_field.name} to {reset_value}")
+            build_config = self.parse_curl(field_value, build_config)
         elif field_name == "method" and not self.use_curl:
             build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
+            # Not reachable, because we don't have a way to update the curl field, self.use_curl is set after the build_config is created
             build_config = self.parse_curl(field_value, build_config)
         return build_config
 
