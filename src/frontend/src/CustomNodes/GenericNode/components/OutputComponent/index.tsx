@@ -23,7 +23,7 @@ export default function OutputComponent({
   outputs,
 }: outputComponentType) {
   const singleOutput = useMemo(() => {
-    return outputs?.filter((item) => !item.hidden).length === 1;
+    return outputs?.length > 1 ? false : true;
   }, [outputs]);
 
   const [selectedName, setSelectedName] = useState(

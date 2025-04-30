@@ -163,6 +163,7 @@ function NodeOutputField({
   index,
   type,
   outputName,
+  outputs,
   outputProxy,
   lastOutput,
   colorName,
@@ -418,7 +419,7 @@ function NodeOutputField({
         <div className="flex items-center">
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
-              outputs={data.node?.outputs}
+              outputs={outputs}
               proxy={outputProxy}
               idx={index}
               types={type?.split("|") ?? []}

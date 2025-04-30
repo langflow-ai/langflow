@@ -218,15 +218,12 @@ function GenericNode({
 
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
-      return outputs?.map((output, idx) => (
+      return (
         <MemoizedOutputParameter
-          key={`${key}-${output.name}-${idx}`}
-          output={output}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={idx === outputs.length - 1}
+          output={outputs[0]}
+          outputs={outputs}
+          idx={0}
+          lastOutput={0 === outputs.length - 1}
           data={data}
           types={types}
           selected={selected}
@@ -235,7 +232,7 @@ function GenericNode({
           showHiddenOutputs={showHiddenOutputs}
           hidden={key === "hidden"}
         />
-      ));
+      );
     },
     [data, types, selected, showNode, isToolMode, showHiddenOutputs],
   );
@@ -546,15 +543,13 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {!showHiddenOutputs &&
-                shownOutputs &&
-                renderOutputs(shownOutputs, "shown")}
+              {shownOutputs && renderOutputs(shownOutputs, "shown")}
 
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
                 <div className="block">
-                  {renderOutputs(data.node!.outputs, "hidden")}
+                  {renderOutputs(hiddenOutputs, "hidden")}
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (

@@ -15,6 +15,7 @@ export const OutputParameter = ({
   showHiddenOutputs,
   isToolMode,
   hidden,
+  outputs,
 }) => {
   const id = useMemo(
     () => ({
@@ -46,6 +47,7 @@ export const OutputParameter = ({
       data={data}
       colors={colors}
       outputProxy={output.proxy}
+      outputs={outputs}
       title={output.display_name ?? output.name}
       tooltipTitle={output.selected ?? output.types[0]}
       id={id}

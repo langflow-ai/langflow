@@ -110,6 +110,7 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  outputs?: any;
 };
 
 export type NodeInputFieldComponentType = {
