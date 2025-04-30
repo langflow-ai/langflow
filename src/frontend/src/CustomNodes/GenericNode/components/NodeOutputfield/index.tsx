@@ -73,27 +73,23 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="group cursor-pointer"
+      className="cursor-default"
     >
-      <ShadTooltip
-        content={disabled ? null : hidden ? "Show output" : "Hide output"}
-      >
-        <div>
-          <EyeIcon
-            hidden={hidden}
-            className={cn(
-              "icon-size text-placeholder-foreground group-hover:text-foreground",
-              disabled
-                ? isToolMode
-                  ? "text-placeholder-foreground"
-                  : ""
-                : isToolMode
-                  ? "text-background hover:text-secondary-hover"
-                  : "",
-            )}
-          />
-        </div>
-      </ShadTooltip>
+      <div>
+        <EyeIcon
+          hidden={hidden}
+          className={cn(
+            "icon-size text-placeholder-foreground",
+            disabled
+              ? isToolMode
+                ? "text-placeholder-foreground"
+                : ""
+              : isToolMode
+                ? "text-background"
+                : "",
+          )}
+        />
+      </div>
     </Button>
   ),
 );
@@ -403,7 +399,7 @@ function NodeOutputField({
           )}
           <HideShowButton
             disabled={disabledOutput}
-            onClick={() => handleUpdateOutputHide()}
+            onClick={() => {}}
             hidden={!!hidden}
             isToolMode={isToolMode}
             title={title}

@@ -218,12 +218,21 @@ function GenericNode({
 
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
+      if (outputs?.length === 0) return null;
+
       return (
         <MemoizedOutputParameter
-          output={outputs[0]}
+          output={outputs?.[0]}
           outputs={outputs}
-          idx={0}
-          lastOutput={0 === outputs.length - 1}
+          idx={
+            data.node!.outputs?.findIndex(
+              (out) => out.name === outputs[0].name,
+            ) ?? 0
+          }
+          lastOutput={
+            (!showHiddenOutputs && key === "shown") ||
+            (showHiddenOutputs && key === "hidden")
+          }
           data={data}
           types={types}
           selected={selected}
