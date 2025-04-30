@@ -474,6 +474,7 @@ const config = {
             acc[`.truncate-${className}`] = {
               position: "relative",
               overflow: "hidden",
+              pointerEvents: "none",
               "&::after": {
                 content: '""',
                 position: "absolute",
@@ -487,6 +488,7 @@ const config = {
               acc[`.truncate-${className}`] = {
                 position: "relative",
                 overflow: "hidden",
+                pointerEvents: "none",
                 "&::after": {
                   content: '""',
                   position: "absolute",
