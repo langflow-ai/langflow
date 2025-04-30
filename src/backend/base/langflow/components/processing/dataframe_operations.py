@@ -3,7 +3,7 @@ import pandas as pd
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
-from langflow.schema import Data, DataFrame
+from langflow.schema import DataFrame
 
 
 class DataFrameOperationsComponent(Component):
