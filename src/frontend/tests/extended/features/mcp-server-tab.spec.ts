@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user should be able to manage MCP server actions and configuration",
-  { tag: ["@release", "@workspace", "@components"] },
+  { tag: ["@release", "@workspace", "@components", "@development"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
