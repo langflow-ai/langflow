@@ -12,13 +12,11 @@ from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Ou
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.services.settings.base import Settings
+from langflow.services.deps import get_settings_service
 
-# Create settings instance or use a pre-configured one
-settings = Settings()
-
-# Access settings properties
-user_agent = settings.user_agent
+# Get settings using the service
+settings_service = get_settings_service()
+user_agent = settings_service.settings.user_agent
 
 
 class URLComponent(Component):
@@ -86,14 +84,14 @@ class URLComponent(Component):
             name="timeout",
             display_name="Timeout",
             info="Timeout for the request in seconds.",
-            value=600,
+            value=30,
             required=False,
             advanced=True,
         ),
         TableInput(
             name="headers",
             display_name="Headers",
-            info="The headers to send with the request as a dictionary.",
+            info="The headers to send with the request",
             table_schema=[
                 {
                     "name": "key",
