@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
@@ -22,7 +22,13 @@ export default function OutputComponent({
   isToolMode = false,
   outputs,
 }: outputComponentType) {
-  const [selectedName, setSelectedName] = useState("Auto-detect");
+  const singleOutput = useMemo(() => {
+    return outputs?.filter((item) => !item.hidden).length === 1;
+  }, [outputs]);
+
+  const [selectedName, setSelectedName] = useState(
+    singleOutput ? outputs?.[0].display_name : "Auto-detect",
+  );
 
   const displayProxy = (children) => {
     if (proxy) {
@@ -38,10 +44,13 @@ export default function OutputComponent({
 
   return displayProxy(
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger asChild disabled={singleOutput}>
         <Button
           unstyled
-          className="item-center group flex text-[13px] font-medium"
+          className={cn(
+            "item-center group flex text-[13px] font-medium",
+            singleOutput && "mr-2",
+          )}
           style={
             selectedName === "Auto-detect"
               ? {
@@ -54,11 +63,13 @@ export default function OutputComponent({
           }
         >
           {selectedName}
-          <ForwardedIconComponent
-            name="ChevronDown"
-            className="icon-size h-4.5 w-4.5 mx-1 font-medium text-muted-foreground group-hover:text-foreground"
-            strokeWidth={2}
-          />
+          {!singleOutput && (
+            <ForwardedIconComponent
+              name="ChevronDown"
+              className="icon-size h-4.5 w-4.5 mx-1 font-medium text-muted-foreground group-hover:text-foreground"
+              strokeWidth={2}
+            />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent forceMount className="min-w-[200px]">
@@ -81,7 +92,7 @@ export default function OutputComponent({
           </div>
         </DropdownMenuItem>
         {outputs &&
-          outputs?.map((item) => (
+          outputs.map((item) => (
             <DropdownMenuItem
               key={item.name}
               onClick={() => {
