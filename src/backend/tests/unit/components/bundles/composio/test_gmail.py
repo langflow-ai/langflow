@@ -113,8 +113,8 @@ class TestGmailComponent(ComponentTestBaseWithoutClient):
         # Patch the _build_wrapper method
         with patch.object(component, "_build_wrapper", return_value=mock_toolset):
             result = component.execute_action()
-            # Based on the component's actual behavior, it returns the entire data dict
-            assert result == {"messages": "mocked response"}
+            # Based on the component's actual behavior, it returns the result_field directly
+            assert result == "mocked response"
 
     def test_execute_action_get_profile(self, component_class, default_kwargs, monkeypatch):
         # Mock Action enum
