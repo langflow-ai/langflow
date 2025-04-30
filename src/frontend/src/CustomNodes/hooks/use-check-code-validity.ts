@@ -75,7 +75,7 @@ const useCheckCodeValidity = (
       userTemplate,
     );
     if (hasBreakingChange) {
-      setIsOutdated(false);
+      setIsOutdated(true);
       setHasBreakingChange(true);
     } else {
       setIsOutdated(codeIsOutdated(currentCode, thisNodesCode, data.type));
@@ -121,7 +121,6 @@ const outputsComparisonResult = (
       orig.display_name === user.display_name &&
       JSON.stringify(orig.types) === JSON.stringify(user.types) &&
       orig.method === user.method &&
-      orig.hidden === user.hidden &&
       orig.allows_loop === user.allows_loop;
   });
 
