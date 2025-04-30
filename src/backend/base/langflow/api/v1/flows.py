@@ -191,7 +191,7 @@ async def read_flows(
         get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.
         **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**
 
-        folder_id (UUID, optional): The folder ID. Defaults to None.
+        folder_id (UUID, optional): The project ID. Defaults to None.
         params (Params): Pagination parameters.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
         header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
@@ -212,7 +212,7 @@ async def read_flows(
         if not starter_folder and not default_folder:
             raise HTTPException(
                 status_code=404,
-                detail="Starter folder and default folder not found. Please create a folder and add flows to it.",
+                detail="Starter project and default project not found. Please create a project and add flows to it.",
             )
 
         if not folder_id:
