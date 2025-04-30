@@ -261,6 +261,7 @@ class FlowUpdate(SQLModel):
     folder_id: UUID | None = None
     endpoint_name: str | None = None
     mcp_enabled: bool | None = None
+    locked: bool | None = None
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
