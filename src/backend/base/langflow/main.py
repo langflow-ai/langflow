@@ -13,7 +13,7 @@ import anyio
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from loguru import logger
@@ -41,6 +41,7 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.utils import initialize_services, teardown_services
+from pyinstrument import Profiler
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -207,7 +208,11 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        title="Langflow",
+        version=__version__,
+        lifespan=lifespan,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -268,6 +273,20 @@ def create_app():
         request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
 
         return await call_next(request)
+
+    # Add profiling middleware
+    PROFILING = True  # You might want to get this from settings_service
+    if PROFILING:
+        @app.middleware("http")
+        async def profile_request(request: Request, call_next):
+            profiling = request.query_params.get("profile", False)
+            if profiling:
+                profiler = Profiler(async_mode='enabled')  # Enable async mode for FastAPI
+                profiler.start()
+                await call_next(request)
+                profiler.stop()
+                return HTMLResponse(profiler.output_html())
+            return await call_next(request)
 
     settings = get_settings_service().settings
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
