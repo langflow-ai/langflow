@@ -386,11 +386,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.
             if actions_data.get("get_result_field") and actions_data.get("result_field"):
                 result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
-            if (
-                len(result_data) != 1
-                and not self._actions_data.get(action_key, {}).get("result_field")
-                and self._actions_data.get(action_key, {}).get("get_result_field")
-            ):
+            if len(result_data) != 1 and not actions_data.get("result_field") and actions_data.get("get_result_field"):
                 msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
             return result_data  # noqa: TRY300
