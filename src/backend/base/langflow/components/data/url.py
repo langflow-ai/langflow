@@ -20,6 +20,7 @@ settings = Settings()
 # Access settings properties
 user_agent = settings.user_agent
 
+
 class URLComponent(Component):
     """A component that loads and parses child links from a root URL recursively."""
 
