@@ -1,8 +1,8 @@
-import logging
 import re
 
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
+from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
@@ -10,8 +10,6 @@ from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Ou
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-
-logger = logging.getLogger(__name__)
 
 
 class URLComponent(Component):
