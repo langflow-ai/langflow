@@ -22,7 +22,6 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
-        "Convert to Data List",
         "Base64",
     ]
 
@@ -113,12 +112,6 @@ class DataFrameOperationsComponent(Component):
             method="perform_operation",
             info="The resulting DataFrame after the operation.",
         ),
-        Output(
-            display_name="Data",
-            name="data",
-            method="to_data",
-            info="Converted DataFrame to list of data objects.",
-        ),
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
@@ -186,8 +179,6 @@ class DataFrameOperationsComponent(Component):
             return self.tail(dataframe_copy)
         if operation == "Replace Value":
             return self.replace_values(dataframe_copy)
-        if operation == "Convert to Data List":
-            return DataFrame(dataframe_copy)
         if operation == "Base64":
             return self.convert_dataframe_to_base64(dataframe_copy)
 
@@ -225,18 +216,6 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
-
-    def to_data(self) -> list[Data]:
-        if self.operation != "Convert to Data List":
-            return []
-        try:
-            df_data = self.df.copy()
-            records = df_data.to_dict(orient="records")
-            return [Data(data=row) for row in records]
-        except (AttributeError, ValueError, TypeError) as e:
-            self.status = f"Error converting to Data: {e!s}"
-            self.log(self.status)
-            return [Data(data={"error": str(e)})]
 
     def convert_dataframe_to_base64(self, df: DataFrame) -> DataFrame:
         try:
