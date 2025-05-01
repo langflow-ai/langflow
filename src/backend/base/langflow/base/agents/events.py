@@ -94,9 +94,10 @@ def _extract_output_text(output: str | list) -> str:
     if isinstance(item, dict):
         if "text" in item:
             return item["text"]
+        # If the item's type is "tool_use", return an empty string.
+        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
         if item.get("type") == "tool_use":
             return ""
-
     msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
     raise ValueError(msg)
 
