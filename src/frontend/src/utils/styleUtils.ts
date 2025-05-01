@@ -1,3 +1,4 @@
+import { LinearIcon } from "../icons/Linear";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { GradientSave } from "@/icons/GradientSparkles";
@@ -228,6 +229,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Linear", name: "linear", icon: "Linear" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
@@ -320,6 +322,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
   //Integration Icons
+  Linear: LinearIcon,
   AIML: "AI/ML",
   AgentQL: "AgentQL",
   AirbyteJSONLoader: "Airbyte",
