@@ -307,7 +307,7 @@ class MessageResponse(DefaultModel):
     text: str
     files: list[str] = []
     edit: bool
-    # duration: float | None = None
+    duration: float | None = None
 
     properties: Properties | None = None
     category: str | None = None
