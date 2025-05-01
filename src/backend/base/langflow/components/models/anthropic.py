@@ -78,7 +78,6 @@ class AnthropicModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-
         try:
             from langchain_anthropic.chat_models import ChatAnthropic
         except ImportError as e:
