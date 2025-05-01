@@ -52,14 +52,14 @@ class RunFlowBaseComponent(Component):
             display_name="Flow Data Output",
             method="data_output",
             hidden=True,
-            tool_mode=False,
+            tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
         ),
         Output(
             name="flow_outputs_dataframe",
             display_name="Flow Dataframe Output",
             method="dataframe_output",
             hidden=True,
-            tool_mode=False,
+            tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
         ),
         Output(name="flow_outputs_message", display_name="Flow Message Output", method="message_output"),
     ]
