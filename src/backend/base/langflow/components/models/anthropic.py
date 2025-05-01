@@ -60,6 +60,7 @@ class AnthropicModelComponent(LCModelComponent):
             info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
             value="https://api.anthropic.com",
             real_time_refresh=True,
+            advanced=True,
         ),
         BoolInput(
             name="tool_model_enabled",
@@ -77,6 +78,7 @@ class AnthropicModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+
         try:
             from langchain_anthropic.chat_models import ChatAnthropic
         except ImportError as e:
@@ -88,7 +90,7 @@ class AnthropicModelComponent(LCModelComponent):
                 anthropic_api_key=self.api_key,
                 max_tokens_to_sample=self.max_tokens,
                 temperature=self.temperature,
-                anthropic_api_url=self.base_url,
+                anthropic_api_url=self.base_url or "https://api.anthropic.com",
                 streaming=self.stream,
             )
         except Exception as e:
@@ -125,7 +127,7 @@ class AnthropicModelComponent(LCModelComponent):
                 model_with_tool = ChatAnthropic(
                     model=model,  # Use the current model being checked
                     anthropic_api_key=self.api_key,
-                    anthropic_api_url=self.base_url,
+                    anthropic_api_url=self.base_url or "https://api.anthropic.com",
                 )
 
                 if (
@@ -160,6 +162,9 @@ class AnthropicModelComponent(LCModelComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        if self.base_url is None or build_config["base_url"]["value"] is None:
+            build_config["base_url"]["value"] = "https://api.anthropic.com"
+            self.base_url = "https://api.anthropic.com"
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 if len(self.api_key) == 0:
