@@ -106,12 +106,7 @@ class URLComponent(Component):
                     "description": "Header value",
                 },
             ],
-            value=[
-                {
-                    "key": "User-Agent",
-                    "value": user_agent,
-                }
-            ],
+            value=[{"key": "User-Agent", "value": get_settings_service().settings.user_agent}],
             advanced=True,
             input_types=["DataFrame"],
         ),
