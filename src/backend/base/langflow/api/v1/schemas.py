@@ -397,3 +397,14 @@ class CancelFlowResponse(BaseModel):
 
     success: bool
     message: str
+
+
+class MCPSettings(BaseModel):
+    """Model representing MCP settings for a flow."""
+
+    id: UUID
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    name: str | None = None
+    description: str | None = None
