@@ -37,7 +37,7 @@ async def add_user(
         await session.refresh(new_user)
         folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
-            raise HTTPException(status_code=500, detail="Error creating default folder")
+            raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
         await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e

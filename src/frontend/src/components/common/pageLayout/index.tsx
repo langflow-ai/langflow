@@ -35,6 +35,7 @@ export default function PageLayout({
                     onClick={() => {
                       navigate(backTo);
                     }}
+                    data-testid="back_page_button"
                   >
                     <ForwardedIconComponent
                       name="ChevronLeft"

@@ -24,6 +24,7 @@ class GmailLoaderComponent(Component):
     display_name = "Gmail Loader"
     description = "Loads emails from Gmail using provided credentials."
     icon = "Google"
+    legacy: bool = True
 
     inputs = [
         SecretStrInput(

@@ -52,7 +52,7 @@ export const ErrorView = ({
               {blocks.map((block, blockIndex) => (
                 <div
                   key={blockIndex}
-                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground"
+                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-sm text-foreground"
                 >
                   {block.contents.map((content, contentIndex) => {
                     if (content.type === "error") {

@@ -23,30 +23,38 @@ export const ForwardedIconComponent = memo(
     ) => {
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
+      const [initialName, setInitialName] = useState(name);
       const [TargetIcon, setTargetIcon] = useState<any>(null);
 
       useEffect(() => {
         // Reset states when icon name changes
-        setIconError(false);
-        setTargetIcon(null);
+        if (!TargetIcon || initialName !== name) {
+          setInitialName(name);
+          setIconError(false);
+          setTargetIcon(null);
 
-        const timer = setTimeout(() => {
-          setShowFallback(true);
-        }, 30);
+          const timer = setTimeout(() => {
+            setShowFallback(true);
+          }, 30);
 
-        // Load the icon if we have a name
-        if (name && typeof name === "string") {
-          getNodeIcon(name)
-            .then((component) => {
-              setTargetIcon(component);
-            })
-            .catch((error) => {
-              console.error(`Error loading icon ${name}:`, error);
-              setIconError(true);
-            });
+          // Load the icon if we have a name
+          if (name && typeof name === "string") {
+            getNodeIcon(name)
+              .then((component) => {
+                setTargetIcon(component);
+                setShowFallback(false);
+              })
+              .catch((error) => {
+                console.error(`Error loading icon ${name}:`, error);
+                setIconError(true);
+                setShowFallback(false);
+              });
+          } else {
+            setShowFallback(false);
+          }
+
+          return () => clearTimeout(timer);
         }
-
-        return () => clearTimeout(timer);
       }, [name]);
 
       const style = {
@@ -87,14 +95,34 @@ export const ForwardedIconComponent = memo(
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
           <ErrorBoundary onError={handleError}>
-            <TargetIcon
-              className={className}
-              style={style}
-              ref={ref}
-              data-testid={
-                dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
-              }
-            />
+            {TargetIcon?.render || TargetIcon?._payload ? (
+              <TargetIcon
+                className={className}
+                style={style}
+                ref={ref}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              />
+            ) : (
+              <div
+                className={className}
+                style={style}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              >
+                {TargetIcon}
+              </div>
+            )}
           </ErrorBoundary>
         </Suspense>
       );

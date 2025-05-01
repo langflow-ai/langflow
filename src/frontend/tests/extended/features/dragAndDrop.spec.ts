@@ -22,7 +22,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.waitForSelector("text=my projects", {
+    await page.waitForSelector("text=starter project", {
       timeout: 5000,
     });
 
@@ -76,7 +76,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.waitForSelector("text=my projects", {
+    await page.waitForSelector("text=starter project", {
       timeout: 5000,
     });
 

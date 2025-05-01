@@ -247,7 +247,7 @@ class TracingService(Service):
                         metadata=outputs,
                     )
                 except Exception:  # noqa: BLE001
-                    logger.exception("Error ending all traces")
+                    logger.error("Error ending all traces")
 
     async def end_tracers(self, outputs: dict, error: Exception | None = None) -> None:
         """End the trace for a graph run.

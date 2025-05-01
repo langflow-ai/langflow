@@ -1257,6 +1257,10 @@
     @apply h-7 w-7 rounded-md;
   }
 
+  .hit-area-hover {
+    @apply transition-colors duration-200 hover:bg-muted hover:text-foreground;
+  }
+
   .node-toolbar-buttons {
     @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }
@@ -1307,7 +1311,7 @@
 }
 
 .deploy-dropdown-item {
-  @apply h-11 cursor-pointer px-2.5 py-1 text-[14px] font-normal hover:bg-background !important;
+  @apply h-11 cursor-pointer px-2.5 py-1 text-sm font-normal hover:bg-background !important;
 }
 
 .deploy-dropdown-item > :first-child {

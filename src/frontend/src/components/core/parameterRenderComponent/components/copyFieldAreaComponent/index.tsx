@@ -62,7 +62,6 @@ export default function CopyFieldAreaComponent({
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const isValueToReplace = value === BACKEND_URL || value === MCP_SSE_VALUE;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const endpointName = currentFlow?.endpoint_name ?? "";

@@ -108,11 +108,15 @@ This component retrieves and stores chat messages from Redis.
 |------|--------------|------|
 | memory | Memory | The Redis chat message history object |
 
-## ZepChatMemory Component
+## Legacy components
+
+**Legacy** components are available to use but no longer supported.
+
+### ZepChatMemory Component
 
 This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for Large Language Models (LLMs).
 
-### Inputs
+#### Inputs
 
 | Name          | Type          | Description                                               |
 |---------------|---------------|-----------------------------------------------------------|
@@ -121,7 +125,7 @@ This component creates a `ZepChatMessageHistory` instance, enabling storage and 
 | api_base_path | Dropdown      | API version to use. Options: "api/v1" or "api/v2".        |
 | session_id    | MessageText   | Unique identifier for the chat session. Optional.         |
 
-### Outputs
+#### Outputs
 
 | Name            | Type                    | Description                                           |
 |-----------------|-------------------------|-------------------------------------------------------|

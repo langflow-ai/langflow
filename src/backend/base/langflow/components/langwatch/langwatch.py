@@ -1,9 +1,9 @@
 import json
-import logging
 import os
 from typing import Any
 
 import httpx
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.inputs.inputs import MultilineInput
@@ -19,9 +19,6 @@ from langflow.io import (
 )
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class LangWatchComponent(Component):

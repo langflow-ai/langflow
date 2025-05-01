@@ -10,6 +10,8 @@ import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
 
 const GITHUB_API_URL = "https://api.github.com";
+const DISCORD_API_URL =
+  "https://discord.com/api/v9/invites/EqksyE2EX9?with_counts=true";
 
 export async function getRepoStars(owner: string, repo: string) {
   try {
@@ -21,6 +23,15 @@ export async function getRepoStars(owner: string, repo: string) {
   }
 }
 
+export async function getDiscordCount() {
+  try {
+    const response = await api.get(DISCORD_API_URL);
+    return response?.data.approximate_member_count;
+  } catch (error) {
+    console.error("Error fetching repository data:", error);
+    return null;
+  }
+}
 export async function createApiKey(name: string) {
   try {
     const res = await api.post(`${BASE_URL_API}api_key/`, { name });
