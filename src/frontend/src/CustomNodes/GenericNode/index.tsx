@@ -23,18 +23,21 @@ import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
+import { getNodeOutputColors } from "../helpers/get-node-output-colors";
+import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
+import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
-const MemoizedOutputParameter = memo(OutputParameter);
+const MemoizedOutputParameter = memo(NodeOutputField);
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
 const MemoizedNodeName = memo(NodeName);
@@ -262,27 +265,52 @@ function GenericNode({
         (!showHiddenOutputs && key === "shown") ||
         (showHiddenOutputs && key === "hidden");
 
-      console.log(outputGroups);
-
       return outputGroups.map((group) => {
         if (!group.length) return null;
 
         const firstOutput = group[0];
         const outputIndex =
           data.node?.outputs?.findIndex(
-            (out) => out.name === firstOutput.name,
+            (out) => out.selected === firstOutput.selected,
           ) ?? 0;
+
+        console.log(group);
+
+        const id = useMemo(
+          () => ({
+            output_types: [group.selected ?? group[0].types[0]],
+            id: data.id,
+            dataType: data.type,
+            name: group.name,
+          }),
+          [group.selected, group.types, data.id, data.type, group.name],
+        );
+
+        const colors = useMemo(
+          () => getNodeOutputColors(group[0], data, types),
+          [group, data.type, data.id, types],
+        );
+
+        const colorNames = useMemo(
+          () => getNodeOutputColorsName(group[0], data, types),
+          [group, data.type, data.id, types],
+        );
 
         return (
           <MemoizedOutputParameter
             key={firstOutput.name}
-            output={firstOutput}
+            id={id}
+            colors={colors}
+            colorName={colorNames}
+            title={firstOutput.name}
+            tooltipTitle={firstOutput.display_name || firstOutput.name}
+            index={outputIndex}
+            outputProxy={firstOutput.proxy}
             outputs={group}
-            idx={outputIndex}
             lastOutput={isLastOutputSection}
             data={data}
-            types={types}
-            selected={selected}
+            type={group[0].types.join("|")}
+            selected={selected ?? false}
             showNode={showNode}
             isToolMode={isToolMode}
             showHiddenOutputs={showHiddenOutputs}
