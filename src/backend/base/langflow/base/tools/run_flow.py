@@ -47,9 +47,19 @@ class RunFlowBaseComponent(Component):
         ),
     ]
     _base_outputs: list[Output] = [
-        Output(name="flow_outputs_data", display_name="Flow Data Output", method="data_output", hidden=True),
         Output(
-            name="flow_outputs_dataframe", display_name="Flow Dataframe Output", method="dataframe_output", hidden=True
+            name="flow_outputs_data",
+            display_name="Flow Data Output",
+            method="data_output",
+            hidden=True,
+            tool_mode=False,
+        ),
+        Output(
+            name="flow_outputs_dataframe",
+            display_name="Flow Dataframe Output",
+            method="dataframe_output",
+            hidden=True,
+            tool_mode=False,
         ),
         Output(name="flow_outputs_message", display_name="Flow Message Output", method="message_output"),
     ]
