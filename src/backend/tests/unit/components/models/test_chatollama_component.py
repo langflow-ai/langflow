@@ -1,5 +1,4 @@
-from unittest.mock import MagicMock, patch, AsyncMock
-from urllib.parse import urljoin
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_ollama import ChatOllama
@@ -10,6 +9,7 @@ from langflow.components.models import ChatOllamaComponent
 def component():
     return ChatOllamaComponent()
 
+
 @pytest.mark.asyncio
 @patch("langflow.components.models.ollama.httpx.AsyncClient.post")
 @patch("langflow.components.models.ollama.httpx.AsyncClient.get")
@@ -18,10 +18,7 @@ async def test_get_models_success(mock_get, mock_post, component):
     mock_get_response = AsyncMock()
     mock_get_response.raise_for_status.return_value = None
     mock_get_response.json.return_value = {
-        component.JSON_MODELS_KEY: [
-            {component.JSON_NAME_KEY: "model1"},
-            {component.JSON_NAME_KEY: "model2"}
-        ]
+        component.JSON_MODELS_KEY: [{component.JSON_NAME_KEY: "model1"}, {component.JSON_NAME_KEY: "model2"}]
     }
     mock_get.return_value = mock_get_response
 
@@ -31,7 +28,7 @@ async def test_get_models_success(mock_get, mock_post, component):
     mock_post_response.raise_for_status.return_value = None
     mock_post_response.json.side_effect = [
         {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
-        {component.JSON_CAPABILITIES_KEY: []}
+        {component.JSON_CAPABILITIES_KEY: []},
     ]
     mock_post.return_value = mock_post_response
 
@@ -39,21 +36,24 @@ async def test_get_models_success(mock_get, mock_post, component):
     result = await component.get_models(base_url)
 
     # Check that the correct URL was used for the GET request
-    assert result == ["model1"] 
+    assert result == ["model1"]
     assert mock_get.call_count == 1
     assert mock_post.call_count == 2
-    
+
+
 @pytest.mark.asyncio
 @patch("langflow.components.models.ollama.httpx.AsyncClient.post")
 @patch("langflow.components.models.ollama.httpx.AsyncClient.get")
 async def test_get_models_failure(mock_get, mock_post, component):
     # Simulate a network error for /api/tags
     import httpx
+
     mock_get.side_effect = httpx.RequestError("Connection error", request=None)
 
     base_url = "http://localhost:11434"
     with pytest.raises(ValueError, match="Could not get model names from Ollama."):
         await component.get_models(base_url)
+
 
 async def test_update_build_config_mirostat_disabled(component):
     build_config = {
