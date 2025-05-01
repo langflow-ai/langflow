@@ -223,16 +223,16 @@ function GenericNode({
       // Define output type groups
       // TODO: Add more groups as needed and move to constants
       const outputTypeGroups = {
-        dataContainers: ["data", "dataframe", "array", "object"],
-        communication: ["message", "text", "stream"],
-        aiModelOutputs: ["baselanguagemodel", "basellm", "agentexecutor"],
+        dataContainers: ["Data", "DataFrame", "Array", "Object"],
+        communication: ["Message", "Text", "Stream"],
+        aiModelOutputs: ["BaseLanguageModel", "BaseLLM", "AgentExecutor"],
         processingUtility: [
-          "tool",
-          "callable",
-          "outputparser",
-          "component_as_tool",
+          "Tool",
+          "Callable",
+          "OutputParser",
+          "ComponentAsTool",
         ],
-        systemIdentification: ["thread_id", "assistant_id", "unknown"],
+        systemIdentification: ["ThreadId", "AssistantId", "Unknown"],
       };
 
       const outputGroups: (typeof outputs)[] = [];
@@ -240,7 +240,7 @@ function GenericNode({
       // Process each group defined in outputTypeGroups
       Object.entries(outputTypeGroups).forEach(([groupType, groupNames]) => {
         const groupOutputs = outputs.filter((output) =>
-          groupNames.includes(output.name),
+          output.type?.some((type) => groupNames.includes(type)),
         );
         if (groupOutputs.length > 0) {
           outputGroups.push(groupOutputs);
