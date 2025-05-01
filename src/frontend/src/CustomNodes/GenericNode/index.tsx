@@ -218,30 +218,78 @@ function GenericNode({
 
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
-      if (outputs?.length === 0) return null;
+      if (!outputs?.length) return null;
 
-      return (
-        <MemoizedOutputParameter
-          output={outputs?.[0]}
-          outputs={outputs}
-          idx={
-            data.node!.outputs?.findIndex(
-              (out) => out.name === outputs[0].name,
-            ) ?? 0
-          }
-          lastOutput={
-            (!showHiddenOutputs && key === "shown") ||
-            (showHiddenOutputs && key === "hidden")
-          }
-          data={data}
-          types={types}
-          selected={selected}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          hidden={key === "hidden"}
-        />
+      // Define output type groups
+      // TODO: Add more groups as needed and move to constants
+      const outputTypeGroups = {
+        dataContainers: ["data", "dataframe", "array", "object"],
+        communication: ["message", "text", "stream"],
+        aiModelOutputs: ["baselanguagemodel", "basellm", "agentexecutor"],
+        processingUtility: [
+          "tool",
+          "callable",
+          "outputparser",
+          "component_as_tool",
+        ],
+        systemIdentification: ["thread_id", "assistant_id", "unknown"],
+      };
+
+      const outputGroups: (typeof outputs)[] = [];
+
+      // Process each group defined in outputTypeGroups
+      Object.entries(outputTypeGroups).forEach(([groupType, groupNames]) => {
+        const groupOutputs = outputs.filter((output) =>
+          groupNames.includes(output.name),
+        );
+        if (groupOutputs.length > 0) {
+          outputGroups.push(groupOutputs);
+        }
+      });
+
+      // Add any outputs that don't belong to defined groups
+      const definedOutputNames = Object.values(outputTypeGroups).flat();
+      const otherOutputs = outputs.filter(
+        (output) => !definedOutputNames.includes(output.name),
       );
+
+      if (otherOutputs.length > 0) {
+        outputGroups.push(otherOutputs);
+      }
+
+      // Determine if this is the last output section
+      const isLastOutputSection =
+        (!showHiddenOutputs && key === "shown") ||
+        (showHiddenOutputs && key === "hidden");
+
+      console.log(outputGroups);
+
+      return outputGroups.map((group) => {
+        if (!group.length) return null;
+
+        const firstOutput = group[0];
+        const outputIndex =
+          data.node?.outputs?.findIndex(
+            (out) => out.name === firstOutput.name,
+          ) ?? 0;
+
+        return (
+          <MemoizedOutputParameter
+            key={firstOutput.name}
+            output={firstOutput}
+            outputs={group}
+            idx={outputIndex}
+            lastOutput={isLastOutputSection}
+            data={data}
+            types={types}
+            selected={selected}
+            showNode={showNode}
+            isToolMode={isToolMode}
+            showHiddenOutputs={showHiddenOutputs}
+            hidden={key === "hidden"}
+          />
+        );
+      });
     },
     [data, types, selected, showNode, isToolMode, showHiddenOutputs],
   );
