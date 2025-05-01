@@ -14,7 +14,9 @@ def component():
 @patch("langflow.components.models.ollama.httpx.AsyncClient.post")
 @patch("langflow.components.models.ollama.httpx.AsyncClient.get")
 async def test_get_models_success(mock_get, mock_post, component):
-    # The revised approach to get_models filters based on model capabilities. It requires one request to ollama to get the models and another to check the capabilities of each model.
+    # The revised approach to get_models filters based on model capabilities.
+    # It requires one request to ollama to get the models and another to check
+    # the capabilities of each model.
     mock_get_response = AsyncMock()
     mock_get_response.raise_for_status.return_value = None
     mock_get_response.json.return_value = {
@@ -22,7 +24,9 @@ async def test_get_models_success(mock_get, mock_post, component):
     }
     mock_get.return_value = mock_get_response
 
-    # Mock the response for the HTTP POST request to check capabilities. Not that is not exactly what happens if the ollama server is running, but it is a good approximation.
+    # Mock the response for the HTTP POST request to check capabilities.
+    # Note that this is not exactly what happens if the Ollama server is running,
+    # but it is a good approximation.
     # The first call checks the capabilities of model1, and the second call checks the capabilities of model2.
     mock_post_response = AsyncMock()
     mock_post_response.raise_for_status.return_value = None
@@ -42,9 +46,8 @@ async def test_get_models_success(mock_get, mock_post, component):
 
 
 @pytest.mark.asyncio
-@patch("langflow.components.models.ollama.httpx.AsyncClient.post")
 @patch("langflow.components.models.ollama.httpx.AsyncClient.get")
-async def test_get_models_failure(mock_get, mock_post, component):
+async def test_get_models_failure(mock_get, component):
     # Simulate a network error for /api/tags
     import httpx
 
