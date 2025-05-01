@@ -81,13 +81,24 @@ async def handle_on_chain_start(
 
 def _extract_output_text(output: str | list) -> str:
     if isinstance(output, str):
-        text = output
-    elif isinstance(output, list) and len(output) == 1 and isinstance(output[0], dict) and "text" in output[0]:
-        text = output[0]["text"]
-    else:
+        return output
+    if isinstance(output, list) and len(output) == 0:
+        return ""
+    if not isinstance(output, list) or len(output) != 1:
         msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
         raise ValueError(msg)
-    return text
+
+    item = output[0]
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        if "text" in item:
+            return item["text"]
+        if item.get("type") == "tool_use":
+            return ""
+
+    msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
+    raise ValueError(msg)
 
 
 async def handle_on_chain_end(
@@ -214,7 +225,7 @@ async def handle_on_chain_stream(
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
-        agent_message.text += data_chunk.content
+        agent_message.text += _extract_output_text(data_chunk.content)
         agent_message.properties.state = "complete"
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
