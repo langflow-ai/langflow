@@ -86,7 +86,7 @@ def _extract_output_text(output: str | list) -> str:
         return ""
     if not isinstance(output, list) or len(output) != 1:
         msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     item = output[0]
     if isinstance(item, str):
@@ -99,7 +99,7 @@ def _extract_output_text(output: str | list) -> str:
         if item.get("type") == "tool_use":
             return ""
     msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-    raise ValueError(msg)
+    raise TypeError(msg)
 
 
 async def handle_on_chain_end(
