@@ -102,6 +102,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         if (codeValidity && codeValidity.outdated)
           outdatedNodes.push({
             id: node.id,
+            icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
             breakingChange: codeValidity.breakingChange,

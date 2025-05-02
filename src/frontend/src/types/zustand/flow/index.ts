@@ -54,6 +54,7 @@ export type FlowPoolType = {
 
 export type ComponentsToUpdateType = {
   id: string;
+  icon?: string;
   display_name: string;
   outdated: boolean;
   breakingChange: boolean;
