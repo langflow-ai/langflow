@@ -327,7 +327,6 @@ export default function ChatMessage({
                 playgroundPage={playgroundPage}
                 contentBlocks={chat.content_blocks}
                 isLoading={
-                  chatMessage === "" &&
                   chat.properties?.state === "partial" &&
                   isBuilding &&
                   lastMessage
