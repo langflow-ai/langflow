@@ -25,7 +25,7 @@ export default function UpdateComponentModal({
   const [backupFlow, setBackupFlow] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedComponents, setSelectedComponents] = useState<Set<string>>(
-    new Set(components.map((c) => c.id)),
+    new Set(components.filter((c) => !c.breakingChange).map((c) => c.id)),
   );
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
@@ -166,7 +166,7 @@ export default function UpdateComponentModal({
           )}
           <div
             className={cn(
-              "mb-3 flex items-center gap-3 rounded-md border p-3 text-sm",
+              "mb-3 flex items-center gap-3 rounded-md border p-3 text-sm transition-all",
               !backupFlow && "border-accent-amber-foreground bg-accent-amber",
             )}
           >
