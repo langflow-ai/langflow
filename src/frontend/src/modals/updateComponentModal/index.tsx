@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import useDuplicateFlows from "@/pages/MainPage/hooks/use-handle-duplicate";
 import useFlowStore from "@/stores/flowStore";
 import { APIClassType } from "@/types/api";
+import { ComponentsToUpdateType } from "@/types/zustand/flow";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
 import BaseModal from "../baseModal";
@@ -17,7 +18,7 @@ export default function UpdateComponentModal({
   setOpen: (open: boolean) => void;
   onUpdateNode: () => void;
   children?: React.ReactNode;
-  components: { node: APIClassType; nodeId: string; isBreaking: boolean }[];
+  components: ComponentsToUpdateType[];
 }) {
   const [backupFlow, setBackupFlow] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
@@ -57,7 +58,7 @@ export default function UpdateComponentModal({
           Update{" "}
           {components.length > 1
             ? "components"
-            : components[0].node.display_name}
+            : (components?.[0]?.display_name ?? "")}
         </span>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
@@ -65,9 +66,12 @@ export default function UpdateComponentModal({
           <div className="flex flex-col gap-3 text-sm text-muted-foreground">
             {components.length > 1 ? (
               <p>
-                Breaking updates disconnect components and may require
-                reconnecting inputs or outputs after updating. Components from
-                the sidebar always use the latest version.
+                <span className="font-semibold text-accent-amber-foreground">
+                  Breaking
+                </span>{" "}
+                updates disconnect components and may require reconnecting
+                inputs or outputs after updating. Components from the sidebar
+                always use the latest version.
               </p>
             ) : (
               <>
@@ -86,6 +90,41 @@ export default function UpdateComponentModal({
               </>
             )}
           </div>
+          {components.length > 1 && (
+            <div className="grid grid-cols-2 gap-3">
+              <table className="w-full border-separate border-spacing-y-1 text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left font-medium text-muted-foreground">
+                      Component
+                    </th>
+                    <th className="text-left font-medium text-muted-foreground">
+                      Update Type
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {components.map((component) => (
+                    <tr key={component.id}>
+                      <td className="flex items-center gap-2 py-1 pr-4">
+                        {/* Optionally add an icon here if available */}
+                        {component.display_name}
+                      </td>
+                      <td className="py-1">
+                        {component.breakingChange ? (
+                          <span className="font-semibold text-accent-amber-foreground">
+                            Breaking
+                          </span>
+                        ) : (
+                          <span>Standard</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div
             className={cn(
               "mb-3 flex items-center gap-3 rounded-md border p-3 text-sm",
@@ -108,7 +147,7 @@ export default function UpdateComponentModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Update Component",
+          label: "Update Component" + (components.length > 1 ? "s" : ""),
           onClick: handleUpdate,
           loading,
         }}
