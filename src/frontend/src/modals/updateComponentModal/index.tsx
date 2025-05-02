@@ -179,7 +179,7 @@ export default function UpdateComponentModal({
               id="backupFlow"
             />
             <label htmlFor="backupFlow" className="cursor-pointer select-none">
-              Save a backup flow in case something breaks
+              Create backup flow before updating
             </label>
           </div>
         </div>
