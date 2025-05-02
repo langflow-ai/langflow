@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@aws-solutions-constructs/aws-cloudfront-s3": "^2.57.0",
-    "aws-cdk-lib": "^2.141.0",
+    "aws-cdk-lib": "^2.189.1",
     "cdk-ecr-deployment": "^3.0.55",
     "constructs": "^10.3.0",
     "deploy-time-build": "^0.3.21",
