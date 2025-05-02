@@ -7,6 +7,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "../../components/ui/button";
 import {
   ICON_STROKE_WIDTH,
@@ -25,7 +26,6 @@ import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
-import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
@@ -74,9 +74,6 @@ function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
-  const [isOutdated, setIsOutdated] = useState(false);
-  const [hasBreakingChange, setHasBreakingChange] = useState(false);
-  const [isUserEdited, setIsUserEdited] = useState(false);
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
@@ -109,22 +106,26 @@ function GenericNode({
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
 
+  const componentUpdate = useFlowStore(
+    useShallow((state) =>
+      state.componentsToUpdate.find((component) => component.id === data.id),
+    ),
+  );
+  const {
+    outdated: isOutdated,
+    breakingChange: hasBreakingChange,
+    userEdited: isUserEdited,
+  } = componentUpdate ?? {
+    outdated: false,
+    breakingChange: false,
+    userEdited: false,
+  };
+
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
     data.node!,
     setNode,
-    setIsOutdated,
-    setIsUserEdited,
     updateNodeInternals,
-  );
-
-  useCheckCodeValidity(
-    data,
-    templates,
-    setIsOutdated,
-    setIsUserEdited,
-    setHasBreakingChange,
-    types,
   );
 
   if (!data.node!.template) {
@@ -427,6 +428,7 @@ function GenericNode({
         buildStatus={buildStatus}
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
+        isBreakingChange={hasBreakingChange}
         getValidationStatus={getValidationStatus}
         handleUpdateComponent={() => handleUpdateCode()}
       />
@@ -477,12 +479,6 @@ function GenericNode({
     );
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
-  // Compute node color based on status
-  const nodeStatusColor = useMemo(() => {
-    if (hasBreakingChange) return "border-warning";
-    return "";
-  }, [hasBreakingChange, isOutdated]);
-
   return (
     <div
       className={cn(
@@ -493,7 +489,7 @@ function GenericNode({
     >
       <div
         className={cn(
-          nodeStatusColor,
+          borderColor,
           showNode ? "w-80" : `w-48`,
           "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
@@ -503,9 +499,7 @@ function GenericNode({
           open={openUpdateModal}
           setOpen={setOpenUpdateModal}
           onUpdateNode={() => handleUpdateCode(true)}
-          components={[
-            { node: data.node, nodeId: data.id, isBreaking: hasBreakingChange },
-          ]}
+          components={componentUpdate ? [componentUpdate] : []}
         />
         {memoizedNodeToolbarComponent}
         {(isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll && (
