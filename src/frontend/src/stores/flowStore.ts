@@ -8,6 +8,7 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
@@ -33,7 +34,11 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
+import {
+  ComponentsToUpdateType,
+  FlowStoreType,
+  VertexLayerElementType,
+} from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
@@ -88,22 +93,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ componentsToUpdate: newChange });
   },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes: string[] = [];
+    let outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
       let node = nodes[i];
       if (node.type === "genericNode") {
-        const currentCode = templates[node.data?.type]?.template?.code?.value;
-        const thisNodesCode = node.data?.node!.template?.code?.value;
-        if (
-          currentCode &&
-          thisNodesCode &&
-          currentCode !== thisNodesCode &&
-          !node.data?.node?.edited &&
-          !componentsToIgnoreUpdate.includes(node.data?.type)
-        ) {
-          outdatedNodes.push(node.id);
-        }
+        const codeValidity = checkCodeValidity(node.data, templates);
+        if (codeValidity && codeValidity.outdated)
+          outdatedNodes.push({
+            id: node.id,
+            display_name: node.data.node?.display_name,
+            outdated: codeValidity.outdated,
+            breakingChange: codeValidity.breakingChange,
+            userEdited: codeValidity.userEdited,
+          });
       }
     }
     set({ componentsToUpdate: outdatedNodes });
