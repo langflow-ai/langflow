@@ -41,6 +41,7 @@ export default function NodeStatus({
   buildStatus,
   isOutdated,
   isUserEdited,
+  isBreakingChange,
   getValidationStatus,
   handleUpdateComponent,
 }: {
@@ -54,6 +55,7 @@ export default function NodeStatus({
   buildStatus: BuildStatus;
   isOutdated: boolean;
   isUserEdited: boolean;
+  isBreakingChange: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
   handleUpdateComponent: () => void;
 }) {
@@ -189,8 +191,8 @@ export default function NodeStatus({
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     let updateClass =
-      isOutdated && !isUserEdited && !dismissAll
-        ? "border-warning ring-2 ring-warning"
+      isOutdated && !isUserEdited && !dismissAll && isBreakingChange
+        ? "border-warning"
         : "";
     return cn(frozen ? frozenClass : className, updateClass);
   };
