@@ -178,7 +178,7 @@ export default function UpdateComponentModal({
               className="bg-muted"
               id="backupFlow"
             />
-            <label htmlFor="backupFlow" className="select-none">
+            <label htmlFor="backupFlow" className="cursor-pointer select-none">
               Save a backup flow in case something breaks
             </label>
           </div>
