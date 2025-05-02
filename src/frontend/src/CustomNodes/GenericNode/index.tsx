@@ -3,7 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
-import { useUtilityStore } from "@/stores/utilityStore";
+import { FlowStoreType } from "@/types/zustand/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -91,8 +91,15 @@ function GenericNode({
   const edges = useFlowStore((state) => state.edges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
-  const dismissAll = useUtilityStore((state) => state.dismissAll);
-  const setDismissAll = useUtilityStore((state) => state.setDismissAll);
+  const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
+  const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
+  const removeDismissedNodes = useFlowStore(
+    (state) => state.removeDismissedNodes,
+  );
+  const dismissAll = useMemo(
+    () => dismissedNodes.includes(data.id),
+    [dismissedNodes, data.id],
+  );
 
   const showNode = data.showNode ?? true;
 
@@ -107,7 +114,7 @@ function GenericNode({
     useAlternate(false);
 
   const componentUpdate = useFlowStore(
-    useShallow((state) =>
+    useShallow((state: FlowStoreType) =>
       state.componentsToUpdate.find((component) => component.id === data.id),
     ),
   );
@@ -165,6 +172,7 @@ function GenericNode({
                   data.id,
                 );
                 updateNodeCode(newNode, currentCode, "code", type);
+                removeDismissedNodes([data.id]);
                 setLoadingUpdate(false);
               }
             },
@@ -428,6 +436,7 @@ function GenericNode({
         selected={selected}
         setBorderColor={setBorderColor}
         buildStatus={buildStatus}
+        dismissAll={dismissAll}
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
         isBreakingChange={hasBreakingChange}
@@ -509,7 +518,7 @@ function GenericNode({
             showNode={showNode}
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
-            setDismissAll={setDismissAll}
+            setDismissAll={() => addDismissedNodes([data.id])}
           />
         )}
         <div

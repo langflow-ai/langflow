@@ -62,6 +62,9 @@ export type ComponentsToUpdateType = {
 };
 
 export type FlowStoreType = {
+  dismissedNodes: string[];
+  addDismissedNodes: (dismissedNodes: string[]) => void;
+  removeDismissedNodes: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;

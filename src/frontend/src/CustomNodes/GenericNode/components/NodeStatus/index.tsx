@@ -39,6 +39,7 @@ export default function NodeStatus({
   showNode,
   data,
   buildStatus,
+  dismissAll,
   isOutdated,
   isUserEdited,
   isBreakingChange,
@@ -52,6 +53,7 @@ export default function NodeStatus({
   showNode: boolean;
   data: NodeDataType;
   buildStatus: BuildStatus;
+  dismissAll: boolean;
   isOutdated: boolean;
   isUserEdited: boolean;
   isBreakingChange: boolean;
@@ -179,8 +181,6 @@ export default function NodeStatus({
     setValidationStatus,
     getValidationStatus,
   );
-
-  const dismissAll = useUtilityStore((state) => state.dismissAll);
 
   const getBaseBorderClass = (selected) => {
     let className =

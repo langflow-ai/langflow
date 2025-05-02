@@ -16,12 +16,14 @@ export default function UpdateComponentModal({
   onUpdateNode,
   children,
   components,
+  isMultiple = false,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   onUpdateNode: (updatedComponents?: string[]) => void;
   children?: React.ReactNode;
   components: ComponentsToUpdateType[];
+  isMultiple?: boolean;
 }) {
   const [backupFlow, setBackupFlow] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
@@ -132,15 +134,13 @@ export default function UpdateComponentModal({
       <BaseModal.Header>
         <span className="">
           Update{" "}
-          {components.length > 1
-            ? "components"
-            : (components?.[0]?.display_name ?? "")}
+          {isMultiple ? "components" : (components?.[0]?.display_name ?? "")}
         </span>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-sm text-muted-foreground">
-            {components.length > 1 ? (
+            {isMultiple ? (
               <p>
                 <span className="font-semibold text-accent-amber-foreground">
                   Breaking
@@ -166,7 +166,7 @@ export default function UpdateComponentModal({
               </>
             )}
           </div>
-          {components.length > 1 && (
+          {isMultiple && (
             <div className="-mx-4">
               <TableComponent
                 columnDefs={columnDefs}
@@ -213,7 +213,7 @@ export default function UpdateComponentModal({
         submit={{
           label: "Update Component" + (components.length > 1 ? "s" : ""),
           onClick: handleUpdate,
-          disabled: selectedComponents.size === 0,
+          disabled: isMultiple && selectedComponents.size === 0,
           loading,
         }}
       ></BaseModal.Footer>

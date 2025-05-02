@@ -227,6 +227,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    set({
+      dismissedNodes: JSON.parse(
+        localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
+      ) as string[],
+    });
     unselectAllNodesEdges(nodes, edges);
     set({
       nodes,
@@ -995,6 +1000,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       componentsToUpdate: [],
     });
+  },
+  dismissedNodes: [],
+  addDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodes, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
+  },
+  removeDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = get().dismissedNodes.filter(
+      (node) => !dismissedNodes.includes(node),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
   },
 }));
 
