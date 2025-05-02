@@ -4751,7 +4751,7 @@ requires-dist = [
     { name = "langchain-unstructured", specifier = "==0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
-    { name = "langsmith", specifier = "==0.1.147" },
+    { name = "langsmith", specifier = ">=0.1.147,<1.0.0" },
     { name = "langwatch", specifier = "==0.1.16" },
     { name = "lark", specifier = "==1.2.2" },
     { name = "litellm", specifier = "==1.60.2" },
