@@ -117,6 +117,7 @@ const ConnectionComponent = ({
     pollingInterval.current = setInterval(() => {
       mutateTemplate(
         { validate: selectedItem[0]?.name || "" },
+        nodeId,
         nodeClass,
         handleNodeClass,
         postTemplateValue,

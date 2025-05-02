@@ -82,7 +82,13 @@ export default function NodeInputField({
     };
   }, [data?.node?.id, isAuth, name]);
 
-  useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
+  useFetchDataOnMount(
+    data.node!,
+    data.id,
+    handleNodeClass,
+    name,
+    postTemplateValue,
+  );
 
   useEffect(() => {
     if (optionalHandle && optionalHandle.length === 0) {

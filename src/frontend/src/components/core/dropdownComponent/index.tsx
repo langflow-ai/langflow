@@ -180,6 +180,7 @@ export default function Dropdown({
 
     await mutateTemplate(
       value,
+      nodeId,
       nodeClass!,
       handleNodeClass,
       postTemplateValue,

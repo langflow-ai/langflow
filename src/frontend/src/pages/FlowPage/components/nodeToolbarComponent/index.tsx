@@ -177,6 +177,7 @@ const NodeToolbarComponent = memo(
       setToolMode(newValue);
       mutateTemplate(
         newValue,
+        data.id,
         data.node!,
         handleNodeClass,
         postToolModeValue,
