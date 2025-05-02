@@ -1,3 +1,4 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Checkbox } from "@/components/ui/checkbox";
 import useDuplicateFlows from "@/pages/MainPage/hooks/use-handle-duplicate";
 import useFlowStore from "@/stores/flowStore";
@@ -16,12 +17,15 @@ export default function UpdateComponentModal({
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  onUpdateNode: () => void;
+  onUpdateNode: (updatedComponents?: string[]) => void;
   children?: React.ReactNode;
   components: ComponentsToUpdateType[];
 }) {
   const [backupFlow, setBackupFlow] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
+  const [selectedComponents, setSelectedComponents] = useState<Set<string>>(
+    new Set(components.map((c) => c.id)),
+  );
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
   const { handleDuplicate } = useDuplicateFlows({
@@ -34,16 +38,39 @@ export default function UpdateComponentModal({
     setLoading(true);
     if (backupFlow) {
       handleDuplicate().then(() => {
-        onUpdateNode();
+        onUpdateNode(
+          components.length > 0 ? Array.from(selectedComponents) : undefined,
+        );
         setLoading(false);
         setOpen(false);
       });
     } else {
-      onUpdateNode();
+      onUpdateNode(
+        components.length > 0 ? Array.from(selectedComponents) : undefined,
+      );
       setLoading(false);
       setOpen(false);
     }
   };
+
+  const toggleComponent = (componentId: string) => {
+    const newSelected = new Set(selectedComponents);
+    if (newSelected.has(componentId)) {
+      newSelected.delete(componentId);
+    } else {
+      newSelected.add(componentId);
+    }
+    setSelectedComponents(newSelected);
+  };
+
+  const toggleAllComponents = () => {
+    if (selectedComponents.size === components.length) {
+      setSelectedComponents(new Set());
+    } else {
+      setSelectedComponents(new Set(components.map((c) => c.id)));
+    }
+  };
+
   return (
     <BaseModal
       closeButtonClassName="!top-2 !right-3"
@@ -91,39 +118,54 @@ export default function UpdateComponentModal({
             )}
           </div>
           {components.length > 1 && (
-            <div className="grid grid-cols-2 gap-3">
-              <table className="w-full border-separate border-spacing-y-1 text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left font-medium text-muted-foreground">
+            <table className="w-full border-separate border-spacing-y-1 text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left font-medium text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedComponents.size === components.length}
+                        onCheckedChange={toggleAllComponents}
+                        className="bg-muted"
+                      />
                       Component
-                    </th>
-                    <th className="text-left font-medium text-muted-foreground">
-                      Update Type
-                    </th>
+                    </div>
+                  </th>
+                  <th className="text-left font-medium text-muted-foreground">
+                    Update Type
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {components.map((component) => (
+                  <tr key={component.id}>
+                    <td className="flex items-center gap-2 py-1 pr-4">
+                      <Checkbox
+                        checked={selectedComponents.has(component.id)}
+                        onCheckedChange={() => toggleComponent(component.id)}
+                        className="bg-muted"
+                      />
+                      {component.icon && (
+                        <ForwardedIconComponent
+                          name={component.icon}
+                          className="h-4 w-4"
+                        />
+                      )}
+                      {component.display_name}
+                    </td>
+                    <td className="py-1">
+                      {component.breakingChange ? (
+                        <span className="font-semibold text-accent-amber-foreground">
+                          Breaking
+                        </span>
+                      ) : (
+                        <span>Standard</span>
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {components.map((component) => (
-                    <tr key={component.id}>
-                      <td className="flex items-center gap-2 py-1 pr-4">
-                        {/* Optionally add an icon here if available */}
-                        {component.display_name}
-                      </td>
-                      <td className="py-1">
-                        {component.breakingChange ? (
-                          <span className="font-semibold text-accent-amber-foreground">
-                            Breaking
-                          </span>
-                        ) : (
-                          <span>Standard</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
           <div
             className={cn(
@@ -149,6 +191,7 @@ export default function UpdateComponentModal({
         submit={{
           label: "Update Component" + (components.length > 1 ? "s" : ""),
           onClick: handleUpdate,
+          disabled: selectedComponents.size === 0,
           loading,
         }}
       ></BaseModal.Footer>
