@@ -3,6 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
 import { createApiKey } from "@/controllers/API";
+import { api } from "@/controllers/API/api";
 import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
@@ -61,7 +62,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = `${PROXY_TARGET}/api/v1/mcp/project/${projectId}/sse`;
+  const apiHost = api.defaults.baseURL || window.location.origin;
+
+  const apiUrl = `${apiHost}/api/v1/mcp/project/${projectId}/sse`;
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
