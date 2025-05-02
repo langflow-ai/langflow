@@ -43,7 +43,6 @@ export default function NodeStatus({
   isUserEdited,
   isBreakingChange,
   getValidationStatus,
-  handleUpdateComponent,
 }: {
   nodeId: string;
   display_name: string;
@@ -57,7 +56,6 @@ export default function NodeStatus({
   isUserEdited: boolean;
   isBreakingChange: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
-  handleUpdateComponent: () => void;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
@@ -464,36 +462,6 @@ export default function NodeStatus({
             )}
           </div>
         </ShadTooltip>
-        {dismissAll && isOutdated && !isUserEdited && (
-          <ShadTooltip content="Update component">
-            <div
-              className="button-run-bg hit-area-icon ml-1 bg-warning hover:bg-warning/80"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdateComponent();
-                e.stopPropagation();
-              }}
-            >
-              {showNode && (
-                <Button
-                  unstyled
-                  type="button"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <div
-                    data-testid={`button_update_` + display_name.toLowerCase()}
-                  >
-                    <IconComponent
-                      name={"AlertTriangle"}
-                      strokeWidth={ICON_STROKE_WIDTH}
-                      className="icon-size text-black"
-                    />
-                  </div>
-                </Button>
-              )}
-            </div>
-          </ShadTooltip>
-        )}
       </div>
     </>
   ) : (
