@@ -2,8 +2,6 @@ import asyncio
 import base64
 import json
 import os
-import queue
-import threading
 import time
 import traceback
 import uuid
@@ -497,6 +495,7 @@ async def handle_function_call(
         }
         msg_handler.openai_send(function_output)
 
+
 voice_config_cache: dict[str, VoiceConfig] = {}
 tts_config_cache: dict[str, TTSConfig] = {}
 
@@ -572,7 +571,7 @@ def create_event_logger():
 
     def log_event(event: dict, provenance: str) -> None:
         event_type = event.get("type", "None")
-        response_id = event.get("response_id", None) or event.get("response", {}).get("id", None)
+        response_id = event.get("response_id") or event.get("response", {}).get("id", None)
         if event_type != state["last_event_type"]:
             logger.debug(f"Event (response_id - {response_id}): {provenance} {event_type}")
             state["last_event_type"] = event_type
@@ -642,7 +641,7 @@ async def flow_as_tool_websocket(
 
         log_event = create_event_logger()
 
-        vad_task : asyncio.Task = None
+        vad_task: asyncio.Task = None
         voice_config = get_voice_config(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
@@ -787,10 +786,10 @@ async def flow_as_tool_websocket(
                     elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
                     if elevenlabs_client is None:
                         return
-                    
-                    async def get_chunks(q : asyncio.Queue):
-                        delims = ['.', '?', ';', '!']
-                        buf : str = ""
+
+                    async def get_chunks(q: asyncio.Queue):
+                        delims = [".", "?", ";", "!"]
+                        buf: str = ""
                         while True:
                             text = await q.get()
                             if text is None:
@@ -810,10 +809,9 @@ async def flow_as_tool_websocket(
                                 substr_begin = delim_loc + 1
                                 yield chunk
                             buf = buf[substr_begin:]
-                                
-                                        
+
                     chunk_gen = get_chunks(rsp.text_delta_queue)
-                    
+
                     async for text_chunk in chunk_gen:
                         audio_chunks = elevenlabs_client.generate(
                             voice=voice_config.elevenlabs_voice,
@@ -837,7 +835,7 @@ async def flow_as_tool_websocket(
                     event = {"type": "response.audio.done", "response": {"id": rsp.response_id}}
                     # client_send_event_from_thread(event, main_loop)
                     msg_handler.client_send(event)
-                except Exception as e:  # noqa: BLE001
+                except Exception:  # noqa: BLE001
                     logger.error(traceback.format_exc())
 
             async def forward_to_openai() -> None:
@@ -892,28 +890,30 @@ async def flow_as_tool_websocket(
                 nonlocal bot_speaking_flag, responses
                 conversation_id = str(uuid4())
                 # Store function call tasks to prevent garbage collection
-                
+
                 class FunctionCall:
-                    def __init__(self, item, is_prog_enabled : bool):
-                        self.item : dict = item
-                        self.args : str = ""
-                        self.done : bool = False
-                        self.is_prog_enabled : bool = is_prog_enabled
-                        self.prog_rsp_id : str = None
-                        self.func_rsp_id : str = None
-                        self.func_task : asyncio.Task = None
+                    def __init__(self, item, *, is_prog_enabled: bool):
+                        self.item: dict = item
+                        self.args: str = ""
+                        self.done: bool = False
+                        self.is_prog_enabled: bool = is_prog_enabled
+                        self.prog_rsp_id: str = None
+                        self.func_rsp_id: str = None
+                        self.func_task: asyncio.Task = None
+
                     def append_args(self, args):
                         if not self.func_task:
                             self.args = self.args + args
+
                     def execute(self):
                         try:
                             if self.is_prog_enabled:
                                 self.__exec_progress_msg()
                             self.__exec_func_call()
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001
                             logger.error(f"Error saving message to database (ValueError): {e}")
                             logger.error(traceback.format_exc())
-                            
+
                     def __exec_progress_msg(self):
                         msg_handler.openai_send(
                             {
@@ -936,7 +936,7 @@ async def flow_as_tool_websocket(
                         )
                         create_response = get_create_response(msg_handler, session_id)
                         create_response()
-                            
+
                     def __exec_func_call(self):
                         async def execute_func(self):
                             await handle_function_call(
@@ -950,8 +950,9 @@ async def flow_as_tool_websocket(
                                 msg_handler,
                             )
                             self.done = True
-                        self.func_task = asyncio.create_task( execute_func(self) )
-                        
+
+                        self.func_task = asyncio.create_task(execute_func(self))
+
                 function_call = None
 
                 try:
@@ -990,48 +991,61 @@ async def flow_as_tool_websocket(
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
                                     await rsp.text_delta_task
                                 responses.pop(response_id)
-                                msg_handler.client_send({"type":"response.done", "response": {"id": response_id}})
+                                msg_handler.client_send({"type": "response.done", "response": {"id": response_id}})
 
                                 try:
                                     message_text = event.get("text", "")
                                     await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
-                                except ValueError as e:
-                                    logger.error(f"Error saving message to database (ValueError): {e}")
+                                except ValueError as err:
+                                    logger.error(f"Error saving message to database (ValueError): {err}")
                                     logger.error(traceback.format_exc())
-                                except (KeyError, AttributeError, TypeError) as e:
+                                except (KeyError, AttributeError, TypeError) as err:
                                     # Replace blind Exception with specific exceptions
-                                    logger.error(f"Error saving message to database: {e}")
+                                    logger.error(f"Error saving message to database: {err}")
                                     logger.error(traceback.format_exc())
 
                         elif event_type == "response.output_item.added":
                             bot_speaking_flag[0] = True
                             item = event.get("item", {})
-                            if item.get("type") == "function_call":
-                                if not function_call or (function_call and function_call.done):
-                                    function_call = FunctionCall(item, voice_config.progress_enabled)
+                            if item.get("type") == "function_call" and (
+                                not function_call or (function_call and function_call.done)
+                            ):
+                                function_call = FunctionCall(item, voice_config.progress_enabled)
                         elif event_type == "response.output_item.done":
                             try:
                                 transcript = extract_transcript(event)
                                 if transcript and transcript.strip():
                                     await add_message_to_db(transcript, session, flow_id, session_id, "Machine", "AI")
-                            except ValueError as e:
-                                logger.error(f"Error saving message to database (ValueError): {e}")
+                            except ValueError as err:
+                                logger.error(f"Error saving message to database (ValueError): {err}")
                                 logger.error(traceback.format_exc())
-                            except (KeyError, AttributeError, TypeError) as e:
+                            except (KeyError, AttributeError, TypeError) as err:
                                 # Replace blind Exception with specific exceptions
-                                logger.error(f"Error saving message to database: {e}")
+                                logger.error(f"Error saving message to database: {err}")
                                 logger.error(traceback.format_exc())
                             bot_speaking_flag[0] = False
                         elif event_type == "response.done":
                             mark_response_done(event["response"]["id"])
                             msg_handler.openai_unblock()
                         elif event_type == "response.function_call_arguments.delta":
-                            logger.trace(f"{event_type}: {event["call_id"]} {event["event_id"]} {event["item_id"]} {event["response_id"]}")
-                            if function_call and (response_id != function_call.prog_rsp_id) and (response_id != function_call.func_rsp_id):
+                            logger.trace(
+                                f"{event_type}: {event["call_id"]} "
+                                f"{event["event_id"]} {event["item_id"]} {event["response_id"]}"
+                            )
+                            if function_call and response_id not in (
+                                function_call.prog_rsp_id,
+                                function_call.func_rsp_id,
+                            ):
                                 function_call.append_args(event.get("delta", ""))
                         elif event_type == "response.function_call_arguments.done":
-                            logger.trace(f"{event_type}: {event["call_id"]} {event["event_id"]} {event["item_id"]} {event["response_id"]}")
-                            if function_call and (response_id != function_call.prog_rsp_id) and (response_id != function_call.func_rsp_id):
+                            logger.trace(
+                                f"{event_type}: {event["call_id"]} "
+                                f"{event["event_id"]} {event["item_id"]} {event["response_id"]}"
+                            )
+                            if function_call and response_id not in (
+                                function_call.prog_rsp_id,
+                                function_call.func_rsp_id,
+                            ):
                                 function_call.execute()
                         elif event_type == "response.audio.delta":
                             # there are no audio deltas from OpenAI if ElevenLabs is used (because modality = ["text"]).
@@ -1141,14 +1155,14 @@ async def flow_tts_websocket(
                 log_event(msg, LF_TO_CLIENT)
 
         def openai_send(payload):
-            log_event(payload, DIRECTION_TO_OPENAI)
-            logger.trace(f"Sending text {DIRECTION_TO_OPENAI}: {payload['type']}")
+            log_event(payload, LF_TO_OPENAI)
+            logger.trace(f"Sending text {LF_TO_OPENAI}: {payload['type']}")
             openai_send_q.put_nowait(json.dumps(payload))
             logger.trace("JSON sent.")
 
         def client_send(payload):
-            log_event(payload, DIRECTION_TO_CLIENT)
-            logger.trace(f"Sending JSON {DIRECTION_TO_CLIENT}: {payload['type']}")
+            log_event(payload, LF_TO_CLIENT)
+            logger.trace(f"Sending JSON {LF_TO_CLIENT}: {payload['type']}")
             client_send_q.put_nowait(json.dumps(payload))
             logger.trace("JSON sent.")
 
