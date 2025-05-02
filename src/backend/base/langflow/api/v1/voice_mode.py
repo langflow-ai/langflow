@@ -1010,7 +1010,7 @@ async def flow_as_tool_websocket(
                             if item.get("type") == "function_call" and (
                                 not function_call or (function_call and function_call.done)
                             ):
-                                function_call = FunctionCall(item, voice_config.progress_enabled)
+                                function_call = FunctionCall(item, is_prog_enabled=voice_config.progress_enabled)
                         elif event_type == "response.output_item.done":
                             try:
                                 transcript = extract_transcript(event)
