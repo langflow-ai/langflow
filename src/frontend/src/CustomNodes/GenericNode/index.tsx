@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useUpdateNodeInternals } from "@xyflow/react";
@@ -81,6 +82,7 @@ function GenericNode({
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
+  const [openUpdateModal, setOpenUpdateModal] = useState(false);
 
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
@@ -137,52 +139,60 @@ function GenericNode({
     deleteNode(data.id);
   }
 
-  const handleUpdateCode = useCallback(() => {
-    setLoadingUpdate(true);
-    takeSnapshot();
+  const handleUpdateCode = useCallback(
+    (confirmed: boolean = false) => {
+      if (!confirmed && hasBreakingChange) {
+        setOpenUpdateModal(true);
+        return;
+      }
+      setLoadingUpdate(true);
+      takeSnapshot();
 
-    const thisNodeTemplate = templates[data.type]?.template;
-    if (!thisNodeTemplate?.code) return;
+      const thisNodeTemplate = templates[data.type]?.template;
+      if (!thisNodeTemplate?.code) return;
 
-    const currentCode = thisNodeTemplate.code.value;
-    if (data.node) {
-      validateComponentCode(
-        { code: currentCode, frontend_node: data.node },
-        {
-          onSuccess: ({ data: resData, type }) => {
-            if (resData && type && updateNodeCode) {
-              const newNode = processNodeAdvancedFields(
-                resData,
-                edges,
-                data.id,
-              );
-              updateNodeCode(newNode, currentCode, "code", type);
+      const currentCode = thisNodeTemplate.code.value;
+      if (data.node) {
+        validateComponentCode(
+          { code: currentCode, frontend_node: data.node },
+          {
+            onSuccess: ({ data: resData, type }) => {
+              if (resData && type && updateNodeCode) {
+                const newNode = processNodeAdvancedFields(
+                  resData,
+                  edges,
+                  data.id,
+                );
+                updateNodeCode(newNode, currentCode, "code", type);
+                setLoadingUpdate(false);
+              }
+            },
+            onError: (error) => {
+              setErrorData({
+                title: "Error updating Component code",
+                list: [
+                  "There was an error updating the Component.",
+                  "If the error persists, please report it on our Discord or GitHub.",
+                ],
+              });
+              console.error(error);
               setLoadingUpdate(false);
-            }
+            },
           },
-          onError: (error) => {
-            setErrorData({
-              title: "Error updating Component code",
-              list: [
-                "There was an error updating the Component.",
-                "If the error persists, please report it on our Discord or GitHub.",
-              ],
-            });
-            console.error(error);
-            setLoadingUpdate(false);
-          },
-        },
-      );
-    }
-  }, [
-    data,
-    templates,
-    edges,
-    updateNodeCode,
-    validateComponentCode,
-    setErrorData,
-    takeSnapshot,
-  ]);
+        );
+      }
+    },
+    [
+      data,
+      templates,
+      hasBreakingChange,
+      edges,
+      updateNodeCode,
+      validateComponentCode,
+      setErrorData,
+      takeSnapshot,
+    ],
+  );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
     if (isOutdated && selected) {
@@ -299,7 +309,7 @@ function GenericNode({
             showNode={showNode}
             openAdvancedModal={false}
             onCloseAdvancedModal={() => {}}
-            updateNode={handleUpdateCode}
+            updateNode={() => handleUpdateCode()}
             isOutdated={isOutdated && isUserEdited}
           />
         </div>
@@ -418,7 +428,7 @@ function GenericNode({
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
         getValidationStatus={getValidationStatus}
-        handleUpdateComponent={handleUpdateCode}
+        handleUpdateComponent={() => handleUpdateCode()}
       />
     );
   }, [
@@ -489,12 +499,20 @@ function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
+        <UpdateComponentModal
+          open={openUpdateModal}
+          setOpen={setOpenUpdateModal}
+          onUpdateNode={() => handleUpdateCode(true)}
+          components={[
+            { node: data.node, nodeId: data.id, isBreaking: hasBreakingChange },
+          ]}
+        />
         {memoizedNodeToolbarComponent}
         {(isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll && (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             showNode={showNode}
-            handleUpdateCode={handleUpdateCode}
+            handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
             setDismissAll={setDismissAll}
           />
