@@ -100,6 +100,15 @@ export default function UpdateComponentModal({
   ];
 
   useEffect(() => {
+    if (open) {
+      setBackupFlow(true);
+      setSelectedComponents(
+        new Set(components.filter((c) => !c.breakingChange).map((c) => c.id)),
+      );
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (agGrid.current) {
       agGrid.current?.api?.forEachNode((node) => {
         if (selectedComponents.has(node.data.id)) {
