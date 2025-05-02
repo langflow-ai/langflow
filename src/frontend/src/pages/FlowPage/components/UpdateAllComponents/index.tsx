@@ -5,6 +5,7 @@ import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-ad
 import useUpdateAllNodes, {
   UpdateNodesType,
 } from "@/CustomNodes/hooks/use-update-all-nodes";
+import UpdateComponentModal from "@/modals/updateComponentModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
@@ -12,7 +13,7 @@ import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
 const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
@@ -35,7 +36,7 @@ export default function UpdateAllComponents({}: {}) {
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-
+  const [isOpen, setIsOpen] = useState(false);
   const edgesUpdateRef = useRef({
     numberOfEdgesBeforeUpdate: 0,
     updateComponent: false,
@@ -62,7 +63,15 @@ export default function UpdateAllComponents({}: {}) {
     }`;
   };
 
-  const handleUpdateAllComponents = () => {
+  const breakingChanges = componentsToUpdate.filter(
+    (component) => component.breakingChange,
+  );
+
+  const handleUpdateAllComponents = (confirmed?: boolean) => {
+    if (!confirmed && breakingChanges.length > 0) {
+      setIsOpen(true);
+      return;
+    }
     startEdgesUpdateRef();
 
     setLoadingUpdate(true);
@@ -71,8 +80,8 @@ export default function UpdateAllComponents({}: {}) {
     let updatedCount = 0;
     const updates: UpdateNodesType[] = [];
 
-    const updatePromises = componentsToUpdate.map((nodeId) => {
-      const node = nodes.find((n) => n.id === nodeId);
+    const updatePromises = componentsToUpdate.map((nodeUpdate) => {
+      const node = nodes.find((n) => n.id === nodeUpdate.id);
       if (!node || node.type !== "genericNode") return Promise.resolve();
 
       const thisNodeTemplate = templates[node.data.type]?.template;
@@ -87,10 +96,14 @@ export default function UpdateAllComponents({}: {}) {
         })
           .then(({ data: resData, type }) => {
             if (resData && type) {
-              const newNode = processNodeAdvancedFields(resData, edges, nodeId);
+              const newNode = processNodeAdvancedFields(
+                resData,
+                edges,
+                nodeUpdate.id,
+              );
 
               updates.push({
-                nodeId,
+                nodeId: nodeUpdate.id,
                 newNode,
                 code: currentCode,
                 name: "code",
@@ -149,45 +162,50 @@ export default function UpdateAllComponents({}: {}) {
   return (
     <div
       className={cn(
-        "absolute bottom-2 left-1/2 z-50 flex w-[500px] -translate-x-1/2 items-center gap-8 rounded-lg bg-warning px-4 py-2 text-sm font-medium text-warning-foreground shadow-md transition-all ease-in",
+        "absolute bottom-2 left-1/2 z-50 flex w-[530px] -translate-x-1/2 items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md transition-all ease-in",
         dismissed && "translate-y-[120%]",
+        componentsToUpdate.some((component) => component.breakingChange) &&
+          "border-accent-amber-foreground",
       )}
     >
       <div className="flex items-center gap-3">
-        <ForwardedIconComponent
-          name="AlertTriangle"
-          className="!h-[18px] !w-[18px] shrink-0"
-          strokeWidth={1.5}
-        />
         <span>
-          {componentsToUpdate.length} component
-          {componentsToUpdate.length > 1 ? "s are" : " is"} ready to update
+          Update
+          {componentsToUpdate.length > 1 ? "s are" : " is"} available for{" "}
+          {componentsToUpdate.length +
+            " component" +
+            (componentsToUpdate.length > 1 ? "s" : "")}
         </span>
       </div>
       <div className="flex items-center gap-4">
         <Button
           variant="link"
           size="icon"
-          className="shrink-0 text-sm text-warning-foreground"
+          className="shrink-0 text-sm"
           onClick={(e) => {
             setDismissed(true);
             setDismissAll(true);
             e.stopPropagation();
           }}
         >
-          Dismiss
+          Dismiss {componentsToUpdate.length > 1 ? "All" : ""}
         </Button>
         <Button
-          variant="warning"
           size="sm"
           className="shrink-0"
-          onClick={handleUpdateAllComponents}
+          onClick={() => handleUpdateAllComponents()}
           loading={loadingUpdate}
           data-testid="update-all-button"
         >
-          Update All
+          {breakingChanges.length > 0 ? "Review All" : "Update All"}
         </Button>
       </div>
+      <UpdateComponentModal
+        open={isOpen}
+        setOpen={setIsOpen}
+        onUpdateNode={() => handleUpdateAllComponents(true)}
+        components={componentsToUpdate}
+      />
     </div>
   );
 }
