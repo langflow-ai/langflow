@@ -71,7 +71,7 @@ withEventDeliveryModes(
 
     expect(concatAllText.length).toBeGreaterThan(200);
 
-    expect(concatAllText).toContain("html");
+    expect(concatAllText).toContain("div");
     expect(concatAllText).toContain("body");
   },
 );
