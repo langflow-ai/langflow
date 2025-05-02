@@ -18,7 +18,7 @@ import sqlalchemy
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
-from elevenlabs import AsyncElevenLabs
+from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
 from openai import OpenAI
 from sqlalchemy import select
@@ -183,7 +183,7 @@ class ElevenLabsClientManager:
                     return None
 
             if cls._api_key:
-                cls._instance = AsyncElevenLabs(api_key=cls._api_key)
+                cls._instance = ElevenLabs(api_key=cls._api_key)
 
         return cls._instance
 
@@ -813,41 +813,51 @@ async def flow_as_tool_websocket(
                     if elevenlabs_client is None:
                         return
                     
-                    async def wait_for_text(q : asyncio.Queue):
+                    async def get_chunks(q : asyncio.Queue):
+                        delims = ['.', '?', ';', '!']
+                        buf : str = ""
                         while True:
                             text = await q.get()
                             if text is None:
-                                break
-                            yield text
-                    text_gen = wait_for_text(rsp.text_delta_queue)
+                                if len(buf) > 0:
+                                    yield buf
+                                return
+                            buf += text
+                            delim_locs = []
+                            for delim in delims:
+                                i = buf.find(delim)
+                                while i != -1:
+                                    delim_locs.append(i)
+                                    i = buf.find(delim, i + 1)
+                            substr_begin = 0
+                            for delim_loc in delim_locs:
+                                chunk = buf[substr_begin : delim_loc + 1]
+                                substr_begin = delim_loc + 1
+                                yield chunk
+                            buf = buf[substr_begin:]
+                                
+                                        
+                    chunk_gen = get_chunks(rsp.text_delta_queue)
                     
-                    full_text = ""
-                    async for chunk_text in text_gen:
-                        full_text += chunk_text
-                        
-                    generated_audio = await elevenlabs_client.generate(
-                        voice=voice_config.elevenlabs_voice,
-                        output_format="pcm_24000",
-                        text=full_text,  # synchronous generator expected by ElevenLabs
-                        model=voice_config.elevenlabs_model,
-                        voice_settings=None,
-                        stream=True,
-                    )
-                    
-                    audio_stream = []
-                    async for chunk_audio in generated_audio:
-                        audio_stream.append(chunk_audio)
-                        
-                    for chunk in audio_stream:
-                        base64_audio = base64.b64encode(chunk).decode("utf-8")
-                        # Schedule sending the audio chunk in the main event loop.
-                        event = {
-                            "type": "response.audio.delta",
-                            "delta": base64_audio,
-                            "response_id": rsp.response_id,
-                        }
-                        # client_send_event_from_thread(event, main_loop)
-                        msg_handler.client_send(event)
+                    async for text_chunk in chunk_gen:
+                        audio_chunks = elevenlabs_client.generate(
+                            voice=voice_config.elevenlabs_voice,
+                            output_format="pcm_24000",
+                            text=text_chunk,  # synchronous generator expected by ElevenLabs
+                            model=voice_config.elevenlabs_model,
+                            voice_settings=None,
+                            stream=True,
+                        )
+                        for audio_chunk in audio_chunks:
+                            base64_audio = base64.b64encode(audio_chunk).decode("utf-8")
+                            # Schedule sending the audio chunk in the main event loop.
+                            event = {
+                                "type": "response.audio.delta",
+                                "delta": base64_audio,
+                                "response_id": rsp.response_id,
+                            }
+                            # client_send_event_from_thread(event, main_loop)
+                            msg_handler.client_send(event)
 
                     event = {"type": "response.audio.done", "response": {"id": rsp.response_id}}
                     # client_send_event_from_thread(event, main_loop)
@@ -978,8 +988,10 @@ async def flow_as_tool_websocket(
                             mark_response_done(event["response"]["id"])
                             msg_handler.openai_unblock()
                         elif event_type == "response.function_call_arguments.delta":
+                            logger.trace(f"{event_type}: {event["call_id"]} {event["event_id"]} {event["item_id"]} {event["response_id"]}")
                             function_call_args += event.get("delta", "")
                         elif event_type == "response.function_call_arguments.done":
+                            logger.trace(f"{event_type}: {event["call_id"]} {event["event_id"]} {event["item_id"]} {event["response_id"]}")
                             if function_call:
                                 # Create and store reference to the task
                                 function_call_task = asyncio.create_task(
