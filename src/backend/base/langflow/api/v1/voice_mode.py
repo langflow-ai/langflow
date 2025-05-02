@@ -962,9 +962,6 @@ async def flow_as_tool_websocket(
                         log_event(event, OPENAI_TO_LF)
                         event_type = event.get("type")
                         response_id = event.get("response_id", None) or event.get("response", {}).get("id", None)
-                        if is_response_done(response_id):
-                            logger.debug(f"Skipping event {event_type} for completed response {response_id}")
-                            continue
 
                         do_forward = True
                         do_forward = do_forward and not (event_type == "response.done" and voice_config.use_elevenlabs)
@@ -1025,23 +1022,14 @@ async def flow_as_tool_websocket(
                                 logger.error(traceback.format_exc())
                             bot_speaking_flag[0] = False
                         elif event_type == "response.done":
-                            mark_response_done(event["response"]["id"])
                             msg_handler.openai_unblock()
                         elif event_type == "response.function_call_arguments.delta":
-                            logger.trace(
-                                f"{event_type}: {event["call_id"]} "
-                                f"{event["event_id"]} {event["item_id"]} {event["response_id"]}"
-                            )
                             if function_call and response_id not in (
                                 function_call.prog_rsp_id,
                                 function_call.func_rsp_id,
                             ):
                                 function_call.append_args(event.get("delta", ""))
                         elif event_type == "response.function_call_arguments.done":
-                            logger.trace(
-                                f"{event_type}: {event["call_id"]} "
-                                f"{event["event_id"]} {event["item_id"]} {event["response_id"]}"
-                            )
                             if function_call and response_id not in (
                                 function_call.prog_rsp_id,
                                 function_call.func_rsp_id,
