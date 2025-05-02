@@ -36,7 +36,10 @@ export default function NodeUpdateComponent({
         variant="ghost"
         size="icon"
         className="shrink-0 !text-mmd"
-        onClick={() => setDismissAll(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setDismissAll(true);
+        }}
         aria-label="Dismiss warning bar"
         data-testid="dismiss-warning-bar"
       >
@@ -45,7 +48,10 @@ export default function NodeUpdateComponent({
       <Button
         size="sm"
         className="!h-8 shrink-0 !text-mmd"
-        onClick={handleUpdateCode}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleUpdateCode();
+        }}
         loading={loadingUpdate}
         data-testid="update-button"
       >
