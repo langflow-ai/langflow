@@ -407,36 +407,11 @@ async def handle_function_call(
     current_user: CurrentActiveUser,
     conversation_id: str,
     session_id: str,
-    voice_config: VoiceConfig,
     msg_handler: SendQueues,
 ):
     create_response = get_create_response(msg_handler, session_id)
     """Handle function calls from the OpenAI API."""
     try:
-        # trigger response that tool was called
-        if voice_config.progress_enabled:
-            msg_handler.openai_send(
-                {
-                    "type": "conversation.item.create",
-                    "item": {
-                        "type": "message",
-                        "role": "system",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": "Tell the user you are now looking into or solving "
-                                "a request that will be explained later. Do not repeat "
-                                "the prompt exactly, summarize what's being requested."
-                                "Keep it very short."
-                                f"\n\nThe request: {function_call_args}",
-                            }
-                        ],
-                    },
-                }
-            )
-            logger.trace("Sent progress update conversation item.")
-            create_response()
-            logger.trace("Sent progress update response create.")
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
@@ -915,11 +890,69 @@ async def flow_as_tool_websocket(
 
             async def forward_to_client() -> None:
                 nonlocal bot_speaking_flag, responses
-                function_call = None
-                function_call_args = ""
                 conversation_id = str(uuid4())
                 # Store function call tasks to prevent garbage collection
-                function_call_tasks = []
+                
+                class FunctionCall:
+                    def __init__(self, item, is_prog_enabled : bool):
+                        self.item : dict = item
+                        self.args : str = ""
+                        self.done : bool = False
+                        self.is_prog_enabled : bool = is_prog_enabled
+                        self.prog_rsp_id : str = None
+                        self.func_rsp_id : str = None
+                        self.func_task : asyncio.Task = None
+                    def append_args(self, args):
+                        if not self.func_task:
+                            self.args = self.args + args
+                    def execute(self):
+                        try:
+                            if self.is_prog_enabled:
+                                self.__exec_progress_msg()
+                            self.__exec_func_call()
+                        except Exception as e:
+                            logger.error(f"Error saving message to database (ValueError): {e}")
+                            logger.error(traceback.format_exc())
+                            
+                    def __exec_progress_msg(self):
+                        msg_handler.openai_send(
+                            {
+                                "type": "conversation.item.create",
+                                "item": {
+                                    "type": "message",
+                                    "role": "system",
+                                    "content": [
+                                        {
+                                            "type": "input_text",
+                                            "text": "Tell the user you are now looking into or solving "
+                                            "a request that will be explained later. Do not repeat "
+                                            "the prompt exactly, summarize what's being requested."
+                                            "Keep it very short."
+                                            f"\n\nThe request: {self.args}",
+                                        }
+                                    ],
+                                },
+                            }
+                        )
+                        create_response = get_create_response(msg_handler, session_id)
+                        create_response()
+                            
+                    def __exec_func_call(self):
+                        async def execute_func(self):
+                            await handle_function_call(
+                                self.item,
+                                self.args,
+                                flow_id,
+                                background_tasks,
+                                current_user,
+                                conversation_id,
+                                session_id,
+                                msg_handler,
+                            )
+                            self.done = True
+                        self.func_task = asyncio.create_task( execute_func(self) )
+                        
+                function_call = None
 
                 try:
                     while True:
@@ -940,14 +973,19 @@ async def flow_as_tool_websocket(
                             msg_handler.client_send(event)
                         if event_type == "response.created":
                             responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
+                            if function_call:
+                                if function_call.is_prog_enabled and not function_call.prog_rsp_id:
+                                    function_call.prog_rsp_id = response_id
+                                elif not function_call.func_rsp_id:
+                                    function_call.func_rsp_id = response_id
                         elif event_type == "response.text.delta":
+                            rsp: Response = responses[response_id]
                             if voice_config.use_elevenlabs:
                                 delta = event.get("delta", "")
-                                rsp: Response = responses[response_id]
                                 await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
+                            rsp: Response = responses[response_id]
                             if voice_config.use_elevenlabs:
-                                rsp: Response = responses[response_id]
                                 await rsp.text_delta_queue.put(None)
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
                                     await rsp.text_delta_task
@@ -969,8 +1007,8 @@ async def flow_as_tool_websocket(
                             bot_speaking_flag[0] = True
                             item = event.get("item", {})
                             if item.get("type") == "function_call":
-                                function_call = item
-                                function_call_args = ""
+                                if not function_call or (function_call and function_call.done):
+                                    function_call = FunctionCall(item, voice_config.progress_enabled)
                         elif event_type == "response.output_item.done":
                             try:
                                 transcript = extract_transcript(event)
@@ -989,30 +1027,12 @@ async def flow_as_tool_websocket(
                             msg_handler.openai_unblock()
                         elif event_type == "response.function_call_arguments.delta":
                             logger.trace(f"{event_type}: {event["call_id"]} {event["event_id"]} {event["item_id"]} {event["response_id"]}")
-                            function_call_args += event.get("delta", "")
+                            if function_call and (response_id != function_call.prog_rsp_id) and (response_id != function_call.func_rsp_id):
+                                function_call.append_args(event.get("delta", ""))
                         elif event_type == "response.function_call_arguments.done":
                             logger.trace(f"{event_type}: {event["call_id"]} {event["event_id"]} {event["item_id"]} {event["response_id"]}")
-                            if function_call:
-                                # Create and store reference to the task
-                                function_call_task = asyncio.create_task(
-                                    handle_function_call(
-                                        function_call,
-                                        function_call_args,
-                                        flow_id,
-                                        background_tasks,
-                                        current_user,
-                                        conversation_id,
-                                        session_id,
-                                        voice_config,
-                                        msg_handler,
-                                    )
-                                )
-                                # Store the task reference to prevent garbage collection
-                                function_call_tasks.append(function_call_task)
-                                # Clean up completed tasks periodically
-                                function_call_tasks = [t for t in function_call_tasks if not t.done()]
-                                function_call = None
-                                function_call_args = ""
+                            if function_call and (response_id != function_call.prog_rsp_id) and (response_id != function_call.func_rsp_id):
+                                function_call.execute()
                         elif event_type == "response.audio.delta":
                             # there are no audio deltas from OpenAI if ElevenLabs is used (because modality = ["text"]).
                             event.get("delta", "")
