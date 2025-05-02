@@ -52,6 +52,8 @@ const NodeToolbarComponent = memo(
     onCloseAdvancedModal,
     updateNode,
     isOutdated,
+    isUserEdited,
+    hasBreakingChange,
     setOpenShowMoreOptions,
   }: nodeToolbarPropsType): JSX.Element => {
     const version = useDarkStore((state) => state.version);
@@ -621,8 +623,9 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      value={"Restore"}
-                      icon={"RefreshCcwDot"}
+                      style={hasBreakingChange ? "text-warning" : ""}
+                      value={isUserEdited ? "Restore" : "Update"}
+                      icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
                     />
                   </SelectItem>
