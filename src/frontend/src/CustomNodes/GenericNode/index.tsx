@@ -311,7 +311,9 @@ function GenericNode({
             openAdvancedModal={false}
             onCloseAdvancedModal={() => {}}
             updateNode={() => handleUpdateCode()}
-            isOutdated={isOutdated && isUserEdited}
+            isOutdated={isOutdated && dismissAll}
+            isUserEdited={isUserEdited}
+            hasBreakingChange={hasBreakingChange}
           />
         </div>
         <div className="-z-10">
@@ -430,7 +432,6 @@ function GenericNode({
         isUserEdited={isUserEdited}
         isBreakingChange={hasBreakingChange}
         getValidationStatus={getValidationStatus}
-        handleUpdateComponent={() => handleUpdateCode()}
       />
     );
   }, [
