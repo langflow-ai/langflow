@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import requests
 from loguru import logger
@@ -90,7 +90,7 @@ class AnthropicModelComponent(LCModelComponent):
                 anthropic_api_key=self.api_key,
                 max_tokens_to_sample=self.max_tokens,
                 temperature=self.temperature,
-                anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,
+                anthropic_api_url=DEFAULT_ANTHROPIC_API_URL,
                 streaming=self.stream,
             )
         except Exception as e:
@@ -127,7 +127,7 @@ class AnthropicModelComponent(LCModelComponent):
                 model_with_tool = ChatAnthropic(
                     model=model,  # Use the current model being checked
                     anthropic_api_key=self.api_key,
-                    anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,
+                    anthropic_api_url=cast(str, self.base_url) or DEFAULT_ANTHROPIC_API_URL,
                 )
 
                 if (
@@ -162,7 +162,7 @@ class AnthropicModelComponent(LCModelComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if self.base_url is None or build_config["base_url"]["value"] is None:
+        if build_config["base_url"]["value"] is None:
             build_config["base_url"]["value"] = DEFAULT_ANTHROPIC_API_URL
             self.base_url = DEFAULT_ANTHROPIC_API_URL
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
