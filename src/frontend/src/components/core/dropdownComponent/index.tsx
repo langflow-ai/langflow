@@ -279,6 +279,21 @@ export default function Dropdown({
     </Button>
   );
 
+  const renderSelectedIcon = () => {
+    const selectedIndex = filteredOptions.findIndex(
+      (option) => option === value,
+    );
+    const iconMetadata =
+      selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
+
+    return iconMetadata ? (
+      <ForwardedIconComponent
+        name={iconMetadata}
+        className="h-4 w-4 flex-shrink-0"
+      />
+    ) : null;
+  };
+
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
@@ -306,27 +321,7 @@ export default function Dropdown({
             className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
-            {value && (
-              <>
-                {(() => {
-                  // Find the selected value's metadata in a reliable way
-                  const selectedIndex = filteredOptions.findIndex(
-                    (option) => option === value,
-                  );
-                  const iconMetadata =
-                    selectedIndex >= 0
-                      ? filteredMetadata?.[selectedIndex]?.icon
-                      : undefined;
-
-                  return iconMetadata ? (
-                    <ForwardedIconComponent
-                      name={iconMetadata}
-                      className="h-4 w-4 flex-shrink-0"
-                    />
-                  ) : null;
-                })()}
-              </>
-            )}
+            {value && <>{renderSelectedIcon()}</>}
             <span className="truncate">
               {disabled ? (
                 RECEIVING_INPUT_VALUE
