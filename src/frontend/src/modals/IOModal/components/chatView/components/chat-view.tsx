@@ -148,10 +148,13 @@ export default function ChatView({
   const { files, setFiles, handleFiles } = useFileHandler(currentFlowId);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
+    setIsDragging,
+    !!playgroundPage,
+  );
 
   const onDrop = (e) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND) {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
       e.stopPropagation();
       return;
     }

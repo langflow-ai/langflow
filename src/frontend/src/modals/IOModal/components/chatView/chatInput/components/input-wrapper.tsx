@@ -84,7 +84,8 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         </div>
         <div className="flex w-full items-end justify-between">
           <div className={isBuilding ? "cursor-not-allowed" : ""}>
-            {!playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND && (
+            {(!playgroundPage ||
+              (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
               <UploadFileButton
                 isBuilding={isBuilding}
                 fileInputRef={fileInputRef}
