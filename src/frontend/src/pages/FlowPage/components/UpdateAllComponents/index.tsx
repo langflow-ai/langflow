@@ -67,7 +67,7 @@ export default function UpdateAllComponents({}: {}) {
     (component) => component.breakingChange,
   );
 
-  const handleUpdateAllComponents = (confirmed?: boolean) => {
+  const handleUpdateAllComponents = (confirmed?: boolean, ids?: string[]) => {
     if (!confirmed && breakingChanges.length > 0) {
       setIsOpen(true);
       return;
@@ -80,46 +80,48 @@ export default function UpdateAllComponents({}: {}) {
     let updatedCount = 0;
     const updates: UpdateNodesType[] = [];
 
-    const updatePromises = componentsToUpdate.map((nodeUpdate) => {
-      const node = nodes.find((n) => n.id === nodeUpdate.id);
-      if (!node || node.type !== "genericNode") return Promise.resolve();
+    const updatePromises = componentsToUpdate
+      .filter((component) => ids?.includes(component.id) ?? true)
+      .map((nodeUpdate) => {
+        const node = nodes.find((n) => n.id === nodeUpdate.id);
+        if (!node || node.type !== "genericNode") return Promise.resolve();
 
-      const thisNodeTemplate = templates[node.data.type]?.template;
-      if (!thisNodeTemplate?.code) return Promise.resolve();
+        const thisNodeTemplate = templates[node.data.type]?.template;
+        if (!thisNodeTemplate?.code) return Promise.resolve();
 
-      const currentCode = thisNodeTemplate.code.value;
+        const currentCode = thisNodeTemplate.code.value;
 
-      return new Promise((resolve) => {
-        validateComponentCode({
-          code: currentCode,
-          frontend_node: node.data.node!,
-        })
-          .then(({ data: resData, type }) => {
-            if (resData && type) {
-              const newNode = processNodeAdvancedFields(
-                resData,
-                edges,
-                nodeUpdate.id,
-              );
-
-              updates.push({
-                nodeId: nodeUpdate.id,
-                newNode,
-                code: currentCode,
-                name: "code",
-                type,
-              });
-
-              updatedCount++;
-            }
-            resolve(null);
+        return new Promise((resolve) => {
+          validateComponentCode({
+            code: currentCode,
+            frontend_node: node.data.node!,
           })
-          .catch((error) => {
-            console.error(error);
-            resolve(null);
-          });
+            .then(({ data: resData, type }) => {
+              if (resData && type) {
+                const newNode = processNodeAdvancedFields(
+                  resData,
+                  edges,
+                  nodeUpdate.id,
+                );
+
+                updates.push({
+                  nodeId: nodeUpdate.id,
+                  newNode,
+                  code: currentCode,
+                  name: "code",
+                  type,
+                });
+
+                updatedCount++;
+              }
+              resolve(null);
+            })
+            .catch((error) => {
+              console.error(error);
+              resolve(null);
+            });
+        });
       });
-    });
 
     Promise.all(updatePromises)
       .then(() => {
@@ -203,7 +205,7 @@ export default function UpdateAllComponents({}: {}) {
       <UpdateComponentModal
         open={isOpen}
         setOpen={setIsOpen}
-        onUpdateNode={() => handleUpdateAllComponents(true)}
+        onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
         components={componentsToUpdate}
       />
     </div>
