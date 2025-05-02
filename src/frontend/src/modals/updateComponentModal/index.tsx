@@ -6,7 +6,8 @@ import useFlowStore from "@/stores/flowStore";
 import { ComponentsToUpdateType } from "@/types/zustand/flow";
 import { cn } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
-import { useState } from "react";
+import { AgGridReact } from "ag-grid-react";
+import { useEffect, useRef, useState } from "react";
 import BaseModal from "../baseModal";
 
 export default function UpdateComponentModal({
@@ -27,6 +28,7 @@ export default function UpdateComponentModal({
   const [selectedComponents, setSelectedComponents] = useState<Set<string>>(
     new Set(components.filter((c) => !c.breakingChange).map((c) => c.id)),
   );
+  const agGrid = useRef<AgGridReact>(null);
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
   const { handleDuplicate } = useDuplicateFlows({
@@ -55,6 +57,7 @@ export default function UpdateComponentModal({
   };
 
   const columnDefs: ColDef[] = [
+    { field: "id", hide: true },
     {
       headerName: "Component",
       field: "display_name",
@@ -95,6 +98,18 @@ export default function UpdateComponentModal({
       },
     },
   ];
+
+  useEffect(() => {
+    if (agGrid.current) {
+      agGrid.current?.api?.forEachNode((node) => {
+        if (selectedComponents.has(node.data.id)) {
+          node.setSelected(true);
+        } else {
+          node.setSelected(false);
+        }
+      });
+    }
+  }, [agGrid.current, selectedComponents, open]);
 
   return (
     <BaseModal
@@ -146,6 +161,7 @@ export default function UpdateComponentModal({
             <div className="-mx-4">
               <TableComponent
                 columnDefs={columnDefs}
+                ref={agGrid}
                 domLayout="autoHeight"
                 rowData={components}
                 rowSelection="multiple"
