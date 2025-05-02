@@ -2269,6 +2269,27 @@ wheels = [
 ]
 
 [[package]]
+name = "fi-instrumentation-otel"
+version = "0.1.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-sdk" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5d/3f/2ced423754edca6ab98fa4ffb3c76ccffb62f420bea34699350236143833/fi_instrumentation_otel-0.1.3.tar.gz", hash = "sha256:9e577d208616418a3b0ab84bf34978733746394f285c6f1e646b69c800760029", size = 23630 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/96/570f5f100e002996126028ee5b8fa218cef0b7510356a556a06e544f519e/fi_instrumentation_otel-0.1.3-py3-none-any.whl", hash = "sha256:d2923f5782574042bcc9a67be6f6d63567febbc10b0a3367639f534e604623c6", size = 28988 },
+]
+
+[[package]]
 name = "filelock"
 version = "3.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4600,6 +4621,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["aiosqlite"] },
     { name = "sseclient-py" },
     { name = "supabase" },
+    { name = "traceai-langchain" },
     { name = "types-cachetools" },
     { name = "upstash-vector" },
     { name = "uv" },
@@ -4795,6 +4817,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'" },
     { name = "sseclient-py", specifier = "==1.8.0" },
     { name = "supabase", specifier = "==2.6.0" },
+    { name = "traceai-langchain", specifier = ">=0.1.3" },
     { name = "types-cachetools", specifier = "==5.5.0.20240820" },
     { name = "upstash-vector", specifier = "==0.6.0" },
     { name = "uv", specifier = ">=0.5.7" },
@@ -9921,6 +9944,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540 },
+]
+
+[[package]]
+name = "traceai-langchain"
+version = "0.1.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fi-instrumentation-otel" },
+    { name = "langchain" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8a/6b/093f72ac9a540b8cec0757f332c344a2fa2c7bbd1ab694872fb81e9eb885/traceai_langchain-0.1.3.tar.gz", hash = "sha256:fb8f2a10f8d928eb92337e229f607092c66ace0c65474577f43c8641d6bde8ec", size = 12645 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/98/26f2aeecd0ba36bfca00dd251ce7b27e01b61dddd608c848cc65ac571a84/traceai_langchain-0.1.3-py3-none-any.whl", hash = "sha256:c663064d6e9628d10224ad3c3d0b05099716dfa7b2982f225dda269b5132e9c8", size = 13353 },
 ]
 
 [[package]]
