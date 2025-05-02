@@ -8,154 +8,174 @@ import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
+This page describes how to use Langflow as an *MCP server*.
+For information about using Langflow as an *MCP client*, see the [MCP component](/components-tools#mcp-server).
 
-As an MCP server, you can serve your flows as tools to any [MCP client](https://modelcontextprotocol.io/clients).
-All flows within a [project](/concepts-overview#projects) are exposed as actions for MCP clients to use as tools.
-
-To use Langflow as an MCP client to access MCP servers, see the [MCP component](/components-tools#mcp-server).
+As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
 
 ## Prerequisites
 
-* Install [uv](https://docs.astral.sh/uv/getting-started/installation/) to run `uvx` commands. `uvx` is included with `uv` in the Langflow package.
-* Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) to run `npx` commands.
-For an example `npx` server, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
-* Create at least one flow within your Langflow project, and note your host. For example, `http://127.0.0.1:7860`.
+* A Langflow project with at least one flow created.
 
-## Serve flows as actions from the MCP server
+* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer.
 
-:::important
-If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
-:::
-Serve a flow as an action from your MCP server, with a clear name and description for MCP clients to use it as a tool.
+## Select and configure flows to expose as tools {#select-flows-to-serve}
 
-1. Navigate to the **MCP** page.
-The **MCP** page is available at the `/mcp` URL. For example, if you're running Langflow at the default `http://127.0.0.1:7860` address, the **MCP** page is located at `http://127.0.0.1:7860/mcp`.
-:::tip
-Alternatively, from the **Workspace**, click **Publish**, and then click **MCP Server**.
-:::
-2. Click the **MCP Server** tab.
-The page presents code templates for connecting your server to client applications.
-Your available flows are listed as actions.
-![MCP server projects page](/img/mcp-server.png)
-3. To add Actions to your server and expose them to clients, click **Edit Actions**.
-The **MCP Server Actions** pane appears.
-![MCP server actions](/img/mcp-server-actions.png)
-4. Select the action you want your server to expose as a tool.
-This example adds a Document QA flow based on a resume.
-:::important
-Tool names must contain only letters, numbers, underscores, and dashes.
-Tool names cannot contain spaces.
-:::
-5. To modify your **Flow Name** and **Flow Description**, in the **MCP Server Actions** pane, click the **Flow name** or **Action**.
-6. The **Flow Name** field should make it clear what the flow does, both to a user and to the agent. For example, name the action `document_qa_for_resume`.
-7. The **Flow Description** field should include a description of what the action does. For example, describe the flow as `OpenAI LLM Chat with Emily's resume.`
-8. Optionally, click <Icon name="RefreshCw" aria-label="Refresh"/> to reset the field value to the original name.
-:::tip
-The **Flow Name** and **Flow Description** fields must contain text.
-:::
-9. Close the window. You have named and described your flow as an action that your MCP server is exposing.
+Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
+The MCP server for each project exposes that project's flows as tools.
 
-## Connect clients to use the server's actions
+All of the flows in a project are exposed by default.
+To expose only specific flows and optionally rename them for agentic use, follow these steps:
 
-Connect an MCP client to Langflow to use your flows as actions.
+1. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
+Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Publish > MCP Server**.
 
-This example uses [Cursor](https://docs.cursor.com/), but you can use any [MCP-compatible client](https://modelcontextprotocol.io/clients) to connect to your server.
+    The **MCP Server** tab displays a code template that you can use to connect MCP clients to the the project's MCP server.
 
-1. Install [Cursor](https://docs.cursor.com/).
-2. Open Cursor, and then go to **Cursor Settings**.
-3. Click MCP, and then click **Add New Global MCP Server**.
-Cursor's MCP servers are listed as JSON objects in `mcp.json`.
-4. To add a Langflow server, copy the code template from the **MCP Server** page in Langflow and paste it into `mcp.json`.
-This example assumes the default Langflow server address of `http://127.0.0.1:7860`.
-Replace **PROJECT_ID** with your project ID. Copying the command from the **MCP Server** page does this automatically.
-```json
-{
-  "mcpServers": {
-    "langflow-my_projects": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "http://127.0.0.1:7860/api/v1/mcp/project/**PROJECT_ID**/sse"
-      ]
+    The **Flows/Actions** section lists the flows that are currently being served as tools.
+
+    ![MCP server projects page](/img/mcp-server.png)
+
+2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
+
+3. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
+
+    ![MCP server actions](/img/mcp-server-actions.png)
+
+4. Optional: Edit the **Flow Name** and **Flow Description**.
+
+    - **Flow Name**: Enter a name thats makes it clear what the flow does.
+
+    - **Flow Description**: Enter a description that accurately describes the specific action(s) the flow performs.
+
+   :::important
+   MCP clients use the **Flow Name** and **Flow Description** to determine which action to use.
+   For more information about naming and describing your flows, see [Name and describe your flows for agentic use](#name-and-describe-your-flows).
+   :::
+
+5. Close the **MCP Server Actions** window to save your changes.
+
+{/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
+## Connect clients to Langflow's MCP server {#connect-clients-to-use-the-servers-actions}
+
+The following procedure describes how to connect [Cursor](https://www.cursor.com/) to your Langflow project's MCP server to consume your flows as tools.
+However, you can connect any [MCP-compatible client](https://modelcontextprotocol.io/clients) following similar steps.
+
+1. Install [Cursor](https://docs.cursor.com/get-started/installation).
+
+2. In Cursor, go to **Cursor Settings > MCP**, and then click **Add New Global MCP Server**.
+This opens Cursor's global MCP configuration file, `mcp.json`.
+
+3. In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the **MCP Server** tab.
+
+4. Copy the code template from the **MCP Server** tab, and then paste it into `mcp.json` in Cursor.
+For example:
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "supergateway",
+            "--sse",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
     }
-  }
-}
-```
-5. Save the `mcp.json` file, and then click the **Reload** icon.
-6. Your Langflow server is now available to Cursor as an MCP server, and your project's added flows are registered as tools.
-You can now use your flows as tools in Cursor.
+    ```
+
+    The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
+    The default Langflow server address is `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+
+    :::important
+    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
+    For more information, see [Langflow MCP server authentication and environment variables](#authentication).
+    :::
+
+5. Save and close the `mcp.json` file in Cursor.
+The newly added MCP server will appear in the **MCP Servers** section.
+
+Cursor is now connected to your project's MCP server and your flows are registered as tools.
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
-For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+For more information, see the [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
-### Langflow MCP server authentication and environment variables
+### Langflow MCP server authentication and environment variables {#authentication}
 
-If your Langflow server has `LANGFLOW_AUTO_LOGIN` set to `False`, MCP commands require an API key to connect.
-The presented code snippets automatically include the `x-api-key` field, but you need to replace the value for **LANGFLOW_API_KEY** with your Langflow API key.
-To create a Langflow API key, in the **MCP Server** tab, click **Create API key**. The key is added to your server command.
+If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/configuration-api-keys) in your MCP client configuration.
+When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
 
 ```json
 {
   "mcpServers": {
-    "lf-my_projects": {
+    "PROJECT_NAME": {
       "command": "npx",
       "args": [
         "-y",
         "supergateway",
         "--sse",
-        "http://127.0.0.1:7860/api/v1/mcp/project/e91ef0c4-86bc-4c7a-a916-c09e242065bd/sse",
+        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse",
         "--header",
-        "x-api-key:**LANGFLOW_API_KEY**"
+        "x-api-key:YOUR_API_KEY"
       ]
     }
   }
 }
 ```
 
-For more information, see [Authentication](/configuration-api-keys) and [API keys](/configuration-api-keys).
+Click <Icon name="key" aria-hidden="true"/> **Generate API key** to automatically insert a new Langflow API key into the code template.
+Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
+
+![MCP server tab showing Generate API key button](/img/mcp-server-api-key.png)
 
 To include environment variables with your MCP server command, include them like this:
 
 ```json
 {
   "mcpServers": {
-    "langflow-my_projects": {
+    "PROJECT_NAME": {
       "command": "npx",
       "args": [
         "-y",
         "supergateway",
         "--sse",
-        "http://127.0.0.1:7860/api/v1/mcp/project/**PROJECT_ID**/sse"
+        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
       ],
       "env": {
-        "key": "value"
+        "KEY": "VALUE"
       }
     }
   }
 }
 ```
 
-## Name and describe your flows for agentic use
+Replace `KEY` and `VALUE` with the environment variable name and value you want to include.
 
-MCP clients Cursor "see" your Langflow project as a single MCP server, with **all** of your enabled flows listed as tools.
+## Name and describe your flows for agentic use {#name-and-describe-your-flows}
 
-This can confuse agents, who don't know that flow `adbbf8c7-0a34-493b-90ea-5e8b42f78b66` is a Document Q&A flow for a specific text file.
+MCP clients like [Cursor](https://www.cursor.com/) "see" your Langflow project as a single MCP server, with _all_ of your enabled flows listed as tools.
+This can confuse agents.
+For example, an agent won't know that flow `adbbf8c7-0a34-493b-90ea-5e8b42f78b66` is a [Document Q&A](/document-qa) flow for a specific text file.
 
-To prevent this behavior, name and describe your flows clearly for agentic use. Imagine your names and descriptions as function names and code comments, with a clear statement of what problem they solve.
+To prevent this behavior, make sure to [name and describe](#select-flows-to-serve) your flows clearly.
+It's helpful to think of the names and descriptions as function names and code comments, making sure to use clear statements describing the problems your flows solve.
 
-For example, you previously named and described a [Document Q&A](/document-qa) flow that loads a sample resume for an LLM to chat with, and you want Cursor to use the tool.
+For example, let's say you have a [Document Q&A](/document-qa) flow that loads a sample resume for an LLM to chat with, and that you've given it the following name and description:
 
-1. To see how an MCP client understands your flow, in Cursor, examine the **MCP Servers**.
-The tool is listed as:
-```text
-document_qa_for_resume
+ - **Flow Name**: `document_qa_for_resume`
+
+ - **Flow Description**: `A flow for analyzing Emily's resume.`
+
+If you ask Cursor a question specifically about the resume, such as `What job experience does Emily have?`, the agent asks to call the MCP tool `document_qa_for_resume`.
+That's because your name and description provided the agent with a clear purpose for the tool.
+
+When you run the tool, the agent requests permissions when necessary, and then provides a response.
+For example:
+
 ```
-2. Ask Cursor a question specifically about the resume, such as `What job experience does Emily have?`
-The agent asks to call the MCP tool `document_qa_for_resume`, because your name and description provided the agent with a clear purpose for the tool.
-3. Click **Run tool** to continue. The agent requests permissions when necessary.
-```text
 {
   "input_value": "What job experience does Emily have?"
 }
@@ -163,9 +183,10 @@ Result:
 What job experience does Emily have?
 Emily J. Wilson has the following job experience:
 ```
-4. Ask about a different resume, such as `What job experience does Alex have?`
-You've provided enough information in the description for the agent to make the correct decision:
-```text
+
+If you ask about a different resume, such as `What job experience does Alex have?`, you've provided enough information in the description for the agent to make the correct decision:
+
+```
 I notice you're asking about Alex's job experience.
 Based on the available tools, I can see there is a Document QA for Resume flow that's designed for analyzing resumes.
 However, the description mentions it's for "Emily's resume" not Alex's. I don't have access to Alex's resume or job experience information.
@@ -173,97 +194,103 @@ However, the description mentions it's for "Emily's resume" not Alex's. I don't 
 
 ## Install MCP Inspector to test and debug flows
 
-[MCP inspector](https://modelcontextprotocol.io/docs/tools/inspector) is the standard tool for testing and debugging MCP servers.
+[MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) is a common tool for testing and debugging MCP servers.
+You can use MCP Inspector to monitor your flows and get insights into how they are being consumed by the MCP server:
 
-Use MCP Inspector to monitor your Langflow server's flows, and understand how they are being consumed by the MCP.
+1. Install MCP Inspector:
 
-To install and run MCP inspector, follow these steps:
+    ```bash
+    npx @modelcontextprotocol/inspector
+    ```
 
-1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-2. To install and start MCP inspector, in a terminal window, run the following command:
+    For more information about configuring MCP Inspector, including specifying a proxy port, see the [MCP Inspector GitHub project](https://github.com/modelcontextprotocol/inspector).
+
+2. Open a web browser and navigate to the MCP Inspector UI.
+The default address is `http://127.0.0.1:6274`.
+
+3. In the MCP Inspector UI, enter the connection details for your Langflow project's MCP server:
+
+    - **Transport Type**: Select **SSE**.
+    - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example: `http://127.0.0.1:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse`
+
+    If you've [configured authentication for your MCP server](#authentication), click **Authentication** and fill out the following fields:
+
+    - **Header Name**: Enter `x-api-key`.
+    - **Bearer Token**: Enter your Langflow API key.
+
+4. Click **Connect**.
+
+    If the connection was successful, you should see your project's flows in the **Tools** tab.
+    From this tab, you can monitor how your flows are being registered as tools by MCP, as well test the tools with custom input values.
+
+5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
+
+{/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
+## Deploy your server externally {#deploy-your-server-externally}
+
+By default, Langflow isn't exposed to the public internet.
+However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started).
+
+The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
+This procedure also assumes that you're using the default Langflow listening address `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+
+1. Sign up for an [ngrok account](https://dashboard.ngrok.com/signup).
+
+2. [Install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok).
+
+3. Copy your [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) and use it to authenticate your local ngrok server:
+
+    ```
+    ngrok config add-authtoken NGROK_TOKEN
+    ```
+
+    Replace `NGROK_TOKEN` with your ngrok authtoken.
+
+4. Use ngrok to expose your Langflow server to the public internet:
+
+    ```
+    ngrok http http://localhost:7860
+    ```
+
+    The ngrok session starts in your terminal and deploys an ephemeral domain with no authentication.
+    To add authentication or deploy a static domain, see the [ngrok documentation](https://ngrok.com/docs/).
+
+
+    The `Forwarding` row displays the forwarding address for your Langflow server:
+
+    ```
+    Forwarding https://94b1-76-64-171-14.ngrok-free.app -> http://localhost:7860
+    ```
+
+    The forwarding address is acting as a reverse proxy for your Langflow server.
+
+5. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
+
+      Note that the code template now contains your ngrok forwarding address instead of the localhost address:
+
+      ```json
+      {
+        "mcpServers": {
+          "lf-my_projects": {
+            "command": "npx",
+            "args": [
+              "-y",
+              "supergateway",
+              "--sse",
+              "https://94b1-73-64-171-14.ngrok-free.app/api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1/sse"
+            ]
+          }
+        }
+      }
+    ```
+
+6. Complete the steps in [Connect clients Langflow's MCP server](#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
+
+Your MCP client is now connected to your project's MCP server over the public internet.
+
+If using Cursor, your conversations are the same as they are on your local host:
+
 ```
-npx @modelcontextprotocol/inspector
-```
-
-MCP inspector starts by default at `http://localhost:5173`.
-
-:::tip
-Optionally, specify a proxy port when starting MCP Inspector:
-```
-SERVER_PORT=9000 npx -y @modelcontextprotocol/inspector
-```
-:::
-
-3. In the browser, navigate to MCP Inspector.
-4. To inspect the Langflow server, enter the values for the Langflow server.
-
-* In the **Transport Type** field, select **SSE**.
-* In the **URL** field, enter the Langflow server's `/mcp/sse` endpoint.
-For a default deployment, the URL is `http://127.0.0.1:7860/api/v1/mcp/project/**PROJECT_ID**/sse`.
-
-5. Click **Connect**.
-MCP Inspector connects to the Langflow server.
-6. To confirm the connection, click the **Tools** tab.
-The Langflow server's flows are listed as tools, which confirms MCP Inspector is connected.
-In the **Tools** tab, you can monitor how your flows are being registered as tools by MCP, and run flows with input values.
-
-To quit MCP Inspector, in the terminal where it's running, enter `Ctrl+C`.
-
-## Deploy your server externally
-
-The Langflow MCP server isn't exposed to the public internet.
-
-To expose it, forward traffic with a forwarding platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
-
-This example uses Ngrok, but you can use any similar reverse proxy or forwarding platform.
-This example assumes the default Langflow listening address of `127.0.0.1:7860`.
-If you're using **Langflow for Desktop**, the address is `127.0.0.1:7868`.
-
-1. Install ngrok.
-```
-brew install ngrok
-```
-2. Authenticate your ngrok server with an ngrok authentication token.
-Your token is found in your Ngrok dashboard.
-Replace **NGROK_TOKEN** with your ngrok token.
-```
-ngrok config add-authtoken **NGROK_TOKEN**
-```
-3. Deploy your application.
-This example deploys an ephemeral domain with no authentication.
-```
-ngrok http http://localhost:7860
-```
-The Ngrok session starts in your terminal. The `Forwarding` row displays the forwarding address for your Langflow server, which is acting as a reverse proxy for your server.
-```text
-Forwarding https://94b1-73-64-171-14.ngrok-free.app -> http://localhost:7860
-```
-4. Navigate to the forwarding address.
-5. In Langflow, navigate to the **MCP Server** page.
-6. Copy the **MCP Server** command.
-7. Open Cursor, and then navigate to the `mcp.json` file.
-8. Paste the code template from the **MCP Server** page into the `mcp.json` file.
-Note that the MCP server command now contains your ngrok forwarding address instead of the localhost address.
-```json
-{
-  "mcpServers": {
-    "lf-my_projects": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "https://94b1-73-64-171-14.ngrok-free.app/api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1/sse"
-      ]
-    }
-  }
-}
-```
-9. Save the `mcp.json` file, and then click the **Reload** icon.
-10. Ask Cursor the same question you asked before, such as `What job experience does Emily have?`
-The agent asks to call the MCP tool `document_qa_for_resume`, indicating connectivity between your MCP client and the Langflow server through the ngrok proxy.
-The conversation is the same as it was on localhost:
-```text
 {
   "input_value": "What job experience does Emily have?"
 }
@@ -272,9 +299,8 @@ What job experience does Emily have?
 Emily J. Wilson has the following job experience:
 ```
 
-The ngrok terminal session displays your requests to your project's endpoint:
-```text
+You can use the ngrok console output to monitor requests for your project's endpoint:
+
+```
 16:35:48.566 EDT GET /api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1 200 OK
 ```
-
-To add authentication or deploy a static domain, see the [Ngrok documentation](https://ngrok.com/docs/).
