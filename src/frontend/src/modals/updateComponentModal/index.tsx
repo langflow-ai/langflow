@@ -121,8 +121,8 @@ export default function UpdateComponentModal({
             <table className="w-full border-separate border-spacing-y-1 text-sm">
               <thead>
                 <tr>
-                  <th className="text-left font-medium text-muted-foreground">
-                    <div className="flex items-center gap-2">
+                  <th className="text-left text-mmd font-normal text-muted-foreground">
+                    <div className="flex items-center gap-3">
                       <Checkbox
                         checked={selectedComponents.size === components.length}
                         onCheckedChange={toggleAllComponents}
@@ -131,7 +131,7 @@ export default function UpdateComponentModal({
                       Component
                     </div>
                   </th>
-                  <th className="text-left font-medium text-muted-foreground">
+                  <th className="text-left text-mmd font-normal text-muted-foreground">
                     Update Type
                   </th>
                 </tr>
@@ -139,7 +139,7 @@ export default function UpdateComponentModal({
               <tbody>
                 {components.map((component) => (
                   <tr key={component.id}>
-                    <td className="flex items-center gap-2 py-1 pr-4">
+                    <td className="flex items-center gap-3 py-1 pr-4">
                       <Checkbox
                         checked={selectedComponents.has(component.id)}
                         onCheckedChange={() => toggleComponent(component.id)}
@@ -153,7 +153,7 @@ export default function UpdateComponentModal({
                       )}
                       {component.display_name}
                     </td>
-                    <td className="py-1">
+                    <td className="py-1 text-muted-foreground">
                       {component.breakingChange ? (
                         <span className="font-semibold text-accent-amber-foreground">
                           Breaking
