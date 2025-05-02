@@ -18,7 +18,7 @@ import sqlalchemy
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
-from elevenlabs import ElevenLabs
+from elevenlabs import AsyncElevenLabs
 from fastapi import APIRouter, BackgroundTasks
 from openai import OpenAI
 from sqlalchemy import select
@@ -121,35 +121,6 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
     return user, openai_key
 
 
-# --- Synchronous Text Chunker ---
-def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
-    """Synchronous generator that reads text pieces from a sync queue and yields complete chunks."""
-    splitters = (".", ",", "?", "!", ";", ":", "—", "-", "(", ")", "[", "]", "}", " ")
-    buffer = ""
-    while True:
-        try:
-            text = sync_queue_obj.get(timeout=timeout)
-        except queue.Empty:
-            if buffer:
-                yield buffer + " "
-                buffer = ""
-            continue
-        if text is None:
-            if buffer:
-                yield buffer + " "
-            break
-        if buffer and buffer[-1] in splitters:
-            yield buffer + " "
-            buffer = text
-        elif text and text[0] in splitters:
-            yield buffer + text[0] + " "
-            buffer = text[1:]
-        else:
-            buffer += text
-    if buffer:
-        yield buffer + " "
-
-
 class VoiceConfig:
     def __init__(self, session_id: str):
         self.session_id = session_id
@@ -212,7 +183,7 @@ class ElevenLabsClientManager:
                     return None
 
             if cls._api_key:
-                cls._instance = ElevenLabs(api_key=cls._api_key)
+                cls._instance = AsyncElevenLabs(api_key=cls._api_key)
 
         return cls._instance
 
@@ -551,133 +522,6 @@ async def handle_function_call(
         }
         msg_handler.openai_send(function_output)
 
-
-voice_config_cache: dict[str, VoiceConfig] = {}
-tts_config_cache: dict[str, TTSConfig] = {}
-
-
-async def handle_function_call(
-    function_call: dict,
-    function_call_args: str,
-    flow_id: str,
-    background_tasks: BackgroundTasks,
-    current_user: CurrentActiveUser,
-    conversation_id: str,
-    session_id: str,
-    voice_config: VoiceConfig,
-    client_safe_send_json,
-    openai_send,
-):
-    """Handle function calls from the OpenAI API."""
-    try:
-        # trigger response that tool was called
-        if voice_config.progress_enabled:
-            await openai_send(
-                {
-                    "type": "conversation.item.create",
-                    "item": {
-                        "type": "message",
-                        "role": "system",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": "Tell the user you are now looking into or solving "
-                                "a request that will be explained later. Do not repeat "
-                                "the prompt exactly, summarize what's being requested."
-                                "Keep it very short."
-                                f"\n\nThe request: {function_call_args}",
-                            }
-                        ],
-                    },
-                }
-            )
-            await openai_send(common_response_create(session_id))
-        args = json.loads(function_call_args) if function_call_args else {}
-        input_request = InputValueRequest(
-            input_value=args.get("input"), components=[], type="chat", session=conversation_id
-        )
-        response = await build_flow_and_stream(
-            flow_id=UUID(flow_id),
-            inputs=input_request,
-            background_tasks=background_tasks,
-            current_user=current_user,
-        )
-        result = ""
-        async for line in response.body_iterator:
-            if not line:
-                continue
-            event_data = json.loads(line)
-            client_safe_send_json({"type": "flow.build.progress", "data": event_data})
-            if event_data.get("event") == "end_vertex":
-                text_part = (
-                    event_data.get("data", {})
-                    .get("build_data", "")
-                    .get("data", {})
-                    .get("results", {})
-                    .get("message", {})
-                    .get("text", "")
-                )
-                result += text_part
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": str(result),
-            },
-        }
-        await openai_send(function_output)
-        await openai_send(common_response_create(session_id))
-    except json.JSONDecodeError as e:
-        trace = traceback.format_exc()
-        logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Error parsing arguments: {e!s}",
-            },
-        }
-        await openai_send(function_output)
-    except ValueError as e:
-        trace = traceback.format_exc()
-        logger.error(f"Value error: {e!s}\ntrace: {trace}")
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Error with input values: {e!s}",
-            },
-        }
-        await openai_send(function_output)
-    except (ConnectionError, websockets.exceptions.WebSocketException) as e:
-        trace = traceback.format_exc()
-        logger.error(f"Connection error: {e!s}\ntrace: {trace}")
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Connection error: {e!s}",
-            },
-        }
-        await openai_send(function_output)
-    except (KeyError, AttributeError, TypeError) as e:
-        logger.error(f"Error executing flow: {e}")
-        logger.error(traceback.format_exc())
-        function_output = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": function_call.get("call_id"),
-                "output": f"Error executing flow: {e}",
-            },
-        }
-        await openai_send(function_output)
-
-
 voice_config_cache: dict[str, VoiceConfig] = {}
 tts_config_cache: dict[str, TTSConfig] = {}
 
@@ -753,7 +597,7 @@ def create_event_logger():
 
     def log_event(event: dict, provenance: str) -> None:
         event_type = event.get("type", "None")
-        response_id = event.get("response_id", "None")
+        response_id = event.get("response_id", None) or event.get("response", {}).get("id", None)
         if event_type != state["last_event_type"]:
             logger.debug(f"Event (response_id - {response_id}): {provenance} {event_type}")
             state["last_event_type"] = event_type
@@ -823,7 +667,7 @@ async def flow_as_tool_websocket(
 
         log_event = create_event_logger()
 
-        vad_task = None
+        vad_task : asyncio.Task = None
         voice_config = get_voice_config(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
@@ -964,61 +808,52 @@ async def flow_as_tool_websocket(
 
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
                 """
-                sync_q: queue.Queue = queue.Queue()
+                try:
+                    elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
+                    if elevenlabs_client is None:
+                        return
+                    
+                    async def wait_for_text(q : asyncio.Queue):
+                        while True:
+                            text = await q.get()
+                            if text is None:
+                                break
+                            yield text
+                    text_gen = wait_for_text(rsp.text_delta_queue)
+                    
+                    full_text = ""
+                    async for chunk_text in text_gen:
+                        full_text += chunk_text
+                        
+                    generated_audio = await elevenlabs_client.generate(
+                        voice=voice_config.elevenlabs_voice,
+                        output_format="pcm_24000",
+                        text=full_text,  # synchronous generator expected by ElevenLabs
+                        model=voice_config.elevenlabs_model,
+                        voice_settings=None,
+                        stream=True,
+                    )
+                    
+                    audio_stream = []
+                    async for chunk_audio in generated_audio:
+                        audio_stream.append(chunk_audio)
+                        
+                    for chunk in audio_stream:
+                        base64_audio = base64.b64encode(chunk).decode("utf-8")
+                        # Schedule sending the audio chunk in the main event loop.
+                        event = {
+                            "type": "response.audio.delta",
+                            "delta": base64_audio,
+                            "response_id": rsp.response_id,
+                        }
+                        # client_send_event_from_thread(event, main_loop)
+                        msg_handler.client_send(event)
 
-                async def transfer_text_deltas():
-                    while True:
-                        item = await rsp.text_delta_queue.get()
-                        sync_q.put(item)
-                        if item is None:
-                            break
-
-                # Schedule the transfer task in the main event loop.
-                transfer_task = asyncio.create_task(transfer_text_deltas())
-
-                # Create the synchronous generator from the sync queue.
-                sync_gen = sync_text_chunker(sync_q, timeout=0.3)
-                elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
-                if elevenlabs_client is None:
-                    transfer_task.cancel()
-                    return
-                # Capture the current event loop to schedule send operations.
-                main_loop = asyncio.get_running_loop()
-
-                def tts_thread():
-                    # Create a new event loop for this thread.
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-
-                    async def run_tts():
-                        try:
-                            audio_stream = elevenlabs_client.generate(
-                                voice=voice_config.elevenlabs_voice,
-                                output_format="pcm_24000",
-                                text=sync_gen,  # synchronous generator expected by ElevenLabs
-                                model=voice_config.elevenlabs_model,
-                                voice_settings=None,
-                                stream=True,
-                            )
-                            for chunk in audio_stream:
-                                base64_audio = base64.b64encode(chunk).decode("utf-8")
-                                # Schedule sending the audio chunk in the main event loop.
-                                event = {
-                                    "type": "response.audio.delta",
-                                    "delta": base64_audio,
-                                    "response_id": rsp.response_id,
-                                }
-                                client_send_event_from_thread(event, main_loop)
-
-                            event = {"type": "response.done", "response": {"id": rsp.response_id}}
-                            client_send_event_from_thread(event, main_loop)
-                        except Exception as e:  # noqa: BLE001
-                            logger.error(f"Error in TTS processing (ValueError): {e}")
-
-                    new_loop.run_until_complete(run_tts())
-                    new_loop.close()
-
-                threading.Thread(target=tts_thread, daemon=True).start()
+                    event = {"type": "response.audio.done", "response": {"id": rsp.response_id}}
+                    # client_send_event_from_thread(event, main_loop)
+                    msg_handler.client_send(event)
+                except Exception as e:  # noqa: BLE001
+                    logger.error(traceback.format_exc())
 
             async def forward_to_openai() -> None:
                 nonlocal openai_realtime_session
@@ -1094,22 +929,20 @@ async def flow_as_tool_websocket(
                         if do_forward:
                             msg_handler.client_send(event)
                         if event_type == "response.created":
-                            response_id = event["response"]["id"]
                             responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
                         elif event_type == "response.text.delta":
                             if voice_config.use_elevenlabs:
-                                response_id = event["response_id"]
                                 delta = event.get("delta", "")
                                 rsp: Response = responses[response_id]
                                 await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
                             if voice_config.use_elevenlabs:
-                                response_id = event["response_id"]
                                 rsp: Response = responses[response_id]
                                 await rsp.text_delta_queue.put(None)
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
                                     await rsp.text_delta_task
                                 responses.pop(response_id)
+                                msg_handler.client_send({"type":"response.done", "response": {"id": response_id}})
 
                                 try:
                                     message_text = event.get("text", "")
@@ -1295,7 +1128,6 @@ async def flow_tts_websocket(
             await client_websocket.close()
             await openai_ws.close()
 
-        log_event = create_event_logger(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
