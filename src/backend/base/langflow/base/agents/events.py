@@ -226,7 +226,8 @@ async def handle_on_chain_stream(
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
-        if output_text := _extract_output_text(data_chunk.content):
+        output_text = _extract_output_text(data_chunk.content)
+        if output_text and isinstance(agent_message.text, str):
             agent_message.text += output_text
             agent_message.properties.state = "partial"
             agent_message = await send_message_method(message=agent_message)
