@@ -135,10 +135,14 @@
   padding: 0rem 1rem !important;
 }
 
-.ag-tool-mode .ag-row-focus {
+.ag-tool-mode:not(.ag-no-selection) .ag-row-focus {
   background-color: hsl(var(--accent)) !important;
 }
-
-.ag-tool-mode .ag-row-selected:not(.ag-row-focus)::before {
+.ag-tool-mode.ag-no-selection .ag-row-selected::before {
   background-color: hsl(var(--background)) !important;
+}
+
+.ag-tool-mode .ag-layout-auto-height .ag-center-cols-container,
+.ag-tool-mode .ag-layout-auto-height .ag-center-cols-viewport {
+  min-height: 0px !important;
 }

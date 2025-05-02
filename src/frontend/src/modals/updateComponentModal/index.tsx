@@ -1,10 +1,11 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Checkbox } from "@/components/ui/checkbox";
 import useDuplicateFlows from "@/pages/MainPage/hooks/use-handle-duplicate";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType } from "@/types/api";
 import { ComponentsToUpdateType } from "@/types/zustand/flow";
 import { cn } from "@/utils/utils";
+import { ColDef } from "ag-grid-community";
 import { useState } from "react";
 import BaseModal from "../baseModal";
 
@@ -53,23 +54,47 @@ export default function UpdateComponentModal({
     }
   };
 
-  const toggleComponent = (componentId: string) => {
-    const newSelected = new Set(selectedComponents);
-    if (newSelected.has(componentId)) {
-      newSelected.delete(componentId);
-    } else {
-      newSelected.add(componentId);
-    }
-    setSelectedComponents(newSelected);
-  };
-
-  const toggleAllComponents = () => {
-    if (selectedComponents.size === components.length) {
-      setSelectedComponents(new Set());
-    } else {
-      setSelectedComponents(new Set(components.map((c) => c.id)));
-    }
-  };
+  const columnDefs: ColDef[] = [
+    {
+      headerName: "Component",
+      field: "display_name",
+      headerClass: "text-mmd",
+      flex: 1,
+      headerCheckboxSelection: true,
+      checkboxSelection: true,
+      resizable: false,
+      cellRenderer: (params) => {
+        return (
+          <div className="flex items-center gap-3">
+            {params.data.icon && (
+              <ForwardedIconComponent
+                name={params.data.icon}
+                className="h-4 w-4"
+              />
+            )}
+            {params.value}
+          </div>
+        );
+      },
+    },
+    {
+      headerName: "Update Type",
+      field: "breakingChange",
+      headerClass: "text-mmd",
+      resizable: false,
+      flex: 1,
+      cellClass: "text-muted-foreground",
+      cellRenderer: (params) => {
+        return params.value ? (
+          <span className="font-semibold text-accent-amber-foreground">
+            Breaking
+          </span>
+        ) : (
+          <span>Standard</span>
+        );
+      },
+    },
+  ];
 
   return (
     <BaseModal
@@ -118,54 +143,26 @@ export default function UpdateComponentModal({
             )}
           </div>
           {components.length > 1 && (
-            <table className="w-full border-separate border-spacing-y-1 text-sm">
-              <thead>
-                <tr>
-                  <th className="text-left text-mmd font-normal text-muted-foreground">
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={selectedComponents.size === components.length}
-                        onCheckedChange={toggleAllComponents}
-                        className="bg-muted"
-                      />
-                      Component
-                    </div>
-                  </th>
-                  <th className="text-left text-mmd font-normal text-muted-foreground">
-                    Update Type
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {components.map((component) => (
-                  <tr key={component.id}>
-                    <td className="flex items-center gap-3 py-1 pr-4">
-                      <Checkbox
-                        checked={selectedComponents.has(component.id)}
-                        onCheckedChange={() => toggleComponent(component.id)}
-                        className="bg-muted"
-                      />
-                      {component.icon && (
-                        <ForwardedIconComponent
-                          name={component.icon}
-                          className="h-4 w-4"
-                        />
-                      )}
-                      {component.display_name}
-                    </td>
-                    <td className="py-1 text-muted-foreground">
-                      {component.breakingChange ? (
-                        <span className="font-semibold text-accent-amber-foreground">
-                          Breaking
-                        </span>
-                      ) : (
-                        <span>Standard</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="-mx-4">
+              <TableComponent
+                columnDefs={columnDefs}
+                domLayout="autoHeight"
+                rowData={components}
+                rowSelection="multiple"
+                className="ag-tool-mode ag-no-selection"
+                rowHeight={30}
+                headerHeight={30}
+                suppressRowClickSelection={false}
+                onSelectionChanged={(event) => {
+                  const selectedIds = event.api
+                    .getSelectedRows()
+                    .map((row) => row.id);
+                  setSelectedComponents(new Set(selectedIds));
+                }}
+                suppressRowHoverHighlight={true}
+                tableOptions={{ hide_options: true }}
+              />
+            </div>
           )}
           <div
             className={cn(
