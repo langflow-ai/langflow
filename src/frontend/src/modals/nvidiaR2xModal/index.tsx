@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/controllers/API/api";
 import { BASE_URL_API, PROXY_TARGET } from "@/customization/config-constants";
 import useFlowStore from "@/stores/flowStore";
 import "ace-builds/src-noconflict/ext-language_tools";
@@ -27,8 +28,10 @@ export default function NvidiaR2xModal({
       ? [myOpen, mySetOpen]
       : useState(false);
 
-  const hostName = PROXY_TARGET.split("://")[1].split(":")[0];
-  const portNumber = PROXY_TARGET.split("://")[1].split(":")[1].split("/")[0];
+  const host = api.defaults.baseURL || window.location.origin;
+
+  const hostName = host.split("://")[1].split(":")[0];
+  const portNumber = host.split("://")[1].split(":")[1].split("/")[0];
 
   const { flowId, flowName } = useFlowStore(
     useShallow((state) => ({
