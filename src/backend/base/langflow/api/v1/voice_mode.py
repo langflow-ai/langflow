@@ -76,8 +76,10 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
 [ADDITIONAL] The following instructions are to be considered only "Additional"
 """
 
-DIRECTION_TO_OPENAI = "Client → OpenAI"
-DIRECTION_TO_CLIENT = "OpenAI → Client"
+LF_TO_OPENAI = "LF → OpenAI"
+LF_TO_CLIENT = "LF → Client"
+OPENAI_TO_LF = "OpenAI → LF"
+CLIENT_TO_LF = "Client → LF"
 # --- Helper Functions ---
 
 
@@ -378,7 +380,7 @@ class SendQueues:
                     break
                 await self.block.wait()
                 await self.openai_ws.send(json.dumps(msg))
-                self.log_event(msg, DIRECTION_TO_OPENAI)
+                self.log_event(msg, LF_TO_OPENAI)
                 if is_blocking:
                     self.block.clear()
                     logger.trace("OPENAI BLOCKING")
@@ -389,7 +391,7 @@ class SendQueues:
     def client_send(self, payload):
         try:
             self.client_send_q.put_nowait(payload)
-            self.log_event(payload, DIRECTION_TO_OPENAI)
+            self.log_event(payload, LF_TO_OPENAI)
         except Exception:  # noqa: BLE001
             logger.error(traceback.format_exc())
 
@@ -399,7 +401,7 @@ class SendQueues:
                 msg = await self.client_send_q.get()
                 if msg is None:
                     break
-                self.log_event(msg, DIRECTION_TO_CLIENT)
+                self.log_event(msg, LF_TO_CLIENT)
                 await self.client_ws.send_text(json.dumps(msg))
         except Exception:  # noqa: BLE001
             logger.error(traceback.format_exc())
@@ -749,11 +751,11 @@ async def queue_generator(queue: asyncio.Queue):
 def create_event_logger():
     state = {"last_event_type": None, "event_count": 0}
 
-    def log_event(event: dict, direction: str) -> None:
+    def log_event(event: dict, provenance: str) -> None:
         event_type = event.get("type", "None")
         response_id = event.get("response_id", "None")
         if event_type != state["last_event_type"]:
-            logger.debug(f"Event (response_id - {response_id}): {direction} {event_type}")
+            logger.debug(f"Event (response_id - {response_id}): {provenance} {event_type}")
             state["last_event_type"] = event_type
             state["event_count"] = 0
             if event_type == "response.created":
@@ -819,7 +821,7 @@ async def flow_as_tool_websocket(
     try:
         await client_websocket.accept()
 
-        log_event = create_event_logger(session_id)
+        log_event = create_event_logger()
 
         vad_task = None
         voice_config = get_voice_config(session_id)
@@ -1026,6 +1028,7 @@ async def flow_as_tool_websocket(
                     while True:
                         message_text = await client_websocket.receive_text()
                         msg = json.loads(message_text)
+                        log_event(msg, CLIENT_TO_LF)
                         if msg.get("type") == "input_audio_buffer.append":
                             logger.trace(f"buffer_id {msg.get('buffer_id', '')}")
                             base64_data = msg.get("audio", "")
@@ -1077,6 +1080,7 @@ async def flow_as_tool_websocket(
                     while True:
                         data = await openai_ws.recv()
                         event = json.loads(data)
+                        log_event(event, OPENAI_TO_LF)
                         event_type = event.get("type")
                         response_id = event.get("response_id", None) or event.get("response", {}).get("id", None)
                         if is_response_done(response_id):
@@ -1249,23 +1253,27 @@ async def flow_tts_websocket(
         openai_send_q: asyncio.Queue[str] = asyncio.Queue()
         client_send_q: asyncio.Queue[str] = asyncio.Queue()
 
-        log_event = create_event_logger(session_id)
+        log_event = create_event_logger()
 
         async def openai_writer():
             while True:
                 msg = await openai_send_q.get()
                 if msg is None:
                     break
-                await openai_ws.send(msg)
+                logger.trace(f"Sending text {LF_TO_OPENAI}: {msg['type']}")
+                await openai_ws.send(json.dumps(msg))
+                logger.trace("JSON sent.")
+                log_event(msg, LF_TO_OPENAI)
 
         async def client_writer():
             while True:
                 msg = await client_send_q.get()
                 if msg is None:
                     break
-                await client_websocket.send_text(msg)
-
-        log_event = create_event_logger(session_id)
+                logger.trace(f"Sending JSON {LF_TO_CLIENT}: {msg['type']}")
+                await client_websocket.send_text(json.dumps(msg))
+                logger.trace("JSON sent.")
+                log_event(msg, LF_TO_CLIENT)
 
         def openai_send(payload):
             log_event(payload, DIRECTION_TO_OPENAI)
