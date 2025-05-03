@@ -219,10 +219,8 @@ postgresql = [
 ]
 
 mysql = [
-    "mysqlclient>=2.0.0", # Common MySQL driver for Python
-    "sqlalchemy[mysqlclient]",
-    "sqlalchemy[mysqlconnector]",
-    "sqlalchemy[mysql]",
+    "sqlalchemy",
+    "pymysql",
 ]
 
 [project.scripts]
