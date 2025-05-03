@@ -213,9 +213,9 @@ nv-ingest = [
 ]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
+    "sqlalchemy[postgresql_psycopg2binary]",
     "sqlalchemy[postgresql_psycopg]",
-
+    "psycopg2-binary",
 ]
 
 mysql = [

@@ -4640,6 +4640,7 @@ nv-ingest = [
     { name = "nv-ingest-client" },
 ]
 postgresql = [
+    { name = "psycopg2-binary" },
     { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
 ]
 
@@ -4777,6 +4778,7 @@ requires-dist = [
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "opik", specifier = ">=1.6.3" },
     { name = "pgvector", specifier = "==0.3.6" },
+    { name = "psycopg2-binary", marker = "extra == 'postgresql'" },
     { name = "pyarrow", specifier = "==19.0.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
