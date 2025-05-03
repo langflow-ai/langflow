@@ -1,6 +1,6 @@
 
 [project]
-name = "langflow"
+name = "langflow-enmaca"
 version = "1.4.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
@@ -216,6 +216,13 @@ postgresql = [
   "sqlalchemy[postgresql_psycopg2binary]",
     "sqlalchemy[postgresql_psycopg]",
 
+]
+
+mysql = [
+    "mysqlclient>=2.0.0", # Common MySQL driver for Python
+    "sqlalchemy[mysqlclient]",
+    "sqlalchemy[mysqlconnector]",
+    "sqlalchemy[mysql]"
 ]
 
 [project.scripts]
