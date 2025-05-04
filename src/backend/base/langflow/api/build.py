@@ -423,7 +423,31 @@ async def generate_flow_events(
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
 
-        event_manager.on_end_vertex(data={"build_data": build_data})
+        def truncate_large_fields_recursive(data, max_list_length=10, max_str_length=1000):
+            if isinstance(data, dict):
+                return {k: truncate_large_fields_recursive(v, max_list_length, max_str_length) for k, v in data.items()}
+            elif isinstance(data, list):
+                if len(data) > max_list_length:
+                    print(f"jFRAZIER - truncating list with length {len(data)}")
+                    return [truncate_large_fields_recursive(v, max_list_length, max_str_length) for v in data[:max_list_length]] + ['...truncated...']
+                else:
+                    return [truncate_large_fields_recursive(v, max_list_length, max_str_length) for v in data]
+            elif isinstance(data, str):
+                if len(data) > max_str_length:
+                    print(f"jFRAZIER - truncating string with length {len(data)}")
+                    return data[:max_str_length] + '...truncated...'
+                else:
+                    return data
+            else:
+                return data
+
+        # Truncate build_data before serializing and sending
+        truncated_build_data = truncate_large_fields_recursive(build_data)
+        import orjson
+        build_data_json = orjson.dumps(truncated_build_data)
+        print(f"jFRAZIER - recurse size of build_data_json: {len(build_data_json)} bytes")
+
+        event_manager.on_end_vertex(data={"build_data": truncated_build_data})
 
         if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
             tasks = []
