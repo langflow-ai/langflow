@@ -442,12 +442,14 @@ async def generate_flow_events(
                 return data
 
         # Truncate build_data before serializing and sending
+        # TODO: This is the culprit - build vertices. 
         truncated_build_data = truncate_large_fields_recursive(build_data)
-        import orjson
-        build_data_json = orjson.dumps(truncated_build_data)
-        print(f"jFRAZIER - recurse size of build_data_json: {len(build_data_json)} bytes")
+        # import orjson
+        # build_data_json = orjson.dumps(truncated_build_data)
+        # print(f"jFRAZIER - recurse size of build_data_json: {len(build_data_json)} bytes")
 
         event_manager.on_end_vertex(data={"build_data": truncated_build_data})
+        # event_manager.on_end_vertex(data={"build_data": build_data})
 
         if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
             tasks = []

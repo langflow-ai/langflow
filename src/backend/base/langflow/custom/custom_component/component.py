@@ -1239,6 +1239,9 @@ class Component(CustomComponent):
             data = log.model_dump()
             data["output"] = self._current_output
             data["component_id"] = self._id
+            import orjson
+            data_json = orjson.dumps(data)
+            print(f"jFRAZIER - size of data_json: {len(data_json)} bytes")
             self._event_manager.on_log(data=data)
 
     def _append_tool_output(self) -> None:
@@ -1306,12 +1309,50 @@ class Component(CustomComponent):
         stored_message = stored_messages[0]
         return await Message.create(**stored_message.model_dump())
 
+    def truncate_any(self, value):
+        MAX_TEXT_LENGTH = 5000
+        MAX_LIST_LENGTH = 100
+        MAX_DICT_KEYS = 50
+        MAX_BLOCK_LENGTH = 1000  # for content_blocks or similar
+        MAX_NAME_LENGTH = 200
+        if isinstance(value, str) and len(value) > MAX_TEXT_LENGTH:
+            return value[:MAX_TEXT_LENGTH] + "...[truncated]"
+        elif isinstance(value, list) and len(value) > MAX_LIST_LENGTH:
+            print(f"jFRAZIER - truncating list: {value}")
+            return value[:MAX_LIST_LENGTH] + ["...[truncated]"]
+        elif isinstance(value, dict) and len(value) > MAX_DICT_KEYS:
+            # Truncate dict by keys, and recursively truncate values
+            keys = list(value.keys())[:MAX_DICT_KEYS]
+            truncated = {k: self.truncate_any(value[k]) for k in keys}
+            truncated["...[truncated]"] = True
+            return truncated
+        elif isinstance(value, dict):
+            # Recursively truncate values in dict
+            return {k: self.truncate_any(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            # Recursively truncate values in list
+            return [self.truncate_any(v) for v in value]
+        else:
+            return value
+
+    def truncate_large_fields(self, data_dict):
+        # Recursively truncate all fields in the dict
+        return {k: self.truncate_any(v) for k, v in data_dict.items()}
+
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
             category = category or data_dict.get("category", None)
+
+            # Truncate large fields before sending
+            data_dict = self.truncate_large_fields(data_dict)
+
+            # After all data is added and before sending:
+            import orjson
+            json_str = orjson.dumps(data_dict)
+            print(f"jFRAZIER - size of serialized data: {len(json_str)} bytes")
 
             def _send_event():
                 match category:
@@ -1320,6 +1361,7 @@ class Component(CustomComponent):
                     case "remove_message":
                         self._event_manager.on_remove_message(data={"id": data_dict["id"]})
                     case _:
+                        # print the size of the data dict:
                         self._event_manager.on_message(data=data_dict)
 
             await asyncio.to_thread(_send_event)

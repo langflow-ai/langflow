@@ -258,6 +258,9 @@ async def run_flow_generator(
             api_key_user=api_key_user,
             event_manager=event_manager,
         )
+        import orjson
+        result_json = orjson.dumps(result.model_dump())
+        print(f"jFRAZIER - size of result_json: {len(result_json)} bytes")
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
     except (ValueError, InvalidChatInputError, SerializationError) as e:
