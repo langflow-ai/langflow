@@ -310,8 +310,7 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
-        return truncate_long_strings(data_dict)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
 
 class VerticesBuiltResponse(BaseModel):

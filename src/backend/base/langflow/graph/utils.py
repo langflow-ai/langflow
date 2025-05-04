@@ -143,8 +143,8 @@ async def log_transaction(
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
-            inputs=inputs,
-            outputs=outputs,
+            inputs=serialize(inputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            outputs=serialize(outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
