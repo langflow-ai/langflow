@@ -158,7 +158,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Starting telemetry service")
             logger.debug("Starting telemetry service...")
             telemetry_service.start(fastapi_version=fastapi.__version__, langflow_version=version)
             logger.debug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
