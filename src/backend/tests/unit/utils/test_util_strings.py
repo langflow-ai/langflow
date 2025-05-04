@@ -28,3 +28,32 @@ from langflow.utils import util_strings
 )
 def test_is_valid_database_url(value, expected):
     assert util_strings.is_valid_database_url(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        # Basic case: single space -> underscore, to lowercase
+        ("Some Name", "some_name"),
+        # # Multiple spaces -> single underscore
+        ("Some    Name", "some_name"),
+        # # Non-alphanumeric characters (dash) are removed
+        ("Some-Name", "somename"),
+        # # Digits at start -> prepend underscore
+        ("4some name", "_4some_name"),
+        # # Special symbols ($) are removed
+        ("some$name", "somename"),
+        # # Mixed whitespace and symbols
+        ("   Some!!Name###  ", "_somename_"),
+        # # Already valid Pythonic string -> stays the same
+        ("some_name", "some_name"),
+        # # Empty string -> stays empty
+        ("", ""),
+        # # Single digit -> underscore + digit
+        ("1", "_1"),
+        # # Mixed digits and letters
+        ("123abc", "_123abc"),
+    ],
+)
+def test_to_pythonic_variable_name(name, expected):
+    assert util_strings.to_pythonic_variable_name(name) == expected
