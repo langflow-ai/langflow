@@ -136,7 +136,7 @@ export const EmptyPageCommunity = ({
                 unstyled
                 className="group mx-3 h-[84px] sm:mx-0"
                 onClick={() => {
-                  handleUserTrack("discord_joined")();
+                  handleUserTrack("discord_clicked")();
                   window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
                 }}
                 data-testid="empty_page_discord_button"
