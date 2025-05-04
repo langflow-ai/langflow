@@ -7,7 +7,9 @@ from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.keycloak import router as keycloak_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
+from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.monitor import router as monitor_router
+from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.users import router as users_router
@@ -24,8 +26,10 @@ __all__ = [
     "folders_router",
     "keycloak_router",
     "login_router",
+    "mcp_projects_router",
     "mcp_router",
     "monitor_router",
+    "projects_router",
     "starter_projects_router",
     "store_router",
     "users_router",

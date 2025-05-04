@@ -5,6 +5,7 @@ OLLAMA_EMBEDDING_MODELS = [
     "snowflake-arctic-embed",
     "all-minilm",
     "bge-m3",
+    "bge-large",
     "paraphrase-multilingual",
     "granite-embedding",
     "jina-embeddings-v2-base-en",
@@ -36,6 +37,7 @@ OLLAMA_TOOL_MODELS_BASE = [
     "aya-expanse",
     "granite3-moe",
     "firefunction-v2",
+    "cogito",
 ]
 
 

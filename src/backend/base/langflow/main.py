@@ -24,6 +24,7 @@ from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
+from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -156,8 +157,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             await create_or_update_starter_projects(all_types_dict)
             logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Starting telemetry service")
             logger.debug("Starting telemetry service...")
             telemetry_service.start(fastapi_version=fastapi.__version__, langflow_version=version)
+            logger.debug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
             logger.debug("Loading user flows from directory...")
@@ -169,6 +173,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
                 logger.info("Queue service started")
             logger.debug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Loading mcp servers for projects")
+            await init_mcp_servers()
+            logger.debug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             total_time = asyncio.get_event_loop().time() - start_time
             logger.debug(f"Total initialization time: {total_time:.2f}s")

@@ -11,6 +11,9 @@ import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const refreshDiscordCount = useDarkStore(
+    (state) => state.refreshDiscordCount,
+  );
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const location = useLocation();
   const isKeycloakCallback = location.pathname.includes("keycloak/callback");
@@ -28,6 +31,7 @@ export function AppInitPage() {
   useEffect(() => {
     if (isFetched) {
       refreshStars();
+      refreshDiscordCount();
     }
   }, [isFetched]);
 

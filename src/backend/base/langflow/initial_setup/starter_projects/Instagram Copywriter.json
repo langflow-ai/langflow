@@ -1670,7 +1670,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1-mini"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2903,7 +2903,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1-mini"
               },
               "openai_api_base": {
                 "_input_type": "StrInput",
@@ -3296,7 +3296,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1-mini"
               },
               "openai_api_base": {
                 "_input_type": "StrInput",
