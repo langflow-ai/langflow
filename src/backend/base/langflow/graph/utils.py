@@ -18,6 +18,7 @@ from langflow.services.database.models.vertex_builds.crud import log_vertex_buil
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
+from langflow.serialization.constants import MAX_TEXT_LENGTH, MAX_ITEMS_LENGTH
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDataResponse
@@ -175,10 +176,8 @@ async def log_vertex_build(
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,
-            # Serialize data using our custom serializer
-            data=serialize(data),
-            # Serialize artifacts using our custom serializer
-            artifacts=serialize(artifacts) if artifacts else None,
+            data=serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            artifacts=serialize(artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_vertex_build(session, vertex_build)
