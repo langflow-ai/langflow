@@ -1,7 +1,7 @@
 """Add Keycloak fields to User model
 
 Revision ID: a87d3f2c6e2c
-Revises: 93e2705fa8d6
+Revises: 66f72f04a1de
 Create Date: 2024-03-01 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a87d3f2c6e2c"
-down_revision: Union[str, None] = "1b8b740a6fa3"
+down_revision: Union[str, None] = "66f72f04a1de"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
