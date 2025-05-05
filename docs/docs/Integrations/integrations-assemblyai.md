@@ -135,7 +135,7 @@ To run the Transcription and Speech AI Flow:
 1. Open Langflow and create a new project.
 2. Add the components listed above to your flow canvas, or download the [AssemblyAI Transcription and Speech AI Flow](./AssemblyAI_Flow.json)(Download link) and **Import** the JSON file into Langflow.
 3. Connect the components as shown in the flow diagram. **Tip**: Freeze the path of the *Start Transcript* component to only submit the file once.
-4. Input the AssemblyAI API key in in all components that require the key (Start Transcript, Poll Transcript, Get Subtitles, LeMUR, List Transcripts).
+4. Input the AssemblyAI API key in all components that require the key (Start Transcript, Poll Transcript, Get Subtitles, LeMUR, List Transcripts).
 5. Select an audio or video file in the *Start Transcript* component.
 6. Run the flow by clicking **Play** on the *Parse Data* component. Make sure that the specified template is `{text}`.
 7. To generate subtitles, click **Play** on the *Get Subtitles* component.
