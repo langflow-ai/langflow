@@ -20,7 +20,6 @@ from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
-from pyinstrument import Profiler
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
@@ -275,6 +274,7 @@ def create_app():
         return await call_next(request)
 
     if os.environ.get("LANGFLOW_PROFILING", "false").lower() == "true":
+        from pyinstrument import Profiler
 
         @app.middleware("http")
         async def profile_request(request: Request, call_next):
