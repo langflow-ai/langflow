@@ -1,5 +1,5 @@
 ---
-title: Langflow architecture and best practices
+title: Langflow architecture and best practices on Kubernetes
 slug: /deployment-prod-best-practices
 ---
 
