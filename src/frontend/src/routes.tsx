@@ -11,16 +11,17 @@ import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
 import { StoreGuard } from "./components/authorization/storeGuard";
 import ContextWrapper from "./contexts";
+import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_LANGFLOW_DESKTOP,
 } from "./customization/feature-flags";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
-import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
@@ -74,7 +75,7 @@ const router = createBrowserRouter(
             }
           >
             <Route path="" element={<AppAuthenticatedPage />}>
-              <Route path="" element={<DashboardWrapperPage />}>
+              <Route path="" element={<CustomDashboardWrapperPage />}>
                 <Route path="" element={<CollectionPage />}>
                   <Route
                     index
@@ -135,24 +136,30 @@ const router = createBrowserRouter(
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
-                  <Route path="store" element={<StoreApiKeyPage />} />
+                  {!ENABLE_LANGFLOW_DESKTOP && (
+                    <Route path="store" element={<StoreApiKeyPage />} />
+                  )}
                 </Route>
-                <Route
-                  path="store"
-                  element={
-                    <StoreGuard>
-                      <StorePage />
-                    </StoreGuard>
-                  }
-                />
-                <Route
-                  path="store/:id/"
-                  element={
-                    <StoreGuard>
-                      <StorePage />
-                    </StoreGuard>
-                  }
-                />
+                {!ENABLE_LANGFLOW_DESKTOP && (
+                  <>
+                    <Route
+                      path="store"
+                      element={
+                        <StoreGuard>
+                          <StorePage />
+                        </StoreGuard>
+                      }
+                    />
+                    <Route
+                      path="store/:id/"
+                      element={
+                        <StoreGuard>
+                          <StorePage />
+                        </StoreGuard>
+                      }
+                    />
+                  </>
+                )}
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>
@@ -166,7 +173,7 @@ const router = createBrowserRouter(
                 />
               </Route>
               <Route path="flow/:id/">
-                <Route path="" element={<DashboardWrapperPage />}>
+                <Route path="" element={<CustomDashboardWrapperPage />}>
                   <Route path="folder/:folderId/" element={<FlowPage />} />
                   <Route path="" element={<FlowPage />} />
                 </Route>

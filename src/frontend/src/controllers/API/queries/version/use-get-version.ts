@@ -1,3 +1,4 @@
+import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
 import { useDarkStore } from "@/stores/darkStore";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -23,9 +24,13 @@ export const useGetVersionQuery: useQueryFunctionType<
   const responseFn = async () => {
     const { data } = await getVersionFn();
     const refreshVersion = useDarkStore.getState().refreshVersion;
-    const refreshLatestVersion = useDarkStore.getState().refreshLatestVersion;
     refreshVersion(data.version);
-    refreshLatestVersion(data.main_version);
+
+    if (!ENABLE_LANGFLOW_DESKTOP) {
+      const refreshLatestVersion = useDarkStore.getState().refreshLatestVersion;
+      refreshLatestVersion(data.main_version);
+    }
+
     return data;
   };
 

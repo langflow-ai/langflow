@@ -1,5 +1,9 @@
+import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
 import { useEffect } from "react";
-import { BASE_URL_API } from "../../../../../../../../../constants/constants";
+import {
+  BASE_URL_API,
+  baseURL,
+} from "../../../../../../../../../constants/constants";
 
 const usePreloadImages = (
   setImagesLoaded: (value: boolean) => void,
@@ -27,7 +31,7 @@ const usePreloadImages = (
     Object.keys(profilePictures).flatMap((folder) =>
       profilePictures[folder].map((path) =>
         imageArray.push(
-          `${BASE_URL_API}files/profile_pictures/${folder}/${path}`,
+          `${ENABLE_LANGFLOW_DESKTOP ? baseURL : ""}${BASE_URL_API}files/profile_pictures/${folder}/${path}`,
         ),
       ),
     );

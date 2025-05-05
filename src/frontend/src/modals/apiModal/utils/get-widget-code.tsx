@@ -1,3 +1,4 @@
+import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
 import { GetCodeType } from "@/types/tweaks";
 
 /**
@@ -20,11 +21,18 @@ export default function getWidgetCode({
 build/static/js/bundle.min.js">
 </script>`;
 
+  const protocol = !ENABLE_LANGFLOW_DESKTOP
+    ? window.location.protocol
+    : "http:";
+  const host = !ENABLE_LANGFLOW_DESKTOP
+    ? window.location.host
+    : "localhost:7868";
+
   return `${source}
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
-    host_url="${window.location.protocol}//${window.location.host}"${
+    host_url="${protocol}//${host}"${
       !isAuth
         ? `
     api_key="..."`

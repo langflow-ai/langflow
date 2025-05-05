@@ -1,5 +1,7 @@
-export const DashboardWrapperPage = () => {
-  return <></>;
+import { DashboardWrapperPage } from "@/pages/DashboardWrapperPage";
+
+export const CustomDashboardWrapperPage = () => {
+  return <DashboardWrapperPage />;
 };
 
-export default DashboardWrapperPage;
+export default CustomDashboardWrapperPage;

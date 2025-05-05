@@ -1,7 +1,13 @@
-import { IS_AUTO_LOGIN, LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
+import {
+  baseURL,
+  IS_AUTO_LOGIN,
+  LANGFLOW_ACCESS_TOKEN,
+} from "@/constants/constants";
+import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { getLocalStorage } from "@/utils/local-storage-util";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
@@ -14,7 +20,7 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: "",
+  baseURL: ENABLE_LANGFLOW_DESKTOP ? baseURL : "",
 });
 
 const cookies = new Cookies();
@@ -41,7 +47,10 @@ function ApiInterceptor() {
   useEffect(() => {
     const unregister = fetchIntercept.register({
       request: function (url, config) {
-        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+        const accessToken = ENABLE_LANGFLOW_DESKTOP
+          ? getLocalStorage(LANGFLOW_ACCESS_TOKEN)
+          : cookies.get(LANGFLOW_ACCESS_TOKEN);
+
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -83,7 +92,10 @@ function ApiInterceptor() {
 
           await tryToRenewAccessToken(error);
 
-          const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+          const accessToken = ENABLE_LANGFLOW_DESKTOP
+            ? getLocalStorage(LANGFLOW_ACCESS_TOKEN)
+            : cookies.get(LANGFLOW_ACCESS_TOKEN);
+
           if (!accessToken && error?.config?.url?.includes("login")) {
             return Promise.reject(error);
           }
@@ -142,7 +154,7 @@ function ApiInterceptor() {
 
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
-      (config) => {
+      async (config) => {
         const controller = new AbortController();
         try {
           checkDuplicateRequestAndStoreRequest(config);
@@ -152,7 +164,10 @@ function ApiInterceptor() {
           console.error(error.message);
         }
 
-        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+        const accessToken = ENABLE_LANGFLOW_DESKTOP
+          ? getLocalStorage(LANGFLOW_ACCESS_TOKEN)
+          : cookies.get(LANGFLOW_ACCESS_TOKEN);
+
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -234,7 +249,10 @@ function ApiInterceptor() {
     const originalRequest = error.config as AxiosRequestConfig;
 
     try {
-      const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+      const accessToken = ENABLE_LANGFLOW_DESKTOP
+        ? getLocalStorage(LANGFLOW_ACCESS_TOKEN)
+        : cookies.get(LANGFLOW_ACCESS_TOKEN);
+
       if (!accessToken) {
         throw new Error("Access token not found in cookies");
       }

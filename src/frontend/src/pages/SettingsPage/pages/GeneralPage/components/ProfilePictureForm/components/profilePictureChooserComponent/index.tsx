@@ -7,7 +7,7 @@ import { useDarkStore } from "../../../../../../../../stores/darkStore";
 import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
 
-type ProfilePictureChooserComponentProps = {
+export type ProfilePictureChooserComponentProps = {
   profilePictures?: ProfilePicturesQueryResponse;
   loading: boolean;
   value: string;

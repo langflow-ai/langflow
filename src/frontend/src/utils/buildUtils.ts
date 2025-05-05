@@ -1,10 +1,12 @@
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BASE_URL_API,
+  baseURL,
   POLLING_INTERVAL,
   POLLING_MESSAGES,
 } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
@@ -250,7 +252,7 @@ export async function buildFlowVertices({
 }: BuildVerticesParams) {
   const inputs = {};
 
-  let buildUrl = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow`;
+  let buildUrl = `${ENABLE_LANGFLOW_DESKTOP ? baseURL : ""}${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow`;
 
   const queryParams = new URLSearchParams();
 
@@ -363,7 +365,7 @@ export async function buildFlowVertices({
 
     const { job_id } = await buildResponse.json();
 
-    const cancelBuildUrl = `${BASE_URL_API}build/${job_id}/cancel`;
+    const cancelBuildUrl = `${ENABLE_LANGFLOW_DESKTOP ? baseURL : ""}${BASE_URL_API}build/${job_id}/cancel`;
 
     // Get the buildController from flowStore
     const buildController = new AbortController();
@@ -381,7 +383,7 @@ export async function buildFlowVertices({
     });
     useFlowStore.getState().setBuildController(buildController);
     // Then stream the events
-    const eventsUrl = `${BASE_URL_API}build/${job_id}/events`;
+    const eventsUrl = `${ENABLE_LANGFLOW_DESKTOP ? baseURL : ""}${BASE_URL_API}build/${job_id}/events`;
     const buildResults: Array<boolean> = [];
     const verticesStartTimeMs: Map<string, number> = new Map();
 

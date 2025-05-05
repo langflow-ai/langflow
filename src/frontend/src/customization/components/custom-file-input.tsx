@@ -1,5 +1,8 @@
-export function IOFileInput() {
-  return <></>;
+import IOFileInput from "@/modals/IOModal/components/IOFieldView/components/file-input";
+import { IOFileInputProps } from "@/types/components";
+
+export function CustomIOFileInput({ field, updateValue }: IOFileInputProps) {
+  return <IOFileInput field={field} updateValue={updateValue} />;
 }
 
-export default IOFileInput;
+export default CustomIOFileInput;
