@@ -69,18 +69,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "${apiUrl}"${
+        "mcp-proxy",${
           isAutoLogin
             ? ""
             : `,
         "--header",
-        "x-api-key:${apiKey || "YOUR_API_KEY"}"`
+        "x-api-key:${apiKey || "YOUR_API_KEY"}",`
         }
+        "${apiUrl}"
       ]
     }
   }
