@@ -15,13 +15,12 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
-const EMPTY_PAGE_TITLE = "Your new favorite way to ship Agents";
-const EMPTY_PAGE_DESCRIPTION =
-  "Design agents that connect to any API, model, or database.";
+const EMPTY_PAGE_TITLE = "Welcome to Langflow";
+const EMPTY_PAGE_DESCRIPTION = "Your new favorite way to ship Agents.";
 const EMPTY_PAGE_GITHUB_DESCRIPTION =
   "Follow development, star the repo, and shape the future.";
 const EMPTY_PAGE_DISCORD_DESCRIPTION =
-  "Join builders, ask questions, and show off your agents.";
+  "Join builders, ask questions, and show off your agents";
 const EMPTY_PAGE_DRAG_AND_DROP_TEXT =
   "Already have a flow? Drag and drop to upload.";
 const EMPTY_PAGE_FOLDER_DESCRIPTION = "Empty folder";
@@ -86,7 +85,7 @@ export const EmptyPageCommunity = ({
               </div>
               <span
                 data-testid="mainpage_title"
-                className="z-50 text-center font-chivo text-2xl font-semibold text-foreground"
+                className="z-50 text-center font-chivo text-2xl font-medium text-foreground"
               >
                 {EMPTY_PAGE_TITLE}
               </span>
