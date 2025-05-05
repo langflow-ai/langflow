@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
-import EmptyPage from "./emptyPage";
+import EmptyPageCommunity from "./empty-page";
 
 export default function CollectionPage(): JSX.Element {
   const [openModal, setOpenModal] = useState(false);
@@ -39,14 +39,14 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: "Folder deleted successfully.",
+            title: "Project deleted successfully.",
           });
           navigate("/all");
         },
         onError: (err) => {
           console.error(err);
           setErrorData({
-            title: "Error deleting folder.",
+            title: "Error deleting project.",
           });
         },
       },
@@ -80,7 +80,9 @@ export default function CollectionPage(): JSX.Element {
             {flows?.length !== examples?.length || folders?.length > 1 ? (
               <Outlet />
             ) : (
-              <EmptyPage setOpenModal={setOpenModal} />
+              // <EmptyPage setOpenModal={setOpenModal} />
+
+              <EmptyPageCommunity setOpenModal={setOpenModal} />
             )}
           </div>
         ) : (
