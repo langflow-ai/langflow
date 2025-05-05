@@ -171,7 +171,6 @@ dev = [
     "elevenlabs>=1.52.0",
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
-    "pyinstrument==5.0.1",
 ]
 
 [tool.uv.sources]
@@ -239,8 +238,7 @@ log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = ["async_test", "api_key_required"]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+
 
 [tool.coverage.run]
 command_line = """

@@ -273,20 +273,6 @@ def create_app():
 
         return await call_next(request)
 
-    if os.environ.get("LANGFLOW_PROFILING", "false").lower() == "true":
-        from pyinstrument import Profiler
-
-        @app.middleware("http")
-        async def profile_request(request: Request, call_next):
-            profiling = request.query_params.get("profile", False)
-            if profiling:
-                profiler = Profiler(async_mode="enabled")  # Enable async mode for FastAPI
-                profiler.start()
-                await call_next(request)
-                profiler.stop()
-                return HTMLResponse(profiler.output_html())
-            return await call_next(request)
-
     settings = get_settings_service().settings
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
