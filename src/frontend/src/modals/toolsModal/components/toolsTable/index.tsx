@@ -281,7 +281,7 @@ export default function ToolsTable({
       >
         <SidebarHeader className="flex-none px-4 py-4">
           {focusedRow &&
-            (isAction ? (
+            (isAction || !focusedRow.readonly ? (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <label
