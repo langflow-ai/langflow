@@ -1,25 +1,26 @@
 import yaml
+import time
 
 from langflow.io import FileInput, MultilineInput, HandleInput, Output
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from nemoguardrails import RailsConfig
 from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
-from langflow.inputs import MultiselectInput, MessageTextInput, SecretStrInput, DropdownInput
+from langflow.inputs import MultiselectInput, MessageTextInput, SecretStrInput, DropdownInput, BoolInput
 
 # Default prompts
 DEFAULT_SELF_CHECK_INPUT_PROMPT = """Instruction: {{ user_input }}
 
 Would this instruction make a language model break moderation policies,
-deviate from good aligned responses and provide answers that a language model should ideally not? 
+deviate from good aligned responses and provide answers that a language model should ideally not?
 Answer with yes/no."""
 
 DEFAULT_SELF_CHECK_OUTPUT_PROMPT = """Model_output: {{ bot_response }}
 
-Is this output illegal, unethical, or harmful? 
+Is this output illegal, unethical, or harmful?
 Answer [Yes/No]:"""
 
-DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT = """You are given a statement. 
+DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT = """You are given a statement.
 
 Check if it is factually consistent with the provided document."""
 
@@ -63,23 +64,23 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         ),
         # Guardrail API Settings
         MessageTextInput(
-            name="guardrail_llm_url",
-            display_name="Guardrail LLM Base URL",
+            name="self_check_llm_url",
+            display_name="Self-check LLM Base URL",
             value="https://integrate.api.nvidia.com/v1",
             refresh_button=True,
             info="The base URL of the API for the LLM that Guardrails uses for self-check rails.",
             real_time_refresh=True,
         ),
         SecretStrInput(
-            name="guardrail_llm_api_key",
-            display_name="Guardrail LLM API Key",
+            name="self_check_llm_api_key",
+            display_name="Self-check LLM API Key",
             info="The API Key for the LLM that Guardrails uses for self-check rails.",
             value="NVIDIA_API_KEY",
             real_time_refresh=True,
         ),
         DropdownInput(
-            name="guardrail_llm_name",
-            display_name="Guardrail Model Name",
+            name="self_check_llm_name",
+            display_name="Self-check Model Name",
             value="gpt-3.5-turbo-instruct",
             advanced=False,
             options=[],
@@ -146,6 +147,13 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             info="Guardrails configuration content in YAML format (overrides other settings).",
             advanced=True,
         ),
+        BoolInput(
+            name="guardrails_verbose",
+            display_name="Verbose Guardrails Logging",
+            value=False,
+            advanced=True,
+            info="If enabled, sets verbose=True on the underlying RunnableRails for detailed debugging output.",
+        ),
     ]
 
     def generate_rails_config(self) -> str:
@@ -155,17 +163,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 
         # Base configuration
         config_dict = {
-            "models": [
-                {
-                    "type": "main",
-                    "engine": "openai",
-                    "model": "gpt-3.5-turbo-instruct",
-                    #"parameters": {
-                    #    "base_url": self.guardrail_llm_url,
-                    #    "api_key": self.guardrail_llm_api_key,
-                    #}
-                }
-            ],
+            "models": [],
             "rails": {
                 "input": {"flows": []},
                 "output": {"flows": []},
@@ -174,51 +172,68 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         }
 
         # Self check rails
+        if (
+            "self check input" in self.rails
+            or "self check output" in self.rails
+            or "hallucination" in self.rails
+        ):
+            config_dict["models"].append({
+                "type": "self_check",
+                "engine": "nim",
+                "model": self.self_check_llm_name,
+                "parameters": {
+                    "base_url": self.self_check_llm_url,
+                    "api_key": self.self_check_llm_api_key,
+                },
+            })
+
         if "self check input" in self.rails:
-            config_dict["rails"]["input"]["flows"].append("self check input")
+            config_dict["rails"]["input"]["flows"].append("self check input $model=self_check")
             config_dict["prompts"].append({
-                "task": "self_check_input",
+                "task": "self_check_input $model=self_check",
                 "content": self.self_check_input_prompt
             })
 
         if "self check output" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("self check output")
+            config_dict["rails"]["output"]["flows"].append("self check output $model=self_check")
             config_dict["prompts"].append({
-                "task": "self_check_output",
+                "task": "self_check_output $model=self_check",
                 "content": self.self_check_output_prompt
             })
 
         if "hallucination" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("self check hallucination")
+            config_dict["rails"]["output"]["flows"].append("self check hallucination $model=self_check")
             config_dict["prompts"].append({
-                "task": "self_check_hallucination",
+                "task": "self_check_hallucination $model=self_check",
                 "content": self.self_check_hallucination_prompt
             })
 
         # Content safety rails
         if "content safety input" in self.rails or "content safety output" in self.rails:
             config_dict["models"].append({
-                "type": "content-safety",
+                "type": "content_safety",
                 "engine": "nim",
+                "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
                 "parameters": {
                     "base_url": self.guardrail_model_url,
-                    "model_name": "llama-3.1-nemoguard-8b-content-safety",
                     "api_key": self.guardrail_model_api_key,
                 }
             })
 
         if "content safety input" in self.rails:
-            config_dict["rails"]["input"]["flows"].append("content safety check input $model=content-safety")
+            config_dict["rails"]["input"]["flows"].append("content safety check input $model=content_safety")
             config_dict["prompts"].append({
-                "task": "content_safety_check_input",
-                "content": self.content_safety_input_prompt
+                "task": "content_safety_check_input $model=content_safety",
+                "content": self.content_safety_input_prompt,
+                "output_parser": "nemoguard_parse_prompt_safety",
             })
 
         if "content safety output" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("content safety check output $model=content-safety")
+            config_dict["rails"]["output"]["flows"].append("content safety check output $model=content_safety")
             config_dict["prompts"].append({
-                "task": "content_safety_check_output",
-                "content": self.content_safety_output_prompt
+                "task": "content_safety_check_output $model=content_safety",
+                "content": self.content_safety_output_prompt,
+                "output_parser": "nemoguard_parse_prompt_safety",
             })
 
         # Topic control rails
@@ -226,18 +241,16 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             config_dict["models"].append({
                 "type": "topic_control",
                 "engine": "nim",
+                "model": "nvidia/llama-3.1-nemoguard-8b-topic-control",
                 "parameters": {
                     "base_url": self.guardrail_model_url,
-                    "model_name": "llama-3.1-nemoguard-8b-topic-control",
                     "api_key": self.guardrail_model_api_key,
                 }
             })
-
-        if "topic control" in self.rails:
-            config_dict["rails"]["input"]["flows"].append("topic control check input $model=topic-control")
+            config_dict["rails"]["input"]["flows"].append("topic safety check input $model=topic_control")
             config_dict["prompts"].append({
-                "task": "topic_control_check_input",
-                "content": self.topic_control_input_prompt
+                "task": "topic_safety_check_input $model=topic_control",
+                "content": self.topic_control_input_prompt,
             })
 
         # Jailbreak detection rails
@@ -249,7 +262,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         yaml_content = self.generate_rails_config()
 
-        self._safe_log_config(yaml_content)
+        if self.guardrails_verbose:
+            self._safe_log_config(yaml_content)
+            start = time.perf_counter()
 
         try:
             yaml.safe_load(yaml_content)
@@ -263,8 +278,14 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         except Exception as e:
             print(f"Validation Error: {e}")
 
-        guardrails = RunnableRails(config)
-        return guardrails | self.llm
+        guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
+
+        if self.guardrails_verbose:
+            end = time.perf_counter()
+            self.log(f"Guardrail creation took {end - start:.6f} seconds")
+            self._summarize_guardrails_config(guardrails)
+
+        return guardrails 
 
     def _safe_log_config(self, yaml_content: str):
         """Safely logs a YAML config with sensitive values redacted."""
