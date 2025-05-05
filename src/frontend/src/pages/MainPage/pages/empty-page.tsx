@@ -92,7 +92,7 @@ export const EmptyPageCommunity = ({
 
               <span
                 data-testid="empty_page_description"
-                className="z-50 text-center text-xs text-secondary-foreground"
+                className="z-50 text-center text-sm text-secondary-foreground"
               >
                 {folders?.length > 1
                   ? EMPTY_PAGE_FOLDER_DESCRIPTION
