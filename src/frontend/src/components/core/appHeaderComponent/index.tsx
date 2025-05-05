@@ -48,24 +48,16 @@ export default function AppHeader(): JSX.Element {
 
   useResetDismissUpdateAll();
 
-  const flows = useFlowsManagerStore((state) => state.flows);
-  const examples = useFlowsManagerStore((state) => state.examples);
-  const folders = useFolderStore((state) => state.folders);
-
-  const isEmpty = flows?.length !== examples?.length || folders?.length > 1;
-
   const getNotificationBadge = () => {
     const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
     return notificationCenter
-      ? `${baseClasses} right-[5.1rem] top-[10px]`
+      ? `${baseClasses} right-[5.1rem] top-[5px]`
       : "hidden";
   };
 
   return (
     <div
-      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background ${
-        !isEmpty ? "hidden" : ""
-      }`}
+      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}

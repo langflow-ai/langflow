@@ -15,30 +15,6 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 ![](/img/vector-store-document-ingestion.png)
 
-## Alter metadata
-
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_value | Input | Objects to which Metadata should be added |
-| text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
-| metadata | Metadata | Metadata to add to each object |
-| remove_fields | Fields to Remove | Metadata Fields to Remove |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | List of Input objects, each with added metadata |
-
-</details>
-
 ## Combine data
 
 :::important
@@ -70,6 +46,25 @@ The component iterates through the input list of data objects, merging them into
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
+1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
+This example uses two **Text Input** components.
+
+![Combine text component](/img/component-combine-text.png)
+
+2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
+3. In the **Combine Text** component, enter an optional **Delimiter** value.
+The delimiter character separates the combined texts.
+This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
+4. Connect a **Chat Output** component to view the text combination.
+5. Click **Playground**, and then click **Run Flow**.
+The combined text appears in the **Playground**.
+```text
+This is the first text. Let's combine text!
+end first text
+start second text
+Here's the second part. We'll see how combining text works.
+```
+
 <details>
 <summary>Parameters</summary>
 
@@ -86,32 +81,6 @@ This component concatenates two text sources into a single text chunk using a sp
 | Name | Display Name | Info |
 |------|--------------|------|
 |message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
-
-</details>
-
-## Create data
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
-:::
-
-This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-| Name | Display Name | Info |
-|------|--------------|------|
-| number_of_fields | Number of Fields | The number of fields to be added to the record. |
-| text_key | Text Key | Key that identifies the field to be used as the text content. |
-| text_key_validator | Text Key Validator | If enabled, checks if the given `Text Key` is present in the given `Data`. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
 
 </details>
 
@@ -274,19 +243,60 @@ This component can perform the following operations on Pandas [DataFrame](https:
 
 </details>
 
-## Data to message
+## Data to DataFrame
 
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-Instead, use the [Parser](#parser) component.
-:::
+This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
 
-:::important
-Prior to Langflow version 1.1.3, this component was named **Parse Data**.
-:::
+1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
+This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
+2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
 
-The ParseData component converts data objects into plain text using a specified template.
-This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
+![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
+
+3. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Alex Cruz - Employee Profile",
+    "data": {
+        "Name": "Alex Cruz",
+        "Role": "Developer",
+        "Department": "Engineering"
+    }
+}'
+```
+
+4. In the **Playground**, view the output of your flow.
+The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
+```text
+| text                         | data                                                                    |
+|:-----------------------------|:------------------------------------------------------------------------|
+| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
+```
+
+5. Send another employee data object.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Kalani Smith - Employee Profile",
+    "data": {
+        "Name": "Kalani Smith",
+        "Role": "Designer",
+        "Department": "Design"
+    }
+}'
+```
+
+6. In the **Playground**, this request is also converted to `DataFrame`.
+```text
+| text                            | data                                                                 |
+|:--------------------------------|:---------------------------------------------------------------------|
+| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
+```
 
 <details>
 <summary>Parameters</summary>
@@ -295,15 +305,13 @@ This component transforms structured data into human-readable text formats, allo
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The data to convert to text. |
-| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}`, or any other key in the data. |
-| sep | Separator | The separator to use between multiple data items. |
+| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| text | Text | The resulting formatted text string as a [Message](/concepts-objects#message-object) object. |
+| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a 'text' column. |
 
 </details>
 
@@ -357,30 +365,6 @@ The Filter values component filters a list of data items based on a specified ke
 | Name | Display Name | Info |
 |------|--------------|------|
 | filtered_data | Filtered data | The resulting list of filtered data items. |
-
-</details>
-
-## JSON cleaner
-
-The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| json_str | JSON String | The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
-| remove_control_chars | Remove Control Characters | If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
-| normalize_unicode | Normalize Unicode | When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
-| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output | Cleaned JSON String | The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
 </details>
 
@@ -522,60 +506,6 @@ For an additional example of using the **Parser** component to format a DataFram
 
 </details>
 
-## Parse DataFrame
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-Instead, use the [Parser](#parser) component.
-:::
-
-This component converts DataFrames into plain text using templates.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| df | DataFrame | The DataFrame to convert to text rows. |
-| template | Template | Template for formatting (use `{column_name}` placeholders). |
-| sep | Separator | String to join rows in output. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| text | Text | All rows combined into single text. |
-
-</details>
-
-## Parse JSON
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
-:::
-
-This component converts and extracts JSON fields using JQ queries.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)). |
-| query | JQ Query | JQ Query to filter the data |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
-
-</details>
-
 ## Regex extractor
 
 This component extracts patterns from text using regular expressions. It can be used to find and extract specific patterns or information from text data.
@@ -680,35 +610,56 @@ For `Message` inputs, the component can create:
 
 </details>
 
-## Select data
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
-:::
-
-This component selects a single [Data](/concepts-objects#data-object) item from a list.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data_list | Data List | List of data to select from |
-| data_index | Data Index | Index of the data to select |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
-
-</details>
-
 ## Split text
 
-This component splits text into chunks based on specified criteria.
+This component splits text into chunks based on specified criteria. It's ideal for chunking data to be tokenized and embedded into vector databases.
+
+The **Split Text** component outputs **Chunks** or **DataFrame**.
+The **Chunks** output returns a list of individual text chunks.
+The **DataFrame** output returns a structured data format, with additional `text` and `metadata` columns applied.
+
+1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/concepts-objects) to the **Split Text** component's **Data** port.
+This example uses the **URL** component, which is fetching JSON placeholder data.
+
+![Split text component and chroma-db](/img/component-split-text.png)
+
+2. In the **Split Text** component, define your data splitting parameters.
+
+This example splits incoming JSON data at the separator `},`, so each chunk contains one JSON object.
+
+The order of precedence is **Separator**, then **Chunk Size**, and then **Chunk Overlap**.
+If any segment after separator splitting is longer than `chunk_size`, it is split again to fit within `chunk_size`.
+
+After `chunk_size`, **Chunk Overlap** is applied between chunks to maintain context.
+
+3. Connect a **Chat Output** component to the **Split Text** component's **DataFrame** output to view its output.
+4. Click **Playground**, and then click **Run Flow**.
+The output contains a table of JSON objects split at `},`.
+```text
+{
+"userId": 1,
+"id": 1,
+"title": "Introduction to Artificial Intelligence",
+"body": "Learn the basics of Artificial Intelligence and its applications in various industries.",
+"link": "https://example.com/article1",
+"comment_count": 8
+},
+{
+"userId": 2,
+"id": 2,
+"title": "Web Development with React",
+"body": "Build modern web applications using React.js and explore its powerful features.",
+"link": "https://example.com/article2",
+"comment_count": 12
+},
+```
+5. Clear the **Separator** field, and then run the flow again.
+Instead of JSON objects, the output contains 50-character lines of text with 10 characters of overlap.
+```text
+First chunk:  "title": "Introduction to Artificial Intelligence""
+Second chunk: "elligence", "body": "Learn the basics of Artif"
+Third chunk:  "s of Artificial Intelligence and its applications"
+```
 
 <details>
 <summary>Parameters</summary>
@@ -753,5 +704,139 @@ This component dynamically updates or appends data with specified fields.
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | Updated [Data](/concepts-objects#data-object) objects. |
+
+</details>
+
+## Legacy components
+
+**Legacy** components are available for use but are no longer supported.
+
+### Alter metadata
+
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Input | Objects to which Metadata should be added |
+| text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
+| metadata | Metadata | Metadata to add to each object |
+| remove_fields | Fields to Remove | Metadata fields to remove |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | List of Input objects, each with added metadata |
+
+</details>
+
+### Create data
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
+
+This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+| Name | Display Name | Info |
+|------|--------------|------|
+| number_of_fields | Number of Fields | The number of fields to be added to the record. |
+| text_key | Text Key | Key that identifies the field to be used as the text content. |
+| text_key_validator | Text Key Validator | If enabled, checks if the given `Text Key` is present in the given `Data`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
+
+</details>
+
+### Parse DataFrame
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+Instead, use the [Parser](#parser) component.
+:::
+
+This component converts DataFrames into plain text using templates.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| df | DataFrame | The DataFrame to convert to text rows. |
+| template | Template | Template for formatting (use `{column_name}` placeholders). |
+| sep | Separator | String to join rows in output. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| text | Text | All rows combined into single text. |
+
+</details>
+
+### Parse JSON
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
+
+This component converts and extracts JSON fields using JQ queries.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)). |
+| query | JQ Query | JQ Query to filter the data |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
+
+</details>
+
+### Select data
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
+
+This component selects a single [Data](/concepts-objects#data-object) item from a list.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_list | Data List | List of data to select from |
+| data_index | Data Index | Index of the data to select |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
 
 </details>

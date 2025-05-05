@@ -56,7 +56,7 @@ export const AccountMenu = () => {
         <HeaderMenuItems position="right" classNameSize="w-[272px]">
           <div className="divide-y divide-foreground/10">
             <div>
-              <div className="h-[46px] items-center px-4 pt-3">
+              <div className="h-[44px] items-center px-4 pt-3">
                 <div className="flex items-center justify-between">
                   <span
                     data-testid="menu_version_button"
@@ -148,7 +148,7 @@ export const AccountMenu = () => {
                 >
                   <ForwardedIconComponent
                     strokeWidth={2}
-                    name="TwitterXIcon"
+                    name="TwitterX"
                     className="h-4 w-4"
                   />
                   X
@@ -156,7 +156,7 @@ export const AccountMenu = () => {
               </HeaderMenuItemLink>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-1 text-sm">
+            <div className="flex items-center justify-between px-4 py-[6.5px] text-sm">
               <span className="">Theme</span>
               <div className="relative top-[1px] float-right">
                 <ThemeButtons />
