@@ -132,7 +132,7 @@ export const MenuBar = memo((): JSX.Element => {
       <div
         data-testid="menu_status_saved_flow_button"
         id="menu_status_saved_flow_button"
-        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
+        className="shrink-0 text-sm font-medium text-accent-emerald-foreground"
       >
         Saved
       </div>
@@ -178,7 +178,7 @@ export const MenuBar = memo((): JSX.Element => {
     [currentFlowName],
   );
 
-  const handleNameSubmit = useCallback(() => {
+  const handleNameSubmit = useCallback(async () => {
     if (
       flowName.trim() !== "" &&
       flowName !== currentFlowName &&
@@ -192,9 +192,10 @@ export const MenuBar = memo((): JSX.Element => {
         name: flowName,
         id: currentFlowId!,
       };
-      setCurrentFlow(newFlow);
+
       saveFlow(newFlow)
         .then(() => {
+          setCurrentFlow(newFlow);
           setSuccessData({ title: "Flow name updated successfully" });
         })
         .catch((error) => {
@@ -257,7 +258,7 @@ export const MenuBar = memo((): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-sm text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -302,7 +303,7 @@ export const MenuBar = memo((): JSX.Element => {
             >
               <Input
                 className={cn(
-                  "h-6 w-full shrink-0 cursor-text font-semibold",
+                  "text- h-6 w-full shrink-0 cursor-text font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
@@ -323,7 +324,7 @@ export const MenuBar = memo((): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-sm font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
@@ -538,7 +539,7 @@ export const MenuBar = memo((): JSX.Element => {
         >
           <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
             <div className="flex cursor-default items-center gap-2 truncate text-sm">
-              <div className="w-full truncate text-xs">
+              <div className="w-full truncate text-sm">
                 {printByBuildStatus()}
               </div>
             </div>
@@ -552,7 +553,7 @@ export const MenuBar = memo((): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "hidden items-center gap-1.5 text-xs text-status-red sm:flex"
+                  ? "hidden items-center gap-1.5 text-sm text-status-red sm:flex"
                   : "hidden"
               }
             >

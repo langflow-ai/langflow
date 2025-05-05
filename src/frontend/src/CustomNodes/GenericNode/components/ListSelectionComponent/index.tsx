@@ -1,12 +1,11 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
-import { Button } from "@/components/ui/button";
 import { DialogHeader } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
-import { cn, testIdCase } from "@/utils/utils";
+import { testIdCase } from "@/utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ListItem from "./ListItem";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
@@ -19,118 +18,6 @@ interface ListSelectionComponentProps {
   onSelection?: (action: any) => void;
   limit?: number;
 }
-
-const ListItem = ({
-  item,
-  isSelected,
-  onClick,
-  className,
-  onMouseEnter,
-  onMouseLeave,
-  isFocused,
-  isKeyboardNavActive,
-  dataTestId,
-}: {
-  item: any;
-  isSelected: boolean;
-  onClick: () => void;
-  className?: string;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  isFocused: boolean;
-  isKeyboardNavActive: boolean;
-  dataTestId: string;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const itemRef = useRef<HTMLButtonElement>(null);
-
-  // Clear hover state when keyboard navigation is active
-  useEffect(() => {
-    if (isKeyboardNavActive) {
-      setIsHovered(false);
-    }
-  }, [isKeyboardNavActive]);
-
-  // Scroll into view when focused by keyboard
-  useEffect(() => {
-    if (isFocused && itemRef.current) {
-      itemRef.current.scrollIntoView({ block: "nearest" });
-    }
-  }, [isFocused]);
-
-  return (
-    <Button
-      ref={itemRef}
-      key={item.id}
-      data-testid={dataTestId}
-      unstyled
-      size="sm"
-      className={cn(
-        "group flex w-full rounded-md px-2 py-0.5",
-        !isKeyboardNavActive && "hover:bg-muted", // Only apply hover styles when not in keyboard nav
-        !item.metaData && "py-2.5",
-        isFocused && "bg-muted",
-        className,
-      )}
-      onClick={onClick}
-      onMouseEnter={() => {
-        if (!isKeyboardNavActive) {
-          setIsHovered(true);
-          onMouseEnter();
-        }
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        onMouseLeave();
-      }}
-      // Disable pointer events during keyboard navigation
-      style={{ pointerEvents: isKeyboardNavActive ? "none" : "auto" }}
-    >
-      <div className="flex w-full items-center gap-2">
-        {item.icon && (
-          <div>
-            <ForwardedIconComponent name={item.icon} className="mr-2 h-4 w-4" />
-          </div>
-        )}
-        <div className="flex w-full flex-col truncate">
-          <div className="flex w-full truncate text-[13px] font-semibold">
-            <span className="truncate">{item.name}</span>
-          </div>
-          {"metaData" in item && item.metaData && (
-            <div className="flex w-full truncate text-[13px] text-gray-500">
-              <span className="truncate">{item.metaData}</span>
-            </div>
-          )}
-        </div>
-
-        {isHovered || isFocused ? (
-          <div className="ml-auto flex items-center justify-start rounded-md">
-            <div className="flex items-center pr-1.5 text-[13px] font-semibold text-muted-foreground">
-              Select
-            </div>
-            <div className="flex items-center justify-center rounded-md">
-              <ForwardedIconComponent
-                name="corner-down-left"
-                className="h-3.5 w-3.5 text-muted-foreground"
-              />
-            </div>
-          </div>
-        ) : (
-          // Always show the check icon when selected, regardless of hover/focus state
-          isSelected && (
-            <ForwardedIconComponent
-              name="check"
-              className={cn(
-                "ml-auto flex h-4 w-4",
-                item.link === "validated" && "text-green-500",
-              )}
-            />
-          )
-        )}
-      </div>
-    </Button>
-  );
-};
 
 const ListSelectionComponent = ({
   open,

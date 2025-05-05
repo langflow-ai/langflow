@@ -12,7 +12,7 @@ export function ProfileIcon() {
   return (
     <img
       src={profileImageUrl}
-      className="h-7 w-7 shrink-0 focus-visible:outline-0"
+      className="h-6 w-6 shrink-0 focus-visible:outline-0"
     />
   );
 }
