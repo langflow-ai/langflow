@@ -14,9 +14,12 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+// Re-enabling the MonkeyAgentChat component
+import MonkeyAgentChat from "../../components/monkey-agent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
+  const [showLegacy, setShowLegacy] = useState(false);
 
   useGetTypes({
     enabled: Object.keys(types).length <= 0,
@@ -163,7 +166,13 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
             <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
-              {!view && <FlowSidebarComponent isLoading={isLoading} />}
+              {!view && (
+                <FlowSidebarComponent
+                  isLoading={isLoading}
+                  showLegacy={showLegacy}
+                  setShowLegacy={setShowLegacy}
+                />
+              )}
               <main className="flex w-full overflow-hidden">
                 <div className="h-full w-full">
                   <Page setIsLoading={setIsLoading} />
@@ -172,18 +181,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </SidebarProvider>
           </div>
         )}
-        {/* {ENABLE_BRANDING && version && (
-          <a
-            target={"_blank"}
-            href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
-            className="langflow-page-icon"
-          >
-            <div className="mt-1">Langflow 🤝 DataStax</div>
-
-            <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
-          </a>
-        )} */}
       </div>
+      {/* AI Agent Chat Overlay */}
+      {!view && currentSavedFlow && <MonkeyAgentChat />}
       {blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (
@@ -200,8 +200,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       second: "numeric",
                       month: "numeric",
                       day: "numeric",
+                      year: "numeric",
                     })
-                  : undefined
+                  : "Never"
               }
               autoSave={autoSaving}
             />

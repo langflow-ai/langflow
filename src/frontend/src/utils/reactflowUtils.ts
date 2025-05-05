@@ -957,6 +957,7 @@ export function convertValuesToNumbers(arr) {
 export function scapedJSONStringfy(json: object): string {
   return customStringify(json).replace(/"/g, "œ");
 }
+export const scapeJSONStringify = scapedJSONStringfy;
 export function scapeJSONParse(json: string): any {
   let parsed = json.replace(/œ/g, '"');
   return JSON.parse(parsed);

@@ -1,0 +1,593 @@
+{
+  "TextInput": {
+    "id": "TextInput",
+    "displayName": "Text Input",
+    "description": "A simple text input node",
+    "category": "Inputs",
+    "inputs": {},
+    "outputs": {
+      "text": {
+        "type": [
+          "Message"
+        ],
+        "displayName": "Text",
+        "connectionFormat": {
+          "fieldName": "text",
+          "handleFormat": "{\"dataType\": \"TextInput\", \"id\": \"NODE_ID\", \"name\": \"text\", \"output_types\": [\"Message\"]}"
+        }
+      }
+    }
+  },
+  "ChatInput": {
+    "id": "ChatInput",
+    "displayName": "Chat Input",
+    "description": "An input for chat messages",
+    "category": "Inputs",
+    "inputs": {},
+    "outputs": {
+      "chat_history": {
+        "type": [
+          "ChatHistory"
+        ],
+        "displayName": "Chat History",
+        "connectionFormat": {
+          "fieldName": "chat_history",
+          "handleFormat": "{\"dataType\": \"ChatInput\", \"id\": \"NODE_ID\", \"name\": \"chat_history\", \"output_types\": [\"ChatHistory\"]}"
+        }
+      }
+    }
+  },
+  "DocumentInput": {
+    "id": "DocumentInput",
+    "displayName": "Document Input",
+    "description": "Input for document content",
+    "category": "Inputs",
+    "inputs": {},
+    "outputs": {
+      "document": {
+        "type": [
+          "Document"
+        ],
+        "displayName": "Document",
+        "connectionFormat": {
+          "fieldName": "document",
+          "handleFormat": "{\"dataType\": \"DocumentInput\", \"id\": \"NODE_ID\", \"name\": \"document\", \"output_types\": [\"Document\"]}"
+        }
+      }
+    }
+  },
+  "FileInput": {
+    "id": "FileInput",
+    "displayName": "File Input",
+    "description": "Input for uploading files",
+    "category": "Inputs",
+    "inputs": {},
+    "outputs": {
+      "file": {
+        "type": [
+          "File",
+          "Blob"
+        ],
+        "displayName": "File",
+        "connectionFormat": {
+          "fieldName": "file",
+          "handleFormat": "{\"dataType\": \"FileInput\", \"id\": \"NODE_ID\", \"name\": \"file\", \"output_types\": [\"File\", \"Blob\"]}"
+        }
+      }
+    }
+  },
+  "Display": {
+    "id": "Display",
+    "displayName": "Display",
+    "description": "Displays text output in the UI",
+    "category": "Outputs",
+    "inputs": {
+      "content": {
+        "type": [
+          "str",
+          "Message"
+        ],
+        "displayName": "Content",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "content",
+          "handleFormat": "{\"fieldName\": \"content\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\", \"Message\"], \"type\": \"str\"}"
+        }
+      }
+    },
+    "outputs": {}
+  },
+  "FileOutput": {
+    "id": "FileOutput",
+    "displayName": "File Output",
+    "description": "Saves content to a file",
+    "category": "Outputs",
+    "inputs": {
+      "content": {
+        "type": [
+          "str",
+          "Message",
+          "Document"
+        ],
+        "displayName": "Content",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "content",
+          "handleFormat": "{\"fieldName\": \"content\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\", \"Message\", \"Document\"], \"type\": \"str\"}"
+        }
+      },
+      "filename": {
+        "type": [
+          "str"
+        ],
+        "displayName": "Filename",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "filename",
+          "handleFormat": "{\"fieldName\": \"filename\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      }
+    },
+    "outputs": {}
+  },
+  "APIOutput": {
+    "id": "APIOutput",
+    "displayName": "API Output",
+    "description": "Sends data to an API endpoint",
+    "category": "Outputs",
+    "inputs": {
+      "url": {
+        "type": [
+          "str"
+        ],
+        "displayName": "URL",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "url",
+          "handleFormat": "{\"fieldName\": \"url\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      },
+      "data": {
+        "type": [
+          "str",
+          "Message",
+          "Document",
+          "JSON"
+        ],
+        "displayName": "Data",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "data",
+          "handleFormat": "{\"fieldName\": \"data\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\", \"Message\", \"Document\", \"JSON\"], \"type\": \"str\"}"
+        }
+      }
+    },
+    "outputs": {
+      "response": {
+        "type": [
+          "APIResponse"
+        ],
+        "displayName": "Response",
+        "connectionFormat": {
+          "fieldName": "response",
+          "handleFormat": "{\"dataType\": \"APIOutput\", \"id\": \"NODE_ID\", \"name\": \"response\", \"output_types\": [\"APIResponse\"]}"
+        }
+      }
+    }
+  },
+  "ChatDisplay": {
+    "id": "ChatDisplay",
+    "displayName": "Chat Display",
+    "description": "Displays chat messages in the UI",
+    "category": "Outputs",
+    "inputs": {
+      "chat_history": {
+        "type": [
+          "ChatHistory",
+          "Message"
+        ],
+        "displayName": "Chat History",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "chat_history",
+          "handleFormat": "{\"fieldName\": \"chat_history\", \"id\": \"NODE_ID\", \"inputTypes\": [\"ChatHistory\", \"Message\"], \"type\": \"str\"}"
+        }
+      }
+    },
+    "outputs": {}
+  },
+  "PromptTemplate": {
+    "id": "PromptTemplate",
+    "displayName": "Prompt Template",
+    "description": "A template for generating prompts",
+    "category": "Prompts",
+    "inputs": {
+      "template": {
+        "type": [
+          "str"
+        ],
+        "displayName": "Template",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "template",
+          "handleFormat": "{\"fieldName\": \"template\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      },
+      "variables": {
+        "type": [
+          "JSON",
+          "Dict"
+        ],
+        "displayName": "Variables",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "variables",
+          "handleFormat": "{\"fieldName\": \"variables\", \"id\": \"NODE_ID\", \"inputTypes\": [\"JSON\", \"Dict\"], \"type\": \"dict\"}"
+        }
+      }
+    },
+    "outputs": {
+      "prompt": {
+        "type": [
+          "PromptValue",
+          "str"
+        ],
+        "displayName": "Prompt",
+        "connectionFormat": {
+          "fieldName": "prompt",
+          "handleFormat": "{\"dataType\": \"PromptTemplate\", \"id\": \"NODE_ID\", \"name\": \"prompt\", \"output_types\": [\"PromptValue\", \"str\"]}"
+        }
+      }
+    }
+  },
+  "ChatPromptTemplate": {
+    "id": "ChatPromptTemplate",
+    "displayName": "Chat Prompt Template",
+    "description": "A template for generating chat prompts",
+    "category": "Prompts",
+    "inputs": {
+      "system_message": {
+        "type": [
+          "str"
+        ],
+        "displayName": "System Message",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "system_message",
+          "handleFormat": "{\"fieldName\": \"system_message\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      },
+      "human_message": {
+        "type": [
+          "str"
+        ],
+        "displayName": "Human Message",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "human_message",
+          "handleFormat": "{\"fieldName\": \"human_message\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      },
+      "chat_history": {
+        "type": [
+          "ChatHistory"
+        ],
+        "displayName": "Chat History",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "chat_history",
+          "handleFormat": "{\"fieldName\": \"chat_history\", \"id\": \"NODE_ID\", \"inputTypes\": [\"ChatHistory\"], \"type\": \"list\"}"
+        }
+      }
+    },
+    "outputs": {
+      "prompt": {
+        "type": [
+          "ChatPromptValue",
+          "PromptValue"
+        ],
+        "displayName": "Prompt",
+        "connectionFormat": {
+          "fieldName": "prompt",
+          "handleFormat": "{\"dataType\": \"ChatPromptTemplate\", \"id\": \"NODE_ID\", \"name\": \"prompt\", \"output_types\": [\"ChatPromptValue\", \"PromptValue\"]}"
+        }
+      }
+    }
+  },
+  "FewShotPromptTemplate": {
+    "id": "FewShotPromptTemplate",
+    "displayName": "Few-Shot Prompt Template",
+    "description": "A template for generating few-shot prompts",
+    "category": "Prompts",
+    "inputs": {
+      "prefix": {
+        "type": [
+          "str"
+        ],
+        "displayName": "Prefix",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "prefix",
+          "handleFormat": "{\"fieldName\": \"prefix\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      },
+      "examples": {
+        "type": [
+          "List",
+          "JSON"
+        ],
+        "displayName": "Examples",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "examples",
+          "handleFormat": "{\"fieldName\": \"examples\", \"id\": \"NODE_ID\", \"inputTypes\": [\"List\", \"JSON\"], \"type\": \"list\"}"
+        }
+      },
+      "suffix": {
+        "type": [
+          "str"
+        ],
+        "displayName": "Suffix",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "suffix",
+          "handleFormat": "{\"fieldName\": \"suffix\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      },
+      "input_variables": {
+        "type": [
+          "List",
+          "JSON"
+        ],
+        "displayName": "Input Variables",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "input_variables",
+          "handleFormat": "{\"fieldName\": \"input_variables\", \"id\": \"NODE_ID\", \"inputTypes\": [\"List\", \"JSON\"], \"type\": \"list\"}"
+        }
+      }
+    },
+    "outputs": {
+      "prompt": {
+        "type": [
+          "PromptValue",
+          "str"
+        ],
+        "displayName": "Prompt",
+        "connectionFormat": {
+          "fieldName": "prompt",
+          "handleFormat": "{\"dataType\": \"FewShotPromptTemplate\", \"id\": \"NODE_ID\", \"name\": \"prompt\", \"output_types\": [\"PromptValue\", \"str\"]}"
+        }
+      }
+    }
+  },
+  "DocumentLoader": {
+    "id": "DocumentLoader",
+    "displayName": "Document Loader",
+    "description": "Loads documents from various sources",
+    "category": "Data",
+    "inputs": {
+      "source": {
+        "type": [
+          "str",
+          "File"
+        ],
+        "displayName": "Source",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "source",
+          "handleFormat": "{\"fieldName\": \"source\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\", \"File\"], \"type\": \"str\"}"
+        }
+      }
+    },
+    "outputs": {
+      "documents": {
+        "type": [
+          "Document",
+          "List[Document]"
+        ],
+        "displayName": "Documents",
+        "connectionFormat": {
+          "fieldName": "documents",
+          "handleFormat": "{\"dataType\": \"DocumentLoader\", \"id\": \"NODE_ID\", \"name\": \"documents\", \"output_types\": [\"Document\", \"List[Document]\"]}"
+        }
+      }
+    }
+  },
+  "TextSplitter": {
+    "id": "TextSplitter",
+    "displayName": "Text Splitter",
+    "description": "Splits documents into chunks",
+    "category": "Data",
+    "inputs": {
+      "documents": {
+        "type": [
+          "Document",
+          "List[Document]",
+          "str"
+        ],
+        "displayName": "Documents",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "documents",
+          "handleFormat": "{\"fieldName\": \"documents\", \"id\": \"NODE_ID\", \"inputTypes\": [\"Document\", \"List[Document]\", \"str\"], \"type\": \"list\"}"
+        }
+      },
+      "chunk_size": {
+        "type": [
+          "int"
+        ],
+        "displayName": "Chunk Size",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "chunk_size",
+          "handleFormat": "{\"fieldName\": \"chunk_size\", \"id\": \"NODE_ID\", \"inputTypes\": [\"int\"], \"type\": \"int\"}"
+        }
+      },
+      "chunk_overlap": {
+        "type": [
+          "int"
+        ],
+        "displayName": "Chunk Overlap",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "chunk_overlap",
+          "handleFormat": "{\"fieldName\": \"chunk_overlap\", \"id\": \"NODE_ID\", \"inputTypes\": [\"int\"], \"type\": \"int\"}"
+        }
+      }
+    },
+    "outputs": {
+      "chunks": {
+        "type": [
+          "List[Document]"
+        ],
+        "displayName": "Chunks",
+        "connectionFormat": {
+          "fieldName": "chunks",
+          "handleFormat": "{\"dataType\": \"TextSplitter\", \"id\": \"NODE_ID\", \"name\": \"chunks\", \"output_types\": [\"List[Document]\"]}"
+        }
+      }
+    }
+  },
+  "VectorStore": {
+    "id": "VectorStore",
+    "displayName": "Vector Store",
+    "description": "Stores and retrieves document vectors",
+    "category": "Data",
+    "inputs": {
+      "documents": {
+        "type": [
+          "Document",
+          "List[Document]"
+        ],
+        "displayName": "Documents",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "documents",
+          "handleFormat": "{\"fieldName\": \"documents\", \"id\": \"NODE_ID\", \"inputTypes\": [\"Document\", \"List[Document]\"], \"type\": \"list\"}"
+        }
+      },
+      "embedding": {
+        "type": [
+          "Embedding"
+        ],
+        "displayName": "Embedding",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "embedding",
+          "handleFormat": "{\"fieldName\": \"embedding\", \"id\": \"NODE_ID\", \"inputTypes\": [\"Embedding\"], \"type\": \"object\"}"
+        }
+      }
+    },
+    "outputs": {
+      "vectorstore": {
+        "type": [
+          "VectorStore"
+        ],
+        "displayName": "Vector Store",
+        "connectionFormat": {
+          "fieldName": "vectorstore",
+          "handleFormat": "{\"dataType\": \"VectorStore\", \"id\": \"NODE_ID\", \"name\": \"vectorstore\", \"output_types\": [\"VectorStore\"]}"
+        }
+      }
+    }
+  },
+  "Retriever": {
+    "id": "Retriever",
+    "displayName": "Retriever",
+    "description": "Retrieves documents from a vector store",
+    "category": "Data",
+    "inputs": {
+      "vectorstore": {
+        "type": [
+          "VectorStore"
+        ],
+        "displayName": "Vector Store",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "vectorstore",
+          "handleFormat": "{\"fieldName\": \"vectorstore\", \"id\": \"NODE_ID\", \"inputTypes\": [\"VectorStore\"], \"type\": \"object\"}"
+        }
+      },
+      "query": {
+        "type": [
+          "str",
+          "Message"
+        ],
+        "displayName": "Query",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "query",
+          "handleFormat": "{\"fieldName\": \"query\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\", \"Message\"], \"type\": \"str\"}"
+        }
+      },
+      "k": {
+        "type": [
+          "int"
+        ],
+        "displayName": "Number of Results",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "k",
+          "handleFormat": "{\"fieldName\": \"k\", \"id\": \"NODE_ID\", \"inputTypes\": [\"int\"], \"type\": \"int\"}"
+        }
+      }
+    },
+    "outputs": {
+      "documents": {
+        "type": [
+          "List[Document]"
+        ],
+        "displayName": "Documents",
+        "connectionFormat": {
+          "fieldName": "documents",
+          "handleFormat": "{\"dataType\": \"Retriever\", \"id\": \"NODE_ID\", \"name\": \"documents\", \"output_types\": [\"List[Document]\"]}"
+        }
+      }
+    }
+  },
+  "OpenAIEmbeddings": {
+    "id": "OpenAIEmbeddings",
+    "displayName": "OpenAI Embeddings",
+    "description": "Generates embeddings using OpenAI's embedding models",
+    "category": "Data",
+    "inputs": {
+      "text": {
+        "type": [
+          "str",
+          "Message",
+          "Document"
+        ],
+        "displayName": "Text",
+        "required": true,
+        "connectionFormat": {
+          "fieldName": "text",
+          "handleFormat": "{\"fieldName\": \"text\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\", \"Message\", \"Document\"], \"type\": \"str\"}"
+        }
+      },
+      "model": {
+        "type": [
+          "str"
+        ],
+        "displayName": "Model Name",
+        "required": false,
+        "connectionFormat": {
+          "fieldName": "model",
+          "handleFormat": "{\"fieldName\": \"model\", \"id\": \"NODE_ID\", \"inputTypes\": [\"str\"], \"type\": \"str\"}"
+        }
+      }
+    },
+    "outputs": {
+      "embedding": {
+        "type": [
+          "Embedding"
+        ],
+        "displayName": "Embedding",
+        "connectionFormat": {
+          "fieldName": "embedding",
+          "handleFormat": "{\"dataType\": \"OpenAIEmbeddings\", \"id\": \"NODE_ID\", \"name\": \"embedding\", \"output_types\": [\"Embedding\"]}"
+        }
+      }
+    }
+  }
+}
