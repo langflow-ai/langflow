@@ -1,4 +1,4 @@
-import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
 
 /**
@@ -133,12 +133,7 @@ export function getNewPythonApiCode({
   tweaksObject: any;
   activeTweaks: boolean;
 }): string {
-  const protocol = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.protocol
-    : "http:";
-  const host = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.host
-    : "localhost:7868";
+  const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
   const tweaksString =

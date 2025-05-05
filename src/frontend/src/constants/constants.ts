@@ -1081,6 +1081,3 @@ export const DATASTAX_DOCS_URL =
   "https://docs.datastax.com/en/langflow/index.html";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
-
-//Langflow Desktop Base URL
-export const baseURL = "http://localhost:7868";

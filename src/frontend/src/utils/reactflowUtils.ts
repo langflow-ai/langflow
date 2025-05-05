@@ -16,7 +16,7 @@ import {
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
-import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
+import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import {
   Connection,
   Edge,
@@ -63,23 +63,6 @@ import {
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 const uid = new ShortUniqueId();
-
-async function getTauriFs() {
-  if (ENABLE_LANGFLOW_DESKTOP) {
-    try {
-      // Using string literal to prevent static analysis
-      const modulePath = "@tauri-apps/plugin-fs";
-      const module = await import(/* @vite-ignore */ modulePath);
-      return {
-        writeTextFile: module.writeTextFile,
-        BaseDirectory: module.BaseDirectory,
-      };
-    } catch (error) {
-      console.error("Failed to import Tauri FS module:", error);
-    }
-  }
-  return null;
-}
 
 export function checkChatInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "ChatInput");
@@ -1829,24 +1812,7 @@ export async function downloadFlow(
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
-    if (ENABLE_LANGFLOW_DESKTOP) {
-      const downloadName = `${flowName || flow.name}.json`;
-      const tauriFs = await getTauriFs();
-      if (tauriFs) {
-        await tauriFs.writeTextFile(downloadName, sortedJsonString, {
-          baseDir: tauriFs.BaseDirectory.Download,
-          append: false,
-          create: true,
-        });
-      }
-    } else {
-      const dataUri = `data:text/json;chatset=utf-8,${encodeURIComponent(sortedJsonString)}`;
-      const downloadLink = document.createElement("a");
-      downloadLink.href = dataUri;
-      downloadLink.download = `${flowName || flow.name}.json`;
-
-      downloadLink.click();
-    }
+    customDownloadFlow(flow, sortedJsonString, flowName);
   } catch (error) {
     console.error("Error downloading flow:", error);
   }

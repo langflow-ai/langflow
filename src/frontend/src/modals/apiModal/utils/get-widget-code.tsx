@@ -1,4 +1,4 @@
-import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
 
 /**
@@ -21,12 +21,7 @@ export default function getWidgetCode({
 build/static/js/bundle.min.js">
 </script>`;
 
-  const protocol = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.protocol
-    : "http:";
-  const host = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.host
-    : "localhost:7868";
+  const { protocol, host } = customGetHostProtocol();
 
   return `${source}
   <langflow-chat

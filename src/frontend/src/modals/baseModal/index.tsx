@@ -16,7 +16,6 @@ import {
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
 
-import { ENABLE_LANGFLOW_DESKTOP } from "@/customization/feature-flags";
 import { DialogClose } from "@radix-ui/react-dialog";
 import * as Form from "@radix-ui/react-form";
 import { Button } from "../../components/ui/button";
@@ -265,7 +264,7 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          {dialogContentWithouFixed && ENABLE_LANGFLOW_DESKTOP ? (
+          {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
               onClick={(e) => e.stopPropagation()}
               onOpenAutoFocus={(event) => event.preventDefault()}

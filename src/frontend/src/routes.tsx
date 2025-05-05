@@ -17,8 +17,9 @@ import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
-  ENABLE_LANGFLOW_DESKTOP,
 } from "./customization/feature-flags";
+import { customRoutesStore as CustomRoutesStore } from "./customization/utils/custom-routes-store";
+import { customRoutesStorePages as CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
@@ -33,8 +34,6 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
-import StoreApiKeyPage from "./pages/SettingsPage/pages/StoreApiKeyPage";
-import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -44,6 +43,7 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
+
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route path="/playground/:id/">
@@ -136,30 +136,9 @@ const router = createBrowserRouter(
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
-                  {!ENABLE_LANGFLOW_DESKTOP && (
-                    <Route path="store" element={<StoreApiKeyPage />} />
-                  )}
+                  {CustomRoutesStore()}
                 </Route>
-                {!ENABLE_LANGFLOW_DESKTOP && (
-                  <>
-                    <Route
-                      path="store"
-                      element={
-                        <StoreGuard>
-                          <StorePage />
-                        </StoreGuard>
-                      }
-                    />
-                    <Route
-                      path="store/:id/"
-                      element={
-                        <StoreGuard>
-                          <StorePage />
-                        </StoreGuard>
-                      }
-                    />
-                  </>
-                )}
+                {CustomRoutesStorePages()}
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>

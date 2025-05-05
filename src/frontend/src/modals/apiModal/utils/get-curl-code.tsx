@@ -1,7 +1,5 @@
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_LANGFLOW_DESKTOP,
-} from "@/customization/feature-flags";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useFlowStore from "@/stores/flowStore";
 import { GetCodeType } from "@/types/tweaks";
 
@@ -27,12 +25,7 @@ export function getCurlRunCode({
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
   // show the endpoint name in the curl command if it exists
 
-  const protocol = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.protocol
-    : "http:";
-  const host = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.host
-    : "localhost:7868";
+  const { protocol, host } = customGetHostProtocol();
 
   return `curl -X POST \\
     "${protocol}//${host}/api/v1/run/${endpointName || flowId}?stream=false" \\
@@ -63,12 +56,7 @@ export function getCurlWebhookCode({
   endpointName,
   format = "multiline",
 }: GetCodeType & { format?: "multiline" | "singleline" }) {
-  const protocol = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.protocol
-    : "http:";
-  const host = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.host
-    : "localhost:7868";
+  const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}/api/v1/webhook/${endpointName || flowId}`;
   const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
 
@@ -106,12 +94,7 @@ export function getNewCurlCode({
   tweaksObject: any;
   activeTweaks: boolean;
 }): string {
-  const protocol = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.protocol
-    : "http:";
-  const host = !ENABLE_LANGFLOW_DESKTOP
-    ? window.location.host
-    : "localhost:7868";
+  const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
   const tweaksString =
