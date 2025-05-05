@@ -213,7 +213,7 @@ class MCPStdioClient:
             args=command[1:],
             env={"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})},
         )
-        
+
         last_error = None
         for attempt in range(self.max_retries):
             try:
@@ -240,12 +240,13 @@ class MCPStdioClient:
             except Exception as e:
                 last_error = f"Failed to initialize MCP session: {e}"
                 logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
-            
+
             if attempt < self.max_retries - 1:
                 await asyncio.sleep(self.retry_delay * (attempt + 1))
-        
+
         msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
         raise ConnectionError(msg)
+
 
 class MCPSseClient:
     def __init__(self):
