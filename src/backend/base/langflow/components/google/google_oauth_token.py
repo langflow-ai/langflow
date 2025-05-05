@@ -17,7 +17,7 @@ class GoogleOAuthToken(Component):
     documentation: str = "https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1"
     icon = "Google"
     name = "GoogleOAuthToken"
-
+    legacy: bool = True
     inputs = [
         MultilineInput(
             name="scopes",
