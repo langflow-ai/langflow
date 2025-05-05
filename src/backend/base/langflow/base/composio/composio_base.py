@@ -285,7 +285,7 @@ class ComposioBaseComponent(Component):
             display_name = self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
             # Set the tags
             tool.tags = [tool.name]
-            tool.metadata = {"display_name": display_name, "display_description": tool.description}
+            tool.metadata = {"display_name": display_name, "display_description": tool.description, "readonly": True}
             configured_tools.append(tool)
         return configured_tools
 
