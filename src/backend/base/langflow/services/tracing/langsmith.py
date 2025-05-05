@@ -29,20 +29,21 @@ class LangSmithTracer(BaseTracer):
             self._ready = self.setup_langsmith()
             if not self._ready:
                 return
-            from langsmith.run_trees import RunTree
+            from langsmith.run_trees import trace
 
             self.trace_name = trace_name
             self.trace_type = trace_type
             self.project_name = project_name
             self.trace_id = trace_id
-            self._run_tree = RunTree(
-                project_name=self.project_name,
+            self._trace = trace(
                 name=self.trace_name,
+                project_name=self.project_name,
                 run_type=self.trace_type,
-                id=self.trace_id,
+                run_id=self.trace_id,
             )
-            self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
+            self._run_tree = self._trace.__enter__()
             self._children: dict[str, RunTree] = {}
+            self._children_traces: dict[str, trace] = {}
         except Exception:  # noqa: BLE001
             logger.debug("Error setting up LangSmith tracer")
             self._ready = False
@@ -78,14 +79,18 @@ class LangSmithTracer(BaseTracer):
         processed_inputs = {}
         if inputs:
             processed_inputs = self._convert_to_langchain_types(inputs)
-        child = self._run_tree.create_child(
+        from langsmith.run_trees import trace
+
+        child_trace = trace(
             name=trace_name,
-            run_type=trace_type,  # type: ignore[arg-type]
+            run_type=trace_type,
             inputs=processed_inputs,
-        )
+        )            
+        child = child_trace.__enter__()
         if metadata:
             child.add_metadata(self._convert_to_langchain_types(metadata))
         self._children[trace_name] = child
+        self._children_traces[trace_name] = child_trace
         self._child_link: dict[str, str] = {}
 
     def _convert_to_langchain_types(self, io_dict: dict[str, Any]):
@@ -141,6 +146,7 @@ class LangSmithTracer(BaseTracer):
         else:
             child.post()
         self._child_link[trace_name] = child.get_url()
+        self._children_traces[trace_name].__exit__()
 
     @staticmethod
     def _error_to_string(error: Exception | None):
@@ -165,6 +171,7 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.end(outputs=serialize(outputs), error=self._error_to_string(error))
         self._run_tree.post()
         self._run_link = self._run_tree.get_url()
+        self._trace.__exit__()
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
