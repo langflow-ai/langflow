@@ -67,7 +67,7 @@ If you try to run the flow without an embedding model, you will get an error.
 Open the **Playground** and ask a question about your data.
 The Agent uses the **Astra DB Tool** to return information about your collection.
 
-### Astra DB tool parameters
+### Define Astra DB tool parameters
 
 The **Tool Parameters** configuration pane allows you to define parameters for [filter conditions](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters) for the component's **Find** command.
 
@@ -77,12 +77,12 @@ These filters become available as parameters that the LLM can use when calling t
 2. Complete the fields based on your data. For example, with this filter, the LLM can filter by unique `customer_id` values.
 
 * Name: `customer_id`
-* Attribute Name: Leave empty if the attribute matches the field name in the database
-* Description: `"The unique identifier of the customer to filter by"`
-* Is Metadata: `False` (unless it's stored in the metadata field)
-* Is Mandatory: `True` (if you want to require this filter)
-* Is Timestamp: `False` (since this is an ID, not a timestamp)
-* Operator: `$eq` (for exact match)
+* Attribute Name: Leave empty if the attribute matches the field name in the database.
+* Description: `"The unique identifier of the customer to filter by"`.
+* Is Metadata: `False` unless the value stored in the metadata field.
+* Is Mandatory: `True` to require this filter.
+* Is Timestamp: `False` since the value is an ID, not a timestamp.
+* Operator: `$eq` to look for an exact match.
 
 If you want to apply filters regardless of the LLM's input, use the **Static Filters** option, which is available in the component's **Controls** pane.
 
@@ -93,7 +93,7 @@ If you want to apply filters regardless of the LLM's input, use the **Static Fil
 | Description | Provides instructions to the LLM on how the parameter should be used. Clear and specific guidance helps the LLM provide valid input. For example, if a field such as `specialty` is stored in lowercase, the description should indicate that the input must be lowercase. |
 | Is Metadata | When loading data using LangChain or Langflow, additional attributes may be stored under a metadata object. If the target attribute is stored this way, enable this option. It adjusts the query by generating a filter in the format: `{"metadata.<attribute_name>": "<value>"}` |
 | Is Timestamp | For date or time-based filters, enable this option to automatically convert values to the timestamp format that the Astrapy client expects. This ensures compatibility with the underlying API without requiring manual formatting. |
-| Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters: one with the `$gt` (greater than) operator, and another with `$lt` (less than). |
+| Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters: one with the `$gt` operator for "greater than", and another with the `$lt` operator for "less than". |
 
 ### Inputs
 
@@ -104,8 +104,8 @@ If you want to apply filters regardless of the LLM's input, use the **Static Fil
 | Collection Name   | String | The name of the Astra DB collection to query.                                                                                    |
 | Token             | SecretString | The authentication token for accessing Astra DB.                                                                                 |
 | API Endpoint      | String | The Astra DB API endpoint.                                                                                                       |
-| Projection Fields | String | The attributes to return, separated by commas. Default: "*".                                                                     |
-| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark (for example, `!customer_id`). |
+| Projection Fields | String | The attributes to return, separated by commas. The default is `*`.                                                                     |
+| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark, for example `!customer_id`. |
 | Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                              |
 | Limit             | String | The number of documents to return.                                                                                               |
 
