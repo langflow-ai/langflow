@@ -74,9 +74,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "mcp-proxy",${
           isAutoLogin
             ? ""
-            : `,
-        "--header",
-        "x-api-key:${apiKey || "YOUR_API_KEY"}",`
+            : `
+        "--headers",
+        "x-api-key",
+        "${apiKey || "YOUR_API_KEY"}",`
         }
         "${apiUrl}"
       ]
