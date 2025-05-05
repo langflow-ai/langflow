@@ -47,7 +47,9 @@ async def consume_and_assert_stream(response, job_id, timeout=10.0):
 
     # Set a timeout for the entire consumption process
     try:
-        async with asyncio.timeout(timeout):
+        # In Python 3.10, asyncio.timeout() is not available, so we use wait_for instead
+        async def process_events():
+            nonlocal count, lines, first_event_seen, end_event_seen
             async for line in response.aiter_lines():
                 # Skip empty lines (ndjson uses double newlines)
                 if not line:
@@ -99,6 +101,8 @@ async def consume_and_assert_stream(response, job_id, timeout=10.0):
                 # Debug output for verbose mode to track progress
                 if count % 10 == 0:
                     logger.debug(f"Processed {count} events so far")
+
+        await asyncio.wait_for(process_events(), timeout=timeout)
     except asyncio.TimeoutError as e:
         # If we timed out, logger.debug what we have so far and fail the test
         events_summary = "\n".join(
