@@ -1848,6 +1848,7 @@ export const createNewFlow = (
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
     tags: flow?.tags ?? [],
+    mcp_enabled: true,
   };
 };
 
