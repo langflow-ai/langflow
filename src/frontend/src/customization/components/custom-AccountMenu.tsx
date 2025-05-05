@@ -1,5 +1,7 @@
-export function AccountMenu() {
-  return <></>;
+import { AccountMenu } from "@/components/core/appHeaderComponent/components/AccountMenu";
+
+export function CustomAccountMenu() {
+  return <AccountMenu />;
 }
 
-export default AccountMenu;
+export default CustomAccountMenu;
