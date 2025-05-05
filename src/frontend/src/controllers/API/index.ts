@@ -1,3 +1,7 @@
+import {
+  customGetAppVersions,
+  customGetLatestVersion,
+} from "@/customization/utils/custom-get-app-latest-version";
 import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { BASE_URL_API } from "../../constants/constants";
@@ -33,44 +37,8 @@ export async function getDiscordCount() {
   }
 }
 
-export async function getAppVersions() {
-  try {
-    const response = await fetch(
-      "https://raw.githubusercontent.com/Julio-Cesar07/tauri-versions/main/versions.json",
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    return data?.versions;
-  } catch (error) {
-    console.error("Error fetching repository data versions:", error);
-    return null;
-  }
-}
-
-export async function getLatestVersion() {
-  try {
-    const response = await fetch(
-      "https://raw.githubusercontent.com/Julio-Cesar07/tauri-versions/main/latest.json",
-    );
-
-    if (!response.ok) {
-      console.error(`HTTP error! Status: ${response.status}`);
-      return null;
-    }
-
-    const data = await response.json();
-
-    return data?.version;
-  } catch (error) {
-    console.error("Error fetching repository data version latest:", error);
-    return null;
-  }
-}
+customGetAppVersions();
+customGetLatestVersion();
 
 export async function createApiKey(name: string) {
   try {
