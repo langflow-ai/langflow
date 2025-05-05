@@ -46,9 +46,54 @@ This component searches and retrieves papers from [arXiv.org](https://arXiv.org)
 | papers | Papers | List of retrieved arXiv papers |
 
 
-## Astra DB Tool
+## Astra DB tool
 
-The `Astra DB Tool` allows agents to connect to and query data from Astra DB collections.
+This component allows agents to query data from Astra DB collections.
+
+To use this tool in a flow, connect it to an **Agent** component.
+The flow looks like this:
+
+![Astra DB JSON tool connected to an Agent](/img/component-astra-db-json-tool.png)
+
+The **Tool Name** and **Tool Description** fields are required for the Agent to decide when to use the tool.
+**Tool Name** cannot contain spaces.
+
+The values for **Collection Name**, **Astra DB Application Token**, and **Astra DB API Endpoint** are found in your Astra DB deployment. For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
+
+In this example, an **OpenAI** embeddings component is connected to use the Astra DB tool component's **Semantic Search** capability.
+To use **Semantic Search**, you must have an embedding model or Astra DB Vectorize enabled.
+If you try to run the flow without an embedding model, you will get an error.
+
+Open the **Playground** and ask a question about your data.
+The Agent uses the **Astra DB Tool** to return information about your collection.
+
+### Define Astra DB tool parameters
+
+The **Tool Parameters** configuration pane allows you to define parameters for [filter conditions](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters) for the component's **Find** command.
+
+These filters become available as parameters that the LLM can use when calling the tool, with a better understanding of each parameter provided by the **Description** field.
+
+1. To define a parameter for your query, in the **Tool Parameters** pane, click <Icon name="Plus" aria-label="Add"/>.
+2. Complete the fields based on your data. For example, with this filter, the LLM can filter by unique `customer_id` values.
+
+* Name: `customer_id`
+* Attribute Name: Leave empty if the attribute matches the field name in the database.
+* Description: `"The unique identifier of the customer to filter by"`.
+* Is Metadata: `False` unless the value stored in the metadata field.
+* Is Mandatory: `True` to require this filter.
+* Is Timestamp: `False` since the value is an ID, not a timestamp.
+* Operator: `$eq` to look for an exact match.
+
+If you want to apply filters regardless of the LLM's input, use the **Static Filters** option, which is available in the component's **Controls** pane.
+
+| Parameter | Description |
+|-----------|-------------|
+| Name | The name of the parameter that is exposed to the LLM. It can be the same as the underlying field name or a more descriptive label. The LLM uses this name, along with the description, to infer what value to provide during execution. |
+| Attribute Name | When the parameter name shown to the LLM differs from the actual field or property in the database, use this setting to map the user-facing name to the correct attribute. For example, to apply a range filter to the timestamp field, define two separate parameters, such as `start_date` and `end_date`, that both reference the same timestamp attribute. |
+| Description | Provides instructions to the LLM on how the parameter should be used. Clear and specific guidance helps the LLM provide valid input. For example, if a field such as `specialty` is stored in lowercase, the description should indicate that the input must be lowercase. |
+| Is Metadata | When loading data using LangChain or Langflow, additional attributes may be stored under a metadata object. If the target attribute is stored this way, enable this option. It adjusts the query by generating a filter in the format: `{"metadata.<attribute_name>": "<value>"}` |
+| Is Timestamp | For date or time-based filters, enable this option to automatically convert values to the timestamp format that the Astrapy client expects. This ensures compatibility with the underlying API without requiring manual formatting. |
+| Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters: one with the `$gt` operator for "greater than", and another with the `$lt` operator for "less than". |
 
 ### Inputs
 
@@ -59,20 +104,19 @@ The `Astra DB Tool` allows agents to connect to and query data from Astra DB col
 | Collection Name   | String | The name of the Astra DB collection to query.                                                                                    |
 | Token             | SecretString | The authentication token for accessing Astra DB.                                                                                 |
 | API Endpoint      | String | The Astra DB API endpoint.                                                                                                       |
-| Projection Fields | String | The attributes to return, separated by commas. Default: "*".                                                                     |
-| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark (for example, `!customer_id`). |
+| Projection Fields | String | The attributes to return, separated by commas. The default is `*`.                                                                     |
+| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark, for example `!customer_id`. |
 | Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                              |
 | Limit             | String | The number of documents to return.                                                                                               |
 
 ### Outputs
 
-The Data output is primarily used when directly querying Astra DB, while the Tool output is used when integrating with LangChain agents or chains.
+The **Data** output is used when directly querying Astra DB, while the **Tool** output is used when integrating with agents.
 
 | Name | Type | Description |
 |------|------|-------------|
 | Data | List[`Data`] | A list of [Data](/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
-
 
 ## Astra DB CQL Tool
 
@@ -143,8 +187,7 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 
 ## Combinatorial Reasoner
 
-This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
-
+This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. For more information, see [Icosa Computing](https://www.icosacomputing.com/).
 ### Inputs
 
 | Name                   | Display Name | Description                           |
