@@ -250,6 +250,12 @@ const config = {
             to: "/components-custom-components",
             from: "/components/custom",
           },
+          {
+            to: "/deployment-kubernetes-dev",
+            from: [
+              "/deployment-kubernetes",
+            ]
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',

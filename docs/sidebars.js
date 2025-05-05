@@ -112,9 +112,25 @@ module.exports = {
           label: "Docker"
         },
         {
-          type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
+          type: "category",
+          label: "Kubernetes",
+          items: [
+            {
+              type: "doc",
+              id: "Deployment/deployment-prod-best-practices",
+              label: "Langflow architecture and best practices"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-dev",
+              label: "Deploy in development"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-prod",
+              label: "Deploy in production"
+            }
+          ]
         },
         {
           type: "doc",
@@ -135,7 +151,7 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-render",
           label: "Render"
-        }
+        },
       ],
     },
     {
