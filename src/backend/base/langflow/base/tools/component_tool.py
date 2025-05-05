@@ -200,7 +200,6 @@ class ComponentToolkit:
             elif tool_mode_inputs:
                 args_schema = create_input_schema(tool_mode_inputs)
             elif output.required_inputs:
-
                 inputs = [
                     self.component._inputs[input_name]
                     for input_name in output.required_inputs
@@ -209,7 +208,7 @@ class ComponentToolkit:
                 # If any of the required inputs are not in tool mode, this means
                 # that when the tool is called it will raise an error.
                 # so we should raise an error here.
-                #ToDo: This logic might need to be improved, example if the required is an api key.
+                # TODO: This logic might need to be improved, example if the required is an api key.
                 if not all(getattr(_input, "tool_mode", False) for _input in inputs):
                     non_tool_mode_inputs = [
                         input_.name
@@ -224,7 +223,7 @@ class ComponentToolkit:
                     )
                     raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
-            
+
             else:
                 args_schema = create_input_schema(self.component.inputs)
 
