@@ -443,7 +443,7 @@ class NestedDictInput(
     """
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
-    value: dict | Data | None = {}
+    value: dict | None = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -458,7 +458,9 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DICT
-    value: dict | None = {}
+    # Note do not set value to an empty dict, it will break the component in dynamic update build config
+    # value: dict | None = {}
+    value: dict = Field(default_factory=dict)
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):

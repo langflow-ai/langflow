@@ -5,7 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to lock a flow and it must be saved",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -47,7 +47,7 @@ test(
     });
 
     //ensure the UI is updated
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     await page.waitForSelector('[data-testid="icon-Lock"]', {
       timeout: 3000,
