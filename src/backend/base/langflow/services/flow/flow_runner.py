@@ -43,8 +43,10 @@ class LangflowRunnerExperimental:
         session_id: str,  # UUID required currently
         flow: Path | str | dict,
         input_value: str,
+        *,
         input_type: str = "chat",
         output_type: str = "chat",
+        stream: bool = False,
     ):
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
@@ -56,7 +58,7 @@ class LangflowRunnerExperimental:
         await self.add_flow_to_db(session_id, flow_dict)
         graph = await self.create_graph_from_flow(session_id, flow_dict)
         try:
-            result = await self.run_graph(input_value, input_type, output_type, session_id, graph)
+            result = await self.run_graph(input_value, input_type, output_type, session_id, graph, stream=stream)
         finally:
             await self.clear_flow_state(session_id, flow_dict)
         logger.info(f"Finish Handling {session_id=}")
@@ -74,7 +76,9 @@ class LangflowRunnerExperimental:
             await session.commit()
 
     @staticmethod
-    async def run_graph(input_value: str, input_type: str, output_type: str, session_id: str, graph: Graph):
+    async def run_graph(
+        input_value: str, input_type: str, output_type: str, session_id: str, graph: Graph, *, stream: bool
+    ):
         return await run_graph(
             graph=graph,
             session_id=session_id,
@@ -82,13 +86,17 @@ class LangflowRunnerExperimental:
             fallback_to_env_vars=True,
             input_type=input_type,
             output_type=output_type,
+            stream=stream,
         )
 
     @staticmethod
     async def create_graph_from_flow(session_id: str, flow_dict: dict):
         graph = await aload_flow_from_json(flow=flow_dict, disable_logs=False)
         graph.flow_id = flow_dict["id"]
+        graph.flow_name = flow_dict.get("name")
         graph.session_id = session_id
+        graph.set_run_id(session_id)
+        await graph.initialize_run()
         return graph
 
     @staticmethod

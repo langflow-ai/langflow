@@ -71,6 +71,7 @@ async def run_graph(
     session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
+    stream: bool = False,
 ) -> list[RunOutputs]:
     """Runs the given Langflow Graph with the specified input and returns the outputs.
 
@@ -83,6 +84,7 @@ async def run_graph(
         fallback_to_env_vars (bool, optional): Whether to fallback to environment variables.
             Defaults to False.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
+        stream (bool, optional): Whether to stream the results or not. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the outputs of the graph.
@@ -113,7 +115,7 @@ async def run_graph(
         inputs_components=components,
         types=types,
         outputs=outputs or [],
-        stream=False,
+        stream=stream,
         session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
     )

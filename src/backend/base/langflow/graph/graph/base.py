@@ -641,7 +641,7 @@ class Graph:
             raise ValueError(msg)
         return self._run_id
 
-    def set_run_id(self, run_id: uuid.UUID | None = None) -> None:
+    def set_run_id(self, run_id: uuid.UUID | str | None = None) -> None:
         """Sets the ID of the current run.
 
         Args:
