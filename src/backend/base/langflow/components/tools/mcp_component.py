@@ -456,7 +456,12 @@ class MCPToolsComponent(Component):
 
             if mode == "Stdio":
                 if not self.stdio_client.session:
-                    self.tools = await self.stdio_client.connect_to_server(command, env)
+                    try:
+                        self.tools = await self.stdio_client.connect_to_server(command, env)
+                    except ValueError as e:
+                        msg = f"Error connecting to MCP server: {e}"
+                        logger.exception(msg)
+                        raise ValueError(msg) from e
             elif mode == "SSE" and not self.sse_client.session:
                 try:
                     self.tools = await self.sse_client.connect_to_server(url, headers)
