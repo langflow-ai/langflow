@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should-run-ci: ${{ (needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group')) }}
-      should-run-tests: ${{ github.event_name != 'pull_request' }}
+      should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
@@ -95,7 +95,7 @@ jobs:
       - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
       - run: echo "Event name -> ${{ github.event_name }}"
       - run: echo "Nightly build status -> ${{ needs.check-nightly-status.outputs.should-proceed }}"
-      - run: echo "Should run tests -> ${{ github.event_name != 'pull_request' }}"
+      - run: echo "Should run tests -> ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}"
 
   path-filter:
     needs: set-ci-condition
