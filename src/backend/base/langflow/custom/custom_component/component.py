@@ -1166,6 +1166,7 @@ class Component(CustomComponent):
     async def _build_tools_metadata_input(self):
         tools = await self._get_tools()
         # Always use the latest tool data
+
         tool_data = [
             {
                 "name": tool.name,
