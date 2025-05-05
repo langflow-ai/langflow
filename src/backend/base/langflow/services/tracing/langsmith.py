@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from langsmith.run_trees import RunTree
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
@@ -36,8 +37,6 @@ class LangSmithTracer(BaseTracer):
             from langsmith import get_current_run_tree
             from langsmith.run_helpers import trace
 
-            if TYPE_CHECKING:
-                from langsmith.run_trees import RunTree
             self._run_tree: RunTree | None = None
             self._children: dict[str, RunTree] = {}
             self._children_traces: dict[str, trace] = {}
@@ -137,12 +136,12 @@ class LangSmithTracer(BaseTracer):
     def end_trace(
         self,
         trace_id: str,
-        trace_name: str,
+        trace_name: str,  # noqa: ARG002
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ):
-        if not self._run_tree:
+        if not self._ready or not self._run_tree:
             return
         if trace_id not in self._children:
             logger.warning(f"Trace {trace_id} not found in children traces")
