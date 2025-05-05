@@ -274,9 +274,7 @@ def create_app():
 
         return await call_next(request)
 
-    # Add profiling middleware
-    PROFILING = True  # You might want to get this from settings_service
-    if PROFILING:
+    if os.environ.get("LANGFLOW_PROFILING", "false").lower() == "true":
 
         @app.middleware("http")
         async def profile_request(request: Request, call_next):
