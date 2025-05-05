@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import traceback
 import types
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -29,7 +28,7 @@ class LangSmithTracer(BaseTracer):
             self._ready = self.setup_langsmith()
             if not self._ready:
                 return
-            from langsmith.run_trees import trace, RunTree
+            from langsmith.run_trees import RunTree, trace
 
             self.trace_name = trace_name
             self.trace_type = trace_type
@@ -85,7 +84,7 @@ class LangSmithTracer(BaseTracer):
             name=trace_name,
             run_type=trace_type,
             inputs=processed_inputs,
-        )            
+        )
         child = child_trace.__enter__()
         if metadata:
             child.add_metadata(self._convert_to_langchain_types(metadata))
