@@ -173,11 +173,13 @@ class MCPToolsComponent(Component):
         if mode == "Stdio" and not command:
             msg = "Command is required for Stdio mode"
             raise ValueError(msg)
+        if mode == "Stdio" and command:
+            self._validate_node_installation(command)
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
 
-    def validate_npx_command(self, command: str) -> str:
+    def _validate_node_installation(self, command: str) -> str:
         """Validate the npx command."""
         if "npx" in command and not shutil.which("node"):
             msg = "Node.js is not installed. Please install Node.js to use npx commands."
@@ -261,7 +263,6 @@ class MCPToolsComponent(Component):
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
-                    self.validate_npx_command(build_config["command"]["value"])
                     await self.update_tools(
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
