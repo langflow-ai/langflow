@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
-import { Input } from "../input";
-import { Button } from "../button";
 import { Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../../controllers/API/api";
 import useAlertStore from "../../../stores/alertStore";
 import useAuthStore from "../../../stores/authStore";
 import useFlowStore from "../../../stores/flowStore";
+import { Button } from "../button";
+import { Input } from "../input";
 
 // Simple message interface
 interface Message {
@@ -24,11 +24,11 @@ export function SimpleAIChat() {
   const setEdges = useFlowStore((state) => state.setEdges);
   const edges = useFlowStore((state) => state.edges);
   const onConnect = useFlowStore((state) => state.onConnect);
-  
+
   // Auth and alerts
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  
+
   // Component state
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -36,7 +36,8 @@ export function SimpleAIChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm a simple AI assistant. Try asking me to add a node to your canvas.",
+      content:
+        "Hi! I'm a simple AI assistant. Try asking me to add a node to your canvas.",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -50,19 +51,20 @@ export function SimpleAIChat() {
   // Handle sending API key
   const handleApiKeySave = async () => {
     if (!apiKey) return;
-    
+
     setLoading(true);
     try {
       const response = await api.post("/api/v1/ai-agent/api-key", {
         api_key: apiKey,
       });
-      
+
       if (response.status === 200) {
         setMessages((prevMessages) => [
           ...prevMessages,
           {
             role: "assistant",
-            content: "API key saved successfully! I'm ready to help you build your workflow.",
+            content:
+              "API key saved successfully! I'm ready to help you build your workflow.",
           },
         ]);
         setApiKey("");
@@ -84,13 +86,13 @@ export function SimpleAIChat() {
     // Create a simple ID based on type and timestamp
     return `${nodeType}_${Date.now()}`;
   };
-  
+
   // Add a single node to the canvas
   const addNode = (nodeType: string, position = { x: 200, y: 200 }) => {
     try {
       // Generate ID for the new node
       const nodeId = generateNodeId(nodeType);
-      
+
       // Create the node data
       const nodeData = {
         id: nodeId,
@@ -106,18 +108,18 @@ export function SimpleAIChat() {
             base_classes: [],
             documentation: "",
             tool_mode: false,
-            frozen: false
-          }
+            frozen: false,
+          },
         },
         width: 200,
         height: 400,
         selected: false,
-        dragging: false
+        dragging: false,
       };
-      
+
       // Add node to canvas (using 'as any' to bypass type checking)
       setNodes((oldNodes) => [...oldNodes, nodeData as any]);
-      
+
       return nodeId;
     } catch (error) {
       console.error("Error adding node:", error);
@@ -128,7 +130,7 @@ export function SimpleAIChat() {
       return null;
     }
   };
-  
+
   // Get template for specific node types
   const getNodeTemplate = (nodeType: string) => {
     if (nodeType === "ChatOpenAI") {
@@ -139,26 +141,27 @@ export function SimpleAIChat() {
           required: true,
           list: false,
           show: true,
-          readonly: false
-        }
+          readonly: false,
+        },
       };
     } else if (nodeType === "PromptTemplate") {
       return {
         template: {
-          value: "You are a helpful assistant that answers questions concisely.\n\nQuestion: {question}\n\nAnswer:",
+          value:
+            "You are a helpful assistant that answers questions concisely.\n\nQuestion: {question}\n\nAnswer:",
           type: "str",
           required: true,
           list: false,
           show: true,
-          readonly: false
-        }
+          readonly: false,
+        },
       };
     }
-    
+
     // Default empty template
     return {};
   };
-  
+
   // Connect two nodes
   const connectNodes = (sourceId: string, targetId: string) => {
     try {
@@ -167,40 +170,40 @@ export function SimpleAIChat() {
         source: sourceId,
         target: targetId,
         sourceHandle: "output", // Required for connections to work
-        targetHandle: "input"   // Required for connections to work
+        targetHandle: "input", // Required for connections to work
       };
-      
+
       // Use the store's connect function
       onConnect(connection);
-      
+
       return true;
     } catch (error) {
       console.error("Error connecting nodes:", error);
       return false;
     }
   };
-  
+
   // Find nodes by type
   const findNodesByType = (type: string) => {
-    return nodes.filter(node => node.data.type === type);
+    return nodes.filter((node) => node.data.type === type);
   };
-  
+
   // Create a QA flow with connected nodes
   const createQAFlow = () => {
     try {
       // Create prompt node
       const promptId = addNode("PromptTemplate", { x: 200, y: 200 });
-      
+
       // Create chat node below it
       const chatId = addNode("ChatOpenAI", { x: 200, y: 400 });
-      
+
       if (promptId && chatId) {
         // Connect immediately - no timeout needed since we have proper handles now
         const connected = connectNodes(promptId, chatId);
-        
+
         return { promptId, chatId, connected };
       }
-      
+
       return null;
     } catch (error) {
       console.error("Error creating QA flow:", error);
@@ -220,104 +223,109 @@ export function SimpleAIChat() {
       setLoading(true);
 
       // Process commands
-      if (message.toLowerCase().includes('add chatgpt') || 
-          message.toLowerCase().includes('add chat') || 
-          message.toLowerCase().includes('add openai')) {
-        
+      if (
+        message.toLowerCase().includes("add chatgpt") ||
+        message.toLowerCase().includes("add chat") ||
+        message.toLowerCase().includes("add openai")
+      ) {
         const nodeId = addNode("ChatOpenAI");
-        
+
         if (nodeId) {
           setMessages((prevMessages) => [
             ...prevMessages,
-            { 
-              role: "assistant", 
-              content: "I've added a ChatOpenAI node to your canvas." 
+            {
+              role: "assistant",
+              content: "I've added a ChatOpenAI node to your canvas.",
             },
           ]);
         }
-      } 
-      else if (message.toLowerCase().includes('add prompt')) {
+      } else if (message.toLowerCase().includes("add prompt")) {
         const nodeId = addNode("PromptTemplate");
-        
+
         if (nodeId) {
           setMessages((prevMessages) => [
             ...prevMessages,
-            { 
-              role: "assistant", 
-              content: "I've added a PromptTemplate node to your canvas." 
+            {
+              role: "assistant",
+              content: "I've added a PromptTemplate node to your canvas.",
             },
           ]);
         }
-      }
-      else if (message.toLowerCase().includes('connect prompt') || 
-               message.toLowerCase().match(/connect.*to/i)) {
-        
+      } else if (
+        message.toLowerCase().includes("connect prompt") ||
+        message.toLowerCase().match(/connect.*to/i)
+      ) {
         // Find nodes to connect
         const promptNodes = findNodesByType("PromptTemplate");
         const chatNodes = findNodesByType("ChatOpenAI");
-        
+
         if (promptNodes.length === 0 || chatNodes.length === 0) {
           setMessages((prevMessages) => [
             ...prevMessages,
-            { 
-              role: "assistant", 
-              content: "I need both a PromptTemplate and ChatOpenAI node on the canvas to connect them. Please add them first." 
+            {
+              role: "assistant",
+              content:
+                "I need both a PromptTemplate and ChatOpenAI node on the canvas to connect them. Please add them first.",
             },
           ]);
         } else {
           // Get the most recently added nodes
           const sourceNode = promptNodes[promptNodes.length - 1];
           const targetNode = chatNodes[chatNodes.length - 1];
-          
+
           // Connect the nodes directly
           if (connectNodes(sourceNode.id, targetNode.id)) {
             setMessages((prevMessages) => [
               ...prevMessages,
-              { 
-                role: "assistant", 
-                content: `I've connected the PromptTemplate to the ChatOpenAI node.` 
+              {
+                role: "assistant",
+                content: `I've connected the PromptTemplate to the ChatOpenAI node.`,
               },
             ]);
           } else {
             setMessages((prevMessages) => [
               ...prevMessages,
-              { 
-                role: "assistant", 
-                content: "I tried to connect the nodes but encountered a technical issue. Please try again." 
+              {
+                role: "assistant",
+                content:
+                  "I tried to connect the nodes but encountered a technical issue. Please try again.",
               },
             ]);
           }
         }
-      }
-      else if (message.toLowerCase().includes('qa flow') || 
-               message.toLowerCase().includes('create qa flow') || 
-               message.toLowerCase().includes('build qa flow')) {
-        
+      } else if (
+        message.toLowerCase().includes("qa flow") ||
+        message.toLowerCase().includes("create qa flow") ||
+        message.toLowerCase().includes("build qa flow")
+      ) {
         const flow = createQAFlow();
-        
+
         if (flow) {
           setMessages((prevMessages) => [
             ...prevMessages,
-            { 
-              role: "assistant", 
-              content: "I've created a simple QA flow with a PromptTemplate connected to a ChatOpenAI node." 
+            {
+              role: "assistant",
+              content:
+                "I've created a simple QA flow with a PromptTemplate connected to a ChatOpenAI node.",
             },
           ]);
         }
-      }
-      else {
+      } else {
         // For other messages, respond with a placeholder
         setMessages((prevMessages) => [
           ...prevMessages,
-          { 
-            role: "assistant", 
-            content: "I understand you want to: \"" + message + "\". This feature is coming soon! For now, try simple commands like \"add ChatGPT\" or \"create QA flow\"." 
+          {
+            role: "assistant",
+            content:
+              'I understand you want to: "' +
+              message +
+              '". This feature is coming soon! For now, try simple commands like "add ChatGPT" or "create QA flow".',
           },
         ]);
       }
     } catch (error: any) {
       console.error("Error sending message:", error);
-      
+
       setMessages((prevMessages) => [
         ...prevMessages,
         {
@@ -331,9 +339,9 @@ export function SimpleAIChat() {
   };
 
   return (
-    <div className="flex flex-col h-full border rounded-md shadow-sm">
+    <div className="flex h-full flex-col rounded-md border shadow-sm">
       {/* Chat header */}
-      <div className="flex justify-between items-center p-2 border-b">
+      <div className="flex items-center justify-between border-b p-2">
         <div className="text-sm font-medium">Simple AI Assistant</div>
         <div className="flex gap-2">
           <Button
@@ -345,25 +353,22 @@ export function SimpleAIChat() {
           </Button>
         </div>
       </div>
-      
+
       {/* API Key input */}
       {apiKeyDialogOpen && (
-        <div className="p-4 border-b">
+        <div className="border-b p-4">
           <div className="mb-2 text-sm">Enter your OpenAI API key:</div>
           <div className="flex space-x-2">
-            <Input 
+            <Input
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
               type="password"
             />
-            <Button 
-              onClick={handleApiKeySave}
-              disabled={!apiKey || loading}
-            >
+            <Button onClick={handleApiKeySave} disabled={!apiKey || loading}>
               Save
             </Button>
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setApiKeyDialogOpen(false)}
             >
@@ -372,9 +377,9 @@ export function SimpleAIChat() {
           </div>
         </div>
       )}
-      
+
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -395,7 +400,7 @@ export function SimpleAIChat() {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      
+
       {/* Input area */}
       <div className="border-t p-2">
         <div className="flex space-x-2">
@@ -424,7 +429,7 @@ export function SimpleAIChat() {
           </Button>
         </div>
         {!isAuthenticated && (
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="mt-1 text-xs text-muted-foreground">
             Please sign in to use the AI assistant.
           </div>
         )}

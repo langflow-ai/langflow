@@ -46,29 +46,31 @@ import useFlowStore from "../stores/flowStore";
 1. **Generate Properly Formatted Handle IDs**
 
    For the source (output) handle:
+
    ```typescript
    function createSourceHandle(nodeId: string, outputName: string): string {
      const handleData = {
        id: nodeId,
-       name: outputName,      // The name of the output
+       name: outputName, // The name of the output
        output_types: ["str"], // The types this output provides
-       dataType: "TextInput"  // The node type
+       dataType: "TextInput", // The node type
      };
-     
+
      return scapedJSONStringfy(handleData);
    }
    ```
 
    For the target (input) handle:
+
    ```typescript
    function createTargetHandle(nodeId: string, inputName: string): string {
      const handleData = {
        id: nodeId,
-       name: inputName,      // The parameter name
+       name: inputName, // The parameter name
        fieldName: inputName, // The field in the template
-       dataType: "ChatOpenAI" // The node type
+       dataType: "ChatOpenAI", // The node type
      };
-     
+
      return scapedJSONStringfy(handleData);
    }
    ```
@@ -80,7 +82,7 @@ import useFlowStore from "../stores/flowStore";
      source: sourceNodeId,
      sourceHandle: createSourceHandle(sourceNodeId, "text"),
      target: targetNodeId,
-     targetHandle: createTargetHandle(targetNodeId, "text")
+     targetHandle: createTargetHandle(targetNodeId, "text"),
    };
    ```
 
@@ -93,6 +95,7 @@ import useFlowStore from "../stores/flowStore";
    ```
 
    The `onConnect` function will:
+
    - Parse the handle data
    - Validate the connection
    - Add the connection to the flow's edges
@@ -102,10 +105,11 @@ import useFlowStore from "../stores/flowStore";
 Langflow validates connections before adding them:
 
 ```typescript
-isValidConnection(connection, nodes, edges)
+isValidConnection(connection, nodes, edges);
 ```
 
 This function checks:
+
 - Connection doesn't create a cycle
 - Data types are compatible
 - Connection is between an output and an input handle
@@ -124,7 +128,7 @@ const connection = {
   source: textNodeId,
   sourceHandle: createSourceHandle(textNodeId, "text"),
   target: openAINodeId,
-  targetHandle: createTargetHandle(openAINodeId, "text")
+  targetHandle: createTargetHandle(openAINodeId, "text"),
 };
 
 onConnect(connection);

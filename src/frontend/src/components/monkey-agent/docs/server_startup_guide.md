@@ -34,6 +34,7 @@ This will start the frontend development server at http://localhost:3000.
 ### Step 3: Access the UI
 
 Once both servers are running, you can access the Langflow UI by opening:
+
 - http://localhost:3000 in your browser
 
 ## Testing the Enhanced Registry

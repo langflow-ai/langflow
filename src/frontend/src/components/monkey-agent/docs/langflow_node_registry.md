@@ -45,6 +45,7 @@ type APIDataType = { [key: string]: APIKindType };
 ```
 
 Example:
+
 ```javascript
 {
   "LLMs": { /* LLM node types */ },
@@ -60,6 +61,7 @@ type APIKindType = { [key: string]: APIClassType };
 ```
 
 Example:
+
 ```javascript
 "LLMs": {
   "OpenAI": { /* OpenAI node template */ },
@@ -97,6 +99,7 @@ type APIClassType = {
 ```
 
 Example:
+
 ```javascript
 "OpenAI": {
   "description": "Generates text using OpenAI LLMs.",
@@ -141,6 +144,7 @@ type APITemplateType = {
 ```
 
 Example:
+
 ```javascript
 "template": {
   "model_name": {
@@ -159,19 +163,19 @@ Example:
 
 ```typescript
 type InputFieldType = {
-  type: string;            // Data type (str, int, float, bool, etc.)
-  required: boolean;       // Whether the field is required
-  placeholder?: string;    // Placeholder text for UI
-  list: boolean;           // Whether the field accepts multiple values
-  show: boolean;           // Whether to show the field in the UI
-  readonly: boolean;       // Whether the field is editable
-  password?: boolean;      // Whether to mask input as password
-  multiline?: boolean;     // Whether to use multiline input
-  value?: any;             // Default value
-  dynamic?: boolean;       // Whether value can be dynamically determined
+  type: string; // Data type (str, int, float, bool, etc.)
+  required: boolean; // Whether the field is required
+  placeholder?: string; // Placeholder text for UI
+  list: boolean; // Whether the field accepts multiple values
+  show: boolean; // Whether to show the field in the UI
+  readonly: boolean; // Whether the field is editable
+  password?: boolean; // Whether to mask input as password
+  multiline?: boolean; // Whether to use multiline input
+  value?: any; // Default value
+  dynamic?: boolean; // Whether value can be dynamically determined
   proxy?: { id: string; field: string }; // Proxy reference to another node
   input_types?: Array<string>; // Accepted input types
-  display_name?: string;   // Human-readable field name
+  display_name?: string; // Human-readable field name
   // other properties
 };
 ```
@@ -180,13 +184,13 @@ type InputFieldType = {
 
 ```typescript
 type OutputFieldType = {
-  types: Array<string>;     // Output data types
-  selected?: string;        // Currently selected type
-  name: string;             // Output identifier
-  display_name: string;     // Human-readable output name
-  hidden?: boolean;         // Whether to hide in UI
+  types: Array<string>; // Output data types
+  selected?: string; // Currently selected type
+  name: string; // Output identifier
+  display_name: string; // Human-readable output name
+  hidden?: boolean; // Whether to hide in UI
   proxy?: OutputFieldProxyType; // Proxy reference
-  allows_loop?: boolean;    // Whether loops are allowed
+  allows_loop?: boolean; // Whether loops are allowed
 };
 ```
 
@@ -211,7 +215,7 @@ Frontend useGetTypes() Hook
       ↓
 setTypes() Action
       ↓
-typesGenerator() & templatesGenerator() 
+typesGenerator() & templatesGenerator()
       ↓
 TypesStore Updated
       ↓
@@ -221,13 +225,17 @@ Components Available to Application
 ### 3.3 Code Execution Path
 
 1. **API Call**: In `useGetTypes.ts`:
+
    ```typescript
-   const response = await api.get<APIObjectType>(`${getURL("ALL")}?force_refresh=true`);
+   const response = await api.get<APIObjectType>(
+     `${getURL("ALL")}?force_refresh=true`,
+   );
    const data = response?.data;
    setTypes(data);
    ```
 
 2. **Store Update**: In `typesStore.ts`:
+
    ```typescript
    setTypes: (data: APIDataType) => {
      set((old) => ({
@@ -235,7 +243,7 @@ Components Available to Application
        data: { ...old.data, ...data },
        templates: templatesGenerator(data),
      }));
-   }
+   };
    ```
 
 3. **Template Generation**: In `reactflowUtils.ts`:
@@ -279,7 +287,7 @@ const templates = useTypesStore((state) => state.templates);
 const specificNode = templates["OpenAI"];
 
 // Find nodes by description
-const openAINodes = Object.keys(templates).filter(key => {
+const openAINodes = Object.keys(templates).filter((key) => {
   const template = templates[key];
   return template?.description?.includes("Generates text using OpenAI");
 });
@@ -317,6 +325,7 @@ Each node template contains extensive metadata:
 ### 5.4 Parameters (template)
 
 Each parameter defined in the template includes:
+
 - Data type
 - Required status
 - Default value
@@ -326,6 +335,7 @@ Each parameter defined in the template includes:
 ### 5.5 Outputs
 
 The outputs array defines the node's output connection points, including:
+
 - Name and display name
 - Supported types
 - Connection constraints
@@ -337,6 +347,7 @@ When working with the node registry, consider these best practices:
 ### 6.1 Finding the Right Node
 
 For finding a specific node, use a combination of criteria:
+
 - Exact node type ID if known
 - Description search for approximate matching
 - Category + feature combination
@@ -344,6 +355,7 @@ For finding a specific node, use a combination of criteria:
 ### 6.2 Handling Node Variants
 
 Some nodes have variants (e.g., "OpenAI" vs "ChatOpenAI"):
+
 - Check descriptions to understand the difference
 - Examine templates to understand parameter differences
 - Consider using the most specific variant for your use case
@@ -351,6 +363,7 @@ Some nodes have variants (e.g., "OpenAI" vs "ChatOpenAI"):
 ### 6.3 Cross-Version Compatibility
 
 Node types may change between Langflow versions:
+
 - Use description-based search for more robust matching
 - Implement fallbacks for critical nodes
 - Always check if a node exists before attempting to use it

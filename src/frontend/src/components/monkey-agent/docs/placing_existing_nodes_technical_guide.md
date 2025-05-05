@@ -28,71 +28,79 @@ import useFlowStore from "../stores/flowStore";
 ### 2.2 Step-by-Step Node Creation Process
 
 1. **Access Node Templates**
+
    ```typescript
    const templates = useTypesStore.getState().templates;
    const template = templates[nodeType];
    ```
+
    This retrieves the template for the specific node type, which contains all the node's configuration.
 
 2. **Generate a Unique Node ID**
+
    ```typescript
    const nodeId = getNodeId(nodeType);
    ```
+
    The `getNodeId` utility generates a unique ID using the same pattern that Langflow uses internally.
 
 3. **Create Complete Component Object**
+
    ```typescript
    const component = {
-     ...template,                               // Copy all template properties
+     ...template, // Copy all template properties
      display_name: template.display_name || nodeType,
      template: template.template || {},
      description: template.description || "",
      base_classes: template.base_classes || [],
      documentation: template.documentation || "",
      minimized: false,
-     outputs: template.outputs || [             // Critical for connection points
+     outputs: template.outputs || [
+       // Critical for connection points
        {
-         name: "Message", 
+         name: "Message",
          display_name: "Message",
          types: ["str"],
          selected: "str",
-         allows_loop: false
-       }
+         allows_loop: false,
+       },
      ],
      input_types: template.input_types || [],
      output_types: template.output_types || ["str"],
      custom_fields: template.custom_fields || {},
      is_input: false,
      is_output: false,
-     edited: false
+     edited: false,
    };
    ```
-   
+
    The `outputs` array is especially critical - it defines the connection points for the node. Without it, the node cannot connect to other nodes in the flow.
 
 4. **Create Node with Proper Structure**
+
    ```typescript
    const newNode: AllNodeType = {
      id: nodeId,
-     type: getNodeRenderType("genericnode"),   // Use Langflow's node type utility
+     type: getNodeRenderType("genericnode"), // Use Langflow's node type utility
      position: position,
      data: {
        node: component,
-       showNode: !component.minimized,         // Controls node expansion
+       showNode: !component.minimized, // Controls node expansion
        type: nodeType,
        id: nodeId,
      },
    };
    ```
-   
+
    Note that we use `getNodeRenderType("genericnode")` to ensure the node has the same type as manually created nodes.
 
 5. **Add Node to Canvas Using Langflow's Native Method**
+
    ```typescript
    const paste = useFlowStore.getState().paste;
    paste({ nodes: [newNode], edges: [] }, position);
    ```
-   
+
    Rather than directly setting nodes, we use Langflow's `paste` function which handles positioning, collisions, and other aspects of node placement.
 
 ## 3. Critical Components to Include

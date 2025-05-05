@@ -15,18 +15,11 @@ export const AIMessage: React.FC<AIMessageProps> = ({ message }) => {
   const isUser = message.role === "user";
 
   return (
-    <div
-      className={cn(
-        "flex flex-col",
-        isUser ? "items-end" : "items-start"
-      )}
-    >
+    <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
       <div
         className={cn(
           "max-w-[80%] rounded-lg p-3",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted"
+          isUser ? "bg-primary text-primary-foreground" : "bg-muted",
         )}
       >
         <ReactMarkdown
@@ -38,7 +31,7 @@ export const AIMessage: React.FC<AIMessageProps> = ({ message }) => {
               <code
                 className={cn(
                   "rounded bg-black/10 px-1.5 py-0.5 font-mono text-sm",
-                  className
+                  className,
                 )}
                 {...props}
               >

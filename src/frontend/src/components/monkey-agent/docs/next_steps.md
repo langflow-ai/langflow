@@ -71,39 +71,52 @@ export interface ConnectionSuggestion {
 }
 
 // API client functions
-export const getEnhancedRegistry = async (): Promise<EnhancedRegistryResponse> => {
-  const response = await fetch(`${baseURL}/api/v1/monkey-agent/registry`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch enhanced registry: ${response.statusText}`);
-  }
-  return await response.json();
-};
+export const getEnhancedRegistry =
+  async (): Promise<EnhancedRegistryResponse> => {
+    const response = await fetch(`${baseURL}/api/v1/monkey-agent/registry`);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch enhanced registry: ${response.statusText}`,
+      );
+    }
+    return await response.json();
+  };
 
-export const getNodeDetails = async (nodeId: string): Promise<NodeRegistryEntry> => {
-  const response = await fetch(`${baseURL}/api/v1/monkey-agent/registry/node/${nodeId}`);
+export const getNodeDetails = async (
+  nodeId: string,
+): Promise<NodeRegistryEntry> => {
+  const response = await fetch(
+    `${baseURL}/api/v1/monkey-agent/registry/node/${nodeId}`,
+  );
   if (!response.ok) {
     throw new Error(`Failed to fetch node details: ${response.statusText}`);
   }
   return await response.json();
 };
 
-export const getCompatibilityMatrix = async (): Promise<Record<string, string[]>> => {
-  const response = await fetch(`${baseURL}/api/v1/monkey-agent/registry/compatibility`);
+export const getCompatibilityMatrix = async (): Promise<
+  Record<string, string[]>
+> => {
+  const response = await fetch(
+    `${baseURL}/api/v1/monkey-agent/registry/compatibility`,
+  );
   if (!response.ok) {
-    throw new Error(`Failed to fetch compatibility matrix: ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch compatibility matrix: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
 
 export const suggestConnections = async (
   sourceId: string,
-  targetId: string
+  targetId: string,
 ): Promise<ConnectionSuggestion[]> => {
   const response = await fetch(
     `${baseURL}/api/v1/monkey-agent/connection/suggest?source_id=${sourceId}&target_id=${targetId}`,
     {
       method: "POST",
-    }
+    },
   );
   if (!response.ok) {
     throw new Error(`Failed to suggest connections: ${response.statusText}`);
@@ -120,36 +133,39 @@ Now, enhance the MonkeyAgentChat component to use the backend services:
 
 ```typescript
 // Add imports for the API services
-import { 
-  getEnhancedRegistry, 
+import {
+  getEnhancedRegistry,
   suggestConnections,
-  NodeRegistryEntry
+  NodeRegistryEntry,
 } from "../../controllers/API/monkey-agent";
 
 // Add a function to use the enhanced registry for more sophisticated node placement
-const addNodeWithEnhancedRegistry = async (nodeType: string, position = { x: 200, y: 200 }) => {
+const addNodeWithEnhancedRegistry = async (
+  nodeType: string,
+  position = { x: 200, y: 200 },
+) => {
   try {
     // Get the full registry from the backend
     const registry = await getEnhancedRegistry();
-    
+
     // Find matching node type
-    const matchedNodeType = Object.keys(registry.nodes).find(
-      (key) => key.toLowerCase().includes(nodeType.toLowerCase())
+    const matchedNodeType = Object.keys(registry.nodes).find((key) =>
+      key.toLowerCase().includes(nodeType.toLowerCase()),
     );
-    
+
     if (!matchedNodeType) {
       return {
         success: false,
         message: `Could not find a node type matching "${nodeType}"`,
       };
     }
-    
+
     // Use the existing node placement tool with the matched type
     return existingNodeTools.processExistingNodeCommand(
       `add ${matchedNodeType}`,
       nodes,
       setNodes,
-      onConnect
+      onConnect,
     );
   } catch (error) {
     console.error("Error using enhanced registry:", error);
@@ -161,50 +177,53 @@ const addNodeWithEnhancedRegistry = async (nodeType: string, position = { x: 200
 };
 
 // Add a function to suggest connections using the backend
-const suggestNodeConnections = async (sourceNodeId: string, targetNodeId: string) => {
+const suggestNodeConnections = async (
+  sourceNodeId: string,
+  targetNodeId: string,
+) => {
   try {
     // Get the node types
-    const sourceNode = nodes.find(node => node.id === sourceNodeId);
-    const targetNode = nodes.find(node => node.id === targetNodeId);
-    
+    const sourceNode = nodes.find((node) => node.id === sourceNodeId);
+    const targetNode = nodes.find((node) => node.id === targetNodeId);
+
     if (!sourceNode || !targetNode) {
       return {
         success: false,
         message: "Could not find the specified nodes",
       };
     }
-    
+
     const sourceType = sourceNode.data.type;
     const targetType = targetNode.data.type;
-    
+
     // Get connection suggestions from the backend
     const suggestions = await suggestConnections(sourceType, targetType);
-    
+
     if (suggestions.length === 0) {
       return {
         success: false,
         message: `No compatible connections found between ${sourceType} and ${targetType}`,
       };
     }
-    
+
     // Use the best suggestion to connect nodes
     const bestSuggestion = suggestions[0];
-    
+
     const connection = {
       source: sourceNodeId,
       sourceHandle: existingNodeTools.createSourceHandle(
-        sourceNodeId, 
-        bestSuggestion.sourceField
+        sourceNodeId,
+        bestSuggestion.sourceField,
       ),
       target: targetNodeId,
       targetHandle: existingNodeTools.createTargetHandle(
-        targetNodeId, 
-        bestSuggestion.targetField
+        targetNodeId,
+        bestSuggestion.targetField,
       ),
     };
-    
+
     onConnect(connection);
-    
+
     return {
       success: true,
       message: `Connected ${sourceType} to ${targetType} using ${bestSuggestion.sourceField} → ${bestSuggestion.targetField}`,
@@ -224,28 +243,31 @@ const handleSendMessage = async () => {
 
   // Add user message to chat
   const userMessage = { role: "user" as const, content: currentMessage };
-  setMessages((prevMessages) => [
-    ...prevMessages,
-    userMessage
-  ]);
+  setMessages((prevMessages) => [...prevMessages, userMessage]);
   setCurrentMessage("");
   setLoading(true);
 
   try {
     let result;
-    
+
     // Check for enhanced commands that use the backend
-    if (currentMessage.toLowerCase().includes("connect") && currentMessage.includes("to")) {
+    if (
+      currentMessage.toLowerCase().includes("connect") &&
+      currentMessage.includes("to")
+    ) {
       // Extract node names or IDs from the message
       // This is a simplified example - real implementation would need more sophisticated parsing
       const parts = currentMessage.split("connect")[1].split("to");
       const sourceNodeId = parts[0].trim();
       const targetNodeId = parts[1].trim();
-      
+
       result = await suggestNodeConnections(sourceNodeId, targetNodeId);
-    } 
+    }
     // Check for adding nodes using the enhanced registry
-    else if (currentMessage.toLowerCase().includes("add") || currentMessage.toLowerCase().includes("create")) {
+    else if (
+      currentMessage.toLowerCase().includes("add") ||
+      currentMessage.toLowerCase().includes("create")
+    ) {
       const nodeType = currentMessage.split(/add|create/i)[1].trim();
       result = await addNodeWithEnhancedRegistry(nodeType, { x: 200, y: 200 });
     }
@@ -255,7 +277,7 @@ const handleSendMessage = async () => {
         currentMessage,
         nodes,
         setNodes,
-        onConnect
+        onConnect,
       );
     }
 
@@ -266,7 +288,7 @@ const handleSendMessage = async () => {
     ]);
   } catch (error) {
     console.error("Error processing message:", error);
-    
+
     // Fallback response if there's an error
     setMessages((prevMessages) => [
       ...prevMessages,
@@ -292,15 +314,18 @@ Fix the variable naming issue in this file to use it properly with the backend:
 import { useTypesStore } from "../../../stores/typesStore";
 import useFlowStore from "../../../stores/flowStore";
 import { produce } from "immer";
-import { scapeJSONParse, scapeJSONStringify } from "../../../utils/reactflowUtils";
+import {
+  scapeJSONParse,
+  scapeJSONStringify,
+} from "../../../utils/reactflowUtils";
 
 // Fix the function to use the store properly
-function addNodeToCanvas(nodeType: string, position: { x: number, y: number }) {
+function addNodeToCanvas(nodeType: string, position: { x: number; y: number }) {
   const typesStore = useTypesStore.getState();
   const flowStoreState = useFlowStore.getState();
-  
+
   console.log(`Adding node: ${nodeType}`);
-  
+
   // ... rest of the function ...
 }
 
@@ -310,12 +335,12 @@ function connectNodes(
   sourceNodeType: string,
   sourceField: string,
   sourceOutputTypes: string[],
-  targetNodeId: string, 
+  targetNodeId: string,
   targetField: string,
-  targetInputTypes: string[]
+  targetInputTypes: string[],
 ) {
   const flowStoreState = useFlowStore.getState();
-  
+
   // ... rest of the function ...
 }
 ```
@@ -327,19 +352,19 @@ To help test and debug the backend-frontend connection, create a test utility co
 **File: `/src/frontend/src/components/monkey-agent/demo/ApiTester.tsx`**
 
 ```tsx
-import React, { useState, useEffect } from 'react';
-import { 
+import React, { useState, useEffect } from "react";
+import {
   getEnhancedRegistry,
   getNodeDetails,
   getCompatibilityMatrix,
-  suggestConnections
+  suggestConnections,
 } from "../../../controllers/API/monkey-agent";
 
 export default function ApiTester() {
   const [registry, setRegistry] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   const fetchRegistry = async () => {
     setLoading(true);
     setError(null);
@@ -354,30 +379,30 @@ export default function ApiTester() {
       setLoading(false);
     }
   };
-  
+
   return (
-    <div className="p-4 border rounded-lg">
-      <h2 className="text-lg font-bold mb-4">Monkey Agent API Tester</h2>
-      
+    <div className="rounded-lg border p-4">
+      <h2 className="mb-4 text-lg font-bold">Monkey Agent API Tester</h2>
+
       <div className="flex flex-col space-y-4">
-        <button 
+        <button
           onClick={fetchRegistry}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
           disabled={loading}
         >
           {loading ? "Loading..." : "Fetch Enhanced Registry"}
         </button>
-        
+
         {error && (
-          <div className="p-2 bg-red-100 border border-red-500 text-red-700 rounded">
+          <div className="rounded border border-red-500 bg-red-100 p-2 text-red-700">
             Error: {error}
           </div>
         )}
-        
+
         {registry && (
           <div className="mt-4">
             <h3 className="text-md font-bold">Registry Data:</h3>
-            <pre className="bg-gray-100 p-2 rounded max-h-60 overflow-auto">
+            <pre className="max-h-60 overflow-auto rounded bg-gray-100 p-2">
               {JSON.stringify(registry, null, 2)}
             </pre>
           </div>
@@ -433,6 +458,7 @@ To test the integration:
 By following these steps, you'll have a fully functional Monkey Agent with both frontend and backend integration. The enhanced registry will provide smarter node manipulation capabilities, and the API endpoints will enable more sophisticated flow management from the chat interface.
 
 Future enhancements could include:
+
 - Natural language processing for more flexible command interpretation
 - Flow analysis and suggestion capabilities
 - Automated flow generation based on user requirements

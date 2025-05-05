@@ -1,5 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useReactFlow, useStoreApi } from "reactflow";
+import { api } from "../../../controllers/API/api";
+import useAlertStore from "../../../stores/alertStore";
+import useAuthStore from "../../../stores/authStore";
+import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import {
   Dialog,
   DialogContent,
@@ -8,14 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import { Input } from "../input";
 import { Button } from "../button";
-import { Send } from "lucide-react";
+import { Input } from "../input";
 import { AIMessage } from "./message";
-import { api } from "../../../controllers/API/api";
-import useAlertStore from "../../../stores/alertStore";
-import useAuthStore from "../../../stores/authStore";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 
 // Define APIKeyDialogProps interface
 interface APIKeyDialogProps {
@@ -25,17 +25,21 @@ interface APIKeyDialogProps {
 }
 
 // APIKeyDialog component for setting the OpenAI API key
-const APIKeyDialog: React.FC<APIKeyDialogProps> = ({ open, onOpenChange, onApiKeySave }) => {
+const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
+  open,
+  onOpenChange,
+  onApiKeySave,
+}) => {
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!apiKey) {
       return;
     }
-    
+
     setSaving(true);
     try {
       await onApiKeySave(apiKey);
@@ -53,8 +57,8 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({ open, onOpenChange, onApiKe
         <DialogHeader>
           <DialogTitle>Set OpenAI API Key</DialogTitle>
           <DialogDescription>
-            Enter your OpenAI API key to enable the AI assistant.
-            This key will be stored securely for your account.
+            Enter your OpenAI API key to enable the AI assistant. This key will
+            be stored securely for your account.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -65,10 +69,7 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({ open, onOpenChange, onApiKe
             className="col-span-3"
           />
           <DialogFooter className="sm:justify-end">
-            <Button 
-              type="submit" 
-              disabled={saving || !apiKey}
-            >
+            <Button type="submit" disabled={saving || !apiKey}>
               {saving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
@@ -95,18 +96,19 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
 
   const reactFlowInstance = useReactFlow();
   const store = useStoreApi();
-  
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  
+
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm your AI assistant. I can help you build and modify your workflow. How can I help you today?",
+      content:
+        "Hi! I'm your AI assistant. I can help you build and modify your workflow. How can I help you today?",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -126,13 +128,14 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
       const response = await api.post("/api/v1/ai-agent/api-key", {
         api_key: apiKey,
       });
-      
+
       if (response.status === 200) {
         setMessages((prevMessages) => [
           ...prevMessages,
           {
             role: "assistant",
-            content: "API key saved successfully! I'm ready to help you build your workflow.",
+            content:
+              "API key saved successfully! I'm ready to help you build your workflow.",
           },
         ]);
       }
@@ -172,7 +175,7 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
 
       // Handle AI response
       const aiResponse = response.data;
-      
+
       // Add AI message to chat
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -185,14 +188,15 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
       }
     } catch (error: any) {
       console.error("Error sending message:", error);
-      
+
       // Handle API key errors
       if (error.response?.data?.detail?.includes("API key")) {
         setMessages((prevMessages) => [
           ...prevMessages,
           {
             role: "assistant",
-            content: "I need an OpenAI API key to help you. Please click the 'Set API Key' button to provide your key.",
+            content:
+              "I need an OpenAI API key to help you. Please click the 'Set API Key' button to provide your key.",
           },
         ]);
       } else {
@@ -246,8 +250,8 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
                   template[key] = { value: value, type: typeof value };
                 }
               });
-              reactFlowInstance.setNodes((nds) => 
-                nds.map((n) => (n.id === action.node_id ? updatedNode : n))
+              reactFlowInstance.setNodes((nds) =>
+                nds.map((n) => (n.id === action.node_id ? updatedNode : n)),
               );
               modified = true;
             }
@@ -287,39 +291,40 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
         // Get the updated flow data with latest nodes and edges
         const updatedNodes = reactFlowInstance.getNodes();
         const updatedEdges = reactFlowInstance.getEdges();
-        
+
         const updatedFlow = {
           ...flow,
           data: JSON.stringify({ nodes: updatedNodes, edges: updatedEdges }),
         };
-        
+
         // Update flows in store
-        const updatedFlows = flows?.map(f => 
-          f.id === flow.id ? updatedFlow : f
-        ) || [];
-        
+        const updatedFlows =
+          flows?.map((f) => (f.id === flow.id ? updatedFlow : f)) || [];
+
         setFlows(updatedFlows);
       }
     } catch (error) {
       console.error("Error handling agent actions:", error);
       setErrorData({
         title: "Error applying changes",
-        list: ["There was an error applying the requested changes to your workflow."],
+        list: [
+          "There was an error applying the requested changes to your workflow.",
+        ],
       });
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       {/* API Key Dialog */}
       <APIKeyDialog
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}
         onApiKeySave={handleApiKeySave}
       />
-      
+
       {/* Chat header */}
-      <div className="flex justify-between items-center p-2 border-b">
+      <div className="flex items-center justify-between border-b p-2">
         <div className="text-sm font-medium">AI Assistant</div>
         <div className="flex gap-2">
           <Button
@@ -331,15 +336,15 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
           </Button>
         </div>
       </div>
-      
+
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((msg, index) => (
           <AIMessage key={index} message={msg} />
         ))}
         <div ref={messagesEndRef} />
       </div>
-      
+
       {/* Input area */}
       <div className="border-t p-2">
         <div className="flex space-x-2">
@@ -368,7 +373,7 @@ export function AIAgentChat({ flow }: AIAssistantProps) {
           </Button>
         </div>
         {!isAuthenticated && (
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="mt-1 text-xs text-muted-foreground">
             Please sign in to use the AI assistant.
           </div>
         )}

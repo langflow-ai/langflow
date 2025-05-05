@@ -3,10 +3,10 @@
  */
 import { BASE_URL_API } from "../../../constants/constants";
 import { apiRequest } from "../../../controllers/API/helpers/request";
-import { 
-  EnhancedRegistry, 
-  EnhancedNodeEntry, 
-  ConnectionSuggestion 
+import {
+  ConnectionSuggestion,
+  EnhancedNodeEntry,
+  EnhancedRegistry,
 } from "./types";
 
 /**
@@ -23,7 +23,9 @@ export async function getEnhancedRegistry(): Promise<EnhancedRegistry> {
 /**
  * Get a specific node entry from the enhanced registry
  */
-export async function getNodeRegistryEntry(nodeId: string): Promise<EnhancedNodeEntry> {
+export async function getNodeRegistryEntry(
+  nodeId: string,
+): Promise<EnhancedNodeEntry> {
   const response = await apiRequest<EnhancedNodeEntry>({
     url: `${BASE_URL_API}/monkey-agent/registry/node/${nodeId}`,
     method: "GET",
@@ -34,7 +36,9 @@ export async function getNodeRegistryEntry(nodeId: string): Promise<EnhancedNode
 /**
  * Get the type compatibility matrix
  */
-export async function getTypeCompatibilityMatrix(): Promise<Record<string, string[]>> {
+export async function getTypeCompatibilityMatrix(): Promise<
+  Record<string, string[]>
+> {
   const response = await apiRequest<Record<string, string[]>>({
     url: `${BASE_URL_API}/monkey-agent/registry/compatibility`,
     method: "GET",
@@ -47,7 +51,7 @@ export async function getTypeCompatibilityMatrix(): Promise<Record<string, strin
  */
 export async function getConnectionSuggestions(
   sourceId: string,
-  targetId: string
+  targetId: string,
 ): Promise<ConnectionSuggestion[]> {
   const response = await apiRequest<ConnectionSuggestion[]>({
     url: `${BASE_URL_API}/monkey-agent/connection/suggest`,

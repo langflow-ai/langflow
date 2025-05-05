@@ -1,22 +1,22 @@
 /**
  * Monkey Agent Chat Component
- * 
+ *
  * A focused component that handles placing existing nodes on the canvas.
  * Currently supporting the "Add text input" command to place a Text Input node.
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Send } from 'lucide-react';
-import useFlowStore from '../../stores/flowStore';
+import { Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import useFlowStore from "../../stores/flowStore";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 // Import our cleaned-up node placement tool
-import existingNodeTools from './demo/existing-node-placement';
+import existingNodeTools from "./demo/existing-node-placement";
 
 // Types for messages
 type Message = {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 };
 
@@ -61,10 +61,7 @@ export default function MonkeyAgentChat() {
 
     // Add user message to chat
     const userMessage = { role: "user" as const, content: currentMessage };
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      userMessage
-    ]);
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
     setCurrentMessage("");
     setLoading(true);
 
@@ -74,7 +71,7 @@ export default function MonkeyAgentChat() {
         currentMessage,
         nodes,
         setNodes,
-        onConnect
+        onConnect,
       );
 
       // Add response to chat
@@ -84,7 +81,7 @@ export default function MonkeyAgentChat() {
       ]);
     } catch (error) {
       console.error("Error processing message:", error);
-      
+
       // Fallback response if there's an error
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -111,12 +108,12 @@ export default function MonkeyAgentChat() {
       {/* Chat toggle button */}
       <button
         onClick={toggleChat}
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-primary shadow-lg hover:bg-primary/90 transition-colors"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-lg transition-colors hover:bg-primary/90"
       >
         {isOpen ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6 text-white"
+            className="h-6 w-6 text-white"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -131,7 +128,7 @@ export default function MonkeyAgentChat() {
         ) : (
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6 text-white"
+            className="h-6 w-6 text-white"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -148,9 +145,9 @@ export default function MonkeyAgentChat() {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-80 md:w-96 bg-background border rounded-lg shadow-xl flex flex-col">
+        <div className="absolute bottom-16 right-0 flex w-80 flex-col rounded-lg border bg-background shadow-xl md:w-96">
           {/* Chat header */}
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between border-b p-4">
             <h3 className="font-medium text-foreground">Monkey Agent</h3>
             <button
               onClick={toggleChat}
@@ -174,7 +171,7 @@ export default function MonkeyAgentChat() {
           </div>
 
           {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-96">
+          <div className="max-h-96 flex-1 space-y-4 overflow-y-auto p-4">
             {messages.map((message, index) => (
               <div
                 key={index}
