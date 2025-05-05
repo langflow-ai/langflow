@@ -217,4 +217,4 @@ The sidebar includes a component **Search** bar, and includes flags for showing 
 
 **Beta** components are still being tested and are not suitable for production workloads.
 
-**Legacy** components are available to use but no longer supported.
+Legacy components are available for use but are no longer supported.

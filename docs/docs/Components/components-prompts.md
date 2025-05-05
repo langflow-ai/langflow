@@ -51,6 +51,10 @@ When variables are added to a prompt template, new fields are automatically crea
 
 ## Langchain Hub Prompt Template
 
+:::important
+This component is available in the **Components** menu under **Bundles**.
+:::
+
 This component fetches prompts from the [Langchain Hub](https://docs.smith.langchain.com/old/category/prompt-hub).
 
 When a prompt is loaded, the component generates input fields for custom variables. For example, the default prompt "efriis/my-first-prompt" generates fields for `profession` and `question`.

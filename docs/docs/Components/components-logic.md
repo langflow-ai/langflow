@@ -263,7 +263,7 @@ Your flow should now look like this:
 
 ## Legacy components
 
-Legacy components are available to use but no longer supported.
+**Legacy** components are available for use but are no longer supported.
 
 ### Data Conditional Router
 

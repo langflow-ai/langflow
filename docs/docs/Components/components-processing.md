@@ -84,78 +84,6 @@ Here's the second part. We'll see how combining text works.
 
 </details>
 
-## Data to DataFrame
-
-This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
-
-1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
-This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
-2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
-
-![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
-
-3. Send a POST request to the **Webhook** containing your JSON data.
-Replace `YOUR_FLOW_ID` with your flow ID.
-This example uses the default Langflow server address.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "text": "Alex Cruz - Employee Profile",
-    "data": {
-        "Name": "Alex Cruz",
-        "Role": "Developer",
-        "Department": "Engineering"
-    }
-}'
-```
-
-4. In the **Playground**, view the output of your flow.
-The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
-```text
-| text                         | data                                                                    |
-|:-----------------------------|:------------------------------------------------------------------------|
-| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
-```
-
-5. Send another employee data object.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "text": "Kalani Smith - Employee Profile",
-    "data": {
-        "Name": "Kalani Smith",
-        "Role": "Designer",
-        "Department": "Design"
-    }
-}'
-```
-
-6. In the **Playground**, this request is also converted to `DataFrame`.
-```text
-| text                            | data                                                                 |
-|:--------------------------------|:---------------------------------------------------------------------|
-| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
-```
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a 'text' column. |
-
-</details>
-
 ## DataFrame operations
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
@@ -758,6 +686,30 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
+
+</details>
+
+### JSON cleaner
+
+The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| json_str | JSON String | The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
+| remove_control_chars | Remove Control Characters | If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| normalize_unicode | Normalize Unicode | When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
+| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output | Cleaned JSON String | The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
 </details>
 

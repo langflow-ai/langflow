@@ -58,7 +58,7 @@ For more information on this component, see the [tool calling agent documentatio
 
 ## Legacy components
 
-Legacy components are available to use but no longer supported.
+**Legacy** components are available for use but are no longer supported.
 
 ### JSON Agent
 

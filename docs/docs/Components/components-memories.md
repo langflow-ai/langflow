@@ -127,7 +127,11 @@ This component retrieves and stores chat messages from Redis.
 
 </details>
 
-## ZepChatMemory Component
+## Legacy components
+
+**Legacy** components are available for use but are no longer supported.
+
+### ZepChatMemory Component
 
 This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for Large Language Models (LLMs).
 
