@@ -4060,29 +4060,26 @@ wheels = [
 
 [[package]]
 name = "langchain"
-version = "0.3.10"
+version = "0.3.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiohttp" },
     { name = "async-timeout", marker = "python_full_version < '3.11'" },
     { name = "langchain-core" },
     { name = "langchain-text-splitters" },
     { name = "langsmith" },
-    { name = "numpy" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "sqlalchemy" },
-    { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/4e/139df0e17394a954f7f200259513ef5438995e1de05f12b229af277f0c0e/langchain-0.3.10.tar.gz", hash = "sha256:aef0f9bdaf4a4d3d50aec348438135987bda1d83070b49f77032f561d3a761d8", size = 420256 }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/54/ea3e30df3a7f6f9986cdb5a53d46a219d1e20b5a5e72a480b932a961ff30/langchain-0.3.21.tar.gz", hash = "sha256:a10c81f8c450158af90bf37190298d996208cfd15dd3accc1c585f068473d619", size = 10225431 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/0c/e123fbfe824b765c4534f954e3418fca7a52adb635cc2f258803ce063bd5/langchain-0.3.10-py3-none-any.whl", hash = "sha256:4ae38d4c9f9ec5cd1a16a505b451a57c0aab2807d6c9f8cb5b346d06301b2232", size = 1009030 },
+    { url = "https://files.pythonhosted.org/packages/c3/89/eeab8c671d791ce872225aa77a05805ba67052764a3faa6331fc4674e855/langchain-0.3.21-py3-none-any.whl", hash = "sha256:c8bd2372440cc5d48cb50b2d532c2e24036124f1c467002ceb15bc7b86c92579", size = 1011714 },
 ]
 
 [[package]]
 name = "langchain-anthropic"
-version = "0.3.0"
+version = "0.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
@@ -4090,9 +4087,9 @@ dependencies = [
     { name = "langchain-core" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/b4/5b54844307decc73416be757dbeba1e4cd62e0cd7e9d6e1b7e30eb17ab4d/langchain_anthropic-0.3.0.tar.gz", hash = "sha256:f9b5cbdbf2d5b3432f78f056e474efb10a2c1e37f9a471d3aceb50a0d9f945df", size = 20619 }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/97/741781ad1eecc65bdfd5adaea0cf9b42a732dad83a8cec70724cebc8da87/langchain_anthropic-0.2.4.tar.gz", hash = "sha256:0382d4c7b5236839b703f7b72b3e06de4bb5be99104b193f719adbe34c49562b", size = 20303 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/bb/8f1cb2c5ab344484cbecd1009c84ed70cd7d8a1df58196b5a35bb7fb4da1/langchain_anthropic-0.3.0-py3-none-any.whl", hash = "sha256:96b74a9adfcc092cc2ae137d4189ca50e8f5ad9635618024f7c98d8f9fc1076a", size = 22152 },
+    { url = "https://files.pythonhosted.org/packages/d6/7d/6109b1d5a50db57540378cf9c9600c77b67d23d3df778cdb4e16f4a2dd82/langchain_anthropic-0.2.4-py3-none-any.whl", hash = "sha256:bcb6c2d0df4a67aff52816621079d6e743b260911caccf313a72b33b7edece6f", size = 21801 },
 ]
 
 [[package]]
@@ -4158,7 +4155,7 @@ wheels = [
 
 [[package]]
 name = "langchain-community"
-version = "0.3.10"
+version = "0.3.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -4174,9 +4171,9 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ba/6b/53f3d7e394e191cc69b11c8c5500e34ed816072e2c31a3c8f01e46b907f6/langchain_community-0.3.10.tar.gz", hash = "sha256:f503e90cbb44ddb14afb141552a93fd9fbd0b216407315a6608f901861a938f9", size = 1672427 }
+sdist = { url = "https://files.pythonhosted.org/packages/86/bb/a07609679781199738934226bb2764c12541573bc4feeaf21e9f3ad5caf4/langchain_community-0.3.20.tar.gz", hash = "sha256:bd83b4f2f818338423439aff3b5be362e1d686342ffada0478cd34c6f5ef5969", size = 33221203 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/d2/2a7668a21f8f58f5c29f06452f1d5d5ccd41e06660244268a115902097a2/langchain_community-0.3.10-py3-none-any.whl", hash = "sha256:f718de973f60c6d0f10c71321e461cf41251cc74543f064b7b2ee7ae06b9a43f", size = 2446511 },
+    { url = "https://files.pythonhosted.org/packages/ab/4b/2652cfd2baa482cb3cdbec1ccccae1674418b7576f21ba7724d8730de9db/langchain_community-0.3.20-py3-none-any.whl", hash = "sha256:ea3dbf37fbc21020eca8850627546f3c95a8770afc06c4142b40b9ba86b970f7", size = 2524455 },
 ]
 
 [[package]]
@@ -4725,33 +4722,33 @@ requires-dist = [
     { name = "jq", specifier = "==1.8.0" },
     { name = "json-repair", specifier = "==0.30.3" },
     { name = "kubernetes", specifier = "==31.0.0" },
-    { name = "langchain", specifier = "==0.3.10" },
-    { name = "langchain-anthropic", specifier = "==0.3.0" },
+    { name = "langchain", specifier = ">=0.3,<0.4" },
+    { name = "langchain-anthropic", specifier = ">=0.2,<0.3" },
     { name = "langchain-astradb", specifier = "~=0.6.0" },
-    { name = "langchain-aws", specifier = "==0.2.7" },
-    { name = "langchain-chroma", specifier = "==0.1.4" },
-    { name = "langchain-cohere", specifier = "==0.3.3" },
-    { name = "langchain-community", specifier = "~=0.3.10" },
+    { name = "langchain-aws", specifier = ">=0.2,<0.3" },
+    { name = "langchain-chroma", specifier = ">=0.1.4,<0.2" },
+    { name = "langchain-cohere", specifier = ">=0.3,<0.4" },
+    { name = "langchain-community", specifier = ">=0.3,<0.4" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
-    { name = "langchain-google-community", specifier = "==2.0.3" },
-    { name = "langchain-google-genai", specifier = "==2.0.6" },
-    { name = "langchain-google-vertexai", specifier = "==2.0.7" },
+    { name = "langchain-google-community", specifier = ">=2,<3" },
+    { name = "langchain-google-genai", specifier = ">=2,<3" },
+    { name = "langchain-google-vertexai", specifier = ">=2,<3" },
     { name = "langchain-graph-retriever", specifier = "==0.6.1" },
-    { name = "langchain-groq", specifier = "==0.2.1" },
-    { name = "langchain-ibm", specifier = ">=0.3.8" },
-    { name = "langchain-milvus", specifier = "==0.1.7" },
-    { name = "langchain-mistralai", specifier = "==0.2.3" },
-    { name = "langchain-mongodb", specifier = "==0.2.0" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.8" },
+    { name = "langchain-groq", specifier = ">=0.2,<0.3" },
+    { name = "langchain-ibm", specifier = ">=0.3,<0.4" },
+    { name = "langchain-milvus", specifier = ">=0.1.7,<0.2" },
+    { name = "langchain-mistralai", specifier = ">=0.2,<0.3" },
+    { name = "langchain-mongodb", specifier = ">=0.2,<0.3" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = ">=0.3,<0.4" },
     { name = "langchain-ollama", specifier = "==0.2.1" },
-    { name = "langchain-openai", specifier = "==0.2.12" },
-    { name = "langchain-pinecone", specifier = "==0.2.2" },
+    { name = "langchain-openai", specifier = ">=0.2,<0.3" },
+    { name = "langchain-pinecone", specifier = ">=0.2,<0.3" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
-    { name = "langchain-unstructured", specifier = "==0.1.5" },
+    { name = "langchain-unstructured", specifier = ">=0.1.5,<0.2" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
-    { name = "langsmith", specifier = ">=0.1.147,<1.0.0" },
+    { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
     { name = "langwatch", specifier = "==0.1.16" },
     { name = "lark", specifier = "==1.2.2" },
     { name = "litellm", specifier = "==1.60.2" },
@@ -5033,11 +5030,11 @@ requires-dist = [
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
     { name = "jsonquerylang", specifier = ">=1.1.1" },
-    { name = "langchain", specifier = "~=0.3.10" },
-    { name = "langchain-community", specifier = "~=0.3.10" },
-    { name = "langchain-core", specifier = "~=0.3.15" },
-    { name = "langchain-experimental", specifier = ">=0.0.61,<1.0.0" },
-    { name = "langchain-ibm", specifier = ">=0.3.8" },
+    { name = "langchain", specifier = ">=0.3,<0.4" },
+    { name = "langchain-community", specifier = ">=0.3,<0.4" },
+    { name = "langchain-core", specifier = ">=0.3,<0.4" },
+    { name = "langchain-experimental", specifier = ">=0.3,<0.4" },
+    { name = "langchain-ibm", specifier = ">=0.3,<0.4" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
@@ -5200,18 +5197,20 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.1.147"
+version = "0.3.42"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "packaging" },
     { name = "pydantic" },
     { name = "requests" },
     { name = "requests-toolbelt" },
+    { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/56/201dd94d492ae47c1bf9b50cacc1985113dc2288d8f15857e1f4a6818376/langsmith-0.1.147.tar.gz", hash = "sha256:2e933220318a4e73034657103b3b1a3a6109cc5db3566a7e8e03be8d6d7def7a", size = 300453 }
+sdist = { url = "https://files.pythonhosted.org/packages/3a/44/fe171c0b0fb0377b191aebf0b7779e0c7b2a53693c6a01ddad737212495d/langsmith-0.3.42.tar.gz", hash = "sha256:2b5cbc450ab808b992362aac6943bb1d285579aa68a3a8be901d30a393458f25", size = 345619 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/f0/63b06b99b730b9954f8709f6f7d9b8d076fa0a973e472efe278089bde42b/langsmith-0.1.147-py3-none-any.whl", hash = "sha256:7166fc23b965ccf839d64945a78e9f1157757add228b086141eb03a60d699a15", size = 311812 },
+    { url = "https://files.pythonhosted.org/packages/89/8e/e8a58e0abaae3f3ac4702e9ca35d1fc6159711556b64ffd0e247771a3f12/langsmith-0.3.42-py3-none-any.whl", hash = "sha256:18114327f3364385dae4026ebfd57d1c1cb46d8f80931098f0f10abe533475ff", size = 360334 },
 ]
 
 [[package]]
