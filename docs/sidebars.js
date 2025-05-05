@@ -118,17 +118,17 @@ module.exports = {
             {
               type: "doc",
               id: "Deployment/deployment-prod-best-practices",
-              label: "Langflow Architecture and Best Practices"
+              label: "Langflow architecture and best practices"
             },
             {
               type: "doc",
               id: "Deployment/deployment-kubernetes-dev",
-              label: "Kubernetes - Development"
+              label: "Deploy in development"
             },
             {
               type: "doc",
               id: "Deployment/deployment-kubernetes-prod",
-              label: "Kubernetes - Production"
+              label: "Deploy in production"
             }
           ]
         },

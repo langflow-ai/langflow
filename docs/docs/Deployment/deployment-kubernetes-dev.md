@@ -45,7 +45,7 @@ This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you 
 	helm install langflow-ide langflow/langflow-ide -n langflow --create-namespace
 	```
 
-3. Check the status of the pods
+3. Check the status of the pods.
 
 	```shell
 	kubectl get pods -n langflow
@@ -154,7 +154,7 @@ langflow:
 ```
 
 :::note
-If your flow relies on shared state, such as built-in chat memory, you need to set up a shared database when scaling horizontally.
+If your flow relies on a shared state, such as built-in chat memory, you need to set up a shared database when scaling horizontally.
 :::
 
 For more examples of `langflow-ide` deployment, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/langflow-ide).
