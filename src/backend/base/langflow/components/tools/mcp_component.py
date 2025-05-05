@@ -1,4 +1,5 @@
 import re
+import shutil
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -175,6 +176,13 @@ class MCPToolsComponent(Component):
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
+        
+    def validate_npx_command(self, command: str) -> str:
+        """Validate the npx command."""
+        if "npx" in command and not shutil.which("node"):
+            msg = "Node.js is not installed. Please install Node.js to use npx commands."
+            raise ValueError(msg)
+        return command
 
     def _process_headers(self, headers: Any) -> dict:
         """Process the headers input into a valid dictionary.
@@ -435,6 +443,7 @@ class MCPToolsComponent(Component):
                 mode = self.mode
             if command is None:
                 command = self.command
+                self.validate_npx_command(command)
             if env is None:
                 env = self.env
             if url is None:
