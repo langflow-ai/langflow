@@ -40,21 +40,8 @@ def _get_input_type(input_: InputTypes):
 
 
 def build_description(component: Component, output: Output) -> str:
-    if not output.required_inputs:
-        logger.warning(f"Output {output.name} does not have required inputs defined")
     name = component.name or component.__class__.__name__
-    if output.required_inputs:
-        args = ", ".join(
-            sorted(
-                [
-                    f"{name}. {input_name}: {_get_input_type(component._inputs[input_name])}"
-                    for input_name in output.required_inputs
-                ]
-            )
-        )
-    else:
-        args = ""
-    return f"{name}. {output.method}({args}) - {component.description}"
+    return f"{name}. {output.method} - {component.description}"
 
 
 async def send_message_noop(
