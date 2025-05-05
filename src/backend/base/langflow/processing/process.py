@@ -71,7 +71,7 @@ async def run_graph(
     session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
-    stream: bool | None = False,
+    stream: bool = False,
 ) -> list[RunOutputs]:
     """Runs the given Langflow Graph with the specified input and returns the outputs.
 

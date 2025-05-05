@@ -58,7 +58,7 @@ class LangflowRunnerExperimental:
         await self.add_flow_to_db(session_id, flow_dict)
         graph = await self.create_graph_from_flow(session_id, flow_dict)
         try:
-            result = await self.run_graph(input_value, input_type, output_type, session_id, graph, stream)
+            result = await self.run_graph(input_value, input_type, output_type, session_id, graph, stream=stream)
         finally:
             await self.clear_flow_state(session_id, flow_dict)
         logger.info(f"Finish Handling {session_id=}")
