@@ -16,7 +16,7 @@ import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
 const EMPTY_PAGE_TITLE = "Welcome to Langflow";
-const EMPTY_PAGE_DESCRIPTION = "Your new favorite way to ship Agents.";
+const EMPTY_PAGE_DESCRIPTION = "Your new favorite way to ship Agents";
 const EMPTY_PAGE_GITHUB_DESCRIPTION =
   "Follow development, star the repo, and shape the future.";
 const EMPTY_PAGE_DISCORD_DESCRIPTION =
@@ -92,7 +92,7 @@ export const EmptyPageCommunity = ({
 
               <span
                 data-testid="empty_page_description"
-                className="z-50 text-center text-sm text-secondary-foreground"
+                className="z-50 text-center text-base text-secondary-foreground"
               >
                 {folders?.length > 1
                   ? EMPTY_PAGE_FOLDER_DESCRIPTION
@@ -122,7 +122,7 @@ export const EmptyPageCommunity = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-sm text-secondary-foreground">
+                      <span className="text-base text-secondary-foreground">
                         {EMPTY_PAGE_GITHUB_DESCRIPTION}
                       </span>
                     </div>
@@ -152,7 +152,7 @@ export const EmptyPageCommunity = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-sm text-secondary-foreground">
+                      <span className="text-base text-secondary-foreground">
                         {EMPTY_PAGE_DISCORD_DESCRIPTION}
                       </span>
                     </div>
