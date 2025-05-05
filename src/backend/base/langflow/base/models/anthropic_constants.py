@@ -28,3 +28,6 @@ DEPRECATED_MODELS = [
     "claude-3-5-haiku-20241022",
     "claude-3-haiku-20240307",
 ]
+
+
+DEFAULT_ANTHROPIC_API_URL = "https://api.anthropic.com"
