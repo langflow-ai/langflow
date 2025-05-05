@@ -29,7 +29,7 @@ class LangSmithTracer(BaseTracer):
             self._ready = self.setup_langsmith()
             if not self._ready:
                 return
-            from langsmith.run_trees import trace
+            from langsmith.run_trees import trace, RunTree
 
             self.trace_name = trace_name
             self.trace_type = trace_type
