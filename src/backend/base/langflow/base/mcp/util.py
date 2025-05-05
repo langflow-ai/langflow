@@ -194,6 +194,9 @@ class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
+        self.max_retries = 2
+        self.retry_delay = 1.0  # seconds
+        self.timeout_seconds = 15  # default timeout
 
     async def connect_to_server(self, command_str: str, env: list[str] | None = None):
         env_dict: dict[str, str] = {}
@@ -210,13 +213,39 @@ class MCPStdioClient:
             args=command[1:],
             env={"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})},
         )
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-        self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-        await self.session.initialize()
-        response = await self.session.list_tools()
-        return response.tools
+        
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                async with asyncio.timeout(self.timeout_seconds):
+                    try:
+                        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+                    except FileNotFoundError as e:
+                        # Command not found, raise immediately
+                        msg = f"Command not found: {command[0]}. Error: {e}"
+                        raise ValueError(msg) from e
+                    except OSError as e:
+                        # Other OS errors (e.g., permission denied)
+                        msg = f"Failed to start command '{command[0]}': {e}"
+                        raise ValueError(msg) from e
 
+                    self.stdio, self.write = stdio_transport
+                    self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+                    await self.session.initialize()
+                    response = await self.session.list_tools()
+                    return response.tools
+            except asyncio.TimeoutError:
+                last_error = f"Command execution timed out after {self.timeout_seconds} seconds"
+                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
+            except Exception as e:
+                last_error = f"Failed to initialize MCP session: {e}"
+                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
+            
+            if attempt < self.max_retries - 1:
+                await asyncio.sleep(self.retry_delay * (attempt + 1))
+        
+        msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
+        raise ConnectionError(msg)
 
 class MCPSseClient:
     def __init__(self):
