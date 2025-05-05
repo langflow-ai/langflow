@@ -81,6 +81,7 @@ export const MenuBar = memo((): JSX.Element => {
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
+  const [flowNames, setFlowNames] = useState<string[]>([]);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -151,17 +152,11 @@ export const MenuBar = memo((): JSX.Element => {
   const handleEditName = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { value } = e.target;
-      const flows = useFlowsManagerStore.getState().flows;
-      const flowNames =
-        flows
-          ?.map((flow) => flow.name)
-          .filter((name) => name !== currentFlowName) ?? [];
-
       const invalid = flowNames.includes(value);
       setIsInvalidName(invalid);
       setFlowName(value);
     },
-    [currentFlowName],
+    [flowNames]
   );
 
   const handleKeyDown = useCallback(
@@ -184,7 +179,6 @@ export const MenuBar = memo((): JSX.Element => {
       flowName !== currentFlowName &&
       !isInvalidName
     ) {
-      // Get a one-time snapshot of currentFlow using get()
       const currentFlowSnapshot = useFlowStore.getState().currentFlow;
 
       const newFlow = {
@@ -316,6 +310,10 @@ export const MenuBar = memo((): JSX.Element => {
                 onFocus={() => {
                   setEditingName(true);
                   setFlowName(currentFlowName);
+                  const flows = useFlowsManagerStore.getState().flows;
+                  setFlowNames(
+                    flows?.map((flow) => flow.name).filter((name) => name !== currentFlowName) ?? []
+                  );
                 }}
                 onBlur={handleNameSubmit}
                 value={flowName}
