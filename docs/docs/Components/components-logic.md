@@ -90,20 +90,20 @@ A new message has been received and added to the Urgent queue. Please review it 
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
-| input_text     | String   | The primary text input for the operation.                         |
-| match_text     | String   | The text input to compare against.                                |
-| operator       | Dropdown | The operator to compare texts. Options: "equals", "not equals", "contains", "starts with", "ends with", "regex". Default: "equals". |
-| case_sensitive | Boolean  | If true, the comparison is case sensitive. This setting is ignored for regex comparison. Default: false. |
-| message        | Message  | The message to pass through either route.                         |
-| max_iterations | Integer  | The maximum number of iterations for the conditional router. Default: 10. |
-| default_route  | Dropdown | The default route to take when max iterations are reached. Options: "true_result" or "false_result". Default: "false_result". |
+| input_text     | String   | The primary text input for the operation. |
+| match_text     | String   | The text to compare against. |
+| operator       | Dropdown | The operator used to compare texts. Options include equals, not equals, contains, starts with, ends with, and regex. The default is equals. |
+| case_sensitive | Boolean  | When set to true, the comparison will be case sensitive. This setting does not apply to regex comparison. The default is false. |
+| message        | Message  | The message to pass through either route. |
+| max_iterations | Integer  | The maximum number of iterations allowed for the conditional router. The default is 10. |
+| default_route  | Dropdown | The route to take when max iterations are reached. Options include true_result or false_result. The default is false_result. |
 
 **Outputs**
 
 | Name         | Type    | Description                                |
 |--------------|---------|--------------------------------------------|
-| true_result  | Message | The output when the condition is true.     |
-| false_result | Message | The output when the condition is false.    |
+| true_result  | Message | The output produced when the condition is true. |
+| false_result | Message | The output produced when the condition is false. |
 
 </details>
 
@@ -131,7 +131,7 @@ This component listens for a notification and retrieves its associated state.
 
 | Name | Type   | Description                                    |
 |------|--------|------------------------------------------------|
-| name | String | The name of the notification to listen for.    |
+| name | String | The name of the notification to listen for. |
 
 **Outputs**
 
@@ -168,14 +168,14 @@ Follow along with this step-by-step video guide for creating this flow and addin
 
 | Name | Type      | Description                                          |
 |------|-----------|------------------------------------------------------|
-| data | Data/List | The initial list of Data objects to iterate over.    |
+| data | Data/List | The initial list of Data objects to process. |
 
 **Outputs**
 
 | Name | Type    | Description                                           |
 |------|---------|-------------------------------------------------------|
-| item | Data    | Outputs one item at a time from the data list.        |
-| done | Data    | Triggered when iteration complete, returns aggregated results. |
+| item | Data    | The current item being processed from the data list. |
+| done | Data    | The aggregated results after all items are processed. |
 
 </details>
 
@@ -190,15 +190,15 @@ This component generates a notification for the Listen component to use.
 
 | Name   | Type    | Description                                                       |
 |--------|---------|-------------------------------------------------------------------|
-| name   | String  | The name of the notification.                                     |
-| data   | Data    | The data to store in the notification.                            |
-| append | Boolean | If true, the record will be appended to the existing notification.|
+| name   | String  | The name of the notification. |
+| data   | Data    | The data to store in the notification. |
+| append | Boolean | When set to true, the record will be added to the existing notification. |
 
 **Outputs**
 
 | Name   | Type | Description                             |
 |--------|------|-----------------------------------------|
-| output | Data | The data stored in the notification.    |
+| output | Data | The data stored in the notification. |
 
 </details>
 
@@ -213,14 +213,14 @@ This component forwards the input message, unchanged.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_message | Input Message | The message to be passed forward. |
-| ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
+| input_message | Input Message | The message to forward. |
+| ignored_message | Ignored Message | A second message that will be ignored. Used as a workaround for continuity. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| output_message | Output Message | The forwarded input message. |
+| output_message | Output Message | The forwarded message from the input. |
 
 </details>
 

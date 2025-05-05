@@ -60,7 +60,7 @@ record_number: {batch_index}, name: {text_input}, summary: {model_response}
 | Name | Type | Description |
 |------|------|-------------|
 | model | HandleInput | Connect the 'Language Model' output from your LLM component here. Required. |
-| system_message | MultilineInput | Multi-line system instruction for all rows in the DataFrame. |
+| system_message | MultilineInput | A multi-line system instruction for all rows in the DataFrame. |
 | df | DataFrameInput | The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
 | column_name | MessageTextInput | The name of the DataFrame column to treat as text messages. Default='text'. Required. |
 | enable_metadata | BoolInput | If True, add metadata to the output DataFrame. |
@@ -84,7 +84,7 @@ The Current Date component returns the current date and time in a selected timez
 
 | Name | Type | Description |
 |------|------|-------------|
-| timezone | String | Select the timezone for the current date and time. |
+| timezone | String | The timezone for the current date and time. |
 
 **Outputs**
 
@@ -139,18 +139,18 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 | memory | Memory | Retrieve messages from an external memory. If empty, it will use the Langflow tables. |
 | sender | String | Filter by sender type. |
 | sender_name | String | Filter by sender name. |
-| n_messages | Integer | Number of messages to retrieve. |
+| n_messages | Integer | The number of messages to retrieve. |
 | session_id | String | The session ID of the chat. If empty, the current session ID parameter will be used. |
-| order | String | Order of the messages. |
+| order | String | The order of the messages. |
 | template | String | The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| messages | Data | Retrieved messages as Data objects. |
-| messages_text | String | Retrieved messages formatted as text. |
-| lc_memory | Memory | A constructed Langchain [ConversationBufferMemory](https://api.python.langchain.com/en/latest/memory/langchain.memory.buffer.ConversationBufferMemory.html) object |
+| messages | Data | The retrieved messages as Data objects. |
+| messages_text | String | The retrieved messages formatted as text. |
+| lc_memory | Memory | A constructed Langchain [ConversationBufferMemory](https://api.python.langchain.com/en/latest/memory/langchain.memory.buffer.ConversationBufferMemory.html) object. |
 
 </details>
 
@@ -216,9 +216,9 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 |------|------|-------------|
 | llm | LanguageModel | The language model to use to generate the structured output. |
 | input_value | String | The input message to the language model. |
-| system_prompt | String | Instructions to the language model for formatting the output. |
+| system_prompt | String | The instructions to the language model for formatting the output. |
 | schema_name | String | The name for the output data schema. |
-| output_schema | Table | Defines the structure and data types for the model's output. |
+| output_schema | Table | The structure and data types for the model's output. |
 | multiple | Boolean | [Deprecated] Always set to `True`. |
 
 **Outputs**
@@ -244,8 +244,8 @@ This component dynamically creates a record with a specified number of fields.
 
 | Name | Type | Description |
 |------|------|-------------|
-| n_fields | Integer | Number of fields to be added to the record. |
-| text_key | String | Key used as text. |
+| n_fields | Integer | The number of fields to be added to the record. |
+| text_key | String | The key used as text. |
 
 **Outputs**
 
@@ -287,7 +287,7 @@ Please list three fruits.
 
 | Name | Type | Description |
 |------|------|-------------|
-| parser_type | String | Select the parser type. Currently supports "CSV". |
+| parser_type | String | The parser type. Currently supports "CSV". |
 
 **Outputs**
 

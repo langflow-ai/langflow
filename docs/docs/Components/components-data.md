@@ -62,14 +62,14 @@ Your request returns a list of blog posts in the `result` field.
 | headers | Headers | The headers to send with the request as a dictionary. |
 | timeout | Timeout | The timeout to use for the request. |
 | follow_redirects | Follow Redirects | Whether to follow http redirects. |
-| save_to_file | Save to File | Save the API response to a temporary file |
+| save_to_file | Save to File | Save the API response to a temporary file. |
 | include_httpx_metadata | Include HTTPx Metadata | Include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The result of the API requests. Returns a Data object containing source URL and results.  |
+| data | Data | The result of the API requests. Returns a Data object containing source URL and results. |
 | dataframe | DataFrame | Converts the API response data into a tabular DataFrame format. |
 
 </details>
@@ -85,20 +85,20 @@ This component recursively loads files from a directory, with options for file t
 
 | Input              | Type             | Description                                        |
 | ------------------ | ---------------- | -------------------------------------------------- |
-| path               | MessageTextInput | Path to the directory to load files from           |
-| types              | MessageTextInput | File types to load (leave empty to load all types) |
-| depth              | IntInput         | Depth to search for files                          |
-| max_concurrency    | IntInput         | Maximum concurrency for loading files              |
-| load_hidden        | BoolInput        | If true, hidden files are loaded               |
-| recursive          | BoolInput        | If true, the search is recursive              |
-| silent_errors      | BoolInput        | If true, errors do not raise an exception        |
-| use_multithreading | BoolInput        | If true, multithreading is used               |
+| path               | MessageTextInput | The path to the directory to load files from.      |
+| types              | MessageTextInput | The file types to load (leave empty to load all types). |
+| depth              | IntInput         | The depth to search for files.                     |
+| max_concurrency    | IntInput         | The maximum concurrency for loading files.         |
+| load_hidden        | BoolInput        | If true, hidden files are loaded.                  |
+| recursive          | BoolInput        | If true, the search is recursive.                  |
+| silent_errors      | BoolInput        | If true, errors do not raise an exception.         |
+| use_multithreading | BoolInput        | If true, multithreading is used.                   |
 
 **Outputs**
 
 | Output | Type       | Description                         |
 | ------ | ---------- | ----------------------------------- |
-| data   | List[Data] | Loaded file data from the directory |
+| data   | List[Data] | The loaded file data from the directory. |
 
 </details>
 
@@ -123,9 +123,9 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| path | Files | Path to file(s) to load. Supports individual files or bundled archives. |
-| file_path | Server File Path | Data object with a `file_path` property pointing to the server file or a Message object with a path to the file. Supersedes 'Path' but supports the same file types. |
-| separator | Separator | Specify the separator to use between multiple outputs in Message format. |
+| path | Files | The path to file(s) to load. Supports individual files or bundled archives. |
+| file_path | Server File Path | A Data object with a `file_path` property pointing to the server file or a Message object with a path to the file. Supersedes 'Path' but supports the same file types. |
+| separator | Separator | The separator to use between multiple outputs in Message format. |
 | silent_errors | Silent Errors | If true, errors do not raise an exception. |
 | delete_server_file_after_processing | Delete Server File After Processing | If true, the Server File Path is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | If true, files with unsupported extensions are not processed. |
@@ -137,9 +137,9 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | Parsed content of the file as a [Data](/concepts-objects) object. |
-| dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe-object) object. |
-| message | Message | File content as a [Message](/concepts-objects#message-object) object. |
+| data | Data | The parsed content of the file as a [Data](/concepts-objects) object. |
+| dataframe | DataFrame | The file content as a [DataFrame](/concepts-objects#dataframe-object) object. |
+| message | Message | The file content as a [Message](/concepts-objects#message-object) object. |
 
 </details>
 
@@ -239,17 +239,17 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 | Name | Display Name | Info |
 |------|--------------|------|
 | urls | URLs | Enter one or more URLs. URLs are automatically validated and cleaned. |
-| format | Output Format | Output Format. Use **Text** to extract text from the HTML, **Raw HTML** for the raw HTML content, or **JSON** to extract JSON from the HTML. |
-| separator | Separator | Specify the separator to use between multiple outputs. Default for **Text** is `\n\n`. Default for **Raw HTML** is `\n<!-- Separator -->\n`. |
+| format | Output Format | The output format. Use **Text** to extract text from the HTML, **Raw HTML** for the raw HTML content, or **JSON** to extract JSON from the HTML. |
+| separator | Separator | The separator to use between multiple outputs. Default for **Text** is `\n\n`. Default for **Raw HTML** is `\n<!-- Separator -->\n`. |
 | clean_extra_whitespace | Clean Extra Whitespace | Whether to clean excessive blank lines in the text output. Only applies to `Text` format. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of [Data](/concepts-objects) objects containing fetched content and metadata. |
-| text | Text | Fetched content as formatted text, with applied separators and cleaning. |
-| dataframe | DataFrame | Content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
+| data | Data | A list of [Data](/concepts-objects) objects containing fetched content and metadata. |
+| text | Text | The fetched content as formatted text, with applied separators and cleaning. |
+| dataframe | DataFrame | The content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
 
 </details>
 
@@ -317,15 +317,15 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 | Input       | Type             | Description                                                                          |
 | ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
-| label_ids   | MessageTextInput | Comma-separated list of label IDs to filter emails                                   |
-| max_results | MessageTextInput | Maximum number of emails to load                                                     |
+| json_string | SecretStrInput   | A JSON string containing OAuth 2.0 access token information for service account access. |
+| label_ids   | MessageTextInput | A comma-separated list of label IDs to filter emails.                                |
+| max_results | MessageTextInput | The maximum number of emails to load.                                                |
 
 **Outputs**
 
 | Output | Type | Description       |
 | ------ | ---- | ----------------- |
-| data   | Data | Loaded email data |
+| data   | Data | The loaded email data. |
 
 </details>
 
@@ -342,14 +342,14 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 | Input       | Type             | Description                                                                          |
 | ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
-| document_id | MessageTextInput | Single Google Drive document ID                                                      |
+| json_string | SecretStrInput   | A JSON string containing OAuth 2.0 access token information for service account access. |
+| document_id | MessageTextInput | A single Google Drive document ID.                                                   |
 
 **Outputs**
 
 | Output | Type | Description          |
 | ------ | ---- | -------------------- |
-| docs   | Data | Loaded document data |
+| docs   | Data | The loaded document data. |
 
 </details>
 
@@ -366,19 +366,19 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 | Input          | Type             | Description                                                                          |
 | -------------- | ---------------- | ------------------------------------------------------------------------------------ |
-| token_string   | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
-| query_item     | DropdownInput    | The field to query                                                                   |
-| valid_operator | DropdownInput    | Operator to use in the query                                                         |
-| search_term    | MessageTextInput | The value to search for in the specified query item                                  |
-| query_string   | MessageTextInput | The query string used for searching (can be edited manually)                         |
+| token_string   | SecretStrInput   | A JSON string containing OAuth 2.0 access token information for service account access. |
+| query_item     | DropdownInput    | The field to query.                                                                  |
+| valid_operator | DropdownInput    | The operator to use in the query.                                                    |
+| search_term    | MessageTextInput | The value to search for in the specified query item.                                 |
+| query_string   | MessageTextInput | The query string used for searching (can be edited manually).                        |
 
 **Outputs**
 
 | Output     | Type      | Description                                     |
 | ---------- | --------- | ----------------------------------------------- |
-| doc_urls   | List[str] | URLs of the found documents                     |
-| doc_ids    | List[str] | IDs of the found documents                      |
-| doc_titles | List[str] | Titles of the found documents                   |
-| Data       | Data      | Document titles and URLs in a structured format |
+| doc_urls   | List[str] | The URLs of the found documents.                |
+| doc_ids    | List[str] | The IDs of the found documents.                 |
+| doc_titles | List[str] | The titles of the found documents.              |
+| Data       | Data      | The document titles and URLs in a structured format. |
 
 </details>
