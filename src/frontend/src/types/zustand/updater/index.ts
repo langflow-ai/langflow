@@ -1,14 +1,14 @@
 export type Version = {
-  name: string, 
-  url: string, 
+  name: string;
+  url: string;
   description_section?: {
-    section?: string,
-    descriptions?: string[]
-  }[], 
+    section?: string;
+    descriptions?: string[];
+  }[];
   version_oss: string;
   is_lf_oss_update?: boolean;
-  date?: string,
-}
+  date?: string;
+};
 
 export type UpdaterStoreType = {
   openUpdaterModal: boolean;
@@ -16,6 +16,6 @@ export type UpdaterStoreType = {
   latestVersion: Version | null;
   versionApp: string | null;
   version_oss: string | null;
-  showVersionChangelog: boolean
-  isLatestVersion: boolean
+  showVersionChangelog: boolean;
+  isLatestVersion: boolean;
 };
