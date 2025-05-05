@@ -147,27 +147,27 @@ export default function ToolsTable({
       cellClass: "text-muted-foreground",
     },
     {
-      field: isAction ? "name" : "tags",
+      field: "name",
       headerName: isAction ? "Action" : "Slug",
       flex: 1,
       resizable: false,
       valueGetter: (params) =>
-        isAction
-          ? params.data.name !== ""
-            ? parseString(params.data.name, [
-                "snake_case",
-                "no_blank",
-                "uppercase",
-              ])
-            : parseString(params.data.display_name, [
-                "snake_case",
-                "no_blank",
-                "uppercase",
-              ])
-          : parseString(params.data.tags.join(", "), [
+        params.data.name !== ""
+          ? parseString(params.data.name, [
               "snake_case",
+              "no_blank",
               "uppercase",
-            ]),
+            ])
+          : isAction
+            ? parseString(params.data.display_name, [
+                "snake_case",
+                "no_blank",
+                "uppercase",
+              ])
+            : parseString(params.data.tags.join(", "), [
+                "snake_case",
+                "uppercase",
+              ]),
       cellClass: "text-muted-foreground",
     },
     {
