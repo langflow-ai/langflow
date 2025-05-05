@@ -202,7 +202,7 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 
 ## Legacy components
 
-Legacy components are no longer in active development but are backward compatible.
+Legacy components are available for use but are no longer supported.
 
 ### Create List
 
