@@ -104,7 +104,7 @@ async def get_flow_events_response(
             events: list = []
             # Get all available events from the queue without blocking
             while not main_queue.empty():
-                event_id, value, put_time = await main_queue.get()
+                _, value, _ = await main_queue.get()
                 if value is None:
                     # End of stream, trigger end event
                     if event_task is not None:
@@ -117,7 +117,7 @@ async def get_flow_events_response(
 
             # If no events were available, wait for one (with timeout)
             if not events:
-                _, value, _ = await asyncio.wait_for(main_queue.get(), timeout=2.0)
+                _, value, _ = await main_queue.get()
                 if value is None:
                     # End of stream, trigger end event
                     if event_task is not None:
