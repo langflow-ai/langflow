@@ -261,6 +261,7 @@ class MCPToolsComponent(Component):
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
+                    self.validate_npx_command(build_config["command"]["value"])
                     await self.update_tools(
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
@@ -443,7 +444,6 @@ class MCPToolsComponent(Component):
                 mode = self.mode
             if command is None:
                 command = self.command
-                self.validate_npx_command(command)
             if env is None:
                 env = self.env
             if url is None:
