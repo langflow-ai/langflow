@@ -13,13 +13,14 @@ import anyio
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
+from pyinstrument import Profiler
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
@@ -41,7 +42,6 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.utils import initialize_services, teardown_services
-from pyinstrument import Profiler
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -277,11 +277,12 @@ def create_app():
     # Add profiling middleware
     PROFILING = True  # You might want to get this from settings_service
     if PROFILING:
+
         @app.middleware("http")
         async def profile_request(request: Request, call_next):
             profiling = request.query_params.get("profile", False)
             if profiling:
-                profiler = Profiler(async_mode='enabled')  # Enable async mode for FastAPI
+                profiler = Profiler(async_mode="enabled")  # Enable async mode for FastAPI
                 profiler.start()
                 await call_next(request)
                 profiler.stop()

@@ -26,7 +26,6 @@ from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):

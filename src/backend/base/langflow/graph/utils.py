@@ -12,13 +12,13 @@ from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.serialization import serialize
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
-from langflow.serialization.constants import MAX_TEXT_LENGTH, MAX_ITEMS_LENGTH
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDataResponse
