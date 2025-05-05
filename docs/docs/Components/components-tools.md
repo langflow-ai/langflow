@@ -102,6 +102,8 @@ If you want to apply filters regardless of the LLM's input, use the **Static Fil
 <details>
 <summary>Parameters</summary>
 
+**Inputs**
+
 | Name              | Type   | Description                                                                                                                      |
 |-------------------|--------|----------------------------------------------------------------------------------------------------------------------------------|
 | Tool Name         | String | The name used to reference the tool in the agent's prompt.                                                                       |
