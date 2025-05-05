@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { GetStartedProgress } from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons/components/get-started-progress";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useUpdateUser } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import { Separator } from "@radix-ui/react-separator";
 import { useState } from "react";
@@ -22,12 +23,22 @@ export const HeaderButtons = ({
   const userDismissedDialog = userData?.optins?.dialog_dismissed;
   const isGithubStarred = userData?.optins?.github_starred;
   const isDiscordJoined = userData?.optins?.discord_clicked;
-
   const [isDismissedDialog, setIsDismissedDialog] =
     useState(userDismissedDialog);
 
+  const { mutate: updateUser } = useUpdateUser();
+
   const handleDismissDialog = () => {
     setIsDismissedDialog(true);
+    updateUser({
+      user_id: userData?.id!,
+      user: {
+        optins: {
+          ...userData?.optins,
+          dialog_dismissed: true,
+        },
+      },
+    });
   };
 
   return (
@@ -41,7 +52,7 @@ export const HeaderButtons = ({
             handleDismissDialog={handleDismissDialog}
           />
 
-          <div className="-mx-4 mt-4 w-[280px]">
+          <div className="-mx-4 mt-1 w-[280px]">
             <hr className="border-t-1 w-full" />
           </div>
         </>
@@ -52,7 +63,7 @@ export const HeaderButtons = ({
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div className="flex-1 text-sm font-semibold">Folders</div>
+        <div className="flex-1 text-sm font-semibold">Projects</div>
         <div className="flex items-center gap-1">
           <UploadFolderButton
             onClick={handleUploadFlowsToFolder}

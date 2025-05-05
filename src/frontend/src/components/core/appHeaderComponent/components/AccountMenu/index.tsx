@@ -1,11 +1,13 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
+  DATASTAX_DOCS_URL,
   DISCORD_URL,
   DOCS_URL,
   GITHUB_URL,
   TWITTER_URL,
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
@@ -45,7 +47,7 @@ export const AccountMenu = () => {
       <HeaderMenu>
         <HeaderMenuToggle>
           <div
-            className="h-7 w-7 rounded-lg focus-visible:outline-0"
+            className="h-6 w-6 rounded-lg focus-visible:outline-0"
             data-testid="user-profile-settings"
           >
             <ProfileIcon />
@@ -54,7 +56,7 @@ export const AccountMenu = () => {
         <HeaderMenuItems position="right" classNameSize="w-[272px]">
           <div className="divide-y divide-foreground/10">
             <div>
-              <div className="h-[46px] items-center px-4 pt-3">
+              <div className="h-[44px] items-center px-4 pt-3">
                 <div className="flex items-center justify-between">
                   <span
                     data-testid="menu_version_button"
@@ -107,7 +109,10 @@ export const AccountMenu = () => {
                   </HeaderMenuItemButton>
                 </div>
               )}
-              <HeaderMenuItemLink newPage href={DOCS_URL}>
+              <HeaderMenuItemLink
+                newPage
+                href={ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL}
+              >
                 <span data-testid="menu_docs_button" id="menu_docs_button">
                   Docs
                 </span>
@@ -143,7 +148,7 @@ export const AccountMenu = () => {
                 >
                   <ForwardedIconComponent
                     strokeWidth={2}
-                    name="TwitterXIcon"
+                    name="TwitterX"
                     className="h-4 w-4"
                   />
                   X
@@ -151,7 +156,7 @@ export const AccountMenu = () => {
               </HeaderMenuItemLink>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-1 text-sm">
+            <div className="flex items-center justify-between px-4 py-[6.5px] text-sm">
               <span className="">Theme</span>
               <div className="relative top-[1px] float-right">
                 <ThemeButtons />
