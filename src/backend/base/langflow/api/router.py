@@ -1,4 +1,3 @@
-# Router for base api
 from fastapi import APIRouter
 from typing import Dict, Any
 
@@ -11,8 +10,10 @@ from langflow.api.v1 import (
     flows_router,
     folders_router,
     login_router,
+    mcp_projects_router,
     mcp_router,
     monitor_router,
+    projects_router,
     starter_projects_router,
     store_router,
     users_router,
@@ -47,10 +48,12 @@ router_v1.include_router(variables_router)
 router_v1.include_router(files_router)
 router_v1.include_router(monitor_router)
 router_v1.include_router(folders_router)
+router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(ai_agent_router)
+router_v1.include_router(mcp_projects_router)
 
 # Create a simple direct endpoint to test monkey-agent functionality
 @router_v1.get("/monkey-agent/test", tags=["Monkey Agent"])

@@ -36,6 +36,7 @@ class FieldTypes(str, Enum):
     SLIDER = "slider"
     TAB = "tab"
     QUERY = "query"
+    TOOLS = "tools"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -206,6 +207,8 @@ class DropDownMixin(BaseModel):
     """Variable that defines if a toggle button is shown."""
     toggle_value: bool | None = None
     """Variable that defines the value of the toggle button. Defaults to None."""
+    toggle_disable: bool | None = None
+    """Variable that defines if the toggle button is disabled. Defaults to None."""
 
     @field_validator("toggle_value")
     @classmethod

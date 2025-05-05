@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+import pandas as pd
 from loguru import logger
 
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -124,12 +124,26 @@ async def log_transaction(
             else:
                 return
         inputs = _vertex_to_primitive_dict(source)
+
+        # Convert the result to a serializable format
+        if source.result:
+            try:
+                result_dict = source.result.model_dump()
+                for key, value in result_dict.items():
+                    if isinstance(value, pd.DataFrame):
+                        result_dict[key] = value.to_dict()
+                outputs = result_dict
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Error serializing result: {e!s}")
+                outputs = None
+        else:
+            outputs = None
+
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
             inputs=inputs,
-            # ugly hack to get the model dump with weird datatypes
-            outputs=json.loads(source.result.model_dump_json()) if source.result else None,
+            outputs=outputs,
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
@@ -139,8 +153,8 @@ async def log_transaction(
                 inserted = await crud_log_transaction(session, transaction)
                 if inserted:
                     logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception:  # noqa: BLE001
-        logger.error("Error logging transaction")
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Error logging transaction: {exc!s}")
 
 
 async def log_vertex_build(
@@ -149,7 +163,7 @@ async def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: ResultDataResponse,
+    data: ResultDataResponse | dict,
     artifacts: dict | None = None,
 ) -> None:
     try:

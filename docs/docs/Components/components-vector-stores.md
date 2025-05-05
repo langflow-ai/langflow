@@ -3,6 +3,8 @@ title: Vector stores
 slug: /components-vector-stores
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Vector store components in Langflow
 
 Vector databases store vector data, which backs AI workloads like chatbots and Retrieval Augmented Generation.
@@ -77,6 +79,54 @@ The embedding model selection is made when creating a new collection and cannot 
 For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/starter-projects-vector-store-rag).
 
 For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+
+### Hybrid search
+
+The **Astra DB** component includes **hybrid search**, which is enabled by default.
+
+The component fields related to hybrid search are **Search Query**, **Lexical Terms**, and **Reranker**.
+
+* **Search Query** finds results by vector similarity.
+* **Lexical Terms** is a comma-separated string of keywords, like `features, data, attributes, characteristics`.
+* **Reranker** is the re-ranker model used in the hybrid search.
+The re-ranker model is `nvidia/llama-3.2-nv.reranker`.
+
+[Hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
+
+To use **Hybrid search** in the **Astra DB** component, do the following:
+
+1. Click **New Flow** > **RAG** > **Hybrid Search RAG**.
+2. In the **OpenAI** model component, add your **OpenAI API key**.
+3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
+4. In the **Database** field, select your database.
+5. In the **Collection** field, select the collection you want to search.
+You must enable support for hybrid search when you create the collection.
+6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
+Your query is sent to two components: an **OpenAI** model component and the **Astra DB** vector database component.
+The **OpenAI** component contains a prompt for creating the lexical query from your input:
+```text
+You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
+You should convert the query into:
+1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+2. A question to use as the basis for a QA embedding engine.
+Avoid common keywords associated with the user's subject matter.
+```
+7. To view the keywords and questions the **OpenAI** component generates from your collection, in the **OpenAI** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+```
+1. Keywords: features, data, attributes, characteristics
+2. Question: What characteristics can be identified in my data?
+```
+8. To view the [DataFrame](/concepts-objects#dataframe-object) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The DataFrame is passed to a **Parser** component, which parses the contents of the **Keywords** column into a string.
+
+    This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
+    Note that the **Search Query** port of the Astra DB port is connected to the **Chat Input** component from step 6.
+    This **Search Query** is vectorized, and both the **Search Query** and **Lexical Terms** content are sent to the reranker at the `find_and_rerank` endpoint.
+
+    The reranker compares the vector search results against the string of terms from the lexical search.
+    The highest-ranked results of your hybrid search are returned to the **Playground**.
+
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).
 
 ## AstraDB Graph vector store
 
@@ -180,6 +230,25 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 ## Chroma DB
 
 This component creates a Chroma Vector Store with search capabilities.
+
+The Chroma DB component creates an ephemeral vector database for experimentation and vector storage.
+
+1. To use this component in a flow, connect it to a component that outputs **Data** or **DataFrame**.
+This example splits text from a [URL](/components-data#url) component, and computes embeddings with the connected **OpenAI Embeddings** component. Chroma DB computes embeddings by default, but you can connect your own embeddings model, as seen in this example.
+
+![ChromaDB receiving split text](/img/component-chroma-db.png)
+
+2. In the **Chroma DB** component, in the **Collection** field, enter a name for your embeddings collection.
+3. Optionally, to persist the Chroma database, in the **Persist** field, enter a directory to store the `chroma.sqlite3` file.
+This example uses `./chroma-db` to create a directory relative to where Langflow is running.
+4. To load data and embeddings into your Chroma database, in the **Chroma DB** component, click <Icon name="Play" aria-label="Play icon" />.
+:::tip
+When loading duplicate documents, enable the **Allow Duplicates** option in Chroma DB if you want to store multiple copies of the same content, or disable it to automatically deduplicate your data.
+:::
+5. To view the split data, in the **Split Text** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+6. To query your loaded data, open the **Playground** and query your database.
+Your input is converted to vector data and compared to the stored vectors in a vector similarity search.
+
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
 
 ### Inputs
@@ -268,6 +337,43 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 |----------------|------------------------|--------------------------------|
 | vector_store   | CouchbaseVectorStore    | A Couchbase vector store instance configured with the specified parameters. |
 
+## Local DB
+
+The **Local DB** component is Langflow's enhanced version of Chroma DB.
+
+The component adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
+
+Local DB includes **Ingest** and **Retrieve** modes.
+
+The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your database to the Langflow cache directory. The Langflow cache directory location is specified in `LANGFLOW_CONFIG_DIR`. For more information, see [Environment variables](/environment-variables).
+
+The **Retrieve** mode can query your **Chroma DB** collections.
+
+![Local DB retrieving vectors](/img/component-local-db.png)
+
+For more information, see the [Chroma documentation](https://docs.trychroma.com/).
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| collection_name | String | The name of the Chroma collection. Default: "langflow". |
+| persist_directory | String | Custom base directory to save the vector store. Collections will be stored under `{directory}/vector_stores/{collection_name}`. If not specified, it will use your system's cache folder. |
+| existing_collections | String | Select a previously created collection to search through its stored data. |
+| embedding | Embeddings | The embedding function to use for the vector store. |
+| allow_duplicates | Boolean | If false, will not add documents that are already in the Vector Store. |
+| search_type | String | Type of search to perform: "Similarity" or "MMR". |
+| ingest_data | Data/DataFrame | Data to store. It will be embedded and indexed for semantic search. |
+| search_query | String | Enter text to search for similar content in the selected collection. |
+| number_of_results | Integer | Number of results to return. Default: 10. |
+| limit | Integer | Limit the number of records to compare when Allow Duplicates is False. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| vector_store | Chroma | A local Chroma vector store instance configured with the specified parameters. |
+| search_results | List[Data](/concepts-objects#data-object) | Results of similarity search. |
 
 ## Elasticsearch
 

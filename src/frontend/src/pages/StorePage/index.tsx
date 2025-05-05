@@ -148,7 +148,10 @@ export default function StorePage(): JSX.Element {
           setLoading(false);
           setErrorData({
             title: COMPONENTS_ERROR_ALERT,
-            list: [err["response"]["data"]["detail"]],
+            list: [
+              err?.response?.data?.detail ??
+                "There was an error fetching the components",
+            ],
           });
         }
       });
