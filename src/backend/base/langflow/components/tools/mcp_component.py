@@ -176,7 +176,7 @@ class MCPToolsComponent(Component):
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
-        
+
     def validate_npx_command(self, command: str) -> str:
         """Validate the npx command."""
         if "npx" in command and not shutil.which("node"):
