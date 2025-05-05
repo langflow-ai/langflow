@@ -101,7 +101,7 @@ async def get_flow_events_response(
 
         # Polling mode - get all available events
         try:
-            events: list[str] = []
+            events: list = []
             # Get all available events from the queue without blocking
             while not main_queue.empty():
                 event_id, value, put_time = await main_queue.get()
