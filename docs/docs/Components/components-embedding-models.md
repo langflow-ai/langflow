@@ -217,10 +217,6 @@ Use this component to create embeddings with Hugging Face's hosted models, or to
 | API Key | API Key | The API key for accessing the Hugging Face Inference API. |
 | API URL | API URL | The URL of the Hugging Face Inference API. |
 | Model Name | Model Name | The name of the model to use for embeddings. |
-| Cache Folder | Cache Folder | The folder path to cache Hugging Face models. |
-| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process. |
-| Model Kwargs | Model Arguments | Additional arguments for the model. |
-| Multi Process | Multi-Process | Whether to use multiple processes. |
 
 ### Outputs
 
