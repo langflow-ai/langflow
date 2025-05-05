@@ -31,7 +31,8 @@ class LangSmithTracer(BaseTracer):
                 return
             from langsmith import get_current_run_tree
             from langsmith.run_helpers import trace
-            from langsmith.run_trees import RunTree
+            if TYPE_CHECKING:
+                from langsmith.run_trees import RunTree
 
             self.trace_name = trace_name
             self.trace_type = trace_type
