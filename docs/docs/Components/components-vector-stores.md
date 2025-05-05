@@ -64,7 +64,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Astra DB vector store instance configured with the specified parameters. |
+| vector_store | Vector Store | The Astra DB vector store instance configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
 </details>
@@ -145,28 +145,28 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| collection_name | Collection Name | The name of the collection within AstraDB where the vectors will be stored (required) |
-| token | Astra DB Application Token | Authentication token for accessing AstraDB (required) |
-| api_endpoint | API Endpoint | API endpoint URL for the AstraDB service (required) |
-| search_input | Search Input | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store |
-| namespace | Namespace | Optional namespace within AstraDB to use for the collection |
-| embedding | Embedding Model | Embedding model to use |
-| metric | Metric | Distance metric for vector comparisons (options: "cosine", "euclidean", "dot_product") |
-| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off") |
-| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
-| search_type | Search Type | Search type to use (options: "Similarity", "Graph Traversal", "Hybrid") |
-| traversal_depth | Traversal Depth | Maximum depth for graph traversal searches (default: 1) |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+| collection_name | Collection Name | The name of the collection within AstraDB where the vectors will be stored. Required. |
+| token | Astra DB Application Token | Authentication token for accessing AstraDB. Required. |
+| api_endpoint | API Endpoint | API endpoint URL for the AstraDB service. Required. |
+| search_input | Search Input | Query string for similarity search. |
+| ingest_data | Ingest Data | Data to be ingested into the vector store. |
+| namespace | Namespace | Optional namespace within AstraDB to use for the collection. |
+| embedding | Embedding Model | Embedding model to use. |
+| metric | Metric | Distance metric for vector comparisons. The options are "cosine", "euclidean", "dot_product". |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store. The options are "Sync", "Async", "Off". |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4). |
+| search_type | Search Type | Search type to use. The options are "Similarity", "Graph Traversal", "Hybrid". |
+| traversal_depth | Traversal Depth | Maximum depth for graph traversal searches. Default: 1. |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Astra DB graph vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
+| vector_store | Vector Store | The Graph RAG vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
 </details>
 
@@ -182,30 +182,30 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 
 | Name | Type | Description |
 |------|------|-------------|
-| database_ref | String | Contact points for the database or AstraDB database ID |
-| username | String | Username for the database (leave empty for AstraDB) |
-| token | SecretString | User password for the database or AstraDB token |
-| keyspace | String | Table Keyspace or AstraDB namespace |
-| table_name | String | Name of the table or AstraDB collection |
-| ttl_seconds | Integer | Time-to-live for added texts |
-| batch_size | Integer | Number of data to process in a single batch |
-| setup_mode | String | Configuration mode for setting up the Cassandra table |
-| cluster_kwargs | Dict | Additional keyword arguments for the Cassandra cluster |
-| search_query | String | Query for similarity search |
-| ingest_data | Data | Data to be ingested into the vector store |
-| embedding | Embeddings | Embedding function to use |
-| number_of_results | Integer | Number of results to return in search |
-| search_type | String | Type of search to perform |
-| search_score_threshold | Float | Minimum similarity score for search results |
-| search_filter | Dict | Metadata filters for search query |
-| body_search | String | Document textual search terms |
-| enable_body_search | Boolean | Flag to enable body search |
+| database_ref | String | Contact points for the database or AstraDB database ID. |
+| username | String | Username for the database (leave empty for AstraDB). |
+| token | SecretString | User password for the database or AstraDB token. |
+| keyspace | String | Table Keyspace or AstraDB namespace. |
+| table_name | String | Name of the table or AstraDB collection. |
+| ttl_seconds | Integer | Time-to-live for added texts. |
+| batch_size | Integer | Number of data to process in a single batch. |
+| setup_mode | String | Configuration mode for setting up the Cassandra table. |
+| cluster_kwargs | Dict | Additional keyword arguments for the Cassandra cluster. |
+| search_query | String | Query for similarity search. |
+| ingest_data | Data | Data to be ingested into the vector store. |
+| embedding | Embeddings | Embedding function to use. |
+| number_of_results | Integer | Number of results to return in search. |
+| search_type | String | Type of search to perform. |
+| search_score_threshold | Float | Minimum similarity score for search results. |
+| search_filter | Dict | Metadata filters for search query. |
+| body_search | String | Document textual search terms. |
+| enable_body_search | Boolean | Flag to enable body search. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| vector_store | Cassandra | A Cassandra vector store instance configured with the specified parameters. |
+| vector_store | Cassandra | The Cassandra vector store instance configured with the specified parameters. |
 | search_results | List[Data] | The results of the similarity search as a list of `Data` objects. |
 
 </details>
@@ -221,28 +221,28 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| database_ref | Contact Points / Astra Database ID | Contact points for the database or AstraDB database ID (required) |
-| username | Username | Username for the database (leave empty for AstraDB) |
-| token | Password / AstraDB Token | User password for the database or AstraDB token (required) |
-| keyspace | Keyspace | Table Keyspace or AstraDB namespace (required) |
-| table_name | Table Name | The name of the table or AstraDB collection where vectors will be stored (required) |
-| setup_mode | Setup Mode | Configuration mode for setting up the Cassandra table (options: "Sync", "Off", default: "Sync") |
-| cluster_kwargs | Cluster arguments | Optional dictionary of additional keyword arguments for the Cassandra cluster |
-| search_query | Search Query | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store (list of Data objects) |
-| embedding | Embedding | Embedding model to use |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
-| search_type | Search Type | Search type to use (options: "Traversal", "MMR traversal", "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)", default: "Traversal") |
-| depth | Depth of traversal | The maximum depth of edges to traverse (for "Traversal" or "MMR traversal" search types, default: 1) |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (for "Similarity with score threshold" search type) |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+| database_ref | Contact Points / Astra Database ID | The contact points for the database or AstraDB database ID. Required. |
+| username | Username | The username for the database. Leave this field empty for AstraDB. |
+| token | Password / AstraDB Token | The user password for the database or AstraDB token. Required. |
+| keyspace | Keyspace | The table Keyspace or AstraDB namespace. Required. |
+| table_name | Table Name | The name of the table or AstraDB collection where vectors will be stored. Required. |
+| setup_mode | Setup Mode | The configuration mode for setting up the Cassandra table. The options are "Sync" or "Off". Default: "Sync". |
+| cluster_kwargs | Cluster arguments | An optional dictionary of additional keyword arguments for the Cassandra cluster. |
+| search_query | Search Query | The query string for similarity search. |
+| ingest_data | Ingest Data | The list of data to be ingested into the vector store. |
+| embedding | Embedding | The embedding model to use. |
+| number_of_results | Number of Results | The number of results to return in similarity search (default: 4). |
+| search_type | Search Type | The search type to use. The options are "Traversal", "MMR traversal", "Similarity", "Similarity with score threshold", or "MMR (Max Marginal Relevance)". Default: "Traversal". |
+| depth | Depth of traversal | The maximum depth of edges to traverse. Used for "Traversal" or "MMR traversal" search types. Default: 1. |
+| search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results. Used for "Similarity with score threshold" search types. |
+| search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | A Cassandra Graph vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
+| vector_store | Vector Store | The Cassandra Graph vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
 </details>
 
@@ -280,31 +280,31 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | collection_name               | String        | The name of the Chroma collection. Default: "langflow". |
 | persist_directory             | String        | The directory to persist the Chroma database.     |
 | search_query                  | String        | The query to search for in the vector store.      |
-| ingest_data                   | Data          | The data to ingest into the vector store (list of Data objects). |
+| ingest_data                   | Data          | The data to ingest into the vector store (list of `Data` objects). |
 | embedding                     | Embeddings    | The embedding function to use for the vector store. |
-| chroma_server_cors_allow_origins | String     | CORS allow origins for the Chroma server.         |
-| chroma_server_host            | String        | Host for the Chroma server.                       |
-| chroma_server_http_port       | Integer       | HTTP port for the Chroma server.                  |
-| chroma_server_grpc_port       | Integer       | gRPC port for the Chroma server.                  |
+| chroma_server_cors_allow_origins | String     | The CORS allow origins for the Chroma server.         |
+| chroma_server_host            | String        | The host for the Chroma server.                       |
+| chroma_server_http_port       | Integer       | The HTTP port for the Chroma server.                  |
+| chroma_server_grpc_port       | Integer       | The gRPC port for the Chroma server.                  |
 | chroma_server_ssl_enabled     | Boolean       | Enable SSL for the Chroma server.                 |
 | allow_duplicates              | Boolean       | Allow duplicate documents in the vector store.    |
-| search_type                   | String        | Type of search to perform: "Similarity" or "MMR". |
-| number_of_results             | Integer       | Number of results to return from the search. Default: 10. |
-| limit                         | Integer       | Limit the number of records to compare when Allow Duplicates is False. |
+| search_type                   | String        | The type of search to perform: "Similarity" or "MMR". |
+| number_of_results             | Integer       | The number of results to return from the search. Default: `10`. |
+| limit                         | Integer       | The limit of the number of records to compare when `Allow Duplicates` is `False`. |
 
 **Outputs**
 
 | Name           | Type          | Description                    |
 |----------------|---------------|--------------------------------|
-| vector_store   | Chroma        | Chroma vector store instance   |
-| search_results | List[Data]    | Results of similarity search   |
+| vector_store   | Chroma        | The Chroma vector store instance.  |
+| search_results | List[Data]    | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.    |
 
 </details>
 
 ## Clickhouse
 
 This component implements a Clickhouse Vector Store with search capabilities.
-For more information, see the [CLickhouse Documentation](https://clickhouse.com/docs/en/intro).
+For more information, see the [Clickhouse Documentation](https://clickhouse.com/docs/en/intro).
 
 <details>
 <summary>Parameters</summary>
@@ -313,29 +313,29 @@ For more information, see the [CLickhouse Documentation](https://clickhouse.com/
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| host | hostname | Clickhouse server hostname (required, default: "localhost") |
-| port | port | Clickhouse server port (required, default: 8123) |
-| database | database | Clickhouse database name (required) |
-| table | Table name | Clickhouse table name (required) |
-| username | The ClickHouse user name. | Username for authentication (required) |
-| password | The password for username. | Password for authentication (required) |
-| index_type | index_type | Type of the index (options: "annoy", "vector_similarity", default: "annoy") |
-| metric | metric | Metric to compute distance (options: "angular", "euclidean", "manhattan", "hamming", "dot", default: "angular") |
-| secure | Use https/TLS | Overrides inferred values from the interface or port arguments (default: false) |
-| index_param | Param of the index | Index parameters (default: "'L2Distance',100") |
-| index_query_params | index query params | Additional index query parameters |
-| search_query | Search Query | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store |
-| embedding | Embedding | Embedding model to use |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
-| score_threshold | Score threshold | Threshold for similarity scores |
+| host | hostname | The Clickhouse server hostname. Required. Default: "localhost". |
+| port | port | The Clickhouse server port. Required. Default: 8123. |
+| database | database | The Clickhouse database name. Required. |
+| table | Table name | The Clickhouse table name. Required. |
+| username | The ClickHouse user name. | Username for authentication. Required. |
+| password | The password for username. | Password for authentication. Required. |
+| index_type | index_type | Type of the index. The options are "annoy" and "vector_similarity". Default: "annoy". |
+| metric | metric | Metric to compute distance. The options are "angular", "euclidean", "manhattan", "hamming", "dot". Default: "angular". |
+| secure | Use https/TLS | Overrides inferred values from the interface or port arguments. Default: false. |
+| index_param | Param of the index | Index parameters. Default: "'L2Distance',100". |
+| index_query_params | index query params | Additional index query parameters. |
+| search_query | Search Query | The query string for similarity search. |
+| ingest_data | Ingest Data | The data to be ingested into the vector store. |
+| embedding | Embedding | The embedding model to use. |
+| number_of_results | Number of Results | The number of results to return in similarity search. Default: 4. |
+| score_threshold | Score threshold | The threshold for similarity scores. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built Clickhouse vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+| vector_store | Vector Store | The Clickhouse vector store. |
+| search_results | Search Results | The results of the similarity search as a list of Data objects. |
 
 </details>
 
@@ -351,17 +351,17 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
-| couchbase_connection_string | SecretString | Couchbase Cluster connection string (required).   |
-| couchbase_username       | String        | Couchbase username (required).                   |
-| couchbase_password       | SecretString  | Couchbase password (required).                   |
-| bucket_name              | String        | Name of the Couchbase bucket (required).         |
-| scope_name               | String        | Name of the Couchbase scope (required).          |
-| collection_name          | String        | Name of the Couchbase collection (required).     |
-| index_name               | String        | Name of the Couchbase index (required).          |
+| couchbase_connection_string | SecretString | Couchbase Cluster connection string. Required.   |
+| couchbase_username       | String        | Couchbase username. Required.                   |
+| couchbase_password       | SecretString  | Couchbase password. Required.                   |
+| bucket_name              | String        | Name of the Couchbase bucket. Required.         |
+| scope_name               | String        | Name of the Couchbase scope. Required.          |
+| collection_name          | String        | Name of the Couchbase collection. Required.     |
+| index_name               | String        | Name of the Couchbase index. Required.          |
 | search_query             | String        | The query to search for in the vector store.     |
-| ingest_data              | Data          | The data to ingest into the vector store (list of Data objects). |
+| ingest_data              | Data          | The list of data to ingest into the vector store. |
 | embedding                | Embeddings    | The embedding function to use for the vector store. |
-| number_of_results        | Integer       | Number of results to return from the search. Default: 4 (advanced). |
+| number_of_results        | Integer       | Number of results to return from the search. Default: 4. |
 
 **Outputs**
 
@@ -410,7 +410,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name | Type | Description |
 |------|------|-------------|
 | vector_store | Chroma | A local Chroma vector store instance configured with the specified parameters. |
-| search_results | List[Data](/concepts-objects#data-object) | Results of similarity search. |
+| search_results | List[Data](/concepts-objects#data-object) | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
 
 </details>
 
@@ -426,23 +426,23 @@ For more information, see the [Elasticsearch documentation](https://www.elastic.
 
 | Name | Type | Description |
 |------|------|-------------|
-| es_url | String | Elasticsearch server URL |
-| es_user | String | Username for Elasticsearch authentication |
-| es_password | SecretString | Password for Elasticsearch authentication |
-| index_name | String | Name of the Elasticsearch index |
-| strategy | String | Strategy for vector search ("approximate_k_nearest_neighbors" or "script_scoring") |
-| distance_strategy | String | Strategy for distance calculation ("COSINE", "EUCLIDEAN_DISTANCE", "DOT_PRODUCT") |
-| search_query | String | Query for similarity search |
-| ingest_data | Data | Data to be ingested into the vector store |
-| embedding | Embeddings | Embedding function to use |
-| number_of_results | Integer | Number of results to return in search (default: 4) |
+| es_url | String | Elasticsearch server URL. |
+| es_user | String | Username for Elasticsearch authentication. |
+| es_password | SecretString | Password for Elasticsearch authentication. |
+| index_name | String | Name of the Elasticsearch index. |
+| strategy | String | Strategy for vector search. The options are "approximate_k_nearest_neighbors" or "script_scoring". |
+| distance_strategy | String | Strategy for distance calculation. The options are "COSINE", "EUCLIDEAN_DISTANCE", or "DOT_PRODUCT". |
+| search_query | String | Query for similarity search. |
+| ingest_data | Data | Data to be ingested into the vector store. |
+| embedding | Embeddings | Embedding function to use. |
+| number_of_results | Integer | Number of results to return in search. Default: `4`. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| vector_store | ElasticsearchStore | Elasticsearch vector store instance |
-| search_results | List[Data] | Results of similarity search |
+| vector_store | ElasticsearchStore | The Elasticsearch vector store instance. |
+| search_results | List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
 
 </details>
 
@@ -461,16 +461,17 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 | index_name                 | String        | The name of the FAISS index. Default: "langflow_index". |
 | persist_directory          | String        | Path to save the FAISS index. It will be relative to where Langflow is running. |
 | search_query               | String        | The query to search for in the vector store.     |
-| ingest_data                | Data          | The data to ingest into the vector store (list of Data objects or documents). |
-| allow_dangerous_deserialization | Boolean  | Set to True to allow loading pickle files from untrusted sources. Default: True (advanced). |
+| ingest_data                | Data          | The list of data to ingest into the vector store. |
+| allow_dangerous_deserialization | Boolean  | Set to True to allow loading pickle files from untrusted sources. Default: True. |
 | embedding                  | Embeddings    | The embedding function to use for the vector store. |
-| number_of_results          | Integer       | Number of results to return from the search. Default: 4 (advanced). |
+| number_of_results          | Integer       | Number of results to return from the search. Default: 4. |
 
 **Outputs**
 
-| Name           | Type                   | Description                    |
-|----------------|------------------------|--------------------------------|
-| vector_store   | FAISS                  | A FAISS vector store instance configured with the specified parameters. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | The FAISS vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
 </details>
 
@@ -523,27 +524,27 @@ To use the HCD vector store for embeddings ingestion, connect it to an embedding
 
 | Name                | Type         | Description                               |
 |---------------------|--------------|-------------------------------------------|
-| endpoint            | String       | API endpoint in the format, such as `http://192.0.2.250:8181` |
-| api_key             | SecretString | API key for authentication                |
-| hcd_api_key         | SecretString | HCD-specific API key                      |
-| hcd_subdomain       | String       | HCD subdomain                             |
-| schema_name         | String       | Name of the schema                        |
-| table_name          | String       | Name of the table                         |
-| search_query        | String       | Query for similarity search               |
-| ingest_data         | Data         | Data to be ingested into the vector store |
-| embedding           | Embeddings   | Embedding function to use                 |
-| number_of_results   | Integer      | Number of results to return in search     |
-| filter              | Dict         | Filter for search query                   |
-| similarity_threshold| Float        | Minimum similarity score for search results |
-| hybrid_search       | Boolean      | Whether to use hybrid search              |
-| hybrid_search_weight| Float        | Weight for hybrid search                  |
+| endpoint            | String       | API endpoint in the format, such as `http://192.0.2.250:8181`. |
+| api_key             | SecretString | API key for authentication.                |
+| hcd_api_key         | SecretString | HCD-specific API key.                      |
+| hcd_subdomain       | String       | HCD subdomain.                             |
+| schema_name         | String       | Name of the schema.                        |
+| table_name          | String       | Name of the table.                         |
+| search_query        | String       | Query for similarity search.               |
+| ingest_data         | Data         | Data to be ingested into the vector store. |
+| embedding           | Embeddings   | Embedding function to use.                 |
+| number_of_results   | Integer      | Number of results to return in search.     |
+| filter              | Dict         | Filter for search query.                   |
+| similarity_threshold| Float        | Minimum similarity score for search results. |
+| hybrid_search       | Boolean      | Whether to use hybrid search.              |
+| hybrid_search_weight| Float        | Weight for hybrid search.                  |
 
 **Outputs**
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
-| vector_store  | HyperConvergedDatabaseVectorStore | HCD vector store instance |
-| search_results| List[Data]   | Results of similarity search              |
+| vector_store  | HyperConvergedDatabaseVectorStore | The HCD vector store instance. |
+| search_results| List[Data]   | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
 
 </details>
 
@@ -559,22 +560,22 @@ For more information, see the [Milvus documentation](https://milvus.io/docs).
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
-| collection_name          | String        | Name of the Milvus collection                    |
-| collection_description   | String        | Description of the Milvus collection             |
-| uri                      | String        | Connection URI for Milvus                        |
-| password                 | SecretString  | Password for Milvus                              |
-| username                 | SecretString  | Username for Milvus                              |
-| batch_size               | Integer       | Number of data to process in a single batch      |
-| search_query             | String        | Query for similarity search                      |
-| ingest_data              | Data          | Data to be ingested into the vector store        |
-| embedding                | Embeddings    | Embedding function to use                        |
-| number_of_results        | Integer       | Number of results to return in search            |
-| search_type              | String        | Type of search to perform                        |
-| search_score_threshold   | Float         | Minimum similarity score for search results      |
-| search_filter            | Dict          | Metadata filters for search query                |
-| setup_mode               | String        | Configuration mode for setting up the vector store |
-| vector_dimensions        | Integer       | Number of dimensions of the vectors              |
-| pre_delete_collection    | Boolean       | Whether to delete the collection before creating a new one |
+| collection_name          | String        | Name of the Milvus collection.                   |
+| collection_description   | String        | Description of the Milvus collection.            |
+| uri                      | String        | Connection URI for Milvus.                       |
+| password                 | SecretString  | Password for Milvus.                             |
+| username                 | SecretString  | Username for Milvus.                             |
+| batch_size               | Integer       | Number of data to process in a single batch.     |
+| search_query             | String        | Query for similarity search.                     |
+| ingest_data              | Data          | Data to be ingested into the vector store.       |
+| embedding                | Embeddings    | Embedding function to use.                       |
+| number_of_results        | Integer       | Number of results to return in search.           |
+| search_type              | String        | Type of search to perform.                       |
+| search_score_threshold   | Float         | Minimum similarity score for search results.     |
+| search_filter            | Dict          | Metadata filters for search query.               |
+| setup_mode               | String        | Configuration mode for setting up the vector store. |
+| vector_dimensions        | Integer       | Number of dimensions of the vectors.             |
+| pre_delete_collection    | Boolean       | Whether to delete the collection before creating a new one. |
 
 **Outputs**
 
@@ -595,27 +596,27 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 **Inputs**
 | Name                      | Type         | Description                               |
 | ------------------------- | ------------ | ----------------------------------------- |
-| mongodb_atlas_cluster_uri | SecretString | The connection URI for your MongoDB Atlas cluster (required) |
-| enable_mtls               | Boolean      | Enable mutual TLS authentication (default: false) |
-| mongodb_atlas_client_cert | SecretString | Client certificate combined with private key for mTLS authentication (required if mTLS is enabled) |
-| db_name                   | String       | The name of the database to use (required) |
-| collection_name           | String       | The name of the collection to use (required) |
-| index_name                | String       | The name of the Atlas Search index, it should be a Vector Search (required) |
-| insert_mode               | String       | How to insert new documents into the collection (options: "append", "overwrite", default: "append") |
-| embedding                 | Embeddings   | The embedding model to use |
-| number_of_results         | Integer      | Number of results to return in similarity search (default: 4) |
-| index_field               | String       | The field to index (default: "embedding") |
-| filter_field              | String       | The field to filter the index |
-| number_dimensions         | Integer      | Embedding context length (default: 1536) |
-| similarity                | String       | The method used to measure similarity between vectors (options: "cosine", "euclidean", "dotProduct", default: "cosine") |
-| quantization              | String       | Quantization reduces memory costs by converting 32-bit floats to smaller data types (options: "scalar", "binary") |
+| mongodb_atlas_cluster_uri | SecretString | The connection URI for your MongoDB Atlas cluster. Required. |
+| enable_mtls               | Boolean      | Enable mutual TLS authentication. Default: false. |
+| mongodb_atlas_client_cert | SecretString | Client certificate combined with private key for mTLS authentication. Required if mTLS is enabled. |
+| db_name                   | String       | The name of the database to use. Required. |
+| collection_name           | String       | The name of the collection to use. Required. |
+| index_name                | String       | The name of the Atlas Search index, it should be a Vector Search. Required. |
+| insert_mode               | String       | How to insert new documents into the collection. The options are "append" or "overwrite". Default: "append". |
+| embedding                 | Embeddings   | The embedding model to use. |
+| number_of_results         | Integer      | Number of results to return in similarity search. Default: 4. |
+| index_field               | String       | The field to index. Default: "embedding". |
+| filter_field              | String       | The field to filter the index. |
+| number_dimensions         | Integer      | Embedding context length. Default: 1536. |
+| similarity                | String       | The method used to measure similarity between vectors. The options are "cosine", "euclidean", or "dotProduct". Default: "cosine". |
+| quantization              | String       | Quantization reduces memory costs by converting 32-bit floats to smaller data types. The options are "scalar" or "binary". |
 
 **Outputs**
 
 | Name          | Type                   | Description                               |
 | ------------- | ---------------------- | ----------------------------------------- |
-| vector_store  | MongoDBAtlasVectorSearch| MongoDB Atlas vector store instance       |
-| search_results| List[Data]             | Results of similarity search              |
+| vector_store  | MongoDBAtlasVectorSearch| The MongoDB Atlas vector store instance.       |
+| search_results| List[Data]             | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
 
 </details>
 
@@ -630,26 +631,26 @@ For more information, see [Opensearch documentation](https://opensearch.org/plat
 **Inputs**
 | Name                   | Type         | Description                                                                                                            |
 |------------------------|--------------|------------------------------------------------------------------------------------------------------------------------|
-| opensearch_url         | String       | URL for OpenSearch cluster (e.g. https://192.168.1.1:9200)                                                             |
-| index_name             | String       | The index name where the vectors will be stored in OpenSearch cluster                                                  |
-| search_input           | String       | Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used                          |
-| ingest_data            | Data         | Data to be ingested into the vector store                                                                              |
-| embedding              | Embeddings   | Embedding function to use                                                                                              |
-| search_type            | String       | Valid values are "similarity", "similarity_score_threshold", "mmr"                                                     |
-| number_of_results      | Integer      | Number of results to return in search                                                                                  |
-| search_score_threshold | Float        | Minimum similarity score threshold for search results                                                                  |
-| username               | String       | username for the opensource cluster                                                                                    |
-| password               | SecretString | password for the opensource cluster                                                                                    |
-| use_ssl                | Boolean      | Use SSL                                                                                                                |
-| verify_certs           | Boolean      | Verify certificates                                                                                                    |
-| hybrid_search_query    | String       | Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching |
+| opensearch_url         | String       | URL for OpenSearch cluster, such as `https://192.168.1.1:9200`.                                                             |
+| index_name             | String       | The index name where the vectors will be stored in OpenSearch cluster.                                                  |
+| search_input           | String       | Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used.                          |
+| ingest_data            | Data         | The data to be ingested into the vector store.                                                                              |
+| embedding              | Embeddings   | The embedding function to use.                                                                                              |
+| search_type            | String       | The options are "similarity", "similarity_score_threshold", "mmr".                                                     |
+| number_of_results      | Integer      | The number of results to return in search.                                                                                  |
+| search_score_threshold | Float        | The minimum similarity score threshold for search results.                                                                  |
+| username               | String       | The username for the opensource cluster.                                                                                    |
+| password               | SecretString | The password for the opensource cluster.                                                                                    |
+| use_ssl                | Boolean      | Use SSL.                                                                                                                |
+| verify_certs           | Boolean      | Verify certificates.                                                                                                    |
+| hybrid_search_query    | String       | Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching. |
 
 **Outputs**
 
 | Name          | Type                   | Description                                 |
 | ------------- |------------------------|---------------------------------------------|
 | vector_store  | OpenSearchVectorSearch | OpenSearch vector store instance            |
-| search_results| List[Data]             | Results of similarity search                |
+| search_results| List[Data]             | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.                 |
 
 </details>
 
@@ -665,19 +666,19 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
-| pg_server_url   | SecretString | PostgreSQL server connection string       |
-| collection_name | String       | Table name for the vector store           |
-| search_query    | String       | Query for similarity search               |
-| ingest_data     | Data         | Data to be ingested into the vector store |
-| embedding       | Embeddings   | Embedding function to use                 |
-| number_of_results | Integer    | Number of results to return in search     |
+| pg_server_url   | SecretString | The PostgreSQL server connection string.       |
+| collection_name | String       | The table name for the vector store.           |
+| search_query    | String       | The query for similarity search.               |
+| ingest_data     | Data         | The data to be ingested into the vector store. |
+| embedding       | Embeddings   | The embedding function to use.                 |
+| number_of_results | Integer    | The number of results to return in search.     |
 
 **Outputs**
 
-| Name          | Type        | Description                               |
-| ------------- | ----------- | ----------------------------------------- |
-| vector_store  | PGVector    | PGVector vector store instance            |
-| search_results| List[Data]  | Results of similarity search              |
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | The PGVector vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
 </details>
 
@@ -693,22 +694,22 @@ For more information, see the [Pinecone documentation](https://docs.pinecone.io/
 
 | Name              | Type         | Description                               |
 | ----------------- | ------------ | ----------------------------------------- |
-| index_name        | String       | Name of the Pinecone index                |
-| namespace         | String       | Namespace for the index                   |
-| distance_strategy | String       | Strategy for calculating distance between vectors |
-| pinecone_api_key  | SecretString | API key for Pinecone                      |
-| text_key          | String       | Key in the record to use as text          |
-| search_query      | String       | Query for similarity search               |
-| ingest_data       | Data         | Data to be ingested into the vector store |
-| embedding         | Embeddings   | Embedding function to use                 |
-| number_of_results | Integer      | Number of results to return in search     |
+| index_name        | String       | The name of the Pinecone index.                |
+| namespace         | String       | The namespace for the index.                   |
+| distance_strategy | String       | The strategy for calculating distance between vectors. |
+| pinecone_api_key  | SecretString | The API key for Pinecone.                      |
+| text_key          | String       | The key in the record to use as text.          |
+| search_query      | String       | The query for similarity search.               |
+| ingest_data       | Data         | The data to be ingested into the vector store. |
+| embedding         | Embeddings   | The embedding function to use.                 |
+| number_of_results | Integer      | The number of results to return in search.     |
 
 **Outputs**
 
-| Name          | Type       | Description                               |
-| ------------- | ---------- | ----------------------------------------- |
-| vector_store  | Pinecone   | Pinecone vector store instance            |
-| search_results| List[Data] | Results of similarity search              |
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | The Pinecone vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
 </details>
 
@@ -724,29 +725,29 @@ For more information, see the [Qdrant documentation](https://qdrant.tech/documen
 
 | Name                 | Type         | Description                               |
 | -------------------- | ------------ | ----------------------------------------- |
-| collection_name       | String       | Name of the Qdrant collection             |
-| host                 | String       | Qdrant server host                        |
-| port                 | Integer      | Qdrant server port                        |
-| grpc_port            | Integer      | Qdrant gRPC port                          |
-| api_key              | SecretString | API key for Qdrant                        |
-| prefix               | String       | Prefix for Qdrant                         |
-| timeout              | Integer      | Timeout for Qdrant operations             |
-| path                 | String       | Path for Qdrant                           |
-| url                  | String       | URL for Qdrant                            |
-| distance_func        | String       | Distance function for vector similarity   |
-| content_payload_key  | String       | Key for content payload                   |
-| metadata_payload_key | String       | Key for metadata payload                  |
-| search_query         | String       | Query for similarity search               |
-| ingest_data          | Data         | Data to be ingested into the vector store |
-| embedding            | Embeddings   | Embedding function to use                 |
-| number_of_results    | Integer      | Number of results to return in search     |
+| collection_name       | String       | The name of the Qdrant collection.             |
+| host                 | String       | The Qdrant server host.                        |
+| port                 | Integer      | The Qdrant server port.                        |
+| grpc_port            | Integer      | The Qdrant gRPC port.                          |
+| api_key              | SecretString | The API key for Qdrant.                        |
+| prefix               | String       | The prefix for Qdrant.                         |
+| timeout              | Integer      | The timeout for Qdrant operations.             |
+| path                 | String       | The path for Qdrant.                           |
+| url                  | String       | The URL for Qdrant.                            |
+| distance_func        | String       | The distance function for vector similarity.   |
+| content_payload_key  | String       | The content payload key.                  |
+| metadata_payload_key | String       | The metadata payload key.                 |
+| search_query         | String       | The query for similarity search.               |
+| ingest_data          | Data         | The data to be ingested into the vector store. |
+| embedding            | Embeddings   | The embedding function to use.                 |
+| number_of_results    | Integer      | The number of results to return in search.     |
 
 **Outputs**
 
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
-| vector_store  | Qdrant   | Qdrant vector store instance              |
-| search_results| List[Data] | Results of similarity search            |
+| vector_store  | Qdrant   | A Qdrant vector store instance.              |
+| search_results| List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.             |
 
 </details>
 
@@ -762,21 +763,21 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 
 | Name              | Type         | Description                               |
 | ----------------- | ------------ | ----------------------------------------- |
-| redis_server_url  | SecretString | Redis server connection string            |
-| redis_index_name  | String       | Name of the Redis index                   |
-| code              | String       | Custom code for Redis (advanced)          |
-| schema            | String       | Schema for Redis index                    |
-| search_query      | String       | Query for similarity search               |
-| ingest_data       | Data         | Data to be ingested into the vector store |
-| number_of_results | Integer      | Number of results to return in search     |
-| embedding         | Embeddings   | Embedding function to use                 |
+| redis_server_url  | SecretString | The Redis server connection string.            |
+| redis_index_name  | String       | The name of the Redis index.                   |
+| code              | String       | The custom code for Redis (advanced).          |
+| schema            | String       | The schema for Redis index.                    |
+| search_query      | String       | The query for similarity search.               |
+| ingest_data       | Data         | The data to be ingested into the vector store. |
+| number_of_results | Integer      | The number of results to return in search.     |
+| embedding         | Embeddings   | The embedding function to use.                 |
 
 **Outputs**
 
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
 | vector_store  | Redis    | Redis vector store instance               |
-| search_results| List[Data]| Results of similarity search             |
+| search_results| List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.              |
 
 </details>
 
@@ -792,21 +793,21 @@ For more information, see the [Supabase documentation](https://supabase.com/docs
 
 | Name                | Type         | Description                               |
 | ------------------- | ------------ | ----------------------------------------- |
-| supabase_url        | String       | URL of the Supabase instance              |
-| supabase_service_key| SecretString | Service key for Supabase authentication   |
-| table_name          | String       | Name of the table in Supabase             |
-| query_name          | String       | Name of the query to use                  |
-| search_query        | String       | Query for similarity search               |
-| ingest_data         | Data         | Data to be ingested into the vector store |
-| embedding           | Embeddings   | Embedding function to use                 |
-| number_of_results   | Integer      | Number of results to return in search     |
+| supabase_url        | String       | The URL of the Supabase instance.              |
+| supabase_service_key| SecretString | The service key for Supabase authentication.   |
+| table_name          | String       | The name of the table in Supabase.             |
+| query_name          | String       | The name of the query to use.                  |
+| search_query        | String       | The query for similarity search.               |
+| ingest_data         | Data         | The data to be ingested into the vector store. |
+| embedding           | Embeddings   | The embedding function to use.                 |
+| number_of_results   | Integer      | The number of results to return in search.     |
 
 **Outputs**
 
 | Name          | Type               | Description                               |
 | ------------- | ------------------ | ----------------------------------------- |
-| vector_store  | SupabaseVectorStore | Supabase vector store instance            |
-| search_results| List[Data]          | Results of similarity search              |
+| vector_store  | SupabaseVectorStore | A Supabase vector store instance.            |
+| search_results| List[Data]          | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
 
 </details>
 
@@ -822,22 +823,22 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
-| index_url       | String       | The URL of the Upstash index              |
-| index_token     | SecretString | The token for the Upstash index           |
-| text_key        | String       | The key in the record to use as text      |
-| namespace       | String       | Namespace for the index                   |
-| search_query    | String       | Query for similarity search               |
-| metadata_filter | String       | Filters documents by metadata             |
-| ingest_data     | Data         | Data to be ingested into the vector store |
-| embedding       | Embeddings   | Embedding function to use (optional)      |
-| number_of_results | Integer    | Number of results to return in search     |
+| index_url       | String       | The URL of the Upstash index.              |
+| index_token     | SecretString | The token for the Upstash index.           |
+| text_key        | String       | The key in the record to use as text.      |
+| namespace       | String       | The namespace for the index.                   |
+| search_query    | String       | The query for similarity search.               |
+| metadata_filter | String       | Filter documents by metadata.             |
+| ingest_data     | Data         | The data to be ingested into the vector store. |
+| embedding       | Embeddings   | The embedding function to use.      |
+| number_of_results | Integer    | The number of results to return in search.     |
 
 **Outputs**
 
 | Name          | Type             | Description                               |
 | ------------- | ---------------- | ----------------------------------------- |
-| vector_store  | UpstashVectorStore| Upstash vector store instance             |
-| search_results| List[Data]        | Results of similarity search              |
+| vector_store  | UpstashVectorStore| An Upstash vector store instance.             |
+| search_results| List[Data]        | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
 
 </details>
 
@@ -853,20 +854,20 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 
 | Name             | Type         | Description                               |
 | ---------------- | ------------ | ----------------------------------------- |
-| vectara_customer_id | String     | Vectara customer ID                       |
-| vectara_corpus_id   | String     | Vectara corpus ID                         |
-| vectara_api_key   | SecretString | Vectara API key                           |
-| embedding         | Embeddings   | Embedding function to use (optional)      |
-| ingest_data       | List[Document/Data] | Data to be ingested into the vector store |
-| search_query      | String       | Query for similarity search               |
-| number_of_results | Integer      | Number of results to return in search     |
+| vectara_customer_id | String     | The Vectara customer ID.                       |
+| vectara_corpus_id   | String     | The Vectara corpus ID.                         |
+| vectara_api_key   | SecretString | The Vectara API key.                           |
+| embedding         | Embeddings   | The embedding function to use (optional).      |
+| ingest_data       | List[Document/Data] | The data to be ingested into the vector store. |
+| search_query      | String       | The query for similarity search.               |
+| number_of_results | Integer      | The number of results to return in search.     |
 
 **Outputs**
 
 | Name          | Type              | Description                               |
 | ------------- | ----------------- | ----------------------------------------- |
-| vector_store  | VectaraVectorStore | Vectara vector store instance             |
-| search_results| List[Data]         | Results of similarity search              |
+| vector_store  | VectaraVectorStore | Vectara vector store instance.             |
+| search_results| List[Data]         | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
 
 </details>
 
@@ -882,18 +883,18 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 
 | Name                | Type         | Description                               |
 |---------------------|--------------|-------------------------------------------|
-| search_type         | String       | Type of search, such as "Similarity" or "MMR" |
-| input_value         | String       | Search query                              |
-| vectara_customer_id | String       | Vectara customer ID                       |
-| vectara_corpus_id   | String       | Vectara corpus ID                         |
-| vectara_api_key     | SecretString | Vectara API key                           |
-| files_url           | List[String] | Optional URLs for file initialization     |
+| search_type         | String       | The type of search, such as "Similarity" or "MMR". |
+| input_value         | String       | The search query.                              |
+| vectara_customer_id | String       | The Vectara customer ID.                       |
+| vectara_corpus_id   | String       | The Vectara corpus ID.                         |
+| vectara_api_key     | SecretString | The Vectara API key.                           |
+| files_url           | List[String] | Optional URLs for file initialization.     |
 
 **Outputs**
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
-| search_results | List[Data] | Results of similarity search |
+| search_results | List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
 
 </details>
 
@@ -909,20 +910,20 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
-| weaviate_url  | String       | Default instance URL                      |
-| search_by_text| Boolean      | Indicates whether to search by text       |
-| api_key       | SecretString | Optional API key for authentication       |
-| index_name    | String       | Optional index name                       |
-| text_key      | String       | Default text extraction key               |
-| input         | Document     | Document or record                        |
-| embedding     | Embeddings   | Model used                                |
-| attributes    | List[String] | Optional additional attributes            |
+| weaviate_url  | String       | The default instance URL.                      |
+| search_by_text| Boolean      | Indicates whether to search by text.       |
+| api_key       | SecretString | The optional API key for authentication.       |
+| index_name    | String       | The optional index name.                       |
+| text_key      | String       | The default text extraction key.               |
+| input         | Document     | The document or record.                        |
+| embedding     | Embeddings   | The embedding model used.                                |
+| attributes    | List[String] | Optional additional attributes.            |
 
 **Outputs**
 
 | Name         | Type             | Description                   |
 |--------------|------------------|-------------------------------|
-| vector_store | WeaviateVectorStore | Weaviate vector store instance |
+| vector_store | WeaviateVectorStore | The Weaviate vector store instance. |
 
 </details>
 
@@ -938,20 +939,20 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
-| search_type   | String       | Type of search, such as "Similarity" or "MMR" |
-| input_value   | String       | Search query                              |
-| weaviate_url  | String       | Default instance URL                      |
-| search_by_text| Boolean      | Indicates whether to search by text       |
-| api_key       | SecretString | Optional API key for authentication       |
-| index_name    | String       | Optional index name                       |
-| text_key      | String       | Default text extraction key               |
-| embedding     | Embeddings   | Model used                                |
-| attributes    | List[String] | Optional additional attributes            |
+| search_type   | String       | The type of search, such as "Similarity" or "MMR" |
+| input_value   | String       | The search query.                              |
+| weaviate_url  | String       | The default instance URL.                      |
+| search_by_text| Boolean      | A boolean value that indicates whether to search by text.       |
+| api_key       | SecretString | The optional API key for authentication.       |
+| index_name    | String       | The optional index name.                       |
+| text_key      | String       | The default text extraction key.               |
+| embedding     | Embeddings   | The embeddings model used.                                |
+| attributes    | List[String] | Optional additional attributes.            |
 
 **Outputs**
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
-| search_results | List[Data] | Results of similarity search |
+| search_results | List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
 
 </details>
