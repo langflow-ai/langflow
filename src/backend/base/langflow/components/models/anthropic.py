@@ -162,7 +162,7 @@ class AnthropicModelComponent(LCModelComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if build_config["base_url"]["value"] is None:
+        if "base_url" in build_config and build_config["base_url"]["value"] is None:
             build_config["base_url"]["value"] = DEFAULT_ANTHROPIC_API_URL
             self.base_url = DEFAULT_ANTHROPIC_API_URL
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
