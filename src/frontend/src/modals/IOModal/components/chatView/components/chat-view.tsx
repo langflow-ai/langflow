@@ -38,7 +38,6 @@ export default function ChatView({
   playgroundPage,
   sidebarOpen,
 }: chatViewProps): JSX.Element {
-  const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -145,13 +144,16 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useFileHandler(currentFlowId);
+  const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
+    setIsDragging,
+    !!playgroundPage,
+  );
 
   const onDrop = (e) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND) {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
       e.stopPropagation();
       return;
     }
