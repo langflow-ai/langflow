@@ -93,7 +93,7 @@ class LangflowRunnerExperimental:
     async def create_graph_from_flow(session_id: str, flow_dict: dict):
         graph = await aload_flow_from_json(flow=flow_dict, disable_logs=False)
         graph.flow_id = flow_dict["id"]
-        graph.flow_name = flow_dict["name"]
+        graph.flow_name = flow_dict.get("name")
         graph.session_id = session_id
         graph.set_run_id(session_id)
         await graph.initialize_run()
