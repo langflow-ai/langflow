@@ -85,7 +85,7 @@ const SidebarProvider = React.forwardRef<
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
-      return setOpen(prev => !prev);
+      return setOpen((prev) => !prev);
     }, [setOpen]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
@@ -275,10 +275,13 @@ const SidebarTrigger = React.forwardRef<
 >(({ className, onClick, ...props }, ref) => {
   const { toggleSidebar } = useSidebar();
 
-  const handleClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    onClick?.(event);
-    toggleSidebar();
-  }, [onClick, toggleSidebar]);
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      onClick?.(event);
+      toggleSidebar();
+    },
+    [onClick, toggleSidebar],
+  );
 
   return (
     <Button
@@ -446,25 +449,27 @@ const SidebarGroup = React.forwardRef<
 });
 SidebarGroup.displayName = "SidebarGroup";
 
-const SidebarGroupLabel = React.memo(React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div"> & { asChild?: boolean }
->(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "div";
+const SidebarGroupLabel = React.memo(
+  React.forwardRef<
+    HTMLDivElement,
+    React.ComponentProps<"div"> & { asChild?: boolean }
+  >(({ className, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "div";
 
-  return (
-    <Comp
-      ref={ref}
-      data-sidebar="group-label"
-      className={cn(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-semibold text-foreground/70 outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
-        className,
-      )}
-      {...props}
-    />
-  );
-}));
+    return (
+      <Comp
+        ref={ref}
+        data-sidebar="group-label"
+        className={cn(
+          "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-semibold text-foreground/70 outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+          "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+          className,
+        )}
+        {...props}
+      />
+    );
+  }),
+);
 SidebarGroupLabel.displayName = "SidebarGroupLabel";
 
 const SidebarGroupAction = React.forwardRef<

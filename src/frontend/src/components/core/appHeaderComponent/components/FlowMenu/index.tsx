@@ -156,7 +156,7 @@ export const MenuBar = memo((): JSX.Element => {
       setIsInvalidName(invalid);
       setFlowName(value);
     },
-    [flowNames]
+    [flowNames],
   );
 
   const handleKeyDown = useCallback(
@@ -312,7 +312,9 @@ export const MenuBar = memo((): JSX.Element => {
                   setFlowName(currentFlowName);
                   const flows = useFlowsManagerStore.getState().flows;
                   setFlowNames(
-                    flows?.map((flow) => flow.name).filter((name) => name !== currentFlowName) ?? []
+                    flows
+                      ?.map((flow) => flow.name)
+                      .filter((name) => name !== currentFlowName) ?? [],
                   );
                 }}
                 onBlur={handleNameSubmit}
