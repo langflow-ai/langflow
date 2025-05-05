@@ -3,7 +3,7 @@ import StoreApiKeyPage from "@/pages/SettingsPage/pages/StoreApiKeyPage";
 import StorePage from "@/pages/StorePage";
 import { Route } from "react-router-dom";
 
-export const customRoutesStorePages = () => {
+export const CustomRoutesStorePages = () => {
   return (
     <>
       <Route
@@ -26,4 +26,4 @@ export const customRoutesStorePages = () => {
   );
 };
 
-export default customRoutesStorePages;
+export default CustomRoutesStorePages;

@@ -9,7 +9,6 @@ import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
-import { StoreGuard } from "./components/authorization/storeGuard";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -18,8 +17,8 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
 } from "./customization/feature-flags";
-import { customRoutesStore as CustomRoutesStore } from "./customization/utils/custom-routes-store";
-import { customRoutesStorePages as CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
+import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
+import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
