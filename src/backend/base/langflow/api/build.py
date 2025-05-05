@@ -113,18 +113,18 @@ async def get_flow_events_response(
                     # Include the end event
                     events.append(None)
                     break
-                events.append(value.decode("utf-8") if value else None)
+                events.append(value.decode("utf-8"))
 
             # If no events were available, wait for one (with timeout)
             if not events:
-                event_id, value, put_time = await asyncio.wait_for(main_queue.get(), timeout=2.0)
+                _, value, _ = await asyncio.wait_for(main_queue.get(), timeout=2.0)
                 if value is None:
                     # End of stream, trigger end event
                     if event_task is not None:
                         event_task.cancel()
                     event_manager.on_end(data={})
                 else:
-                    events.append(value.decode("utf-8") if value else None)
+                    events.append(value.decode("utf-8"))
 
             # Return as NDJSON format - each line is a complete JSON object
             content = "\n".join([event for event in events if event is not None])

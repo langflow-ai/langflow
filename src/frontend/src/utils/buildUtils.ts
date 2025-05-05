@@ -1,7 +1,7 @@
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BASE_URL_API,
-  POLLING_INTERVAL,
+  BUILD_POLLING_INTERVAL,
   POLLING_MESSAGES,
 } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
@@ -242,7 +242,7 @@ async function pollBuildEvents(
     }
 
     // Add a small delay between polls
-    await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL / 4));
+    await new Promise((resolve) => setTimeout(resolve, BUILD_POLLING_INTERVAL));
   }
 }
 
