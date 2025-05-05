@@ -282,8 +282,8 @@ class ComposioBaseComponent(Component):
         configured_tools = []
         for tool in tools:
             # Set the sanitized name
-            display_name = (
-                self._actions_data.get(tool.name, {}).get("display_name", self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name)))
+            display_name = self._actions_data.get(tool.name, {}).get(
+                "display_name", self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
             )
             # Set the tags
             tool.tags = [tool.name]
