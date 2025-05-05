@@ -7,8 +7,8 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { customUseStartConversation } from "@/customization/hooks/use-start-conversation";
-import { customUseStartRecording } from "@/customization/hooks/use-start-recording";
+import { customUseStartConversation } from "@/customization/hooks/use-custom-start-conversation";
+import { customUseStartRecording } from "@/customization/hooks/use-custom-start-recording";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
