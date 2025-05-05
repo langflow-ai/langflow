@@ -53,47 +53,6 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
 
-// Memoize Button components
-const HideShowButton = memo(
-  ({
-    disabled,
-    onClick,
-    hidden,
-    isToolMode,
-    title,
-  }: {
-    disabled: boolean;
-    onClick: () => void;
-    hidden: boolean;
-    isToolMode: boolean;
-    title: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      unstyled
-      onClick={onClick}
-      data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="cursor-default"
-    >
-      <div>
-        <EyeIcon
-          hidden={hidden}
-          className={cn(
-            "icon-size text-placeholder-foreground",
-            disabled
-              ? isToolMode
-                ? "text-placeholder-foreground"
-                : ""
-              : isToolMode
-                ? "text-background"
-                : "",
-          )}
-        />
-      </div>
-    </Button>
-  ),
-);
-
 const InspectButton = memo(
   forwardRef(
     (
@@ -397,13 +356,6 @@ function NodeOutputField({
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
           )}
-          <HideShowButton
-            disabled={disabledOutput}
-            onClick={() => {}}
-            hidden={!!hidden}
-            isToolMode={isToolMode}
-            title={title}
-          />
         </div>
 
         {data.node?.frozen && (

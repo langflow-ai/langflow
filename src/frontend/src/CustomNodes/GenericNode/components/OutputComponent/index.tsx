@@ -26,9 +26,7 @@ export default function OutputComponent({
     return outputs?.length > 1 ? false : true;
   }, [outputs]);
 
-  const [selectedName, setSelectedName] = useState(
-    singleOutput ? outputs?.[0].display_name : "Auto-detect",
-  );
+  const [selectedName, setSelectedName] = useState(outputs?.[0].display_name);
 
   const displayProxy = (children) => {
     if (proxy) {
@@ -73,7 +71,8 @@ export default function OutputComponent({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent forceMount className="min-w-[200px]">
-        <DropdownMenuItem
+        {/* TODO: When we have a way to auto-detect the output type, we can add this back */}
+        {/* <DropdownMenuItem
           onClick={() => {
             setSelectedName("Auto-detect");
           }}
@@ -90,7 +89,7 @@ export default function OutputComponent({
               Auto-detect
             </span>
           </div>
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
         {outputs &&
           outputs.map((item) => (
             <DropdownMenuItem
