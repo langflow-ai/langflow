@@ -281,6 +281,7 @@ function NodeOutputField({
           showNode={showNode}
           testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
           colorName={colorName}
+          selected={selected}
         />
       );
     }
@@ -297,6 +298,7 @@ function NodeOutputField({
     showNode,
     data?.type,
     colorName,
+    selected,
   ]);
 
   const Handle = useMemo(
@@ -315,6 +317,7 @@ function NodeOutputField({
         showNode={showNode}
         testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
         colorName={colorName}
+        selected={selected}
       />
     ),
     [
@@ -330,6 +333,7 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
+      selected,
     ],
   );
 

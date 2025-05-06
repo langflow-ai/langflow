@@ -6,9 +6,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import { useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
+import useFlowStore from "../../../../stores/flowStore";
 import { outputComponentType } from "../../../../types/components";
+import { NodeDataType } from "../../../../types/flow";
 import { cn } from "../../../../utils/utils";
 
 export default function OutputComponent({
@@ -27,6 +31,8 @@ export default function OutputComponent({
   }, [outputs]);
 
   const [selectedName, setSelectedName] = useState(outputs?.[0].display_name);
+  const setNode = useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const displayProxy = (children) => {
     if (proxy) {
@@ -38,6 +44,24 @@ export default function OutputComponent({
     } else {
       return children;
     }
+  };
+
+  const handleOutputSelection = (output) => {
+    // Update the display name in the dropdown
+    setSelectedName(output.display_name);
+
+    // Update the node data to reflect the selected output type
+    setNode(nodeId, (node) => {
+      const newNode = cloneDeep(node);
+      if (newNode.data && newNode.data.node && newNode.data.node.outputs) {
+        (newNode.data as NodeDataType).node!.outputs![idx].selected =
+          output.types[0];
+      }
+      return newNode;
+    });
+
+    // Trigger a refresh of the node to update handle colors
+    updateNodeInternals(nodeId);
   };
 
   return displayProxy(
@@ -95,7 +119,7 @@ export default function OutputComponent({
             <DropdownMenuItem
               key={item.name}
               onClick={() => {
-                setSelectedName(item.display_name);
+                handleOutputSelection(item);
               }}
             >
               <div className="w-full p-1 text-[13px] font-medium hover:bg-muted">

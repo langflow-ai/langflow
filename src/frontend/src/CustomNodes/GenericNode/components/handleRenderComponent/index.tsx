@@ -32,6 +32,7 @@ const HandleContent = memo(function HandleContent({
   showNode,
   left,
   nodeId,
+  selected = false,
 }: {
   isNullHandle: boolean;
   handleColor: string;
@@ -43,6 +44,7 @@ const HandleContent = memo(function HandleContent({
   showNode: boolean;
   left: boolean;
   nodeId: string;
+  selected?: boolean;
 }) {
   // Restore animation effect
   useEffect(() => {
@@ -135,6 +137,7 @@ const HandleContent = memo(function HandleContent({
       accentForegroundColorName,
       isHovered,
       openHandle,
+      nodeId,
     ],
   );
 
@@ -164,6 +167,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  selected = false,
 }: {
   left: boolean;
   nodes: any;
@@ -179,6 +183,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  selected?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
@@ -290,6 +295,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         ? "secondary-foreground"
         : "datatype-" + firstUniqueColor;
 
+    // Use directly the color associated with the output type
     const handleColor = isNullHandle
       ? dark
         ? "hsl(var(--accent-gray))"
@@ -328,7 +334,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       sameNode: sameDraggingNode || sameFilterNode,
       ownHandle: ownDraggingHandle || ownFilterHandle,
       accentForegroundColorName,
-      openHandle,
+      openHandle: openHandle,
       filterOpenHandle,
       filterPresent,
       currentFilter,
@@ -452,6 +458,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
             showNode={showNode}
             left={left}
             nodeId={nodeId}
+            selected={selected ?? false}
           />
         </Handle>
       </ShadTooltip>
