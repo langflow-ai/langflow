@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import { outputComponentType } from "../../../../types/components";
@@ -30,9 +30,17 @@ export default function OutputComponent({
     return outputs?.length > 1 ? false : true;
   }, [outputs]);
 
-  const [selectedName, setSelectedName] = useState(outputs?.[0].display_name);
+  const [selectedName, setSelectedName] = useState(
+    isToolMode ? "Tool Mode" : outputs?.[0].display_name,
+  );
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
+
+  useEffect(() => {
+    if (isToolMode) {
+      setSelectedName("Tool Mode");
+    }
+  }, [isToolMode]);
 
   const displayProxy = (children) => {
     if (proxy) {
@@ -81,7 +89,11 @@ export default function OutputComponent({
                   backgroundImage:
                     "linear-gradient(90deg, #F472B6 0%, #C084FC 50%)",
                 }
-              : {}
+              : selectedName === "Tool Mode"
+                ? {
+                    color: "hsl(var(--placeholder-foreground))",
+                  }
+                : {}
           }
         >
           {selectedName}
