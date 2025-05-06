@@ -45,9 +45,6 @@ class BigQueryExecutorComponent(Component):
 
     def execute_sql(self) -> DataFrame:
         try:
-            # service_account_json_file = service_account.Credentials.from_service_account_file(self.service_account_json_file)
-            # file_content = JsonSpec.from_file(service_account_json_file)
-            # credentials_info = json.loads(file_content)
             credentials = Credentials.from_service_account_file(self.service_account_json_file)
         except JSONDecodeError as e:
             msg = "Invalid JSON string for service account credentials."
@@ -58,19 +55,16 @@ class BigQueryExecutorComponent(Component):
 
         try:
             client = bigquery.Client(credentials=credentials, project=self.project_id)
-            sql_query = str(self.query)
-            # sql_query = re.search(r"```sql\s*(.*?)\s*```", query_text, re.DOTALL)
-            if sql_query:
-                # sql_query = sql_query.group(1).strip()  # Extract only the SQL statement
-                sql_query = sql_query.strip()
-            else:
+            sql_query = str(self.query).strip()
+            
+            # Check for empty or whitespace-only query
+            if not sql_query:
                 msg = "No valid SQL query found in input text."
-                raise ValueError(msg)  # Raise error if no SQL query is found
-            # query_text = query_text.strip().replace("```", "").lstrip("sql")
+                raise ValueError(msg)
+
             query_job = client.query(sql_query)
             results = query_job.result()
             output_dict = [dict(row) for row in results]
-            # output = json.dumps(output_dict, indent=4, sort_keys=True, default=str)
 
         except RefreshError as e:
             msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."

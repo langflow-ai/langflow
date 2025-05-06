@@ -7,6 +7,7 @@ from google.oauth2.service_account import Credentials
 from langflow.components.google.google_bq_sql_executor import BigQueryExecutorComponent
 from langflow.schema.message import Message
 from tests.base import ComponentTestBaseWithoutClient
+from pandas import DataFrame
 
 
 class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
@@ -59,15 +60,29 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
     def test_execute_sql_success(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test successful SQL execution and component side-effects."""
         # Arrange mocks
-        mock_creds = MagicMock()
+        mock_creds = MagicMock(spec=Credentials)
         mock_from_file.return_value = mock_creds
 
-        fake_client = MagicMock()
-        mock_client_cls.return_value = fake_client
+        # Create a mock row that can be converted to a dict
+        mock_row = MagicMock()
+        mock_row.items.return_value = [("column1", "value1")]
+        mock_row.__iter__.return_value = iter([("column1", "value1")])
+        mock_row.keys.return_value = ["column1"]
+        mock_row.values.return_value = ["value1"]
+        mock_row.__getitem__.return_value = "value1"
 
-        fake_job = MagicMock()
-        fake_job.result.return_value = [{"column1": "value1"}]
-        fake_client.query.return_value = fake_job
+        # Create mock result with the mock row
+        mock_result = MagicMock()
+        mock_result.__iter__.return_value = iter([mock_row])
+
+        # Create mock job with the mock result
+        mock_job = MagicMock()
+        mock_job.result.return_value = mock_result
+
+        # Create mock client with the mock job
+        mock_client = MagicMock()
+        mock_client.query.return_value = mock_job
+        mock_client_cls.return_value = mock_client
 
         # Instantiate component with defaults
         component = component_class(**default_kwargs)
@@ -75,28 +90,46 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         # Execute
         result = component.execute_sql()
 
-        # Assert credential loading and client instantiation
+        # Verify the result
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1  # Check number of rows
+        assert "column1" in result.columns  # Check column exists
+        assert result.iloc[0]["column1"] == "value1"  # Check value
+
+        # Verify the mocks were called correctly
         mock_from_file.assert_called_once_with(default_kwargs["service_account_json_file"])
         mock_client_cls.assert_called_once_with(credentials=mock_creds, project=default_kwargs["project_id"])
-        fake_client.query.assert_called_once_with(default_kwargs["query"])
-
-        # Assert output
-        assert isinstance(result, Message)
-        assert '"column1": "value1"' in result.text
-        assert component.status.startswith("[")
-        parsed = json.loads(result.text)
-        assert parsed[0]["column1"] == "value1"
+        mock_client.query.assert_called_once_with(default_kwargs["query"])
 
     @pytest.mark.parametrize("q", ["", "   \n\t  "])
-    def test_empty_query_raises(self, component_class, service_account_file, q):
+    @patch.object(Credentials, "from_service_account_file")
+    @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
+    def test_empty_query_raises(self, mock_client_cls, mock_from_file, component_class, service_account_file, q):
         """Empty or whitespace-only queries should raise a ValueError."""
+        # Create a proper mock credentials object
+        mock_creds = MagicMock(spec=Credentials)
+        mock_from_file.return_value = mock_creds
+
+        # Mock the BigQuery client
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+
+        # Create component with empty/whitespace query
         component = component_class(
             service_account_json_file=service_account_file,
             project_id="p",
             query=q,
         )
-        with pytest.raises(ValueError, match="No valid SQL query found"):
+
+        # Verify that execute_sql raises ValueError for empty/whitespace queries
+        with pytest.raises(ValueError) as exc_info:
             component.execute_sql()
+        
+        # Verify the error message
+        assert "No valid SQL query found" in str(exc_info.value)
+        
+        # Verify that the BigQuery client was not called
+        mock_client.query.assert_not_called()
 
     def test_missing_service_account_file(self, component_class):
         """Non-existent service account file should raise a ValueError."""
@@ -148,23 +181,291 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
     @patch.object(Credentials, "from_service_account_file")
     @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
     def test_complex_query_result(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
-        """Complex row structures should be correctly serialized to JSON."""
+        """Complex row structures should be correctly serialized to DataFrame."""
+        # Arrange mocks
+        mock_creds = MagicMock(spec=Credentials)
+        mock_from_file.return_value = mock_creds
+
+        # Create mock rows with complex data
+        mock_row1 = MagicMock()
+        mock_row1.items.return_value = [
+            ("id", 1),
+            ("name", "Test 1"),
+            ("value", 10.5),
+            ("active", True)
+        ]
+        mock_row1.__iter__.return_value = iter([
+            ("id", 1),
+            ("name", "Test 1"),
+            ("value", 10.5),
+            ("active", True)
+        ])
+        mock_row1.keys.return_value = ["id", "name", "value", "active"]
+        mock_row1.values.return_value = [1, "Test 1", 10.5, True]
+        mock_row1.__getitem__.side_effect = lambda key: {
+            "id": 1,
+            "name": "Test 1",
+            "value": 10.5,
+            "active": True
+        }[key]
+
+        mock_row2 = MagicMock()
+        mock_row2.items.return_value = [
+            ("id", 2),
+            ("name", "Test 2"),
+            ("value", 20.75),
+            ("active", False)
+        ]
+        mock_row2.__iter__.return_value = iter([
+            ("id", 2),
+            ("name", "Test 2"),
+            ("value", 20.75),
+            ("active", False)
+        ])
+        mock_row2.keys.return_value = ["id", "name", "value", "active"]
+        mock_row2.values.return_value = [2, "Test 2", 20.75, False]
+        mock_row2.__getitem__.side_effect = lambda key: {
+            "id": 2,
+            "name": "Test 2",
+            "value": 20.75,
+            "active": False
+        }[key]
+
+        # Create mock result with the mock rows
+        mock_result = MagicMock()
+        mock_result.__iter__.return_value = iter([mock_row1, mock_row2])
+
+        # Create mock job with the mock result
+        mock_job = MagicMock()
+        mock_job.result.return_value = mock_result
+
+        # Create mock client with the mock job
+        mock_client = MagicMock()
+        mock_client.query.return_value = mock_job
+        mock_client_cls.return_value = mock_client
+
+        # Instantiate component with defaults
+        component = component_class(**default_kwargs)
+
+        # Execute
+        result = component.execute_sql()
+
+        # Verify the result
+        assert isinstance(result, DataFrame)
+        assert len(result) == 2  # Check number of rows
+        assert list(result.columns) == ["id", "name", "value", "active"]  # Check columns
+        
+        # Convert DataFrame to dictionary for easier comparison
+        result_dict = result.to_dict(orient='records')
+        
+        # Verify first row
+        assert result_dict[0]["id"] == 1
+        assert result_dict[0]["name"] == "Test 1"
+        assert result_dict[0]["value"] == 10.5
+        assert result_dict[0]["active"] is True
+
+        # Verify second row
+        assert result_dict[1]["id"] == 2
+        assert result_dict[1]["name"] == "Test 2"
+        assert result_dict[1]["value"] == 20.75
+        assert result_dict[1]["active"] is False
+
+        # Verify the mocks were called correctly
+        mock_from_file.assert_called_once_with(default_kwargs["service_account_json_file"])
+        mock_client_cls.assert_called_once_with(credentials=mock_creds, project=default_kwargs["project_id"])
+        mock_client.query.assert_called_once_with(default_kwargs["query"])
+
+    @patch.object(Credentials, "from_service_account_file")
+    @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
+    def test_query_with_sql_code_block(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
+        """Test that queries with SQL code blocks are properly handled."""
         mock_from_file.return_value = MagicMock()
         fake_client = MagicMock()
         mock_client_cls.return_value = fake_client
 
-        complex_result = [
-            {"id": 1, "name": "Test 1", "value": 10.5, "active": True},
-            {"id": 2, "name": "Test 2", "value": 20.75, "active": False},
-        ]
-        fake_job = MagicMock()
-        fake_job.result.return_value = complex_result
-        fake_client.query.return_value = fake_job
-
-        component = component_class(**default_kwargs)
+        query_with_code_block = "```sql\nSELECT * FROM table\n```"
+        component = component_class(**{**default_kwargs, "query": query_with_code_block})
+        
         result = component.execute_sql()
+        
+        # Verify the query was passed as is (no code block stripping)
+        fake_client.query.assert_called_once_with(query_with_code_block.strip())
+        assert isinstance(result, DataFrame)
 
-        assert isinstance(result, Message)
-        for item in complex_result:
-            for key, value in item.items():
-                assert str(value) in result.text
+    @patch.object(Credentials, "from_service_account_file")
+    @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
+    def test_query_with_whitespace(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
+        """Test that queries with extra whitespace are properly handled."""
+        # Arrange mocks
+        mock_creds = MagicMock(spec=Credentials)
+        mock_from_file.return_value = mock_creds
+
+        # Create a mock row that can be converted to a dict
+        mock_row = MagicMock()
+        mock_row.items.return_value = [("column1", "value1")]
+        mock_row.__iter__.return_value = iter([("column1", "value1")])
+        mock_row.keys.return_value = ["column1"]
+        mock_row.values.return_value = ["value1"]
+        mock_row.__getitem__.return_value = "value1"
+
+        # Create mock result with the mock row
+        mock_result = MagicMock()
+        mock_result.__iter__.return_value = iter([mock_row])
+
+        # Create mock job with the mock result
+        mock_job = MagicMock()
+        mock_job.result.return_value = mock_result
+
+        # Create mock client with the mock job
+        mock_client = MagicMock()
+        mock_client.query.return_value = mock_job
+        mock_client_cls.return_value = mock_client
+
+        query_with_whitespace = "  SELECT * FROM table  "
+        component = component_class(**{**default_kwargs, "query": query_with_whitespace})
+        
+        result = component.execute_sql()
+        
+        # Verify the query was properly stripped
+        mock_client.query.assert_called_once_with("SELECT * FROM table")
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1  # Check number of rows
+        assert "column1" in result.columns  # Check column exists
+        assert result.iloc[0]["column1"] == "value1"  # Check value
+
+    @patch.object(Credentials, "from_service_account_file")
+    @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
+    def test_query_with_special_characters(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
+        """Test that queries with special characters are properly handled."""
+        # Arrange mocks
+        mock_creds = MagicMock(spec=Credentials)
+        mock_from_file.return_value = mock_creds
+
+        # Create a mock row that can be converted to a dict
+        mock_row = MagicMock()
+        mock_row.items.return_value = [("name", "test_value")]
+        mock_row.__iter__.return_value = iter([("name", "test_value")])
+        mock_row.keys.return_value = ["name"]
+        mock_row.values.return_value = ["test_value"]
+        mock_row.__getitem__.return_value = "test_value"
+
+        # Create mock result with the mock row
+        mock_result = MagicMock()
+        mock_result.__iter__.return_value = iter([mock_row])
+
+        # Create mock job with the mock result
+        mock_job = MagicMock()
+        mock_job.result.return_value = mock_result
+
+        # Create mock client with the mock job
+        mock_client = MagicMock()
+        mock_client.query.return_value = mock_job
+        mock_client_cls.return_value = mock_client
+
+        query_with_special_chars = "SELECT * FROM `project.dataset.table` WHERE name LIKE '%test%'"
+        component = component_class(**{**default_kwargs, "query": query_with_special_chars})
+        
+        result = component.execute_sql()
+        
+        # Verify the query with special characters was passed correctly
+        mock_client.query.assert_called_once_with(query_with_special_chars)
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1  # Check number of rows
+        assert "name" in result.columns  # Check column exists
+        assert result.iloc[0]["name"] == "test_value"  # Check value
+
+    @patch.object(Credentials, "from_service_account_file")
+    @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
+    def test_query_with_multiple_statements(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
+        """Test that queries with multiple statements are properly handled."""
+        # Arrange mocks
+        mock_creds = MagicMock(spec=Credentials)
+        mock_from_file.return_value = mock_creds
+
+        # Create a mock row that can be converted to a dict
+        mock_row = MagicMock()
+        mock_row.items.return_value = [("id", 1)]
+        mock_row.__iter__.return_value = iter([("id", 1)])
+        mock_row.keys.return_value = ["id"]
+        mock_row.values.return_value = [1]
+        mock_row.__getitem__.return_value = 1
+
+        # Create mock result with the mock row
+        mock_result = MagicMock()
+        mock_result.__iter__.return_value = iter([mock_row])
+
+        # Create mock job with the mock result
+        mock_job = MagicMock()
+        mock_job.result.return_value = mock_result
+
+        # Create mock client with the mock job
+        mock_client = MagicMock()
+        mock_client.query.return_value = mock_job
+        mock_client_cls.return_value = mock_client
+
+        multi_statement_query = """
+        CREATE TABLE IF NOT EXISTS test_table (id INT64);
+        INSERT INTO test_table VALUES (1);
+        SELECT * FROM test_table;
+        """
+        component = component_class(**{**default_kwargs, "query": multi_statement_query})
+        
+        result = component.execute_sql()
+        
+        # Verify the multi-statement query was passed correctly
+        mock_client.query.assert_called_once_with(multi_statement_query.strip())
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1  # Check number of rows
+        assert "id" in result.columns  # Check column exists
+        assert result.iloc[0]["id"] == 1  # Check value
+
+    @patch.object(Credentials, "from_service_account_file")
+    @patch("langflow.components.google.google_bq_sql_executor.bigquery.Client")
+    def test_query_with_parameters(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
+        """Test that queries with parameters are properly handled."""
+        # Arrange mocks
+        mock_creds = MagicMock(spec=Credentials)
+        mock_from_file.return_value = mock_creds
+
+        # Create a mock row that can be converted to a dict
+        mock_row = MagicMock()
+        mock_row.items.return_value = [
+            ("id", 1),
+            ("name", "test_name")
+        ]
+        mock_row.__iter__.return_value = iter([
+            ("id", 1),
+            ("name", "test_name")
+        ])
+        mock_row.keys.return_value = ["id", "name"]
+        mock_row.values.return_value = [1, "test_name"]
+        mock_row.__getitem__.side_effect = lambda key: {
+            "id": 1,
+            "name": "test_name"
+        }[key]
+
+        # Create mock result with the mock row
+        mock_result = MagicMock()
+        mock_result.__iter__.return_value = iter([mock_row])
+
+        # Create mock job with the mock result
+        mock_job = MagicMock()
+        mock_job.result.return_value = mock_result
+
+        # Create mock client with the mock job
+        mock_client = MagicMock()
+        mock_client.query.return_value = mock_job
+        mock_client_cls.return_value = mock_client
+
+        query_with_params = "SELECT * FROM table WHERE id = @id AND name = @name"
+        component = component_class(**{**default_kwargs, "query": query_with_params})
+        
+        result = component.execute_sql()
+        
+        # Verify the parameterized query was passed correctly
+        mock_client.query.assert_called_once_with(query_with_params)
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1  # Check number of rows
+        assert list(result.columns) == ["id", "name"]  # Check columns
+        assert result.iloc[0]["id"] == 1  # Check id value
+        assert result.iloc[0]["name"] == "test_name"  # Check name value
