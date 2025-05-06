@@ -1,4 +1,5 @@
-import { LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
+import { IS_AUTO_LOGIN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
+import useAuthStore from "@/stores/authStore";
 import { useMutationFunctionType } from "@/types/api";
 import { Cookies } from "react-cookie";
 import { api } from "../../api";
@@ -17,6 +18,7 @@ export const useRefreshAccessToken: useMutationFunctionType<
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
   const cookies = new Cookies();
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   async function refreshAccess(): Promise<IRefreshAccessToken> {
     const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`);
@@ -25,7 +27,10 @@ export const useRefreshAccessToken: useMutationFunctionType<
     return res.data;
   }
 
-  const mutation = mutate(["useRefreshAccessToken"], refreshAccess, options);
+  const mutation = mutate(["useRefreshAccessToken"], refreshAccess, {
+    ...options,
+    retry: IS_AUTO_LOGIN || autoLogin ? 0 : 2,
+  });
 
   return mutation;
 };

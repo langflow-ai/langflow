@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.2.0"
+version = "0.4.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -78,10 +78,17 @@ dependencies = [
     "validators>=0.34.0",
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
-    "mcp>=1.1.2",
+    "mcp>=1.6.0",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+    "jsonquerylang>=1.1.1",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    "elevenlabs>=1.54.0",
+    "webrtcvad>=2.0.10",
+    "scipy>=1.15.2",
+    "ibm-watsonx-ai>=1.3.1",
+    "langchain-ibm>=0.3.8",
+    "trustcall>=0.0.38",
 ]
 
 [dependency-groups]
@@ -190,6 +197,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "langflow/api/v1/*" = [
+    "TCH", # FastAPI needs to evaluate types at runtime
+]
+"langflow/api/v2/*" = [
     "TCH", # FastAPI needs to evaluate types at runtime
 ]
 "langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [

@@ -3,7 +3,7 @@ title: Simple agent
 slug: /starter-projects-simple-agent
 ---
 
-Build a **Simple Agent** flow for an agentic application using the **Tool-calling agent** component.
+Build a **Simple Agent** flow for an agentic application using the [Tool-calling agent](/agents-tool-calling-agent-component) component.
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
@@ -12,7 +12,8 @@ The agent selects the **Calculator** tool for simple math problems and the **URL
 
 ## Prerequisites
 
-To use this flow, you need an OpenAI API key.
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
 
 ## Open Langflow and start a new flow
 
@@ -30,17 +31,15 @@ The **Simple Agent** flow consists of these components:
 * The **URL** tool component searches a list of URLs for content.
 * The **Calculator** component performs basic arithmetic operations.
 * The **Chat Input** component accepts user input to the chat.
-* The **Prompt** component combines the user input with a user-defined prompt.
 * The **Chat Output** component prints the flow's output to the chat.
-* The **OpenAI** model component sends the user input and prompt to the OpenAI API and receives a response.
 
 ## Run the Simple Agent flow
 
-1. Add your credentials to the Open AI component.
+1. Add your credentials to the **Agent** component.
 2. Click **Playground** to start a chat session.
 3. To confirm the tools are connected, ask the agent, `What tools are available to you?`
 The response is similar to the following:
-```plain
+```text
 I have access to the following tools:
 Calculator: Perform basic arithmetic operations.
 fetch_content: Load and retrieve data from specified URLs.
@@ -49,10 +48,10 @@ as_dataframe: Load and retrieve data in a structured format (dataframe) from spe
 get_current_date: Returns the current date and time in a selected timezone.
 ```
 4. Ask the agent a question. For example, ask it to create a tabletop character using your favorite rules set.
-The agent will tell you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
+The agent tells you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
 The final output should be similar to this:
 
-```plain
+```text
 Final Attributes
 Strength (STR): 10
 Constitution (CON): 12

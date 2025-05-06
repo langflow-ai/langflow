@@ -3,7 +3,7 @@ FROM langflowai/backend_build as backend_build
 FROM python:3.10-slim
 WORKDIR /app
 
-RUN apt-get update && apt-get install git -y
+RUN apt-get update && apt-get install -y git libpq-dev gcc
 
 COPY --from=backend_build /app/dist/*.whl /app/
 RUN pip install langflow-*.whl

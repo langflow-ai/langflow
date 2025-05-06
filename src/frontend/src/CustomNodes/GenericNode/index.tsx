@@ -1,6 +1,8 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useAlternate } from "@/shared/hooks/use-alternate";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -11,6 +13,7 @@ import {
   TOOLTIP_OPEN_HIDDEN_OUTPUTS,
 } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -20,10 +23,6 @@ import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
-
-import { useAlternate } from "@/shared/hooks/use-alternate";
-import { useUtilityStore } from "@/stores/utilityStore";
-import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -233,10 +232,12 @@ function GenericNode({
           selected={selected}
           showNode={showNode}
           isToolMode={isToolMode}
+          showHiddenOutputs={showHiddenOutputs}
+          hidden={key === "hidden"}
         />
       ));
     },
-    [data, types, selected, showNode, isToolMode],
+    [data, types, selected, showNode, isToolMode, showHiddenOutputs],
   );
 
   const { shownOutputs, hiddenOutputs } = useMemo(
@@ -252,8 +253,19 @@ function GenericNode({
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
 
+  const editedNameDescription =
+    editNameDescription && hasChangedNodeDescription;
+
+  const hasDescription = useMemo(() => {
+    return data.node?.description && data.node?.description !== "";
+  }, [data.node?.description]);
+
+  const selectedNodesCount = useMemo(() => {
+    return useFlowStore.getState().nodes.filter((node) => node.selected).length;
+  }, [selected]);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return selected ? (
+    return selected && selectedNodesCount === 1 ? (
       <>
         <div
           className={cn(
@@ -294,25 +306,21 @@ function GenericNode({
               showNode
                 ? "top-2 translate-x-[10.4rem]"
                 : "top-0 translate-x-[6.4rem]",
-              editNameDescription && hasChangedNodeDescription
+              editedNameDescription
                 ? "bg-accent-emerald"
                 : "bg-zinc-foreground",
             )}
             data-testid={
-              editNameDescription && hasChangedNodeDescription
+              editedNameDescription
                 ? "save-name-description-button"
                 : "edit-name-description-button"
             }
           >
             <ForwardedIconComponent
-              name={
-                editNameDescription && hasChangedNodeDescription
-                  ? "Check"
-                  : "PencilLine"
-              }
+              name={editedNameDescription ? "Check" : "PencilLine"}
               strokeWidth={ICON_STROKE_WIDTH}
               className={cn(
-                editNameDescription && hasChangedNodeDescription
+                editedNameDescription
                   ? "text-accent-emerald-foreground"
                   : "text-muted-foreground",
                 "icon-size",
@@ -338,8 +346,8 @@ function GenericNode({
     editNameDescription,
     hasChangedNodeDescription,
     toggleEditNameDescription,
+    selectedNodesCount,
   ]);
-
   useEffect(() => {
     if (hiddenOutputs && hiddenOutputs.length === 0) {
       setShowHiddenOutputs(false);
@@ -490,8 +498,9 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid gap-3 text-wrap p-4 leading-5",
+            "grid text-wrap p-4 leading-5",
             showNode ? "border-b" : "relative",
+            hasDescription && "gap-3",
           )}
         >
           <div

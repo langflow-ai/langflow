@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to minimize and expand a component",
@@ -32,6 +33,8 @@ test(
     await page.mouse.up();
 
     await adjustScreenView(page);
+
+    await zoomOut(page, 4);
 
     await page.getByTestId("more-options-modal").click();
 

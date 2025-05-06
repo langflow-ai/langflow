@@ -1,3 +1,16 @@
+/**
+ * In Honor of Otávio Anovazzi (@anovazzi1)
+ *
+ * This file contains the highest number of commits by Otávio in the entire Langflow project,
+ * reflecting his unmatched dedication, expertise, and innovative spirit. Each line of code
+ * is a testament to his relentless pursuit of excellence and his significant impact on this
+ * project's evolution.
+
+ * His commitment to selflessly helping others embodies the true meaning of open source,
+ * and his legacy lives on in each one of his 2771 contributions, inspiring us to build exceptional
+ * software for all.
+ */
+
 import {
   getLeftHandleId,
   getRightHandleId,
@@ -52,6 +65,10 @@ const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "ChatInput");
+}
+
+export function checkWebhookInput(nodes: Node[]) {
+  return nodes.some((node) => node.data.type === "Webhook");
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
@@ -113,10 +130,12 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     if (sourceHandle) {
       const parsedSourceHandle = scapeJSONParse(sourceHandle);
       const name = parsedSourceHandle.name;
+
       if (sourceNode.type == "genericNode") {
         const output = sourceNode.data.node!.outputs?.find(
           (output) => output.name === name,
         );
+
         if (output) {
           const outputTypes =
             output!.types.length === 1 ? output!.types : [output!.selected!];
@@ -127,6 +146,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
+
           if (scapedJSONStringfy(id) !== sourceHandle) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
           }
@@ -147,20 +167,16 @@ export function filterHiddenFieldsEdges(
   targetNode: AllNodeType,
 ) {
   if (targetNode) {
-    const nodeInputType = edge.data?.targetHandle?.inputTypes;
+    const targetHandle = edge.data?.targetHandle;
+    if (!targetHandle) return newEdges;
+
+    const fieldName = targetHandle.fieldName;
     const nodeTemplates = targetNode.data.node!.template;
 
-    Object.keys(nodeTemplates).forEach((key) => {
-      if (!nodeTemplates[key]?.input_types) return;
-      if (
-        nodeTemplates[key]?.input_types?.some((type) =>
-          nodeInputType?.includes(type),
-        ) &&
-        !nodeTemplates[key].show
-      ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
-      }
-    });
+    // Only check the specific field the edge is connected to
+    if (nodeTemplates[fieldName]?.show === false) {
+      newEdges = newEdges.filter((e) => e.id !== edge.id);
+    }
   }
   return newEdges;
 }
@@ -1694,17 +1710,49 @@ export function templatesGenerator(data: APIObjectType) {
 
 export function extractFieldsFromComponenents(data: APIObjectType) {
   const fields = new Set<string>();
+
+  // Check if data exists
+  if (!data) {
+    console.warn("[Types] Data is undefined in extractFieldsFromComponenents");
+    return fields;
+  }
+
   Object.keys(data).forEach((key) => {
+    // Check if data[key] exists
+    if (!data[key]) {
+      console.warn(
+        `[Types] data["${key}"] is undefined in extractFieldsFromComponenents`,
+      );
+      return;
+    }
+
     Object.keys(data[key]).forEach((kind) => {
+      // Check if data[key][kind] exists
+      if (!data[key][kind]) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"] is undefined in extractFieldsFromComponenents`,
+        );
+        return;
+      }
+
+      // Check if template exists
+      if (!data[key][kind].template) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"].template is undefined in extractFieldsFromComponenents`,
+        );
+        return;
+      }
+
       Object.keys(data[key][kind].template).forEach((field) => {
         if (
-          data[key][kind].template[field].display_name &&
-          data[key][kind].template[field].show
+          data[key][kind].template[field]?.display_name &&
+          data[key][kind].template[field]?.show
         )
           fields.add(data[key][kind].template[field].display_name!);
       });
     });
   });
+
   return fields;
 }
 /**
@@ -1800,6 +1848,7 @@ export const createNewFlow = (
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
     tags: flow?.tags ?? [],
+    mcp_enabled: true,
   };
 };
 
@@ -1935,8 +1984,41 @@ export function someFlowTemplateFields(
   });
 }
 
-export function checkHasToolMode(template: APITemplateType) {
-  return template && Object.values(template).some((field) => field.tool_mode);
+/**
+ * Determines if the provided API template supports tool mode.
+ *
+ * A template is considered to support tool mode if either:
+ * - It contains only the 'code' and '_type' fields (with both being truthy),
+ *   indicating that no additional fields exist.
+ * - At least one field in the template has a truthy 'tool_mode' property.
+ *
+ * @param template - The API template to evaluate.
+ * @returns True if the template supports tool mode capability; otherwise, false.
+ */
+export function checkHasToolMode(template: APITemplateType): boolean {
+  if (!template) return false;
+
+  const templateKeys = Object.keys(template);
+
+  // Check if the template has no additional fields
+  const hasNoAdditionalFields =
+    templateKeys.length === 2 &&
+    Boolean(template.code) &&
+    Boolean(template._type);
+
+  // Check if the template has at least one field with a truthy 'tool_mode' property
+  const hasToolModeFields = Object.values(template).some((field) =>
+    Boolean(field.tool_mode),
+  );
+  // Check if the component is already in tool mode
+  // This occurs when the template has exactly 3 fields: _type, code, and tools_metadata
+  const isInToolMode =
+    templateKeys.length === 3 &&
+    Boolean(template.code) &&
+    Boolean(template._type) &&
+    Boolean(template.tools_metadata);
+
+  return hasNoAdditionalFields || hasToolModeFields || isInToolMode;
 }
 
 export function buildPositionDictionary(nodes: AllNodeType[]) {
@@ -1945,4 +2027,8 @@ export function buildPositionDictionary(nodes: AllNodeType[]) {
     positionDictionary[node.position.x] = node.position.y;
   });
   return positionDictionary;
+}
+
+export function hasStreaming(nodes: AllNodeType[]) {
+  return nodes.some((node) => node.data.node?.template?.stream?.value);
 }

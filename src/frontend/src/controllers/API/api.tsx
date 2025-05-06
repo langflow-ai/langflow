@@ -1,4 +1,4 @@
-import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
+import { IS_AUTO_LOGIN, LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -6,7 +6,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { BuildStatus } from "../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
@@ -46,9 +46,12 @@ function ApiInterceptor() {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        for (const [key, value] of Object.entries(customHeaders)) {
-          config.headers[key] = value;
+        if (!isExternalURL(url)) {
+          for (const [key, value] of Object.entries(customHeaders)) {
+            config.headers[key] = value;
+          }
         }
+
         return [url, config];
       },
     });
@@ -62,22 +65,27 @@ function ApiInterceptor() {
         const isAuthenticationError =
           error?.response?.status === 403 || error?.response?.status === 401;
 
-        if (isAuthenticationError) {
-          if (autoLogin !== undefined && !autoLogin) {
-            if (error?.config?.url?.includes("github")) {
-              return Promise.reject(error);
-            }
-            const stillRefresh = checkErrorCount();
-            if (!stillRefresh) {
-              return Promise.reject(error);
-            }
+        const shouldRetryRefresh =
+          (isAuthenticationError && !IS_AUTO_LOGIN) ||
+          (isAuthenticationError && !autoLogin && autoLogin !== undefined);
 
-            await tryToRenewAccessToken(error);
+        if (shouldRetryRefresh) {
+          if (
+            error?.config?.url?.includes("github") ||
+            error?.config?.url?.includes("public")
+          ) {
+            return Promise.reject(error);
+          }
+          const stillRefresh = checkErrorCount();
+          if (!stillRefresh) {
+            return Promise.reject(error);
+          }
 
-            const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-            if (!accessToken && error?.config?.url?.includes("login")) {
-              return Promise.reject(error);
-            }
+          await tryToRenewAccessToken(error);
+
+          const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+          if (!accessToken && error?.config?.url?.includes("login")) {
+            return Promise.reject(error);
           }
         }
 
@@ -111,6 +119,23 @@ function ApiInterceptor() {
         return isDomainAllowed || isEndpointAllowed;
       } catch (e) {
         // Invalid URL
+        return false;
+      }
+    };
+
+    // Check for external url which we don't want to add custom headers to
+    const isExternalURL = (url: string): boolean => {
+      const EXTERNAL_DOMAINS = [
+        "https://raw.githubusercontent.com",
+        "https://api.github.com",
+        "https://api.segment.io",
+        "https://cdn.sprig.com",
+      ];
+
+      try {
+        const parsedURL = new URL(url);
+        return EXTERNAL_DOMAINS.some((domain) => parsedURL.origin === domain);
+      } catch (e) {
         return false;
       }
     };
@@ -238,6 +263,7 @@ export type StreamingRequestParams = {
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
   buildController: AbortController;
+  eventDeliveryConfig?: EventDeliveryType;
 };
 
 async function performStreamingRequest({

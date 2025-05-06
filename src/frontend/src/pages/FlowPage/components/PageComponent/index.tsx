@@ -17,7 +17,7 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
@@ -542,6 +542,13 @@ export default function Page({
 
   const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 8;
+  const fitViewOptions = {
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+  };
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -572,9 +579,10 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
+            fitViewOptions={fitViewOptions}
             className="theme-attribution"
-            minZoom={0.01}
-            maxZoom={8}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}

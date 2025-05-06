@@ -1,13 +1,13 @@
 from typing_extensions import TypedDict
 
 from langflow.base.models.model import LCModelComponent
-from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
+from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
-from langflow.components.models.openai import OpenAIModelComponent
+from langflow.components.models.openai_chat_model import OpenAIModelComponent
 from langflow.components.models.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
@@ -85,7 +85,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from langflow.components.models.openai import OpenAIModelComponent
+        from langflow.components.models.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -140,7 +140,7 @@ def _get_nvidia_inputs_and_fields():
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
+        from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:

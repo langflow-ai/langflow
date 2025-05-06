@@ -25,6 +25,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2023-12-01-preview",
         "2024-02-15-preview",
         "2024-03-01-preview",
+        "2024-12-01-preview",
+        "2025-01-01-preview",
+        "2025-02-01-preview",
     ]
 
     inputs = [
@@ -56,6 +59,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             value=0.7,
             range_spec=RangeSpec(min=0, max=2, step=0.01),
             info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
+            advanced=True,
         ),
         IntInput(
             name="max_tokens",

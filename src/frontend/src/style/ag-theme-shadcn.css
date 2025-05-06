@@ -12,8 +12,9 @@
   --ag-selected-row-background-color: hsl(var(--accent)) !important;
   --ag-menu-background-color: hsl(var(--accent)) !important;
   --ag-panel-background-color: hsl(var(--accent)) !important;
-  --ag-row-hover-color: hsl(var(--primary-foreground)) !important;
+  --ag-row-hover-color: hsl(var(--accent)) !important;
   --ag-header-height: 2.5rem !important;
+  --ag-checkbox-checked-color: hsl(var(--primary)) !important;
 }
 
 .ag-theme-shadcn .ag-paging-panel {
@@ -33,7 +34,6 @@
 .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
   align-items: self-start;
   position: relative;
-  top: 2px;
 }
 
 .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
@@ -77,4 +77,68 @@
 
 .ag-row {
   cursor: pointer;
+}
+
+.ag-no-border .ag-root-wrapper {
+  border: none !important;
+}
+.ag-no-border .ag-row {
+  border-bottom: none !important;
+}
+
+.ag-no-border .ag-header {
+  margin-bottom: 0.6rem !important;
+}
+
+.ag-no-border .ag-paging-panel {
+  border-top: none !important;
+}
+
+.ag-no-border .ag-cell-focus:not(.ag-cell-inline-editing) {
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.ag-tool-mode .ag-root-wrapper {
+  border: none !important;
+}
+.ag-tool-mode .ag-row {
+  border-bottom: none !important;
+}
+
+.ag-tool-mode .ag-header {
+  margin-bottom: 0rem !important;
+  border-bottom: 0 !important;
+}
+
+.ag-tool-mode .ag-header-cell {
+  padding: 0rem 1rem !important;
+  margin: 1px;
+}
+
+.ag-tool-mode .ag-ltr .ag-header-select-all {
+  margin-right: var(--ag-cell-widget-spacing);
+}
+
+.ag-tool-mode .ag-paging-panel {
+  border-top: none !important;
+}
+
+.ag-tool-mode .ag-cell-focus:not(.ag-cell-inline-editing) {
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.ag-tool-mode .ag-cell {
+  padding: 0rem 1rem !important;
+}
+
+.ag-tool-mode .ag-row-focus {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.ag-tool-mode .ag-row-selected:not(.ag-row-focus)::before {
+  background-color: hsl(var(--background)) !important;
 }

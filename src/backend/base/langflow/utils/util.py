@@ -415,6 +415,7 @@ async def update_settings(
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
     max_file_size_upload: int = 100,
+    webhook_polling_interval: int = 5000,
 ) -> None:
     """Update the settings from a config file."""
     # Check for database_url in the environment variables
@@ -448,6 +449,9 @@ async def update_settings(
     if max_file_size_upload is not None:
         logger.debug(f"Setting max_file_size_upload to {max_file_size_upload}")
         settings_service.settings.update_settings(max_file_size_upload=max_file_size_upload)
+    if webhook_polling_interval is not None:
+        logger.debug(f"Setting webhook_polling_interval to {webhook_polling_interval}")
+        settings_service.settings.update_settings(webhook_polling_interval=webhook_polling_interval)
 
 
 def is_class_method(func, cls):

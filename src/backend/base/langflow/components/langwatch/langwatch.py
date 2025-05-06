@@ -1,9 +1,9 @@
 import json
-import logging
 import os
 from typing import Any
 
 import httpx
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.inputs.inputs import MultilineInput
@@ -19,9 +19,6 @@ from langflow.io import (
 )
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class LangWatchComponent(Component):
@@ -266,12 +263,10 @@ class LangWatchComponent(Component):
                 "settings": {},
             }
 
-            if (
-                self._tracing_service
-                and self._tracing_service._tracers
-                and "langwatch" in self._tracing_service._tracers
-            ):
-                payload["trace_id"] = str(self._tracing_service._tracers["langwatch"].trace_id)  # type: ignore[assignment]
+            if self._tracing_service:
+                tracer = self._tracing_service.get_tracer("langwatch")
+                if tracer is not None and hasattr(tracer, "trace_id"):
+                    payload["settings"]["trace_id"] = str(tracer.trace_id)
 
             for setting_name in self.dynamic_inputs:
                 payload["settings"][setting_name] = getattr(self, setting_name, None)

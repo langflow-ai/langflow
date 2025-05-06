@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
@@ -40,21 +39,8 @@ def _get_input_type(input_: InputTypes):
 
 
 def build_description(component: Component, output: Output) -> str:
-    if not output.required_inputs:
-        logger.warning(f"Output {output.name} does not have required inputs defined")
-
-    if output.required_inputs:
-        args = ", ".join(
-            sorted(
-                [
-                    f"{input_name}: {_get_input_type(component._inputs[input_name])}"
-                    for input_name in output.required_inputs
-                ]
-            )
-        )
-    else:
-        args = ""
-    return f"{output.method}({args}) - {component.description}"
+    name = component.name or component.__class__.__name__
+    return f"{name}. {output.method} - {component.description}"
 
 
 async def send_message_noop(
@@ -211,6 +197,8 @@ class ComponentToolkit:
                     inputs=flow_mode_inputs,
                     param_key="flow_tweak_data",
                 )
+            elif tool_mode_inputs:
+                args_schema = create_input_schema(tool_mode_inputs)
             elif output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]
@@ -220,6 +208,7 @@ class ComponentToolkit:
                 # If any of the required inputs are not in tool mode, this means
                 # that when the tool is called it will raise an error.
                 # so we should raise an error here.
+                # TODO: This logic might need to be improved, example if the required is an api key.
                 if not all(getattr(_input, "tool_mode", False) for _input in inputs):
                     non_tool_mode_inputs = [
                         input_.name
@@ -234,12 +223,11 @@ class ComponentToolkit:
                     )
                     raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
-            elif tool_mode_inputs:
-                args_schema = create_input_schema(tool_mode_inputs)
+
             else:
                 args_schema = create_input_schema(self.component.inputs)
 
-            name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
+            name = f"{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
             if asyncio.iscoroutinefunction(output_method):
@@ -252,6 +240,10 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
+                        },
                     )
                 )
             else:
@@ -264,6 +256,10 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
+                        },
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):
@@ -306,6 +302,7 @@ class ComponentToolkit:
         # update the tool_name and description according to the name and secriotion mentioned in the list
         if isinstance(self.metadata, pd.DataFrame):
             metadata_dict = self.get_tools_metadata_dictionary()
+            filtered_tools = []
             for tool in tools:
                 if isinstance(tool, StructuredTool | BaseTool) and tool.tags:
                     try:
@@ -315,13 +312,17 @@ class ComponentToolkit:
                         raise ValueError(msg) from None
                     if tag in metadata_dict:
                         tool_metadata = metadata_dict[tag]
-                        tool.name = tool_metadata.get("name", tool.name)
-                        tool.description = tool_metadata.get("description", tool.description)
-                        if tool_metadata.get("commands"):
-                            tool.description = _add_commands_to_tool_description(
-                                tool.description, tool_metadata.get("commands")
-                            )
+                        # Only include tools with status=True
+                        if tool_metadata.get("status", True):
+                            tool.name = tool_metadata.get("name", tool.name)
+                            tool.description = tool_metadata.get("description", tool.description)
+                            if tool_metadata.get("commands"):
+                                tool.description = _add_commands_to_tool_description(
+                                    tool.description, tool_metadata.get("commands")
+                                )
+                            filtered_tools.append(tool)
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)
+            return filtered_tools
         return tools
