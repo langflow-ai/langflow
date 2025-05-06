@@ -63,7 +63,7 @@ def test_vertex_response_structure_when_truncate_applies():
     ("size", "expected"),
     [
         (0, 0),
-        (42, 42),
+        (8, 8),
         (MAX_ITEMS_LENGTH, MAX_ITEMS_LENGTH),
         (MAX_ITEMS_LENGTH + 1000, MAX_ITEMS_LENGTH + 1),
         (MAX_ITEMS_LENGTH + 2000, MAX_ITEMS_LENGTH + 1),

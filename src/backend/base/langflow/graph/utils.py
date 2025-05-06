@@ -12,6 +12,7 @@ from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.serialization import serialize
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
@@ -142,8 +143,8 @@ async def log_transaction(
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
-            inputs=inputs,
-            outputs=outputs,
+            inputs=serialize(inputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            outputs=serialize(outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
@@ -175,10 +176,8 @@ async def log_vertex_build(
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,
-            # Serialize data using our custom serializer
-            data=serialize(data),
-            # Serialize artifacts using our custom serializer
-            artifacts=serialize(artifacts) if artifacts else None,
+            data=serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            artifacts=serialize(artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_vertex_build(session, vertex_build)
