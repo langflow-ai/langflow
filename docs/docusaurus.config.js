@@ -258,7 +258,8 @@ const config = {
             to: "/deployment-kubernetes-dev",
             from: [
               "/deployment-kubernetes",
-           },
+            ],
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
