@@ -299,10 +299,9 @@ Your JSON data is posted to the **Chat Output** component, which indicates that 
 
 </details>
 
-## Moved components
+## Legacy components
 
-The Google components are available in the **Components** menu under **Bundles**.
-For more information, see [Integrate Google OAuth with Langflow](/integrations-setup-google-oauth-langflow).
+Legacy components are available for use but are no longer supported.
 
 ### Gmail Loader
 
