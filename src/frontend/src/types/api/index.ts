@@ -161,6 +161,7 @@ export type changeUser = {
     github_starred?: boolean;
     discord_clicked?: boolean;
     dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
   };
 };
 
@@ -181,6 +182,7 @@ export type Users = {
     github_starred?: boolean;
     discord_clicked?: boolean;
     dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
   };
 };
 
@@ -324,6 +326,7 @@ export type FieldParserType =
   | "uppercase"
   | "no_blank"
   | "valid_csv"
+  | "space_case"
   | "commands";
 
 export type TableOptionsTypeAPI = {

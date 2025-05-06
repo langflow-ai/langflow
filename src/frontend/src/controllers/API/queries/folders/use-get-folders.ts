@@ -1,4 +1,7 @@
-import { DEFAULT_FOLDER } from "@/constants/constants";
+import {
+  DEFAULT_FOLDER,
+  DEFAULT_FOLDER_DEPRECATED,
+} from "@/constants/constants";
 import { FolderType } from "@/pages/MainPage/entities";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -20,10 +23,12 @@ export const useGetFoldersQuery: useQueryFunctionType<
 
   const getFoldersFn = async (): Promise<FolderType[]> => {
     if (!isAuthenticated) return [];
-    const res = await api.get(`${getURL("FOLDERS")}/`);
+    const res = await api.get(`${getURL("PROJECTS")}/`);
     const data = res.data;
 
-    const myCollectionId = data?.find((f) => f.name === DEFAULT_FOLDER)?.id;
+    const myCollectionId = data?.find(
+      (f) => f.name === DEFAULT_FOLDER_DEPRECATED,
+    )?.id;
     setMyCollectionId(myCollectionId);
     setFolders(data);
 
