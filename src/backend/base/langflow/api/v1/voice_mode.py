@@ -7,6 +7,7 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -609,6 +610,81 @@ def is_response_done(response_id: str) -> bool:
     return completed
 
 
+class FunctionCall:
+    def __init__(
+        self,
+        item: dict,
+        msg_handler,
+        flow_id: str,
+        background_tasks,
+        current_user,
+        conversation_id: str,
+        session_id: str,
+        *,
+        is_prog_enabled: bool,
+    ):
+        self.item = item
+        self.args = ""
+        self.done = False
+        self.prog_rsp_id: str = None
+        self.func_rsp_id: str = None
+        self.func_task: asyncio.Task = None
+        self.is_prog_enabled = is_prog_enabled
+        self.msg_handler = msg_handler
+        self.flow_id = flow_id
+        self.background_tasks = background_tasks
+        self.current_user = current_user
+        self.conversation_id = conversation_id
+        self.session_id = session_id
+
+    def append_args(self, args: str):
+        self.args += args
+
+    def execute(self):
+        if self.is_prog_enabled:
+            self._send_progress_message()
+        self._send_function_call()
+
+    def _send_progress_message(self):
+        # Summarize and notify user of in-progress function call
+        self.msg_handler.openai_send(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "message",
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": "Tell the user you are now looking into or solving a request."
+                            "and summarize what is being requested."
+                            "Keep it very short."
+                            f"\n\nThe request: {self.args}",
+                        }
+                    ],
+                },
+            }
+        )
+        create_response = partial(get_create_response(self.msg_handler, self.session_id))
+        create_response()
+
+    def _send_function_call(self):
+        async def _call():
+            await handle_function_call(
+                function_call=self.item,
+                function_call_args=self.args,
+                flow_id=self.flow_id,
+                background_tasks=self.background_tasks,
+                current_user=self.current_user,
+                conversation_id=self.conversation_id,
+                session_id=self.session_id,
+                msg_handler=self.msg_handler,
+            )
+            self.done = True
+
+        self.func_task = asyncio.create_task(_call())
+
+
 # --- WebSocket Endpoints for Flow-as-Tool ---
 @router.websocket("/ws/flow_as_tool/{flow_id}")
 async def flow_as_tool_websocket_no_session(
@@ -889,71 +965,8 @@ async def flow_as_tool_websocket(
             async def forward_to_client() -> None:
                 nonlocal bot_speaking_flag, responses
                 conversation_id = str(uuid4())
-                # Store function call tasks to prevent garbage collection
-
-                class FunctionCall:
-                    def __init__(self, item, *, is_prog_enabled: bool):
-                        self.item: dict = item
-                        self.args: str = ""
-                        self.done: bool = False
-                        self.is_prog_enabled: bool = is_prog_enabled
-                        self.prog_rsp_id: str = None
-                        self.func_rsp_id: str = None
-                        self.func_task: asyncio.Task = None
-
-                    def append_args(self, args):
-                        if not self.func_task:
-                            self.args = self.args + args
-
-                    def execute(self):
-                        try:
-                            if self.is_prog_enabled:
-                                self.__exec_progress_msg()
-                            self.__exec_func_call()
-                        except Exception as e:  # noqa: BLE001
-                            logger.error(f"Error saving message to database (ValueError): {e}")
-                            logger.error(traceback.format_exc())
-
-                    def __exec_progress_msg(self):
-                        msg_handler.openai_send(
-                            {
-                                "type": "conversation.item.create",
-                                "item": {
-                                    "type": "message",
-                                    "role": "system",
-                                    "content": [
-                                        {
-                                            "type": "input_text",
-                                            "text": "Tell the user you are now looking into or solving "
-                                            "a request that will be explained later. Do not repeat "
-                                            "the prompt exactly, summarize what's being requested."
-                                            "Keep it very short."
-                                            f"\n\nThe request: {self.args}",
-                                        }
-                                    ],
-                                },
-                            }
-                        )
-                        create_response = get_create_response(msg_handler, session_id)
-                        create_response()
-
-                    def __exec_func_call(self):
-                        async def execute_func(self):
-                            await handle_function_call(
-                                self.item,
-                                self.args,
-                                flow_id,
-                                background_tasks,
-                                current_user,
-                                conversation_id,
-                                session_id,
-                                msg_handler,
-                            )
-                            self.done = True
-
-                        self.func_task = asyncio.create_task(execute_func(self))
-
                 function_call = None
+                # Store function call tasks to prevent garbage collection
 
                 try:
                     while True:
@@ -1007,7 +1020,16 @@ async def flow_as_tool_websocket(
                             if item.get("type") == "function_call" and (
                                 not function_call or (function_call and function_call.done)
                             ):
-                                function_call = FunctionCall(item, is_prog_enabled=voice_config.progress_enabled)
+                                function_call = FunctionCall(
+                                    item=item,
+                                    msg_handler=msg_handler,
+                                    flow_id=flow_id,
+                                    background_tasks=background_tasks,
+                                    current_user=current_user,
+                                    conversation_id=conversation_id,
+                                    session_id=session_id,
+                                    is_prog_enabled=voice_config.progress_enabled,
+                                )
                         elif event_type == "response.output_item.done":
                             try:
                                 transcript = extract_transcript(event)
