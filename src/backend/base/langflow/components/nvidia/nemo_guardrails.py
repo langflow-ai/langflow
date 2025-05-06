@@ -24,9 +24,22 @@ DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT = """You are given a statement.
 
 Check if it is factually consistent with the provided document."""
 
-DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = """Check if the input violates content safety guidelines."""
+DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = """Task: Check if there is unsafe content in the user message in the below conversation...
+<BEGIN CONVERSATION>
+user: {{ user_input }}
+<END CONVERSATION>
+Provide your safety assessment in the following JSON format:
+{"User Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
+Do not include anything other than the output JSON in your response."""
 
-DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = """Check if the output violates content safety guidelines."""
+DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = """Task: Check if there is unsafe content in the agent response in the below conversation...
+<BEGIN CONVERSATION>
+user: {{ user_input }}
+agent: {{ bot_response }}
+<END CONVERSATION>
+Provide your safety assessment in the following JSON format:
+{"Response Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
+Do not include anything other than the output JSON in your response."""
 
 DEFAULT_TOPIC_CONTROL_INPUT_PROMPT = """Ensure that the input stays within the allowed discussion topics."""
 
@@ -217,6 +230,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "parameters": {
                     "base_url": self.guardrail_model_url,
                     "api_key": self.guardrail_model_api_key,
+                    "max_tokens": 256
                 }
             })
 
@@ -226,6 +240,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "task": "content_safety_check_input $model=content_safety",
                 "content": self.content_safety_input_prompt,
                 "output_parser": "nemoguard_parse_prompt_safety",
+                "max_tokens": 50
             })
 
         if "content safety output" in self.rails:
@@ -233,7 +248,8 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             config_dict["prompts"].append({
                 "task": "content_safety_check_output $model=content_safety",
                 "content": self.content_safety_output_prompt,
-                "output_parser": "nemoguard_parse_prompt_safety",
+                "output_parser": "nemoguard_parse_response_safety",
+                "max_tokens": 50
             })
 
         # Topic control rails
