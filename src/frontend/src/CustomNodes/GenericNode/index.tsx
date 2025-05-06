@@ -293,6 +293,11 @@ function GenericNode({
     return useFlowStore.getState().nodes.filter((node) => node.selected).length;
   }, [selected]);
 
+  const shouldShowUpdateComponent = useMemo(
+    () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+  );
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected && selectedNodesCount === 1 ? (
       <>
@@ -490,13 +495,7 @@ function GenericNode({
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
-    <div
-      className={cn(
-        (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll
-          ? "relative -mt-10"
-          : "",
-      )}
-    >
+    <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
@@ -512,7 +511,7 @@ function GenericNode({
           components={componentUpdate ? [componentUpdate] : []}
         />
         {memoizedNodeToolbarComponent}
-        {(isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll && (
+        {shouldShowUpdateComponent && (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             showNode={showNode}
