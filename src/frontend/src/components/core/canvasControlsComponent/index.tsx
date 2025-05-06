@@ -13,7 +13,7 @@ import {
   type ReactFlowState,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { useEffect, useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
 
@@ -71,7 +71,9 @@ const CanvasControls = ({ children }) => {
     shallow,
   );
   const saveFlow = useSaveFlow();
-  const isLocked = useFlowStore(useShallow((state) => state.currentFlow?.locked));
+  const isLocked = useFlowStore(
+    useShallow((state) => state.currentFlow?.locked),
+  );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
 

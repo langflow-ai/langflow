@@ -1,9 +1,11 @@
-import { memo } from "react";
-import { Background, Panel } from "@xyflow/react";
-import CanvasControls, { CustomControlButton } from "@/components/core/canvasControlsComponent";
-import { cn } from "@/utils/utils";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import CanvasControls, {
+  CustomControlButton,
+} from "@/components/core/canvasControlsComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/utils/utils";
+import { Background, Panel } from "@xyflow/react";
+import { memo } from "react";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -16,30 +18,32 @@ interface MemoizedCanvasControlsProps {
   shadowBoxHeight: number;
 }
 
-export const MemoizedCanvasControls = memo(({
-  setIsAddingNote,
-  position,
-  shadowBoxWidth,
-  shadowBoxHeight,
-}: MemoizedCanvasControlsProps) => (
-  <CanvasControls>
-    <CustomControlButton
-      iconName="sticky-note"
-      tooltipText="Add Note"
-      onClick={() => {
-        setIsAddingNote(true);
-        const shadowBox = document.getElementById("shadow-box");
-        if (shadowBox) {
-          shadowBox.style.display = "block";
-          shadowBox.style.left = `${position.x - shadowBoxWidth / 2}px`;
-          shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
-        }
-      }}
-      iconClasses="text-primary"
-      testId="add_note"
-    />
-  </CanvasControls>
-));
+export const MemoizedCanvasControls = memo(
+  ({
+    setIsAddingNote,
+    position,
+    shadowBoxWidth,
+    shadowBoxHeight,
+  }: MemoizedCanvasControlsProps) => (
+    <CanvasControls>
+      <CustomControlButton
+        iconName="sticky-note"
+        tooltipText="Add Note"
+        onClick={() => {
+          setIsAddingNote(true);
+          const shadowBox = document.getElementById("shadow-box");
+          if (shadowBox) {
+            shadowBox.style.display = "block";
+            shadowBox.style.left = `${position.x - shadowBoxWidth / 2}px`;
+            shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
+          }
+        }}
+        iconClasses="text-primary"
+        testId="add_note"
+      />
+    </CanvasControls>
+  ),
+);
 
 export const MemoizedSidebarTrigger = memo(() => (
   <Panel
@@ -50,10 +54,7 @@ export const MemoizedSidebarTrigger = memo(() => (
     position="top-left"
   >
     <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
-      <ForwardedIconComponent
-        name="PanelRightClose"
-        className="h-4 w-4"
-      />
+      <ForwardedIconComponent name="PanelRightClose" className="h-4 w-4" />
       <span className="text-foreground">Components</span>
     </SidebarTrigger>
   </Panel>

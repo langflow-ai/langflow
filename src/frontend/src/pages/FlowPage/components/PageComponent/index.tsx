@@ -59,9 +59,13 @@ import {
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import {
+  MemoizedBackground,
+  MemoizedCanvasControls,
+  MemoizedSidebarTrigger,
+} from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-import { MemoizedBackground, MemoizedCanvasControls, MemoizedSidebarTrigger } from "./MemoizedComponents";
 
 const nodeTypes = {
   genericNode: GenericNode,
