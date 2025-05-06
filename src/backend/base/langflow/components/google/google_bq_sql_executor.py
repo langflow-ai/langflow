@@ -1,17 +1,13 @@
 import json
-import re
 from json.decoder import JSONDecodeError
-from pathlib import Path
 
 from google.auth.exceptions import RefreshError
 from google.cloud import bigquery
 from google.oauth2.service_account import Credentials
 
-from langflow.base.data.utils import TEXT_FILE_TYPES
 from langflow.custom import Component
 from langflow.field_typing import Message
 from langflow.io import FileInput, MessageTextInput, Output
-from langchain_community.tools.json.tool import JsonSpec
 
 
 class BigQueryExecutorComponent(Component):

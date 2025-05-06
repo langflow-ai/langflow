@@ -1,11 +1,9 @@
 import json
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
-
 from langflow.components.google.google_bq_sql_executor import BigQueryExecutorComponent
 from langflow.field_typing import Message
 
