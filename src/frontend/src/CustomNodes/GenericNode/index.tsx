@@ -233,7 +233,7 @@ function GenericNode({
           showNode={showNode}
           isToolMode={isToolMode}
           showHiddenOutputs={showHiddenOutputs}
-          hidden={output.hidden}
+          hidden={key === "hidden" ? output.hidden : false}
         />
       ));
     },
