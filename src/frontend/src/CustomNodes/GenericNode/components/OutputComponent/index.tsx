@@ -31,14 +31,14 @@ export default function OutputComponent({
   }, [outputs]);
 
   const [selectedName, setSelectedName] = useState(
-    isToolMode ? "Tool Mode" : outputs?.[0].display_name,
+    isToolMode ? "Toolset" : outputs?.[0].display_name,
   );
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
 
   useEffect(() => {
     if (isToolMode) {
-      setSelectedName("Tool Mode");
+      setSelectedName("Toolset");
     }
   }, [isToolMode]);
 
@@ -89,7 +89,7 @@ export default function OutputComponent({
                   backgroundImage:
                     "linear-gradient(90deg, #F472B6 0%, #C084FC 50%)",
                 }
-              : selectedName === "Tool Mode"
+              : selectedName === "Toolset"
                 ? {
                     color: "hsl(var(--placeholder-foreground))",
                   }
