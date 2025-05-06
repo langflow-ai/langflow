@@ -188,7 +188,6 @@ export default function ChatView({
 
   const handleScroll = () => {
     if (!messagesRef.current) return;
-    console.log(scrollDir);
 
     const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
     const atBottom = scrollHeight - clientHeight <= scrollTop + 10;
