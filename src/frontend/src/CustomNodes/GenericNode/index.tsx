@@ -75,6 +75,7 @@ function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  // All state hooks gathered at the top
   const [isOutdated, setIsOutdated] = useState(false);
   const [isUserEdited, setIsUserEdited] = useState(false);
   const [borderColor, setBorderColor] = useState<string>("");
@@ -82,30 +83,32 @@ function GenericNode({
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
+  const [hasChangedNodeDescription, setHasChangedNodeDescription] =
+    useState(false);
 
+  // Refs
+  const nodeRef = useRef<HTMLDivElement>(null);
+
+  // Store hooks
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const setNode = useFlowStore((state) => state.setNode);
-  const updateNodeInternals = useUpdateNodeInternals();
+  const edges = useFlowStore((state) => state.edges);
+  const update = useShortcutsStore((state) => state.update);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  const dismissAll = useUtilityStore((state) => state.dismissAll);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const edges = useFlowStore((state) => state.edges);
-  const shortcuts = useShortcutsStore((state) => state.shortcuts);
-  const buildStatus = useBuildStatus(data, data.id);
-  const dismissAll = useUtilityStore((state) => state.dismissAll);
 
-  const showNode = data.showNode ?? true;
+  // XY Flow hooks
+  const updateNodeInternals = useUpdateNodeInternals();
 
-  const getValidationStatus = (data) => {
-    setValidationStatus(data);
-    return null;
-  };
-
+  // Custom hooks
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
+  const buildStatus = useBuildStatus(data, data.id);
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
@@ -118,17 +121,65 @@ function GenericNode({
 
   useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
 
-  if (!data.node!.template) {
-    setErrorData({
-      title: `Error in component ${data.node!.display_name}`,
-      list: [
-        `The component ${data.node!.display_name} has no template.`,
-        `Please contact the developer of the component to fix this issue.`,
-      ],
-    });
-    takeSnapshot();
-    deleteNode(data.id);
-  }
+  useChangeOnUnfocus({
+    selected,
+    value: editNameDescription,
+    onChange: set,
+    defaultValue: false,
+    shouldChangeValue: (value) => value === true,
+    nodeRef,
+    callback: toggleEditNameDescription,
+  });
+
+  const showNode = data.node?.showNode !== false;
+
+  // Basic computed values using useMemo
+  const isToolMode = useMemo(
+    () =>
+      data.node?.outputs?.some(
+        (output) => output.name === "component_as_tool",
+      ) ??
+      data.node?.tool_mode ??
+      false,
+    [data.node?.outputs, data.node?.tool_mode],
+  );
+
+  const hasToolMode = useMemo(
+    () => checkHasToolMode(data.node?.template ?? {}),
+    [data.node?.template],
+  );
+
+  const hasOutputs = useMemo(
+    () => data.node?.outputs && data.node.outputs.length > 0,
+    [data.node?.outputs],
+  );
+
+  const hasDescription = useMemo(() => {
+    return data.node?.description && data.node?.description !== "";
+  }, [data.node?.description]);
+
+  const selectedNodesCount = useMemo(() => {
+    return useFlowStore.getState().nodes.filter((node) => node.selected).length;
+  }, [selected]);
+
+  const { shownOutputs, hiddenOutputs } = useMemo(
+    () => ({
+      shownOutputs:
+        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
+      hiddenOutputs:
+        data.node?.outputs?.filter((output) => output.hidden) ?? [],
+    }),
+    [data.node?.outputs],
+  );
+
+  const editedNameDescription =
+    editNameDescription && hasChangedNodeDescription;
+
+  // Handler functions using useCallback
+  const getValidationStatus = useCallback((data) => {
+    setValidationStatus(data);
+    return null;
+  }, []);
 
   const handleUpdateCode = useCallback(() => {
     setLoadingUpdate(true);
@@ -183,42 +234,7 @@ function GenericNode({
     }
   }, [isOutdated, selected, handleUpdateCode]);
 
-  const update = useShortcutsStore((state) => state.update);
-  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
-
-  // Memoized values
-  const isToolMode = useMemo(
-    () =>
-      data.node?.outputs?.some(
-        (output) => output.name === "component_as_tool",
-      ) ??
-      data.node?.tool_mode ??
-      false,
-    [data.node?.outputs, data.node?.tool_mode],
-  );
-
-  const hasToolMode = useMemo(
-    () => checkHasToolMode(data.node?.template ?? {}),
-    [data.node?.template],
-  );
-
-  const hasOutputs = useMemo(
-    () => data.node?.outputs && data.node.outputs.length > 0,
-    [data.node?.outputs],
-  );
-
-  const nodeRef = useRef<HTMLDivElement>(null);
-
-  useChangeOnUnfocus({
-    selected,
-    value: editNameDescription,
-    onChange: set,
-    defaultValue: false,
-    shouldChangeValue: (value) => value === true,
-    nodeRef,
-    callback: toggleEditNameDescription,
-  });
-
+  // Component rendering functions using useCallback
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
       if (!outputs?.length) return null;
@@ -235,25 +251,15 @@ function GenericNode({
           (out) => out.selected === output.selected,
         ) ?? 0;
 
-      const id = useMemo(
-        () => ({
-          output_types: [output.selected ?? output.types[0]],
-          id: data.id,
-          dataType: data.type,
-          name: output.name,
-        }),
-        [output.selected, output.types, data.id, data.type, output.name],
-      );
+      const id = {
+        output_types: [output.selected ?? output.types[0]],
+        id: data.id,
+        dataType: data.type,
+        name: output.name,
+      };
 
-      const colors = useMemo(
-        () => getNodeOutputColors(output, data, types),
-        [output, data.type, data.id, types],
-      );
-
-      const colorNames = useMemo(
-        () => getNodeOutputColorsName(output, data, types),
-        [output, data.type, data.id, types],
-      );
+      const colors = getNodeOutputColors(output, data, types);
+      const colorNames = getNodeOutputColorsName(output, data, types);
 
       return (
         <MemoizedOutputParameter
@@ -280,30 +286,131 @@ function GenericNode({
     [data, types, selected, showNode, isToolMode, showHiddenOutputs],
   );
 
-  const { shownOutputs, hiddenOutputs } = useMemo(
-    () => ({
-      shownOutputs:
-        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
-      hiddenOutputs:
-        data.node?.outputs?.filter((output) => output.hidden) ?? [],
-    }),
-    [data.node?.outputs],
-  );
+  const renderNodeIcon = useCallback(() => {
+    return (
+      <MemoizedNodeIcon
+        dataType={data.type}
+        showNode={showNode}
+        icon={data.node?.icon}
+        isGroup={!!data.node?.flow}
+        hasToolMode={hasToolMode ?? false}
+      />
+    );
+  }, [data.type, showNode, data.node?.icon, data.node?.flow, hasToolMode]);
 
-  const [hasChangedNodeDescription, setHasChangedNodeDescription] =
-    useState(false);
+  const renderNodeName = useCallback(() => {
+    return (
+      <MemoizedNodeName
+        display_name={data.node?.display_name}
+        nodeId={data.id}
+        selected={selected}
+        showNode={showNode}
+        validationStatus={validationStatus}
+        isOutdated={isOutdated}
+        beta={data.node?.beta || false}
+        editNameDescription={editNameDescription}
+        toggleEditNameDescription={toggleEditNameDescription}
+        setHasChangedNodeDescription={setHasChangedNodeDescription}
+      />
+    );
+  }, [
+    data.node?.display_name,
+    data.id,
+    selected,
+    showNode,
+    validationStatus,
+    isOutdated,
+    data.node?.beta,
+    editNameDescription,
+    toggleEditNameDescription,
+    setHasChangedNodeDescription,
+  ]);
 
-  const editedNameDescription =
-    editNameDescription && hasChangedNodeDescription;
+  const renderNodeStatus = useCallback(() => {
+    return (
+      <MemoizedNodeStatus
+        data={data}
+        frozen={data.node?.frozen}
+        showNode={showNode}
+        display_name={data.node?.display_name!}
+        nodeId={data.id}
+        selected={selected}
+        setBorderColor={setBorderColor}
+        buildStatus={buildStatus}
+        isOutdated={isOutdated}
+        isUserEdited={isUserEdited}
+        getValidationStatus={getValidationStatus}
+        handleUpdateComponent={handleUpdateCode}
+      />
+    );
+  }, [
+    data,
+    showNode,
+    selected,
+    buildStatus,
+    isOutdated,
+    isUserEdited,
+    getValidationStatus,
+    handleUpdateCode,
+  ]);
 
-  const hasDescription = useMemo(() => {
-    return data.node?.description && data.node?.description !== "";
-  }, [data.node?.description]);
+  const renderDescription = useCallback(() => {
+    return (
+      <MemoizedNodeDescription
+        description={data.node?.description}
+        mdClassName={"dark:prose-invert"}
+        nodeId={data.id}
+        selected={selected}
+        editNameDescription={editNameDescription}
+        setEditNameDescription={set}
+        setHasChangedNodeDescription={setHasChangedNodeDescription}
+      />
+    );
+  }, [
+    data.node?.description,
+    data.id,
+    selected,
+    editNameDescription,
+    set,
+    setHasChangedNodeDescription,
+  ]);
 
-  const selectedNodesCount = useMemo(() => {
-    return useFlowStore.getState().nodes.filter((node) => node.selected).length;
-  }, [selected]);
+  const renderInputParameters = useCallback(() => {
+    return (
+      <MemoizedRenderInputParameters
+        data={data}
+        types={types}
+        isToolMode={isToolMode}
+        showNode={showNode}
+        shownOutputs={shownOutputs}
+        showHiddenOutputs={showHiddenOutputs}
+      />
+    );
+  }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
+  // Effects
+  useEffect(() => {
+    if (hiddenOutputs && hiddenOutputs.length === 0) {
+      setShowHiddenOutputs(false);
+    }
+  }, [hiddenOutputs]);
+
+  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
+
+  // Check if template is missing and handle error
+  if (!data.node!.template) {
+    setErrorData({
+      title: `Error in component ${data.node!.display_name}`,
+      list: [
+        `The component ${data.node!.display_name} has no template.`,
+        `Please contact the developer of the component to fix this issue.`,
+      ],
+    });
+    takeSnapshot();
+    deleteNode(data.id);
+  }
+
+  // Layout components
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected && selectedNodesCount === 1 ? (
       <>
@@ -378,124 +485,15 @@ function GenericNode({
     takeSnapshot,
     setNode,
     showNode,
-    updateNodeCode,
+    shownOutputs.length,
     isOutdated,
     isUserEdited,
     selected,
-    shortcuts,
-    editNameDescription,
-    hasChangedNodeDescription,
-    toggleEditNameDescription,
     selectedNodesCount,
-  ]);
-  useEffect(() => {
-    if (hiddenOutputs && hiddenOutputs.length === 0) {
-      setShowHiddenOutputs(false);
-    }
-  }, [hiddenOutputs]);
-
-  const renderNodeIcon = useCallback(() => {
-    return (
-      <MemoizedNodeIcon
-        dataType={data.type}
-        showNode={showNode}
-        icon={data.node?.icon}
-        isGroup={!!data.node?.flow}
-        hasToolMode={hasToolMode ?? false}
-      />
-    );
-  }, [data.type, showNode, data.node?.icon, data.node?.flow, hasToolMode]);
-
-  const renderNodeName = useCallback(() => {
-    return (
-      <MemoizedNodeName
-        display_name={data.node?.display_name}
-        nodeId={data.id}
-        selected={selected}
-        showNode={showNode}
-        validationStatus={validationStatus}
-        isOutdated={isOutdated}
-        beta={data.node?.beta || false}
-        editNameDescription={editNameDescription}
-        toggleEditNameDescription={toggleEditNameDescription}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
-      />
-    );
-  }, [
-    data.node?.display_name,
-    data.id,
-    selected,
-    showNode,
-    validationStatus,
-    isOutdated,
-    data.node?.beta,
-    editNameDescription,
+    editedNameDescription,
     toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
-
-  const renderNodeStatus = useCallback(() => {
-    return (
-      <MemoizedNodeStatus
-        data={data}
-        frozen={data.node?.frozen}
-        showNode={showNode}
-        display_name={data.node?.display_name!}
-        nodeId={data.id}
-        selected={selected}
-        setBorderColor={setBorderColor}
-        buildStatus={buildStatus}
-        isOutdated={isOutdated}
-        isUserEdited={isUserEdited}
-        getValidationStatus={getValidationStatus}
-        handleUpdateComponent={handleUpdateCode}
-      />
-    );
-  }, [
-    data,
-    showNode,
-    selected,
-    buildStatus,
-    isOutdated,
-    isUserEdited,
-    getValidationStatus,
-    dismissAll,
     handleUpdateCode,
   ]);
-
-  const renderDescription = useCallback(() => {
-    return (
-      <MemoizedNodeDescription
-        description={data.node?.description}
-        mdClassName={"dark:prose-invert"}
-        nodeId={data.id}
-        selected={selected}
-        editNameDescription={editNameDescription}
-        setEditNameDescription={set}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
-      />
-    );
-  }, [
-    data.node?.description,
-    data.id,
-    selected,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
-
-  const renderInputParameters = useCallback(() => {
-    return (
-      <MemoizedRenderInputParameters
-        data={data}
-        types={types}
-        isToolMode={isToolMode}
-        showNode={showNode}
-        shownOutputs={shownOutputs}
-        showHiddenOutputs={showHiddenOutputs}
-      />
-    );
-  }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
     <div
