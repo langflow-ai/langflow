@@ -17,9 +17,9 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * A Langflow project with at least one flow created.
 
-* To use MCP Inspector, any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer.
+* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
-## Select and configure flows to expose as tools {#select-flows-to-serve}
+## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
 Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
 The MCP server for each project exposes that project's flows as tools.
@@ -90,7 +90,7 @@ For example:
 
     :::important
     If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
-    For more information, see [Langflow MCP server authentication and environment variables](#authentication).
+    For more information, see [MCP server authentication and environment variables](#authentication).
     :::
 
 5. Save and close the `mcp.json` file in Cursor.
@@ -101,7 +101,7 @@ Cursor determines when to use tools based on your queries, and requests permissi
 
 For more information, see the [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
-### Langflow MCP server authentication and environment variables {#authentication}
+### MCP server authentication and environment variables {#authentication}
 
 If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/configuration-api-keys) in your MCP client configuration.
 When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
@@ -187,7 +187,7 @@ Based on the available tools, I can see there is a Document QA for Resume flow t
 However, the description mentions it's for "Emily's resume" not Alex's. I don't have access to Alex's resume or job experience information.
 ```
 
-## Install MCP Inspector to test and debug flows
+## Use MCP Inspector to test and debug flows {#test-and-debug-flows}
 
 [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) is a common tool for testing and debugging MCP servers.
 You can use MCP Inspector to monitor your flows and get insights into how they are being consumed by the MCP server:
@@ -208,7 +208,7 @@ The default address is `http://127.0.0.1:6274`.
     - **Transport Type**: Select **SSE**.
     - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example: `http://127.0.0.1:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse`
 
-    If you've [configured authentication for your MCP server](#authentication), fill out the following fields:
+    If you've [configured authentication for your MCP server](#authentication), fill out the following additional fields:
     - **Transport Type**: Select **STDIO**.
     - **Command**: `uvx`
     - **Arguments**: Enter the following list of arguments, separated by spaces. Replace the values for `YOUR_API_KEY`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` with the values from your Langflow MCP server. For example:
@@ -224,7 +224,7 @@ The default address is `http://127.0.0.1:6274`.
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
-## Deploy your server externally {#deploy-your-server-externally}
+## Deploy your MCP server externally {#deploy-your-server-externally}
 
 By default, Langflow isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started).
@@ -238,7 +238,7 @@ This procedure also assumes that you're using the default Langflow listening add
 
 3. Copy your [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) and use it to authenticate your local ngrok server:
 
-    ```
+    ```bash
     ngrok config add-authtoken NGROK_TOKEN
     ```
 
@@ -246,7 +246,7 @@ This procedure also assumes that you're using the default Langflow listening add
 
 4. Use ngrok to expose your Langflow server to the public internet:
 
-    ```
+    ```bash
     ngrok http http://localhost:7860
     ```
 
