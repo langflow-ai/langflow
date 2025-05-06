@@ -92,7 +92,7 @@ class TestSerializationHypothesis:
     @settings(max_examples=100)
     @given(lst=list_strategy)
     def test_list_truncation(self, lst: list) -> None:
-        result: list = serialize(lst)
+        result: list = serialize(lst, max_items=MAX_ITEMS_LENGTH)
         if len(lst) > MAX_ITEMS_LENGTH:
             assert len(result) == MAX_ITEMS_LENGTH + 1
             assert f"... [truncated {len(lst) - MAX_ITEMS_LENGTH} items]" in result

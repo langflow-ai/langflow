@@ -113,13 +113,13 @@ async def get_flow_events_response(
             return resp
 
         # -------------------------------------------------------------------
-        # POLLING: return exactly one event, and if it s the final “end”,
+        # POLLING: return exactly one event, and if it s the final "end",
         # cancel the background build task so it does not linger.
         # -------------------------------------------------------------------
         try:
             _, value, _ = await main_queue.get()
 
-            # None from the queue means “no event right now” (not the JSON end-marker),
+            # None from the queue means "no event right now" (not the JSON end-marker),
             # so return {"event": None} and let the client poll again.
             if value is None:
                 return JSONResponse({"event": None})
@@ -127,7 +127,7 @@ async def get_flow_events_response(
             # Decode the JSON string payload
             data_str = value.decode("utf-8")
 
-            # If this is the final “end” event, tear down the build job:
+            # If this is the final "end" event, tear down the build job:
             if '"end"' in data_str:
                 with suppress(Exception):
                     # cancel_flow_build will cancel the event_task and clean up

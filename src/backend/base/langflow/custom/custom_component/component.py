@@ -1206,6 +1206,7 @@ class Component(CustomComponent):
     async def _build_tools_metadata_input(self):
         tools = await self._get_tools()
         # Always use the latest tool data
+
         tool_data = [
             {
                 "name": tool.name,
@@ -1214,6 +1215,7 @@ class Component(CustomComponent):
                 "status": True,  # Initialize all tools with status True
                 "display_name": tool.metadata.get("display_name", tool.name),
                 "display_description": tool.metadata.get("display_description", tool.description),
+                "readonly": tool.metadata.get("readonly", False),
                 "args": tool.args,
                 # "args_schema": tool.args_schema,
             }
