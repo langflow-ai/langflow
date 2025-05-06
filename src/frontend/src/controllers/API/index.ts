@@ -37,8 +37,8 @@ export async function getDiscordCount() {
   }
 }
 
-customGetAppVersions();
-customGetLatestVersion();
+export const getAppVersions = customGetAppVersions;
+export const getLatestVersion = customGetLatestVersion;
 
 export async function createApiKey(name: string) {
   try {
