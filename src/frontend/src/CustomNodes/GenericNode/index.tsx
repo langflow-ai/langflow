@@ -30,7 +30,6 @@ import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
-import { OutputParameter } from "./components/NodeOutputParameter";
 import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
 import RenderInputParameters from "./components/RenderInputParameters";
@@ -239,12 +238,16 @@ function GenericNode({
     (outputs, key?: string) => {
       if (!outputs?.length) return null;
 
+      const isLoop =
+        data?.node?.display_name === "Loop" && outputs[0].name === "done";
+
       // Determine if this is the last output section
       const isLastOutputSection =
         (!showHiddenOutputs && key === "shown") ||
-        (showHiddenOutputs && key === "hidden");
+        (showHiddenOutputs && key === "hidden") ||
+        (!showHiddenOutputs && isLoop);
 
-      const output = outputs[0]; // Use first output for ID and other properties
+      const output = outputs[0];
 
       const outputIndex =
         data.node?.outputs?.findIndex(
@@ -584,7 +587,17 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {shownOutputs && renderOutputs(shownOutputs, "shown")}
+              {shownOutputs &&
+                (data?.node?.display_name === "Loop" ? (
+                  <>
+                    {shownOutputs.length > 0 &&
+                      renderOutputs([shownOutputs[0]], "loop")}
+                    {shownOutputs.length > 1 &&
+                      renderOutputs([shownOutputs[1]], "loop")}
+                  </>
+                ) : (
+                  renderOutputs(shownOutputs, "shown")
+                ))}
 
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}

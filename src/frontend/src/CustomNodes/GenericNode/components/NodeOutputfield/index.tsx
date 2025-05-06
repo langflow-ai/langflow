@@ -265,7 +265,7 @@ function NodeOutputField({
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
   const LoopHandle = useMemo(() => {
-    if (data.node?.outputs![index].allows_loop) {
+    if (data.node?.outputs![index].allows_loop && title !== "done") {
       return (
         <HandleRenderComponent
           left={true}
