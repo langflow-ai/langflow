@@ -22,7 +22,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
-        "Base64",
+        "Base64 Image",
     ]
 
     inputs = [
