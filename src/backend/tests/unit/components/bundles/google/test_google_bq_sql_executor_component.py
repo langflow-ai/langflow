@@ -5,9 +5,8 @@ import pytest
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
 from langflow.components.google.google_bq_sql_executor import BigQueryExecutorComponent
-from langflow.schema.message import Message
-from tests.base import ComponentTestBaseWithoutClient
 from pandas import DataFrame
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
@@ -124,10 +123,10 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         # Verify that execute_sql raises ValueError for empty/whitespace queries
         with pytest.raises(ValueError) as exc_info:
             component.execute_sql()
-        
+
         # Verify the error message
         assert "No valid SQL query found" in str(exc_info.value)
-        
+
         # Verify that the BigQuery client was not called
         mock_client.query.assert_not_called()
 
@@ -188,48 +187,20 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Create mock rows with complex data
         mock_row1 = MagicMock()
-        mock_row1.items.return_value = [
-            ("id", 1),
-            ("name", "Test 1"),
-            ("value", 10.5),
-            ("active", True)
-        ]
-        mock_row1.__iter__.return_value = iter([
-            ("id", 1),
-            ("name", "Test 1"),
-            ("value", 10.5),
-            ("active", True)
-        ])
+        mock_row1.items.return_value = [("id", 1), ("name", "Test 1"), ("value", 10.5), ("active", True)]
+        mock_row1.__iter__.return_value = iter([("id", 1), ("name", "Test 1"), ("value", 10.5), ("active", True)])
         mock_row1.keys.return_value = ["id", "name", "value", "active"]
         mock_row1.values.return_value = [1, "Test 1", 10.5, True]
-        mock_row1.__getitem__.side_effect = lambda key: {
-            "id": 1,
-            "name": "Test 1",
-            "value": 10.5,
-            "active": True
-        }[key]
+        mock_row1.__getitem__.side_effect = lambda key: {"id": 1, "name": "Test 1", "value": 10.5, "active": True}[key]
 
         mock_row2 = MagicMock()
-        mock_row2.items.return_value = [
-            ("id", 2),
-            ("name", "Test 2"),
-            ("value", 20.75),
-            ("active", False)
-        ]
-        mock_row2.__iter__.return_value = iter([
-            ("id", 2),
-            ("name", "Test 2"),
-            ("value", 20.75),
-            ("active", False)
-        ])
+        mock_row2.items.return_value = [("id", 2), ("name", "Test 2"), ("value", 20.75), ("active", False)]
+        mock_row2.__iter__.return_value = iter([("id", 2), ("name", "Test 2"), ("value", 20.75), ("active", False)])
         mock_row2.keys.return_value = ["id", "name", "value", "active"]
         mock_row2.values.return_value = [2, "Test 2", 20.75, False]
-        mock_row2.__getitem__.side_effect = lambda key: {
-            "id": 2,
-            "name": "Test 2",
-            "value": 20.75,
-            "active": False
-        }[key]
+        mock_row2.__getitem__.side_effect = lambda key: {"id": 2, "name": "Test 2", "value": 20.75, "active": False}[
+            key
+        ]
 
         # Create mock result with the mock rows
         mock_result = MagicMock()
@@ -254,10 +225,10 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
         assert len(result) == 2  # Check number of rows
         assert list(result.columns) == ["id", "name", "value", "active"]  # Check columns
-        
+
         # Convert DataFrame to dictionary for easier comparison
-        result_dict = result.to_dict(orient='records')
-        
+        result_dict = result.to_dict(orient="records")
+
         # Verify first row
         assert result_dict[0]["id"] == 1
         assert result_dict[0]["name"] == "Test 1"
@@ -285,9 +256,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         query_with_code_block = "```sql\nSELECT * FROM table\n```"
         component = component_class(**{**default_kwargs, "query": query_with_code_block})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the query was passed as is (no code block stripping)
         fake_client.query.assert_called_once_with(query_with_code_block.strip())
         assert isinstance(result, DataFrame)
@@ -323,9 +294,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         query_with_whitespace = "  SELECT * FROM table  "
         component = component_class(**{**default_kwargs, "query": query_with_whitespace})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the query was properly stripped
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -364,9 +335,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         query_with_special_chars = "SELECT * FROM `project.dataset.table` WHERE name LIKE '%test%'"
         component = component_class(**{**default_kwargs, "query": query_with_special_chars})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the query with special characters was passed correctly
         mock_client.query.assert_called_once_with(query_with_special_chars)
         assert isinstance(result, DataFrame)
@@ -409,9 +380,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         SELECT * FROM test_table;
         """
         component = component_class(**{**default_kwargs, "query": multi_statement_query})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the multi-statement query was passed correctly
         mock_client.query.assert_called_once_with(multi_statement_query.strip())
         assert isinstance(result, DataFrame)
@@ -429,20 +400,11 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Create a mock row that can be converted to a dict
         mock_row = MagicMock()
-        mock_row.items.return_value = [
-            ("id", 1),
-            ("name", "test_name")
-        ]
-        mock_row.__iter__.return_value = iter([
-            ("id", 1),
-            ("name", "test_name")
-        ])
+        mock_row.items.return_value = [("id", 1), ("name", "test_name")]
+        mock_row.__iter__.return_value = iter([("id", 1), ("name", "test_name")])
         mock_row.keys.return_value = ["id", "name"]
         mock_row.values.return_value = [1, "test_name"]
-        mock_row.__getitem__.side_effect = lambda key: {
-            "id": 1,
-            "name": "test_name"
-        }[key]
+        mock_row.__getitem__.side_effect = lambda key: {"id": 1, "name": "test_name"}[key]
 
         # Create mock result with the mock row
         mock_result = MagicMock()
@@ -459,9 +421,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         query_with_params = "SELECT * FROM table WHERE id = @id AND name = @name"
         component = component_class(**{**default_kwargs, "query": query_with_params})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the parameterized query was passed correctly
         mock_client.query.assert_called_once_with(query_with_params)
         assert isinstance(result, DataFrame)
