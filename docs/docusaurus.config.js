@@ -251,10 +251,14 @@ const config = {
             from: "/components/custom",
           },
           {
+            to: "/mcp-server",
+            from: "/integrations-mcp",
+          },
+          {
             to: "/deployment-kubernetes-dev",
             from: [
               "/deployment-kubernetes",
-            ]
+            ],
           },
           // add more redirects like this
           // {
