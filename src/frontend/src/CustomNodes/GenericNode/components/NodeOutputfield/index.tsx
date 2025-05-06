@@ -77,7 +77,7 @@ const HideShowButton = memo(
       <ShadTooltip
         content={
           disabled
-            ? "Cannot hide output"
+            ? "Connected outputs can't be hidden."
             : hidden
               ? "Show output"
               : "Hide output"
