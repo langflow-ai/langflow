@@ -17,7 +17,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * A Langflow project with at least one flow created.
 
-* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer.
+* To use MCP Inspector, any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer.
 
 ## Select and configure flows to expose as tools {#select-flows-to-serve}
 
@@ -75,11 +75,9 @@ For example:
     {
       "mcpServers": {
         "PROJECT_NAME": {
-          "command": "npx",
+          "command": "uvx",
           "args": [
-            "-y",
-            "supergateway",
-            "--sse",
+            "mcp-proxy",
             "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
           ]
         }
@@ -112,14 +110,13 @@ When this is the case, the code template in your project's **MCP Server** tab au
 {
   "mcpServers": {
     "PROJECT_NAME": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse",
-        "--header",
-        "x-api-key:YOUR_API_KEY"
+        "mcp-proxy",
+        "--headers",
+        "x-api-key",
+        "YOUR_API_KEY",
+        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
       ]
     }
   }
@@ -137,11 +134,9 @@ To include environment variables with your MCP server command, include them like
 {
   "mcpServers": {
     "PROJECT_NAME": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "supergateway",
-        "--sse",
+        "mcp-proxy",
         "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
       ],
       "env": {
@@ -221,7 +216,7 @@ The default address is `http://127.0.0.1:6274`.
 4. Click **Connect**.
 
     If the connection was successful, you should see your project's flows in the **Tools** tab.
-    From this tab, you can monitor how your flows are being registered as tools by MCP, as well test the tools with custom input values.
+    From this tab, you can monitor how your flows are being registered as tools by MCP, as well as test the tools with custom input values.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
 
@@ -271,12 +266,10 @@ This procedure also assumes that you're using the default Langflow listening add
       ```json
       {
         "mcpServers": {
-          "lf-my_projects": {
-            "command": "npx",
+          "PROJECT_NAME": {
+            "command": "uvx",
             "args": [
-              "-y",
-              "supergateway",
-              "--sse",
+              "mcp-proxy",
               "https://94b1-73-64-171-14.ngrok-free.app/api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1/sse"
             ]
           }
@@ -284,7 +277,7 @@ This procedure also assumes that you're using the default Langflow listening add
       }
     ```
 
-6. Complete the steps in [Connect clients Langflow's MCP server](#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
+6. Complete the steps in [Connect clients to Langflow's MCP server](#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
 
 Your MCP client is now connected to your project's MCP server over the public internet.
 
