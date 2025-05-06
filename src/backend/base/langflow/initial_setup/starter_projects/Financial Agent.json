@@ -30,7 +30,7 @@
         "source": "SambaNovaModel-xrxwy",
         "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-xrxwyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-o90sI",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-o90sIœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-o90sIœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
