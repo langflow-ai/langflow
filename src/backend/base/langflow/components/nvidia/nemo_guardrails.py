@@ -43,6 +43,8 @@ Do not include anything other than the output JSON in your response."""
 
 DEFAULT_TOPIC_CONTROL_INPUT_PROMPT = """Ensure that the input stays within the allowed discussion topics."""
 
+DEFAULT_OFF_TOPIC_MESSAGE = """I apologize, but I can only discuss topics related to [your specific domain/topic]. Is there something else I can help you with?"""
+
 
 class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     display_name = "NeMo Guardrails"
@@ -155,6 +157,13 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             value=DEFAULT_TOPIC_CONTROL_INPUT_PROMPT
         ),
         MultilineInput(
+            name="off_topic_message",
+            display_name="Off-Topic Message",
+            advanced=True,
+            value=DEFAULT_OFF_TOPIC_MESSAGE,
+            info="Message to display when the input is off-topic. Use [your specific domain/topic] as a placeholder for your domain."
+        ),
+        MultilineInput(
             name="yaml_content",
             display_name="Guardrails configuration content (YAML)",
             info="Guardrails configuration content in YAML format (overrides other settings).",
@@ -181,7 +190,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "input": {"flows": []},
                 "output": {"flows": []},
             },
-            "prompts": []
+            "prompts": [],
         }
 
         # Self check rails
@@ -287,7 +296,15 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         except yaml.YAMLError as e:
             raise ValueError("Invalid YAML syntax") from e
 
-        config = RailsConfig.from_content(yaml_content=yaml_content)
+        # Create Colang content if topic control is enabled
+        colang_content = None
+        if "topic control" in self.rails:
+            colang_content = f"""
+define bot refuse to respond
+  "{self.off_topic_message}"
+"""
+
+        config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
 
         try:
             config.model_validate(config)
@@ -301,7 +318,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             self.log(f"Guardrail creation took {end - start:.6f} seconds")
             self._summarize_guardrails_config(guardrails)
 
-        return guardrails 
+        return guardrails
 
     def _safe_log_config(self, yaml_content: str):
         """Safely logs a YAML config with sensitive values redacted."""
