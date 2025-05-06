@@ -10,9 +10,10 @@ from langflow.schema.dataframe import DataFrame
 
 
 class BigQueryExecutorComponent(Component):
-    display_name = "BigQuery SQL Executor"
+    display_name = "BigQuery"
     description = "Execute SQL queries on Google BigQuery."
     name = "BigQueryExecutor"
+    icon="Google"
     beta: bool = True
 
     inputs = [
