@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.77070d65.css">
-<script src="/assets/js/runtime~main.1792f6ae.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.15c532e9.js" defer="defer"></script>
 <script src="/assets/js/main.757d2934.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -78,14 +78,15 @@ This text fills the <code>{context}</code> variable in the <strong>Prompt</stron
 The re-ranker model is <code>nvidia/llama-3.2-nv.reranker</code>.</li>
 </ul>
 <p><a href="https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html" target="_blank" rel="noopener noreferrer">Hybrid search</a> performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.</p>
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>To use hybrid search, your collection must be created with vector, lexical, and rerank capabilities enabled. These capabilities are enabled by default when you create a collection in a database in the AWS us-east-2 region.
+For more information, see the <a href="https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid" target="_blank" rel="noopener noreferrer">DataStax documentation</a>.</p></div></div>
 <p>To use <strong>Hybrid search</strong> in the <strong>Astra DB</strong> component, do the following:</p>
 <ol>
 <li>Click <strong>New Flow</strong> &gt; <strong>RAG</strong> &gt; <strong>Hybrid Search RAG</strong>.</li>
 <li>In the <strong>OpenAI</strong> model component, add your <strong>OpenAI API key</strong>.</li>
 <li>In the <strong>Astra DB</strong> vector store component, add your <strong>Astra DB Application Token</strong>.</li>
 <li>In the <strong>Database</strong> field, select your database.</li>
-<li>In the <strong>Collection</strong> field, select the collection you want to search.
-You must enable support for hybrid search when you create the collection.</li>
+<li>In the <strong>Collection</strong> field, select or create a collection with hybrid search capabilities enabled.</li>
 <li>In the <strong>Playground</strong>, enter a question about your data, such as <code>What are the features of my data?</code>
 Your query is sent to two components: an <strong>OpenAI</strong> model component and the <strong>Astra DB</strong> vector database component.
 The <strong>OpenAI</strong> component contains a prompt for creating the lexical query from your input:</li>
@@ -281,7 +282,7 @@ For more information, see the <a href="https://docs.vectara.com/docs/" target="_
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>vectara_customer_id</td><td>String</td><td>Vectara customer ID</td></tr><tr><td>vectara_corpus_id</td><td>String</td><td>Vectara corpus ID</td></tr><tr><td>vectara_api_key</td><td>SecretString</td><td>Vectara API key</td></tr><tr><td>embedding</td><td>Embeddings</td><td>Embedding function to use (optional)</td></tr><tr><td>ingest_data</td><td>List[Document/Data]</td><td>Data to be ingested into the vector store</td></tr><tr><td>search_query</td><td>String</td><td>Query for similarity search</td></tr><tr><td>number_of_results</td><td>Integer</td><td>Number of results to return in search</td></tr></tbody></table>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="outputs-21">Outputs<a href="#outputs-21" class="hash-link" aria-label="Direct link to Outputs" title="Direct link to Outputs">​</a></h3>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>vector_store</td><td>VectaraVectorStore</td><td>Vectara vector store instance</td></tr><tr><td>search_results</td><td>List[Data]</td><td>Results of similarity search</td></tr></tbody></table>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="vectara-search">Vectara Search<a href="#vectara-search" class="hash-link" aria-label="Direct link to Vectara Search" title="Direct link to Vectara Search"> ​</a></h2>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="vectara-search">Vectara Search<a href="#vectara-search" class="hash-link" aria-label="Direct link to Vectara Search" title="Direct link to Vectara Search">​</a></h2>
 <p>This component searches a Vectara Vector Store for documents based on the provided input.
 For more information, see the <a href="https://docs.vectara.com/docs/" target="_blank" rel="noopener noreferrer">Vectara documentation</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="inputs-22">Inputs<a href="#inputs-22" class="hash-link" aria-label="Direct link to Inputs" title="Direct link to Inputs">​</a></h3>
