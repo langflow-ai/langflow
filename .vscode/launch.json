@@ -12,7 +12,7 @@
         "--factory",
         "langflow.main:create_app",
         "--port",
-        "7860",
+        "7868",
         "--reload",
         "--log-level",
         "debug",
