@@ -52,6 +52,8 @@ const NodeToolbarComponent = memo(
     onCloseAdvancedModal,
     updateNode,
     isOutdated,
+    isUserEdited,
+    hasBreakingChange,
     setOpenShowMoreOptions,
   }: nodeToolbarPropsType): JSX.Element => {
     const version = useDarkStore((state) => state.version);
@@ -436,15 +438,19 @@ const NodeToolbarComponent = memo(
     };
 
     const isCustomComponent = useMemo(() => {
-      return data.type === "CustomComponent" && !data.node?.edited;
-    }, [data.type, data.node?.edited]);
+      const isCustom = data.type === "CustomComponent" && !data.node?.edited;
+      if (isCustom) {
+        data.node.edited = true;
+      }
+      return isCustom;
+    }, [data.type, data.node]);
 
     const renderToolbarButtons = useMemo(
       () => (
         <>
           {hasCode && (
             <ToolbarButton
-              className={isCustomComponent ? "!bg-accent-pink" : ""}
+              className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
               label="Code"
               onClick={() => setOpenModal(true)}
@@ -477,7 +483,7 @@ const NodeToolbarComponent = memo(
                 });
               }}
               shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("freeze path"),
+                s.name.toLowerCase().startsWith("freeze"),
               )}
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
             />
@@ -514,7 +520,7 @@ const NodeToolbarComponent = memo(
                     toolMode ? "text-primary" : "",
                   )}
                 />
-                <span className="text-[13px] font-medium">Tool Mode</span>
+                <span className="text-mmd font-medium">Tool Mode</span>
                 <ToggleShadComponent
                   value={toolMode}
                   editNode={false}
@@ -617,8 +623,9 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      value={"Restore"}
-                      icon={"RefreshCcwDot"}
+                      style={hasBreakingChange ? "text-warning" : ""}
+                      value={isUserEdited ? "Restore" : "Update"}
+                      icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
                     />
                   </SelectItem>
@@ -684,8 +691,9 @@ const NodeToolbarComponent = memo(
                   <SelectItem value="freezeAll">
                     <ToolbarSelectItem
                       shortcut={
-                        shortcuts.find((obj) => obj.name === "Freeze")
-                          ?.shortcut!
+                        shortcuts.find((obj) =>
+                          obj.name.toLowerCase().startsWith("freeze"),
+                        )?.shortcut!
                       }
                       value={"Freeze"}
                       icon={"FreezeAll"}

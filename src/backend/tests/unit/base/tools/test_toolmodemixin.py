@@ -122,7 +122,7 @@ def test_component_inputs_toolkit():
     component = AllInputsComponent()
     component_toolkit = ComponentToolkit(component=component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "AllInputsComponent-build_output"
+    assert component_tool.name == "build_output"
     assert issubclass(component_tool.args_schema, BaseModel)
     properties = component_tool.args_schema.model_json_schema()["properties"]
 
@@ -150,6 +150,6 @@ def test_component_inputs_toolkit():
     for input_name, expected in expected_inputs.items():
         assert input_name in properties, f"{input_name} is missing in properties."
         assert properties[input_name]["title"] == expected["title"], f"Title mismatch for {input_name}."
-        assert properties[input_name]["description"] == expected["description"], (
-            f"Description mismatch for {input_name}."
-        )
+        assert (
+            properties[input_name]["description"] == expected["description"]
+        ), f"Description mismatch for {input_name}."

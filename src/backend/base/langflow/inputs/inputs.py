@@ -87,6 +87,21 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
+class ToolsInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents an Input that contains a list of tools to activate, deactivate, or edit.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input.
+        value (list[dict]): The value of the input.
+
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TOOLS
+    value: list[dict] = Field(default_factory=list)
+    is_list: bool = True
+    real_time_refresh: bool = True
+
+
 class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
     """Represents an Input that has a Handle that receives a Data object.
 
@@ -438,7 +453,7 @@ class NestedDictInput(
     """
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
-    value: dict | JSON | None = {}
+    value: dict | None = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -453,7 +468,9 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DICT
-    value: dict | None = {}
+    # Note do not set value to an empty dict, it will break the component in dynamic update build config
+    # value: dict | None = {}
+    value: dict = Field(default_factory=dict)
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -654,6 +671,7 @@ InputTypes: TypeAlias = (
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
+    | ToolsInput
     | PromptInput
     | CodeInput
     | SecretStrInput

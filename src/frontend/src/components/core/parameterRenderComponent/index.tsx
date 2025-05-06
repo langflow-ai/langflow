@@ -6,6 +6,7 @@ import TabComponent from "@/components/core/parameterRenderComponent/components/
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import ToolsComponent from "./components/ToolsComponent";
 import ConnectionComponent from "./components/connectionComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
@@ -201,6 +202,16 @@ export function ParameterRenderComponent({
             trigger_icon={templateData?.trigger_icon}
             trigger_text={templateData?.trigger_text}
             table_icon={templateData?.table_icon}
+          />
+        );
+      case "tools":
+        return (
+          <ToolsComponent
+            {...baseInputProps}
+            description={templateData.info || "Add or edit data"}
+            title={nodeClass?.display_name ?? "Tools"}
+            icon={nodeClass?.icon ?? ""}
+            template={nodeClass?.template}
           />
         );
       case "slider":

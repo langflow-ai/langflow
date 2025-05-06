@@ -242,7 +242,7 @@ class ParameterHandler:
                         params[field_name] = val
                     case str():
                         params[field_name] = bool(val)
-            case "table":
+            case "table" | "tools":
                 if isinstance(val, list) and all(isinstance(item, dict) for item in val):
                     params[field_name] = pd.DataFrame(val)
                 else:

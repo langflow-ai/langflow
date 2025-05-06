@@ -264,8 +264,8 @@ class BaseFileComponent(Component, ABC):
             else:
                 # Handle non-CSV files as before
                 row = dict(data.data) if data.data else {}
-                if data.text:
-                    row["text"] = data.text
+                if "text" in data.data:
+                    row["text"] = data.data["text"]
                 if file_path:
                     row["file_path"] = file_path
                 non_csv_rows.append(row)
@@ -287,7 +287,7 @@ class BaseFileComponent(Component, ABC):
         # Concatenate all text content
         text_content = []
         for data in data_list:
-            content = data.text if data.text else ""
+            content = data.get_text()
             text_content.append(content)
 
         # Join with separator
