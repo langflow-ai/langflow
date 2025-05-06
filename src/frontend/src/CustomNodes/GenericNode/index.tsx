@@ -54,7 +54,7 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group flex h-[1.35rem] w-[1.35rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
