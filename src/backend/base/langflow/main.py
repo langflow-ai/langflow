@@ -207,7 +207,11 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        title="Langflow",
+        version=__version__,
+        lifespan=lifespan,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
