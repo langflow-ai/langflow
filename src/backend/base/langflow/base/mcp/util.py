@@ -194,9 +194,9 @@ class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-        self.max_retries = 2
+        self.max_retries = 1
         self.retry_delay = 1.0  # seconds
-        self.timeout_seconds = 15  # default timeout
+        self.timeout_seconds = 30  # default timeout
 
     async def connect_to_server(self, command_str: str, env: list[str] | None = None):
         env_dict: dict[str, str] = {}
@@ -237,6 +237,7 @@ class MCPStdioClient:
             except asyncio.TimeoutError:
                 last_error = f"Command execution timed out after {self.timeout_seconds} seconds"
                 logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
+                raise ConnectionError(last_error)
             except Exception as e:
                 last_error = f"Failed to initialize MCP session: {e}"
                 logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
