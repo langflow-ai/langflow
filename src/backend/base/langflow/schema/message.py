@@ -42,7 +42,7 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
@@ -92,10 +92,20 @@ class Message(Data):
     def serialize_timestamp(self, value):
         try:
             # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+            try:
+                # Try parsing with millisecond
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+            except ValueError:
+                # Try parsing without millisecond
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
         except ValueError:
             # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            try:
+                # Try parsing with millisecond
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+            except ValueError:
+                # Try parsing without millisecond
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
