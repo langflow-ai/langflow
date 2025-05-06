@@ -13,7 +13,7 @@ class BigQueryExecutorComponent(Component):
     display_name = "BigQuery"
     description = "Execute SQL queries on Google BigQuery."
     name = "BigQueryExecutor"
-    icon="Google"
+    icon = "Google"
     beta: bool = True
 
     inputs = [
@@ -31,9 +31,11 @@ class BigQueryExecutorComponent(Component):
             required=True,
         ),
         MessageTextInput(
-            name="query", display_name="SQL Query", info="he SQL query to execute on BigQuery.", 
+            name="query",
+            display_name="SQL Query",
+            info="he SQL query to execute on BigQuery.",
             required=True,
-            tool_mode=True
+            tool_mode=True,
         ),
     ]
 
