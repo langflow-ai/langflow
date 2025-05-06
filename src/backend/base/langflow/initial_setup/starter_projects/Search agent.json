@@ -131,9 +131,7 @@
                 "display_name": "ScrapeGraph API Key",
                 "dynamic": false,
                 "info": "The API key to use ScrapeGraph API.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
