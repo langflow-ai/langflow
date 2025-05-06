@@ -208,10 +208,13 @@ The default address is `http://127.0.0.1:6274`.
     - **Transport Type**: Select **SSE**.
     - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example: `http://127.0.0.1:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse`
 
-    If you've [configured authentication for your MCP server](#authentication), click **Authentication** and fill out the following fields:
-
-    - **Header Name**: Enter `x-api-key`.
-    - **Bearer Token**: Enter your Langflow API key.
+    If you've [configured authentication for your MCP server](#authentication), fill out the following fields:
+    - **Transport Type**: Select **STDIO**.
+    - **Command**: `uvx`
+    - **Arguments**: Enter the following list of arguments, separated by spaces. Replace the values for `YOUR_API_KEY`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` with the values from your Langflow MCP server. For example:
+    ```bash
+    mcp-proxy --headers x-api-key YOUR_API_KEY http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse
+    ```
 
 4. Click **Connect**.
 
