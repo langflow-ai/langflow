@@ -1,4 +1,3 @@
-import json
 from json.decoder import JSONDecodeError
 
 from google.auth.exceptions import RefreshError
@@ -6,8 +5,8 @@ from google.cloud import bigquery
 from google.oauth2.service_account import Credentials
 
 from langflow.custom import Component
-from langflow.field_typing import Message
 from langflow.io import FileInput, MessageTextInput, Output
+from langflow.schema.dataframe import DataFrame
 
 
 class BigQueryExecutorComponent(Component):
@@ -31,15 +30,17 @@ class BigQueryExecutorComponent(Component):
             required=True,
         ),
         MessageTextInput(
-            name="query", display_name="SQL Query", info="he SQL query to execute on BigQuery.", required=True
+            name="query", display_name="SQL Query", info="he SQL query to execute on BigQuery.", 
+            required=True,
+            tool_mode=True
         ),
     ]
 
     outputs = [
-        Output(display_name="Query Result", name="rows", method="execute_sql"),
+        Output(display_name="Query Results", name="query_results", method="execute_sql"),
     ]
 
-    def execute_sql(self) -> Message:
+    def execute_sql(self) -> DataFrame:
         try:
             # service_account_json_file = service_account.Credentials.from_service_account_file(self.service_account_json_file)
             # file_content = JsonSpec.from_file(service_account_json_file)
@@ -66,7 +67,8 @@ class BigQueryExecutorComponent(Component):
             query_job = client.query(sql_query)
             results = query_job.result()
             output_dict = [dict(row) for row in results]
-            output = json.dumps(output_dict, indent=4, sort_keys=True, default=str)
+            # output = json.dumps(output_dict, indent=4, sort_keys=True, default=str)
+
         except RefreshError as e:
             msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
             raise ValueError(msg) from e
@@ -74,5 +76,4 @@ class BigQueryExecutorComponent(Component):
             msg = f"Error executing BigQuery SQL query: {e}"
             raise ValueError(msg) from e
 
-        self.status = output
-        return Message(text=json.dumps(output, indent=2))
+        return DataFrame(output_dict)
