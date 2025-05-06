@@ -142,22 +142,24 @@ export default function UpdateComponentModal({
           <div className="flex flex-col gap-3 text-sm text-muted-foreground">
             {isMultiple ? (
               <p>
+                Updates marked as{" "}
                 <span className="font-semibold text-accent-amber-foreground">
-                  Breaking
+                  breaking
                 </span>{" "}
-                updates disconnect components and may require reconnecting
-                inputs or outputs after updating. Components from the sidebar
-                always use the latest version.
+                may change inputs, outputs, or component behavior. In some
+                cases, they will disconnect components from your flow, requiring
+                you to review or reconnect them afterward. Components added from
+                the sidebar always use the latest version.
               </p>
             ) : (
               <>
                 <p>
-                  This update includes{" "}
+                  This update may change inputs, outputs, or component behavior.
+                  In some cases, it will{" "}
                   <span className="font-semibold text-accent-amber-foreground">
-                    breaking changes
-                  </span>{" "}
-                  that may disconnect this component from your flow. You might
-                  need to reconnect inputs or outputs after updating.
+                    disconnect this component from your flow
+                  </span>
+                  , requiring you to review or reconnect it afterward.
                 </p>
                 <p>
                   Components added from the sidebar always use the latest
