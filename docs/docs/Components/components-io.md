@@ -19,7 +19,7 @@ The **Chat Input** component provides an interactive chat interface in the **Pla
 
 ## Chat Input
 
-This component collects user input as `Text` strings from the chat and wraps it in a [Message](/concepts-objects) object that includes the input text, sender information, session ID, file attachments, and styling properties.
+This component collects user input as `Text` strings from the chat and wraps it in a [Message](/concepts-objects#message-object) object that includes the input text, sender information, session ID, file attachments, and styling properties.
 
 It can optionally store the message in a chat history.
 
@@ -133,7 +133,7 @@ The output does not appear in the **Playground**.
 
 ## Chat components example flow
 
-1. To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or send the [Message](/concepts-objects#message) type.
+1. To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or send the [Message](/concepts-objects#message-object) type.
 
 For this example, connect a **Chat Input** component to an **OpenAI** model component's **Input** port, and then connect the **OpenAI** model component's **Message** port to the **Chat Output** component.
 

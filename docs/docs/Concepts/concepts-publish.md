@@ -63,7 +63,7 @@ For example, changing the **Chat Input** component's `input_value` changes that 
 
 ### Send files to your flow with the API
 
-For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files).
+For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files-v1).
 
 ### Webhook cURL
 
