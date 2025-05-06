@@ -5,6 +5,7 @@ from .fake_embeddings import FakeEmbeddingsComponent
 from .html_link_extractor import HtmlLinkExtractorComponent
 from .json_agent import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
+from .keybert_link_extractor import KeybertLinkExtractorComponent
 from .langchain_hub import LangChainHubPromptComponent
 from .language_recursive import LanguageRecursiveTextSplitterComponent
 from .language_semantic import SemanticTextSplitterComponent
@@ -36,6 +37,7 @@ __all__ = [
     "HtmlLinkExtractorComponent",
     "JSONDocumentBuilder",
     "JsonAgentComponent",
+    "KeybertLinkExtractorComponent",
     "LLMCheckerChainComponent",
     "LLMMathChainComponent",
     "LangChainHubPromptComponent",
