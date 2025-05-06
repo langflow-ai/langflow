@@ -223,101 +223,59 @@ function GenericNode({
     (outputs, key?: string) => {
       if (!outputs?.length) return null;
 
-      // Define output type groups
-      // TODO: Add more groups as needed and move to constants
-      const outputTypeGroups = {
-        dataContainers: ["Data", "DataFrame", "Array", "Object"],
-        communication: ["Message", "Text", "Stream"],
-        aiModelOutputs: ["BaseLanguageModel", "BaseLLM", "AgentExecutor"],
-        processingUtility: [
-          "Tool",
-          "Callable",
-          "OutputParser",
-          "ComponentAsTool",
-        ],
-        systemIdentification: ["ThreadId", "AssistantId", "Unknown"],
-      };
-
-      const outputGroups: (typeof outputs)[] = [];
-
-      // Process each group defined in outputTypeGroups
-      Object.entries(outputTypeGroups).forEach(([groupType, groupNames]) => {
-        const groupOutputs = outputs.filter((output) =>
-          output.type?.some((type) => groupNames.includes(type)),
-        );
-        if (groupOutputs.length > 0) {
-          outputGroups.push(groupOutputs);
-        }
-      });
-
-      // Add any outputs that don't belong to defined groups
-      const definedOutputNames = Object.values(outputTypeGroups).flat();
-      const otherOutputs = outputs.filter(
-        (output) => !definedOutputNames.includes(output.name),
-      );
-
-      if (otherOutputs.length > 0) {
-        outputGroups.push(otherOutputs);
-      }
-
       // Determine if this is the last output section
       const isLastOutputSection =
         (!showHiddenOutputs && key === "shown") ||
         (showHiddenOutputs && key === "hidden");
 
-      return outputGroups.map((group) => {
-        if (!group.length) return null;
+      const output = outputs[0]; // Use first output for ID and other properties
 
-        const firstOutput = group[0];
-        const outputIndex =
-          data.node?.outputs?.findIndex(
-            (out) => out.selected === firstOutput.selected,
-          ) ?? 0;
+      const outputIndex =
+        data.node?.outputs?.findIndex(
+          (out) => out.selected === output.selected,
+        ) ?? 0;
 
-        console.log(group);
+      const id = useMemo(
+        () => ({
+          output_types: [output.selected ?? output.types[0]],
+          id: data.id,
+          dataType: data.type,
+          name: output.name,
+        }),
+        [output.selected, output.types, data.id, data.type, output.name],
+      );
 
-        const id = useMemo(
-          () => ({
-            output_types: [group.selected ?? group[0].types[0]],
-            id: data.id,
-            dataType: data.type,
-            name: group.name,
-          }),
-          [group.selected, group.types, data.id, data.type, group.name],
-        );
+      const colors = useMemo(
+        () => getNodeOutputColors(output, data, types),
+        [output, data.type, data.id, types],
+      );
 
-        const colors = useMemo(
-          () => getNodeOutputColors(group[0], data, types),
-          [group, data.type, data.id, types],
-        );
+      const colorNames = useMemo(
+        () => getNodeOutputColorsName(output, data, types),
+        [output, data.type, data.id, types],
+      );
 
-        const colorNames = useMemo(
-          () => getNodeOutputColorsName(group[0], data, types),
-          [group, data.type, data.id, types],
-        );
-
-        return (
-          <MemoizedOutputParameter
-            key={firstOutput.name}
-            id={id}
-            colors={colors}
-            colorName={colorNames}
-            title={firstOutput.name}
-            tooltipTitle={firstOutput.display_name || firstOutput.name}
-            index={outputIndex}
-            outputProxy={firstOutput.proxy}
-            outputs={group}
-            lastOutput={isLastOutputSection}
-            data={data}
-            type={group[0].types.join("|")}
-            selected={selected ?? false}
-            showNode={showNode}
-            isToolMode={isToolMode}
-            showHiddenOutputs={showHiddenOutputs}
-            hidden={key === "hidden"}
-          />
-        );
-      });
+      return (
+        <MemoizedOutputParameter
+          key={output.name}
+          id={id}
+          colors={colors}
+          colorName={colorNames}
+          title={output.name}
+          tooltipTitle={output.display_name || output.name}
+          index={outputIndex}
+          outputProxy={output.proxy}
+          outputs={outputs}
+          lastOutput={isLastOutputSection}
+          data={data}
+          type={output.types.join("|")}
+          selected={selected ?? false}
+          showNode={showNode}
+          isToolMode={isToolMode}
+          showHiddenOutputs={showHiddenOutputs}
+          hidden={key === "hidden"}
+        />
+      );
     },
     [data, types, selected, showNode, isToolMode, showHiddenOutputs],
   );
