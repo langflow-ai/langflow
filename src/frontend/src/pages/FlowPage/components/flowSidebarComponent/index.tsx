@@ -18,6 +18,7 @@ import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -48,30 +49,17 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
-  const { data, templates } = useTypesStore(
-    useCallback(
-      (state) => ({
-        data: state.data,
-        templates: state.templates,
-      }),
-      [],
-    ),
-  );
+  const data = useTypesStore((state) => state.data);
 
-  const { getFilterEdge, setFilterEdge, filterType, nodes } = useFlowStore(
-    useCallback(
-      (state) => ({
-        getFilterEdge: state.getFilterEdge,
-        setFilterEdge: state.setFilterEdge,
-        filterType: state.filterType,
-        nodes: state.nodes,
-      }),
-      [],
-    ),
+  const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
+    useShallow((state) => ({
+      getFilterEdge: state.getFilterEdge,
+      setFilterEdge: state.setFilterEdge,
+      filterType: state.filterType,
+    })),
   );
 
   const hasStore = useStoreStore((state) => state.hasStore);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { setOpen } = useSidebar();
   const addComponent = useAddComponent();
 
@@ -86,15 +74,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
-  const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
-  const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
-    return {
-      chatInput: chatInputAdded,
-      webhookInput: webhookInputAdded,
-    };
-  }, [chatInputAdded, webhookInputAdded]);
 
   const customComponent = useMemo(() => {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
@@ -358,7 +337,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   nodeColors={nodeColors}
                   onDragStart={onDragStart}
                   sensitiveSort={sensitiveSort}
-                  uniqueInputsComponents={uniqueInputsComponents}
                 />
 
                 {hasBundleItems && (
@@ -373,7 +351,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                     openCategories={openCategories}
                     setOpenCategories={setOpenCategories}
                     handleKeyDownInput={handleKeyDownInput}
-                    uniqueInputsComponents={uniqueInputsComponents}
                   />
                 )}
               </>

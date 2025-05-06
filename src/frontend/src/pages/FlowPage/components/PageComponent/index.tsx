@@ -542,6 +542,13 @@ export default function Page({
 
   const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 8;
+  const fitViewOptions = {
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+  };
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -572,13 +579,10 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
-            fitViewOptions={{
-              minZoom: 0.2,
-              maxZoom: 8,
-            }}
+            fitViewOptions={fitViewOptions}
             className="theme-attribution"
-            minZoom={0.2}
-            maxZoom={3}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}
