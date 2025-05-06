@@ -162,4 +162,4 @@ The test application returns a large amount of text, so the example command used
 
 For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
 
-To deploy your application to Kubernetes, see [Kubernetes](/deployment-kubernetes).
+To deploy your application to Kubernetes, see [Deploy the Langflow production environment to Kubernetes](/deployment-kubernetes-prod).
