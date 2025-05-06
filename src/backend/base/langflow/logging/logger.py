@@ -320,7 +320,7 @@ def configure_standard_logging(log_level: str, log_file: Path | None, log_format
 
     # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
     # suggest directly print to stdout in production
-    log_stdout_pretty = os.getenv("LAGFLOW_PRETTY_LOGS", "true").lower() == "true"
+    log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
     if log_stdout_pretty:
         logger.configure(
             handlers=[
