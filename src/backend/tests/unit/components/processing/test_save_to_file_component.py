@@ -169,7 +169,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         [
             ("./test_output", "csv", ".csv"),
             ("./test_output", "json", ".json"),
-            ("./test_output", "markdown", ".markdown"),
+            ("./test_output", "markdown", ".md"),
             ("./test_output", "txt", ".txt"),
         ],
     )
