@@ -31,15 +31,8 @@ class MessageBase(SQLModel):
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
 
-    @field_validator("timestamp", mode="after")
-    @classmethod
-    def validate_timestamp(cls, value):
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=timezone.utc)
-        return value
-
     @field_serializer("timestamp")
-    def serialize_timestamp(self, value, _info):
+    def serialize_timestamp(self, value):
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
