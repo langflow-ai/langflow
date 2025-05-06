@@ -1,8 +1,9 @@
 import { useUtilityStore } from "@/stores/utilityStore";
+import { ChatMessageType, ChatType } from "@/types/chat";
 import { useEffect, useRef } from "react";
 
 interface ChatScrollAnchorProps {
-  trackVisibility: any;
+  trackVisibility: ChatMessageType;
   canScroll: boolean;
 }
 
@@ -23,7 +24,10 @@ export function ChatScrollAnchor({
     if (canScroll) {
       if (!scrollRef.current) return;
 
-      if (playgroundScrollBehaves === "instant") {
+      if (
+        playgroundScrollBehaves === "instant" ||
+        trackVisibility.category === "error"
+      ) {
         scrollRef.current.scrollIntoView({
           behavior: playgroundScrollBehaves,
         });
@@ -32,7 +36,7 @@ export function ChatScrollAnchor({
           scrollRef.current.scrollIntoView({
             behavior: "smooth",
           });
-        }, 10);
+        }, 400);
         setPlaygroundScrollBehaves("smooth");
       } else {
         scrollRef.current.scrollIntoView({
