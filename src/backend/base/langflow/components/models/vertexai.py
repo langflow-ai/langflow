@@ -21,6 +21,13 @@ class ChatVertexAIComponent(LCModelComponent):
             file_types=["json"],
         ),
         MessageTextInput(name="model_name", display_name="Model Name", value="gemini-1.5-pro"),
+        BoolInput(
+            name="json_mode",
+            display_name="JSON Mode",
+            info="If True, enforces JSON output format",
+            advanced=True,
+            value=False,
+        ),
         StrInput(name="project", display_name="Project", info="The project ID.", advanced=True),
         StrInput(name="location", display_name="Location", value="us-central1", advanced=True),
         IntInput(name="max_output_tokens", display_name="Max Output Tokens", advanced=True),
@@ -54,6 +61,8 @@ class ChatVertexAIComponent(LCModelComponent):
             project = self.project or None
             credentials = None
 
+        generation_config = {"response_mime_type": "application/json"} if self.json_mode else {}
+
         return cast(
             "LanguageModel",
             ChatVertexAI(
@@ -67,5 +76,6 @@ class ChatVertexAIComponent(LCModelComponent):
                 top_k=self.top_k or None,
                 top_p=self.top_p,
                 verbose=self.verbose,
+                generation_config=generation_config,
             ),
         )
