@@ -148,7 +148,7 @@ export const AccountMenu = () => {
                 >
                   <ForwardedIconComponent
                     strokeWidth={2}
-                    name="TwitterXIcon"
+                    name="TwitterX"
                     className="h-4 w-4"
                   />
                   X
