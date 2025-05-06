@@ -5,10 +5,11 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, OLLAMA_TOOL_MODELS_BASE, URL_LIST
+from langflow.base.models.ollama_constants import OLLAMA_TOOL_MODELS_BASE, URL_LIST
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+from langflow.logging import logger
 
 HTTP_STATUS_OK = 200
 
@@ -18,6 +19,12 @@ class ChatOllamaComponent(LCModelComponent):
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
     name = "OllamaModel"
+
+    # Define constants for JSON keys
+    JSON_MODELS_KEY = "models"
+    JSON_NAME_KEY = "name"
+    JSON_CAPABILITIES_KEY = "capabilities"
+    DESIRED_CAPABILITY = "completion"
 
     inputs = [
         MessageTextInput(
@@ -229,10 +236,10 @@ class ChatOllamaComponent(LCModelComponent):
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_model(self.base_url, tool_model_enabled)
+                build_config["model_name"]["options"] = await self.get_models(self.base_url, tool_model_enabled)
             elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_model(
+                build_config["model_name"]["options"] = await self.get_models(
                     build_config["base_url"].get("value", ""), tool_model_enabled
                 )
             else:
@@ -249,30 +256,59 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    async def get_model(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
+    async def get_models(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
+        """Fetches a list of models from the Ollama API that do not have the "embedding" capability.
+
+        Args:
+            base_url_value (str): The base URL of the Ollama API.
+            tool_model_enabled (bool | None, optional): If True, filters the models further to include
+                only those that support tool calling. Defaults to None.
+
+        Returns:
+            list[str]: A list of model names that do not have the "embedding" capability. If
+                `tool_model_enabled` is True, only models supporting tool calling are included.
+
+        Raises:
+            ValueError: If there is an issue with the API request or response, or if the model
+                names cannot be retrieved.
+        """
         try:
-            url = urljoin(base_url_value, "api/tags")
+            # Normalize the base URL to avoid the repeated "/" at the end
+            base_url = base_url_value.rstrip("/") + "/"
+
+            # Ollama REST API to return models
+            tags_url = urljoin(base_url, "api/tags")
+
+            # Ollama REST API to return model capabilities
+            show_url = urljoin(base_url, "api/show")
+
             async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
+                # Fetch available models
+                tags_response = await client.get(tags_url)
+                tags_response.raise_for_status()
+                models = await tags_response.json()
+                logger.debug(f"Available models: {models}")
 
-            model_ids = [model["name"] for model in data.get("models", [])]
-            # this to ensure that not embedding models are included.
-            # not even the base models since models can have 1b 2b etc
-            # handles cases when embeddings models have tags like :latest - etc.
-            model_ids = [
-                model
-                for model in model_ids
-                if not any(
-                    model == embedding_model or model.startswith(embedding_model.split("-")[0])
-                    for embedding_model in OLLAMA_EMBEDDING_MODELS
-                )
-            ]
+                # Filter models that are NOT embedding models
+                model_ids = []
+                for model in models[self.JSON_MODELS_KEY]:
+                    model_name = model[self.JSON_NAME_KEY]
+                    logger.debug(f"Checking model: {model_name}")
 
-        except (ImportError, ValueError, httpx.RequestError, Exception) as e:
+                    payload = {"model": model_name}
+                    show_response = await client.post(show_url, json=payload)
+                    show_response.raise_for_status()
+                    json_data = await show_response.json()
+                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
+                    logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
+
+                    if self.DESIRED_CAPABILITY in capabilities:
+                        model_ids.append(model_name)
+
+        except (httpx.RequestError, ValueError) as e:
             msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e
+
         return (
             model_ids if not tool_model_enabled else [model for model in model_ids if self.supports_tool_calling(model)]
         )

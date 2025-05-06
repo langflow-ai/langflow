@@ -1,5 +1,4 @@
-from unittest.mock import MagicMock, patch
-from urllib.parse import urljoin
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_ollama import ChatOllama
@@ -11,34 +10,52 @@ def component():
     return ChatOllamaComponent()
 
 
-@patch("httpx.AsyncClient.get")
-async def test_get_model_success(mock_get, component):
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"models": [{"name": "model1"}, {"name": "model2"}]}
-    mock_response.raise_for_status.return_value = None
-    mock_get.return_value = mock_response
+@pytest.mark.asyncio
+@patch("langflow.components.models.ollama.httpx.AsyncClient.post")
+@patch("langflow.components.models.ollama.httpx.AsyncClient.get")
+async def test_get_models_success(mock_get, mock_post, component):
+    # The revised approach to get_models filters based on model capabilities.
+    # It requires one request to ollama to get the models and another to check
+    # the capabilities of each model.
+    mock_get_response = AsyncMock()
+    mock_get_response.raise_for_status.return_value = None
+    mock_get_response.json.return_value = {
+        component.JSON_MODELS_KEY: [{component.JSON_NAME_KEY: "model1"}, {component.JSON_NAME_KEY: "model2"}]
+    }
+    mock_get.return_value = mock_get_response
+
+    # Mock the response for the HTTP POST request to check capabilities.
+    # Note that this is not exactly what happens if the Ollama server is running,
+    # but it is a good approximation.
+    # The first call checks the capabilities of model1, and the second call checks the capabilities of model2.
+    mock_post_response = AsyncMock()
+    mock_post_response.raise_for_status.return_value = None
+    mock_post_response.json.side_effect = [
+        {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
+        {component.JSON_CAPABILITIES_KEY: []},
+    ]
+    mock_post.return_value = mock_post_response
 
     base_url = "http://localhost:11434"
+    result = await component.get_models(base_url)
 
-    model_names = await component.get_model(base_url)
-
-    expected_url = urljoin(base_url, "/api/tags")
-
-    mock_get.assert_called_once_with(expected_url)
-
-    assert model_names == ["model1", "model2"]
+    # Check that the correct URL was used for the GET request
+    assert result == ["model1"]
+    assert mock_get.call_count == 1
+    assert mock_post.call_count == 2
 
 
-@patch("httpx.AsyncClient.get")
-async def test_get_model_failure(mock_get, component):
-    # Mock the response for the HTTP GET request to raise an exception
-    mock_get.side_effect = Exception("HTTP request failed")
+@pytest.mark.asyncio
+@patch("langflow.components.models.ollama.httpx.AsyncClient.get")
+async def test_get_models_failure(mock_get, component):
+    # Simulate a network error for /api/tags
+    import httpx
 
-    url = "http://localhost:11434/"
+    mock_get.side_effect = httpx.RequestError("Connection error", request=None)
 
-    # Assert that the ValueError is raised when an exception occurs
+    base_url = "http://localhost:11434"
     with pytest.raises(ValueError, match="Could not get model names from Ollama."):
-        await component.get_model(base_url_value=url)
+        await component.get_models(base_url)
 
 
 async def test_update_build_config_mirostat_disabled(component):
