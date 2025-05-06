@@ -9,7 +9,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp_validator
+from langflow.schema.validators import str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -31,11 +31,23 @@ class MessageBase(SQLModel):
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
 
-    @field_validator("timestamp", mode="before")
+    @field_validator("timestamp", mode="after")
     @classmethod
     def validate_timestamp(cls, value):
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value, _info):
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
         if isinstance(value, str):
-            return datetime.fromisoformat(value)
+            # Make sure the timestamp is in UTC
+            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
         return value
 
     @field_validator("files", mode="before")
@@ -122,24 +134,6 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     # because we are losing the timezone information when we save the message to the database
     # and when we read it back. We use field_validator to make sure the datetimes have timezone
     # after running session.refresh
-    @field_validator("timestamp", mode="after")
-    @classmethod
-    def validate_timestamp(cls, value):
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=timezone.utc)
-        return value
-
-    @field_serializer("timestamp")
-    def serialize_timestamp(self, value, _info):
-        if isinstance(value, datetime):
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-        if isinstance(value, str):
-            # Make sure the timestamp is in UTC
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-        return value
 
     @field_validator("flow_id", mode="before")
     @classmethod
