@@ -1,6 +1,5 @@
 import { customPreLoadImageUrl } from "@/customization/utils/custom-pre-load-image-url";
 import { useEffect } from "react";
-import { BASE_URL_API } from "../../../../../../../../../constants/constants";
 
 const usePreloadImages = (
   setImagesLoaded: (value: boolean) => void,
