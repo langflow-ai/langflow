@@ -185,6 +185,7 @@ export default function ChatView({
   });
 
   const [canScroll, setCanScroll] = useState<boolean>(false);
+  const [scrolledUp, setScrolledUp] = useState<boolean>(false);
 
   const handleScroll = () => {
     if (!messagesRef.current) return;
@@ -194,10 +195,12 @@ export default function ChatView({
 
     if (scrollDir === Direction.Up) {
       setCanScroll(false);
+      setScrolledUp(true);
     } else {
-      if (atBottom) {
+      if (atBottom || !scrolledUp) {
         setCanScroll(true);
       }
+      setScrolledUp(false);
     }
   };
 
