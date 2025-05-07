@@ -191,7 +191,7 @@ export default function ChatView({
     if (!messagesRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 10;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 3;
 
     if (scrollDir === Direction.Up) {
       setCanScroll(false);
