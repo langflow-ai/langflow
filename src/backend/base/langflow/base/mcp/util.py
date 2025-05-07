@@ -137,7 +137,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         except:
             return Any
 
-
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""
         # If this came via a named $ref, use that name
@@ -191,6 +190,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
 
     return create_model("InputSchema", **top_fields)
+
 
 class MCPStdioClient:
     def __init__(self):
