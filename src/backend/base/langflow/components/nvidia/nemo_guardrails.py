@@ -1,5 +1,7 @@
 import yaml
 import time
+import requests
+from typing import Any
 
 from langflow.io import FileInput, MultilineInput, HandleInput, Output
 from langflow.base.models.model import LCModelComponent
@@ -7,6 +9,7 @@ from langflow.field_typing import LanguageModel
 from nemoguardrails import RailsConfig
 from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 from langflow.inputs import MultiselectInput, MessageTextInput, SecretStrInput, DropdownInput, BoolInput
+from langflow.schema.dotdict import dotdict
 
 # Default prompts
 DEFAULT_SELF_CHECK_INPUT_PROMPT = """Instruction: {{ user_input }}
@@ -64,7 +67,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             name="rails",
             display_name="Rails",
             options=[
-                "self check input", "self check output", "hallucination",
+                "self check input", "self check output", "self check hallucination",
                 "content safety input", "content safety output", "topic control",
                 "jailbreak detection heuristics", "jailbreak detection model"
             ],
@@ -79,36 +82,50 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         ),
         # Guardrail API Settings
         MessageTextInput(
-            name="self_check_llm_url",
-            display_name="Self-check LLM Base URL",
+            name="self_check_model_url",
+            display_name="Self-check Model Base URL",
             value="https://integrate.api.nvidia.com/v1",
-            refresh_button=True,
-            info="The base URL of the API for the LLM that Guardrails uses for self-check rails.",
+            info="The base URL of the API for the model that Guardrails uses for self-check rails.",
             real_time_refresh=True,
         ),
         SecretStrInput(
-            name="self_check_llm_api_key",
-            display_name="Self-check LLM API Key",
-            info="The API Key for the LLM that Guardrails uses for self-check rails.",
+            name="self_check_model_api_key",
+            display_name="Self-check Model API Key",
+            info="The API Key for the model that Guardrails uses for self-check rails.",
             value="NVIDIA_API_KEY",
             real_time_refresh=True,
         ),
         DropdownInput(
-            name="self_check_llm_name",
+            name="self_check_model_name",
             display_name="Self-check Model Name",
-            value="gpt-3.5-turbo-instruct",
+            value="",
             advanced=False,
             options=[],
             refresh_button=True,
             combobox=True,
         ),
         MessageTextInput(
-            name="guardrail_model_url",
-            display_name="Guardrail Model Base URL",
+            name="content_safety_model_url",
+            display_name="Content Safety Model Base URL",
             value="https://integrate.api.nvidia.com/v1",
             advanced=True,
-            refresh_button=True,
-            info="The base URL for content safety, topic control, and jailbreak detection models.",
+            info="The base URL specifically for content safety models.",
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="topic_control_model_url",
+            display_name="Topic Control Model Base URL",
+            value="https://integrate.api.nvidia.com/v1",
+            advanced=True,
+            info="The base URL specifically for topic control models.",
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="jailbreak_detection_model_url",
+            display_name="Jailbreak Detection Model Base URL",
+            value="https://integrate.api.nvidia.com/v1",
+            advanced=True,
+            info="The base URL specifically for jailbreak detection models.",
             real_time_refresh=True,
         ),
         SecretStrInput(
@@ -117,7 +134,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             info="The API Key used for content safety, topic control, and jailbreak detection models.",
             advanced=True,
             value="NVIDIA_API_KEY",
-            real_time_refresh=True,
         ),
         # Advanced Inputs for Prompts
         MultilineInput(
@@ -189,8 +205,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             "rails": {
                 "input": {"flows": []},
                 "output": {"flows": []},
+                "config": {}
             },
-            "prompts": [],
+            "prompts": []
         }
 
         # Self check rails
@@ -202,31 +219,31 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             config_dict["models"].append({
                 "type": "self_check",
                 "engine": "nim",
-                "model": self.self_check_llm_name,
+                "model": self.self_check_model_name,
                 "parameters": {
-                    "base_url": self.self_check_llm_url,
-                    "api_key": self.self_check_llm_api_key,
+                    "base_url": self.self_check_model_url,
+                    "api_key": self.self_check_model_api_key,
                 },
             })
 
         if "self check input" in self.rails:
-            config_dict["rails"]["input"]["flows"].append("self check input $model=self_check")
+            config_dict["rails"]["input"]["flows"].append("self check input")
             config_dict["prompts"].append({
-                "task": "self_check_input $model=self_check",
+                "task": "self_check_input",
                 "content": self.self_check_input_prompt
             })
 
         if "self check output" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("self check output $model=self_check")
+            config_dict["rails"]["output"]["flows"].append("self check output")
             config_dict["prompts"].append({
-                "task": "self_check_output $model=self_check",
+                "task": "self_check_output",
                 "content": self.self_check_output_prompt
             })
 
-        if "hallucination" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("self check hallucination $model=self_check")
+        if "self check hallucination" in self.rails:
+            config_dict["rails"]["output"]["flows"].append("self check hallucination")
             config_dict["prompts"].append({
-                "task": "self_check_hallucination $model=self_check",
+                "task": "self_check_hallucination",
                 "content": self.self_check_hallucination_prompt
             })
 
@@ -237,7 +254,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "engine": "nim",
                 "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
                 "parameters": {
-                    "base_url": self.guardrail_model_url,
+                    "base_url": self.content_safety_model_url,
                     "api_key": self.guardrail_model_api_key,
                     "max_tokens": 256
                 }
@@ -268,7 +285,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "engine": "nim",
                 "model": "nvidia/llama-3.1-nemoguard-8b-topic-control",
                 "parameters": {
-                    "base_url": self.guardrail_model_url,
+                    "base_url": self.topic_control_model_url,
                     "api_key": self.guardrail_model_api_key,
                 }
             })
@@ -281,6 +298,13 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         # Jailbreak detection rails
         if "jailbreak detection heuristics" in self.rails:
             config_dict["rails"]["input"]["flows"].append("jailbreak detection heuristics")
+            
+        if "jailbreak detection model" in self.rails:
+            config_dict["rails"]["config"]["jailbreak_detection"] = {
+                "nim_full_url": self.jailbreak_detection_model_url,
+                "nim_auth_token": self.guardrail_model_api_key
+            }
+            config_dict["rails"]["input"]["flows"].append("jailbreak detection model")
 
         return yaml.dump(config_dict, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
@@ -316,9 +340,67 @@ define bot refuse to respond
         if self.guardrails_verbose:
             end = time.perf_counter()
             self.log(f"Guardrail creation took {end - start:.6f} seconds")
-            self._summarize_guardrails_config(guardrails)
 
         return guardrails
+
+    def get_models(self) -> list[str]:
+        """Get available models from NVIDIA API that are suitable for self-check tasks."""
+        # List of known good models for self-checking tasks
+        KNOWN_GOOD_MODELS = {
+            "openai/gpt-3.5-turbo-instruct",
+            "openai/gpt-4-turbo-instruct",
+            "anthropic/claude-3-opus-20240229",
+            "anthropic/claude-3-sonnet-20240229",
+            "mistral/mistral-large-latest",
+            "meta/llama-3.1-8b-instruct",
+            "google/gemma-2-9b-it",
+            "google/gemma-2-2b-instruct"
+        }
+
+        url = f"{self.self_check_model_url}/models"
+        headers = {
+            "Authorization": f"Bearer {self.self_check_model_api_key}",
+            "Accept": "application/json"
+        }
+
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            model_list = response.json()
+            
+            # Filter for models that are in our known good list
+            suitable_models = []
+            for model in model_list.get("data", []):
+                model_id = model["id"]
+                if model_id in KNOWN_GOOD_MODELS:
+                    suitable_models.append(model_id)
+            
+            return suitable_models
+        except requests.RequestException as e:
+            # Let the UI handle the empty list case
+            return []
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        """Update build configuration with fresh model list when key fields change."""
+        if field_name in {"self_check_model_url", "self_check_model_api_key"}:
+            try:
+                # Only try to fetch models if both URL and API key are provided
+                if self.self_check_model_url and self.self_check_model_api_key:
+                    models = self.get_models()
+                    build_config["self_check_model_name"]["options"] = models
+                    # Only set a default value if we have models and no current value
+                    if models and (not build_config["self_check_model_name"].get("value") or build_config["self_check_model_name"]["value"] not in models):
+                        build_config["self_check_model_name"]["value"] = models[0]
+                else:
+                    # Clear options and value if URL or API key is missing
+                    build_config["self_check_model_name"]["options"] = []
+                    build_config["self_check_model_name"]["value"] = ""
+            except Exception as e:
+                msg = f"Error getting model names: {e}"
+                build_config["self_check_model_name"]["value"] = ""
+                build_config["self_check_model_name"]["options"] = []
+                raise ValueError(msg) from e
+        return build_config
 
     def _safe_log_config(self, yaml_content: str):
         """Safely logs a YAML config with sensitive values redacted."""
