@@ -11,13 +11,17 @@ from sqlalchemy import text
 
 from langflow.api.utils import cascade_delete_flow
 from langflow.graph import Graph
-from langflow.load import aload_flow_from_json
-from langflow.processing.process import run_graph
+from langflow.processing.process import run_graph, process_tweaks
 from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, session_scope
-
+from langflow.logging.logger import configure
+from aiofile import async_open
+from dotenv import dotenv_values
+from langflow.load.utils import replace_tweaks_with_env
+from io import StringIO
+from langflow.utils.util import update_settings
 
 class LangflowRunnerExperimental:
     """LangflowRunnerExperimental orchestrates flow execution without a dedicated server.
@@ -36,24 +40,43 @@ class LangflowRunnerExperimental:
 
     """
 
-    should_initialize_db: bool = True
+    def __init__(self, *, 
+                 should_initialize_db: bool = True,
+                 log_level: str | None = None,
+                 log_file: str | None = None, 
+                 disable_logs: bool = False,
+                 async_log_file: bool = True):
+        self.should_initialize_db = should_initialize_db
+        log_file_path = Path(log_file) if log_file else None
+        configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=async_log_file)
 
     async def run(
         self,
         session_id: str,  # UUID required currently
         flow: Path | str | dict,
         input_value: str,
-        *,
         input_type: str = "chat",
         output_type: str = "chat",
+        cache: str | None = None,
+        env_file: str | None = None,
+        tweaks: dict | None = None,
         stream: bool = False,
     ):
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
+        # Update settings with cache and components path
+        await update_settings(cache=cache)
         flow_dict = await self.get_flow_dict(flow)
         self.set_flow_id(session_id, flow_dict)
+        if env_file and tweaks is not None:
+            async with async_open(Path(env_file), encoding="utf-8") as f:
+                content = await f.read()
+                env_vars = dotenv_values(stream=StringIO(content))
+            tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=env_vars)
         # we must modify the flow schema to set the session_id and for load_from_db=True we load the value from env vars
         self.modification(flow_dict, lambda obj, parent, key: self.modify_flow_schema(session_id, obj, parent, key))
+        if tweaks is not None:
+            flow_dict = process_tweaks(flow_dict, tweaks)
         await self.clear_flow_state(session_id, flow_dict)
         await self.add_flow_to_db(session_id, flow_dict)
         graph = await self.create_graph_from_flow(session_id, flow_dict)
@@ -91,9 +114,7 @@ class LangflowRunnerExperimental:
 
     @staticmethod
     async def create_graph_from_flow(session_id: str, flow_dict: dict):
-        graph = await aload_flow_from_json(flow=flow_dict, disable_logs=False)
-        graph.flow_id = flow_dict["id"]
-        graph.flow_name = flow_dict.get("name")
+        graph = Graph.from_payload(flow_dict, flow_id=flow_dict["id"], flow_name=flow_dict.get("name"))
         graph.session_id = session_id
         graph.set_run_id(session_id)
         await graph.initialize_run()
