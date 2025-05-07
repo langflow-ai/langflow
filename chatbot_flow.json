@@ -1,0 +1,34 @@
+{
+  "nodes": [
+    {
+      "type": "TextInput",
+      "id": "input_node",
+      "properties": {}
+    },
+    {
+      "type": "PromptTemplate",
+      "id": "prompt_node",
+      "properties": {
+        "template": "You are a helpful assistant. Answer the following question:\n{input}"
+      }
+    },
+    {
+      "type": "LLM",
+      "id": "llm_node",
+      "properties": {
+        "model": "gpt-3.5-turbo",
+        "api_key": "<YOUR_OPENAI_API_KEY>"
+      }
+    },
+    {
+      "type": "TextOutput",
+      "id": "output_node",
+      "properties": {}
+    }
+  ],
+  "connections": [
+    { "from": "input_node", "to": "prompt_node" },
+    { "from": "prompt_node", "to": "llm_node" },
+    { "from": "llm_node", "to": "output_node" }
+  ]
+}
