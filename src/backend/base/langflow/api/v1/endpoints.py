@@ -33,7 +33,7 @@ from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
-from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.flow import get_flow_by_id_or_endpoint_name, get_flow_by_id_or_endpoint_name_from_cache
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
@@ -41,7 +41,6 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
@@ -107,7 +106,7 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
 
 
 async def simple_run_flow(
-    flow: Flow,
+    flow: Flow | Graph,
     input_request: SimplifiedAPIRequest,
     *,
     stream: bool = False,
@@ -122,9 +121,12 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
-        graph_data = flow.data.copy()
-        graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
+        if isinstance(flow, Graph):
+            graph = flow
+        else:
+            graph_data = flow.data.copy()
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -271,7 +273,7 @@ async def run_flow_generator(
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[Graph | None, Depends(get_flow_by_id_or_endpoint_name_from_cache)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -309,8 +311,7 @@ async def simplified_run_flow(
     """
     telemetry_service = get_telemetry_service()
     input_request = input_request if input_request is not None else SimplifiedAPIRequest()
-    if flow is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
     start_time = time.perf_counter()
 
     if stream:
