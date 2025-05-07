@@ -371,7 +371,6 @@
                 "name": "model_output",
                 "required_inputs": [
                   "api_key",
-                  "base_url",
                   "max_tokens",
                   "model_name",
                   "stream",
@@ -708,7 +707,6 @@
                 "name": "model_output",
                 "required_inputs": [
                   "api_key",
-                  "base_url",
                   "max_tokens",
                   "model_name",
                   "stream",
