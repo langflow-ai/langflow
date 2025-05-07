@@ -411,7 +411,7 @@
             "custom_fields": {
               "template": []
             },
-            "description": "",
+            "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,

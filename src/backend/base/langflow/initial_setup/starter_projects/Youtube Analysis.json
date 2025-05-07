@@ -323,7 +323,7 @@
             "category": "helpers",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Runs a language model over each row of a DataFrame's text column and returns a new DataFrame with two columns: 'text_input' (the original text) and 'model_response' containing the model's response.",
+            "description": "Runs an LLM over each row of a DataFrame's column. If no column is set, the entire row is passed.",
             "display_name": "Batch Run",
             "documentation": "",
             "edited": false,

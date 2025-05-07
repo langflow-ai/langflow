@@ -737,9 +737,7 @@
                 "display_name": "Needle API Key",
                 "dynamic": false,
                 "info": "Your Needle API key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": false,
                 "name": "needle_api_key",
                 "password": true,
