@@ -50,9 +50,8 @@ from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.event_manager import EventManager
+    from langflow.events.event_manager import EventManager
     from langflow.services.settings.service import SettingsService
-
 router = APIRouter(tags=["Base"])
 
 
