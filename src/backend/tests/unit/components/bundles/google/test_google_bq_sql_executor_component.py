@@ -5,9 +5,8 @@ import pytest
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
 from langflow.components.google.google_bq_sql_executor import BigQueryExecutorComponent
-from langflow.schema.message import Message
-from tests.base import ComponentTestBaseWithoutClient
 from pandas import DataFrame
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
@@ -123,10 +122,10 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         # Verify that execute_sql raises ValueError for empty/whitespace queries
         with pytest.raises(ValueError) as exc_info:
             component.execute_sql()
-        
+
         # Verify the error message
         assert "No valid SQL query found" in str(exc_info.value)
-        
+
         # Verify that the BigQuery client was not called
         mock_client.query.assert_not_called()
 
@@ -194,48 +193,20 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Create mock rows with complex data
         mock_row1 = MagicMock()
-        mock_row1.items.return_value = [
-            ("id", 1),
-            ("name", "Test 1"),
-            ("value", 10.5),
-            ("active", True)
-        ]
-        mock_row1.__iter__.return_value = iter([
-            ("id", 1),
-            ("name", "Test 1"),
-            ("value", 10.5),
-            ("active", True)
-        ])
+        mock_row1.items.return_value = [("id", 1), ("name", "Test 1"), ("value", 10.5), ("active", True)]
+        mock_row1.__iter__.return_value = iter([("id", 1), ("name", "Test 1"), ("value", 10.5), ("active", True)])
         mock_row1.keys.return_value = ["id", "name", "value", "active"]
         mock_row1.values.return_value = [1, "Test 1", 10.5, True]
-        mock_row1.__getitem__.side_effect = lambda key: {
-            "id": 1,
-            "name": "Test 1",
-            "value": 10.5,
-            "active": True
-        }[key]
+        mock_row1.__getitem__.side_effect = lambda key: {"id": 1, "name": "Test 1", "value": 10.5, "active": True}[key]
 
         mock_row2 = MagicMock()
-        mock_row2.items.return_value = [
-            ("id", 2),
-            ("name", "Test 2"),
-            ("value", 20.75),
-            ("active", False)
-        ]
-        mock_row2.__iter__.return_value = iter([
-            ("id", 2),
-            ("name", "Test 2"),
-            ("value", 20.75),
-            ("active", False)
-        ])
+        mock_row2.items.return_value = [("id", 2), ("name", "Test 2"), ("value", 20.75), ("active", False)]
+        mock_row2.__iter__.return_value = iter([("id", 2), ("name", "Test 2"), ("value", 20.75), ("active", False)])
         mock_row2.keys.return_value = ["id", "name", "value", "active"]
         mock_row2.values.return_value = [2, "Test 2", 20.75, False]
-        mock_row2.__getitem__.side_effect = lambda key: {
-            "id": 2,
-            "name": "Test 2",
-            "value": 20.75,
-            "active": False
-        }[key]
+        mock_row2.__getitem__.side_effect = lambda key: {"id": 2, "name": "Test 2", "value": 20.75, "active": False}[
+            key
+        ]
 
         # Create mock result with the mock rows
         mock_result = MagicMock()
@@ -251,18 +222,25 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client_cls.return_value = mock_client
 
         # Mock the file read to return our test credentials
-        with patch("builtins.open", mock_open(read_data=json.dumps({
-            "type": "service_account",
-            "project_id": "test-project",
-            "private_key_id": "fake-key-id",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
-            "client_email": "test@project.iam.gserviceaccount.com",
-            "client_id": "123456789",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
-        }))):
+        with patch(
+            "builtins.open",
+            mock_open(
+                read_data=json.dumps(
+                    {
+                        "type": "service_account",
+                        "project_id": "test-project",
+                        "private_key_id": "fake-key-id",
+                        "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
+                        "client_email": "test@project.iam.gserviceaccount.com",
+                        "client_id": "123456789",
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
+                    }
+                )
+            ),
+        ):
             # Instantiate component with defaults
             component = component_class(**default_kwargs)
 
@@ -275,7 +253,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
             assert list(result.columns) == ["id", "name", "value", "active"]  # Check columns
 
             # Convert DataFrame to dictionary for easier comparison
-            result_dict = result.to_dict(orient='records')
+            result_dict = result.to_dict(orient="records")
 
             # Verify first row
             assert result_dict[0]["id"] == 1
@@ -303,23 +281,30 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client_cls.return_value = fake_client
 
         # Mock the file read to return our test credentials
-        with patch("builtins.open", mock_open(read_data=json.dumps({
-            "type": "service_account",
-            "project_id": "test-project",
-            "private_key_id": "fake-key-id",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
-            "client_email": "test@project.iam.gserviceaccount.com",
-            "client_id": "123456789",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
-        }))):
+        with patch(
+            "builtins.open",
+            mock_open(
+                read_data=json.dumps(
+                    {
+                        "type": "service_account",
+                        "project_id": "test-project",
+                        "private_key_id": "fake-key-id",
+                        "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
+                        "client_email": "test@project.iam.gserviceaccount.com",
+                        "client_id": "123456789",
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
+                    }
+                )
+            ),
+        ):
             query_with_code_block = "```sql\nSELECT * FROM table\n```"
             component = component_class(**{**default_kwargs, "query": query_with_code_block})
-            
+
             result = component.execute_sql()
-            
+
             # Verify the query was properly cleaned (code block markers removed)
             fake_client.query.assert_called_once_with("SELECT * FROM table")
             assert isinstance(result, DataFrame)
@@ -355,9 +340,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         query_with_whitespace = "  SELECT * FROM table  "
         component = component_class(**{**default_kwargs, "query": query_with_whitespace})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the query was properly stripped
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -395,23 +380,30 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client_cls.return_value = mock_client
 
         # Mock the file read to return our test credentials
-        with patch("builtins.open", mock_open(read_data=json.dumps({
-            "type": "service_account",
-            "project_id": "test-project",
-            "private_key_id": "fake-key-id",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
-            "client_email": "test@project.iam.gserviceaccount.com",
-            "client_id": "123456789",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
-        }))):
+        with patch(
+            "builtins.open",
+            mock_open(
+                read_data=json.dumps(
+                    {
+                        "type": "service_account",
+                        "project_id": "test-project",
+                        "private_key_id": "fake-key-id",
+                        "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
+                        "client_email": "test@project.iam.gserviceaccount.com",
+                        "client_id": "123456789",
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
+                    }
+                )
+            ),
+        ):
             query_with_special_chars = "SELECT * FROM `project.dataset.table` WHERE name LIKE '%test%'"
             component = component_class(**{**default_kwargs, "query": query_with_special_chars})
-            
+
             result = component.execute_sql()
-            
+
             # Verify the query with special characters was passed correctly
             # Backticks should be removed from identifiers but preserved in string literals
             mock_client.query.assert_called_once_with("SELECT * FROM project.dataset.table WHERE name LIKE '%test%'")
@@ -450,27 +442,34 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client_cls.return_value = mock_client
 
         # Mock the file read to return our test credentials
-        with patch("builtins.open", mock_open(read_data=json.dumps({
-            "type": "service_account",
-            "project_id": "test-project",
-            "private_key_id": "fake-key-id",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
-            "client_email": "test@project.iam.gserviceaccount.com",
-            "client_id": "123456789",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
-        }))):
+        with patch(
+            "builtins.open",
+            mock_open(
+                read_data=json.dumps(
+                    {
+                        "type": "service_account",
+                        "project_id": "test-project",
+                        "private_key_id": "fake-key-id",
+                        "private_key": "-----BEGIN PRIVATE KEY-----\nfake-key\n-----END PRIVATE KEY-----\n",
+                        "client_email": "test@project.iam.gserviceaccount.com",
+                        "client_id": "123456789",
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
+                    }
+                )
+            ),
+        ):
             multi_statement_query = """
             CREATE TABLE IF NOT EXISTS test_table (id INT64);
             INSERT INTO test_table VALUES (1);
             SELECT * FROM test_table;
             """
             component = component_class(**{**default_kwargs, "query": multi_statement_query})
-            
+
             result = component.execute_sql()
-            
+
             # Verify the multi-statement query was passed correctly
             # Whitespace should be normalized but statements preserved
             expected_query = "CREATE TABLE IF NOT EXISTS test_table (id INT64);\nINSERT INTO test_table VALUES (1);\nSELECT * FROM test_table;"
@@ -490,20 +489,11 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Create a mock row that can be converted to a dict
         mock_row = MagicMock()
-        mock_row.items.return_value = [
-            ("id", 1),
-            ("name", "test_name")
-        ]
-        mock_row.__iter__.return_value = iter([
-            ("id", 1),
-            ("name", "test_name")
-        ])
+        mock_row.items.return_value = [("id", 1), ("name", "test_name")]
+        mock_row.__iter__.return_value = iter([("id", 1), ("name", "test_name")])
         mock_row.keys.return_value = ["id", "name"]
         mock_row.values.return_value = [1, "test_name"]
-        mock_row.__getitem__.side_effect = lambda key: {
-            "id": 1,
-            "name": "test_name"
-        }[key]
+        mock_row.__getitem__.side_effect = lambda key: {"id": 1, "name": "test_name"}[key]
 
         # Create mock result with the mock row
         mock_result = MagicMock()
@@ -520,9 +510,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         query_with_params = "SELECT * FROM table WHERE id = @id AND name = @name"
         component = component_class(**{**default_kwargs, "query": query_with_params})
-        
+
         result = component.execute_sql()
-        
+
         # Verify the parameterized query was passed correctly
         mock_client.query.assert_called_once_with(query_with_params)
         assert isinstance(result, DataFrame)
@@ -545,16 +535,16 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@project.iam.gserviceaccount.com",
         }
-        
+
         # Write invalid credentials to a temp file
         f = tmp_path / "invalid_sa.json"
         f.write_text(json.dumps(invalid_credentials))
-        
+
         component = component_class(
             service_account_json_file=str(f),
             query="SELECT 1",
         )
-        
+
         with pytest.raises(ValueError, match="No project_id found in service account credentials file"):
             component.execute_sql()
 

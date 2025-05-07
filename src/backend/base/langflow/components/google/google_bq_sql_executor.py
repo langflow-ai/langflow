@@ -120,8 +120,13 @@ class BigQueryExecutorComponent(Component):
             raise ValueError(msg) from e
 
         try:
+<<<<<<< HEAD
             client = bigquery.Client(credentials=credentials, project=project_id)
             sql_query = self._clean_sql_query(str(self.query))
+=======
+            client = bigquery.Client(credentials=credentials, project=self.project_id)
+            sql_query = str(self.query).strip()
+>>>>>>> origin/feat-add-google-bq-component
 
             # Check for empty or whitespace-only query
             if not sql_query:
