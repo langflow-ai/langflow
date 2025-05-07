@@ -265,32 +265,6 @@ inputs = [
 ]
 ```
 
-In this example, we define three inputs: a text field (StrInput), a boolean toggle (BoolInput), and a dropdown selection (DropdownInput).
-
-**Tool Mode**
-
-You can configure a Custom Component to work as a **Tool** by setting the parameter `tool_mode=True`. This allows the component to be used in Langflow's Tool Mode workflows.
-
-Langflow currently supports the following input types for Tool Mode:
-
-- `DataInput`
-- `DataFrameInput`
-- `PromptInput`
-- `MessageTextInput`
-- `MultilineInput`
-- `DropdownInput`
-
-```python
-inputs = [
-    MessageTextInput(
-        name="message",
-        display_name="Mensage",
-        info="Enter the message that will be processed directly by the tool",
-        tool_mode=True,
-    ),
-]
-```
-
 ### Outputs
 
 Outputs are defined in a class-level `outputs` list. When Langflow renders a component, each output becomes a connector point in the UI. When you connect something to an output, Langflow automatically calls the corresponding method and passes the returned object to the next component.
@@ -353,6 +327,30 @@ class DataToDataFrame(Component):
         return df
 ```
 
+
+### Tool mode
+
+You can configure a Custom Component to work as a **Tool** by setting the parameter `tool_mode=True`. This allows the component to be used in Langflow's Tool Mode workflows, such as by Agent components.
+
+Langflow currently supports the following input types for Tool Mode:
+
+* `DataInput`
+* `DataFrameInput`
+* `PromptInput`
+* `MessageTextInput`
+* `MultilineInput`
+* `DropdownInput`
+
+```python
+inputs = [
+    MessageTextInput(
+        name="message",
+        display_name="Mensage",
+        info="Enter the message that will be processed directly by the tool",
+        tool_mode=True,
+    ),
+]
+```
 
 ## Typed annotations
 
