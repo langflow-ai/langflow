@@ -401,7 +401,7 @@ class MCPToolsComponent(Component):
         """Build output with improved error handling and validation."""
         try:
             await self.update_tools()
-            if self.tool != "":
+            if self.tool and self.tool_cache:
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
