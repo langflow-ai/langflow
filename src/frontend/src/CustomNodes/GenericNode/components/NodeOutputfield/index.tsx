@@ -266,11 +266,16 @@ function NodeOutputField({
 
   const LoopHandle = useMemo(() => {
     if (data.node?.outputs![index].allows_loop && title !== "done") {
+      const currentSelectedOutput =
+        data.node?.outputs![index].selected ??
+        data.node?.outputs![index].types[0] ??
+        title;
+
       return (
         <HandleRenderComponent
           left={true}
           nodes={nodes}
-          tooltipTitle={tooltipTitle}
+          tooltipTitle={currentSelectedOutput}
           id={id}
           title={title}
           edges={edges}
@@ -287,11 +292,12 @@ function NodeOutputField({
     }
   }, [
     nodes,
-    tooltipTitle,
     id,
     title,
     edges,
     data.id,
+    data.node?.outputs,
+    index,
     myData,
     colors,
     setFilterEdge,
@@ -301,12 +307,17 @@ function NodeOutputField({
     selected,
   ]);
 
-  const Handle = useMemo(
-    () => (
+  const Handle = useMemo(() => {
+    const currentSelectedOutput =
+      data.node?.outputs![index].selected ??
+      data.node?.outputs![index].types[0] ??
+      tooltipTitle;
+
+    return (
       <HandleRenderComponent
         left={false}
         nodes={nodes}
-        tooltipTitle={tooltipTitle}
+        tooltipTitle={currentSelectedOutput}
         id={id}
         title={title}
         edges={edges}
@@ -319,23 +330,24 @@ function NodeOutputField({
         colorName={colorName}
         selected={selected}
       />
-    ),
-    [
-      nodes,
-      tooltipTitle,
-      id,
-      title,
-      edges,
-      data.id,
-      myData,
-      colors,
-      setFilterEdge,
-      showNode,
-      data?.type,
-      colorName,
-      selected,
-    ],
-  );
+    );
+  }, [
+    nodes,
+    id,
+    title,
+    tooltipTitle,
+    edges,
+    data.id,
+    data.node?.outputs,
+    index,
+    myData,
+    colors,
+    setFilterEdge,
+    showNode,
+    data?.type,
+    colorName,
+    selected,
+  ]);
 
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
