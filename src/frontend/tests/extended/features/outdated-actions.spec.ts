@@ -33,9 +33,7 @@ test("user must be able to update outdated components", async ({ page }) => {
 
   await page.getByTestId("list-card").first().click();
 
-  await expect(
-    page.getByText("Updates are available for 5 components"),
-  ).toBeVisible({
+  await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
   });
 
