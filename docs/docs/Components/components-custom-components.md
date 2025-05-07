@@ -3,49 +3,28 @@ title: Create custom Python components
 slug: /components-custom-components
 ---
 
-Custom Components extend Langflow's functionality through Python classes that inherit from `Component`. This enables integration of new features, data manipulation, external services, and specialized tools.
+Custom components extend Langflow's functionality through Python classes that inherit from `Component`. This enables integration of new features, data manipulation, external services, and specialized tools.
 
-## Overview
+In Langflow's node-based environment, each node is a "component" that performs discrete functions. Custom components are Python classes which define:
 
-In Langflow's node-based environment, each node is a "component" performing discrete functions. Custom Components are Python classes defining:
+* **Inputs** — Data or parameters your component requires.
+* **Outputs** — Data your component provides to downstream nodes.
+* **Logic** — How you process inputs to produce outputs.
 
-- **Inputs** — Data or parameters your component requires
-- **Outputs** — Data your component provides to downstream nodes
-- **Logic** — How you process inputs to produce outputs
+The benefits of creating custom components include unlimited extensibility, reusability, automatic UI field generation based on inputs, and type-safe connections between nodes.
 
-## Key Benefits
+Create custom components for performing specialized tasks, calling APIs, or adding advanced logic.
 
-- **Unlimited Extensibility**: Leverage any Python library in Langflow
-- **Reusability**: Save and share components for future projects
-- **User-Friendly Configuration**: Automatic UI field generation based on inputs
-- **Type-Safe Connections**: Ensure compatible node connections with typed inputs/outputs
+Custom components in Langflow are built upon:
 
-## When to Create Custom Components
+* The Python class that inherits from `Component`.
+* Class-level attributes that identify and describe the component.
+* Input and output lists that determine data flow.
+* Internal variables for logging and advanced logic.
 
-Create a Custom Component when:
+## Class-level attributes
 
-- **Performing Specialized Data Processing**: Converting PDFs to structured data, parsing CSV logs
-- **Integrating External Services**: Calling APIs with user-provided credentials
-- **Implementing Custom AI Tools**: Creating specialized text-generation functions or chain-of-thought agents
-- **Adding Advanced Logic**: Implementing if-else routing, looping, concurrency, or memory management
-
-## Example Scenarios
-
-- **Data Transformations**: Transform or filter a `Data` or `DataFrame` object before passing it to a large language model
-- **Conditional Routing**: A router that checks an incoming `Message` and branches the output according to custom logic
-
-# Component Fundamentals
-
-Custom Components in Langflow revolve around:
-
-- The Python class that inherits from `Component`
-- Class-level attributes that identify and describe the component
-- Input and output lists that determine data flow
-- Internal variables for logging and advanced logic
-
-## Class-Level Attributes
-
-Define these attributes to control a Custom Component's appearance and behavior:
+Define these attributes to control a custom component's appearance and behavior:
 
 ```python
 class MyCsvReader(Component):
@@ -56,28 +35,24 @@ class MyCsvReader(Component):
     documentation = "http://docs.example.com/csv_reader"  # Optional
 ```
 
-### Attribute Details
+* **display_name**: A user-friendly label in the node header.
+* **description**: A brief summary shown in tooltips.
+* **icon**: A visual identifier from Langflow's icon library.
+* **name**: A unique internal identifier.
+* **documentation**: An optional link to external docs.
 
-- **display_name**: User-friendly label in the node header
-- **description**: Brief summary shown in tooltips
-- **icon**: Visual identifier from Langflow's icon library
-- **name**: Unique internal identifier
-- **documentation**: Optional link to external docs
+### Structure of a custom component
 
-## Structure of a Custom Component
-
-A **Langflow Custom Component** goes beyond a simple class with inputs and outputs. It includes an internal structure with optional lifecycle steps, output generation, front-end interaction, and logic organization.
-
-### Class Declaration and Layout
+A **Langflow custom component** goes beyond a simple class with inputs and outputs. It includes an internal structure with optional lifecycle steps, output generation, front-end interaction, and logic organization.
 
 A basic component:
 
-- Inherits from `langflow.custom.Component`.
-- Declares metadata (`display_name`, `description`, `icon`, etc.).
-- Defines `inputs` and `outputs` lists.
-- Implements methods matching output specifications.
+* Inherits from `langflow.custom.Component`.
+* Declares metadata like `display_name`, `description`, `icon`, and more.
+* Defines `inputs` and `outputs` lists.
+* Implements methods matching output specifications.
 
-**Minimal Skeleton**:
+A minimal custom component skeleton contains the following:
 
 ```python
 from langflow.custom import Component
@@ -99,45 +74,45 @@ class MyComponent(Component):
 
 Langflow's engine manages:
 
-- **Instantiation**: Component is created and internal structures initialized.
-- **Assigning Inputs**: Values from UI or connections assigned to fields.
-- **Validation and Setup**: Optional hooks like `_pre_run_setup`.
-- **Outputs Generation**: `run()` or `build_results()` triggers output methods.
+* **Instantiation**:  A component is created and internal structures are initialized.
+* **Assigning Inputs**: Values from the UI or connections are assigned to component fields.
+* **Validation and Setup**: Optional hooks like `_pre_run_setup`.
+* **Outputs Generation**: `run()` or `build_results()` triggers output methods.
 
 **Optional Hooks**:
 
-- `initialize_data`, `_pre_run_setup`: for setup logic.
-- Overriding `__call__`, `run()`, or `_run()`.
+* `initialize_data` or `_pre_run_setup` can run setup logic before the component's main execution.
+* `__call__`, `run()`, or `_run()` can be overridden to customize how the component is called or to define custom execution logic.
 
-### The Inputs List
+### Inputs and outputs 
 
-Inputs are defined with properties like:
+Custom component inputs are defined with properties like:
 
-- `name`, `display_name`
-- Optional: `info`, `value`, `advanced`, `is_list`, `tool_mode`, `real_time_refresh`
+* `name`, `display_name`
+* Optional: `info`, `value`, `advanced`, `is_list`, `tool_mode`, `real_time_refresh`
 
-**Examples**:
+For example:
 
-- `StrInput`: simple text input.
-- `DropdownInput`: selectable options.
-- `HandleInput`: specialized connections.
+* `StrInput`: simple text input.
+* `DropdownInput`: selectable options.
+* `HandleInput`: specialized connections.
 
-### The Outputs List
+Custom component `Output` properties define:
 
-Each Output defines:
+* `name`, `display_name`, `method`
+* Optional: `info`
 
-- `name`, `display_name`, `method`
-- Optional: `info`
+For more information, see [Custom component inputs and outputs](/components-custom-components#custom-component-inputs-and-outputs).
 
 ### Associated Methods
 
 Each output is linked to a method:
 
-- Must match the method name.
-- Typically returns objects like Message, Data, or DataFrame.
-- Can use inputs via `self.<input_name>`
+* The output method name must match the method name.
+* The method typically returns objects like Message, Data, or DataFrame.
+* The method can use inputs with `self.<input_name>`.
 
-** Exemple**:
+For example:
 
 ```python
 Output(
@@ -154,9 +129,11 @@ def read_file(self) -> Data:
     return Data(data={"content": content})
 ```
 
-### Handling Multiple Outputs
+### Components with multiple outputs
 
-A component can define multiple outputs:
+A component can define multiple outputs.
+Each output can have a different corresponding method.
+For example:
 
 ```python
 outputs = [
@@ -165,13 +142,11 @@ outputs = [
 ]
 ```
 
-Each with its corresponding method.
-
-### Common Internal Patterns
+### Common internal patterns
 
 #### `_pre_run_setup()`
 
-For initialization, like setting counters:
+To initialize a custom component with counters set:
 
 ```python
 def _pre_run_setup(self):
@@ -180,10 +155,10 @@ def _pre_run_setup(self):
         self.iteration = 0
 ```
 
-#### Overriding `run` or `_run`
+#### Override `run` or `_run`
 You can override `async def _run(self): ...` to define custom execution logic, although the default behavior from the base class usually covers most cases.
 
-#### Storing Data in `self.ctx`
+#### Store data in `self.ctx`
 Use `self.ctx` as a shared storage for data or counters across the component’s execution flow:
 
 ```python
@@ -196,12 +171,11 @@ def some_method(self):
 
 By default, Langflow looks for custom components in the `langflow/components` directory.
 
-If you're creating custom components in a different location using the [LANGFLOW_COMPONENTS_PATH](/environment-variables#LANGFLOW_COMPONENTS_PATH)
-`LANGFLOW_COMPONENTS_PATH` environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
+If you're creating custom components in a different location using the [LANGFLOW_COMPONENTS_PATH](/environment-variables#LANGFLOW_COMPONENTS_PATH) environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
 
 ```
-/your/custom/components/path/    # Base directory (set by LANGFLOW_COMPONENTS_PATH)
-    └── category_name/          # Required category subfolder (determines menu name)
+/your/custom/components/path/    # Base directory set by LANGFLOW_COMPONENTS_PATH
+    └── category_name/          # Required category subfolder that determines menu name
         └── custom_component.py # Component file
 ```
 
@@ -212,7 +186,7 @@ For example, to add a component to the **Helpers** menu, place it in a `helpers`
 
 ```
 /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-    └── helpers/                 # Shows up as "Helpers" menu
+    └── helpers/                 # Displayed within the "Helpers" menu
         └── custom_component.py  # Your component
 ```
 
@@ -232,9 +206,9 @@ This folder structure is required for Langflow to properly discover and load you
     └── custom_component.py      # Won't be loaded - missing category folder!
 ```
 
-## Inputs and Outputs
+## Custom component inputs and outputs
 
-Inputs and outputs are the core of any Langflow Custom Component. They define how data flows through the component, how it appears in the UI, and how connections to other components are validated.
+Inputs and outputs define how data flows through the component, how it appears in the UI, and how connections to other components are validated.
 
 ### Inputs
 
@@ -242,46 +216,44 @@ Inputs are defined in a class-level `inputs` list. When Langflow loads the compo
 
 An input is usually an instance of a class from `langflow.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`). The most common constructor parameters are:
 
-- **`name`**: Internal variable name, accessed via `self.<name>`.
-- **`display_name`**: Label shown to users in the UI.
-- **`info`** *(optional)*: Tooltip or short description.
-- **`value`** *(optional)*: Default value.
-- **`advanced`** *(optional)*: If `True`, moves the field into the "Advanced" section.
-- **`required`** *(optional)*: Forces the user to provide a value.
-- **`is_list`** *(optional)*: Allows multiple values.
-- **`input_types`** *(optional)*: Restricts allowed connection types (e.g., `["Data"]`, `["LanguageModel"]`).
+* **`name`**: The internal variable name, accessed via `self.<name>`.
+* **`display_name`**: The label shown to users in the UI.
+* **`info`** *(optional)*: A tooltip or short description.
+* **`value`** *(optional)*: The default value.
+* **`advanced`** *(optional)*: If `True`, moves the field into the "Advanced" section.
+* **`required`** *(optional)*: If `True`, forces the user to provide a value.
+* **`is_list`** *(optional)*: If `True`, allows multiple values.
+* **`input_types`** *(optional)*: Restricts allowed connection types (e.g., `["Data"]`, `["LanguageModel"]`).
 
-Here are the most commonly used input classes and their typical usage
+Here are the most commonly used input classes and their typical usage.
 
-**Text Inputs**: For simple text entries  
-- **`StrInput`** creates a single-line text field.  
-- **`MultilineInput`** creates a multi-line text area.  
+**Text Inputs**: For simple text entries.
+* **`StrInput`** creates a single-line text field.
+* **`MultilineInput`** creates a multi-line text area.
 
-**Numeric and Boolean Inputs**: Ensure users can only enter valid numeric or boolean data  
-- **`BoolInput`**, **`IntInput`**, and **`FloatInput`** provide fields for boolean, integer, and float values, ensuring type consistency.  
+**Numeric and Boolean Inputs**: Ensures users can only enter valid numeric or boolean data.
+* **`BoolInput`**, **`IntInput`**, and **`FloatInput`** provide fields for boolean, integer, and float values, ensuring type consistency.
 
-**Dropdowns**: For selecting from predefined options, useful for modes or levels  
-- **`DropdownInput`**
+**Dropdowns**: For selecting from predefined options, useful for modes or levels.
+* **`DropdownInput`**
 
-**Secrets**: A specialized input for sensitive data, ensuring input is hidden in the UI  
-- **`SecretStrInput`** (e.g., for API keys, passwords, etc.)
+**Secrets**: A specialized input for sensitive data, ensuring input is hidden in the UI.
+* **`SecretStrInput`** for API keys and passwords.
 
-**Specialized Data Inputs**: Ensure type-checking and color-coded connections in the UI  
-- **`DataInput`** expects a `Data` object (typically with `.data` and optional `.text`).  
-- **`MessageInput`** expects a `Message` object, used in chat or agent-based flows.  
-- **`MessageTextInput`** simplifies access to the `.text` field of a `Message`.
+**Specialized Data Inputs**: Ensures type-checking and color-coded connections in the UI.
+* **`DataInput`** expects a `Data` object (typically with `.data` and optional `.text`).
+* **`MessageInput`** expects a `Message` object, used in chat or agent-based flows.
+* **`MessageTextInput`** simplifies access to the `.text` field of a `Message`.
 
-**Handle-Based Inputs**: Used to connect outputs of specific types, ensuring correct pipeline connections  
+**Handle-Based Inputs**: Used to connect outputs of specific types, ensuring correct pipeline connections.
 - **`HandleInput`**
 
-**File Uploads**: Allows users to upload files directly through the UI or receive file paths from other components  
+**File Uploads**: Allows users to upload files directly through the UI or receive file paths from other components.
 - **`FileInput`**
 
 **Lists**: Set `is_list=True` to accept multiple values, ideal for batch or grouped operations.
 
-**Example**
-
-A simple example of defining inputs:
+This example defines three inputs: a text field (`StrInput`), a boolean toggle (`BoolInput`), and a dropdown selection (`DropdownInput`).
 
 ```python
 from langflow.io import StrInput, BoolInput, DropdownInput
@@ -293,20 +265,18 @@ inputs = [
 ]
 ```
 
-In this example, we define three inputs: a text field (StrInput), a boolean toggle (BoolInput), and a dropdown selection (DropdownInput).
-
 ### Outputs
 
 Outputs are defined in a class-level `outputs` list. When Langflow renders a component, each output becomes a connector point in the UI. When you connect something to an output, Langflow automatically calls the corresponding method and passes the returned object to the next component.
 
 An output is usually an instance of `Output` from `langflow.io`, with common parameters:
 
-- **`name`**: Internal variable name.
-- **`display_name`**: Label shown in the UI.
-- **`method`**: Name of the method called to produce the output.
-- **`info`** *(optional)*: Help text shown on hover.
+* **`name`**: The internal variable name.
+* **`display_name`**: The label shown in the UI.
+* **`method`**: The name of the method called to produce the output.
+* **`info`** *(optional)*: Help text shown on hover.
 
-The method must exist in the class, and it is recommended to annotate its return type for better type checking.  
+The method must exist in the class, and it is recommended to annotate its return type for better type checking.
 You can also set a `self.status` message inside the method to show progress or logs.
 
 **Common Return Types**:
@@ -315,10 +285,7 @@ You can also set a `self.status` message inside the method to show progress or l
 - **`DataFrame`**: Pandas-based tables (`langflow.schema.DataFrame`).
 - **Primitive types**: `str`, `int`, `bool` (not recommended if you need type/color consistency).
 
-
-**Example**
-
-Defining a simple output:
+In this example, the `DataToDataFrame` component defines its output using the outputs list. The `df_out` output is linked to the `build_df` method, so when connected in the UI, Langflow calls this method and passes its returned DataFrame to the next node. This demonstrates how each output maps to a method that generates the actual output data.
 
 ```python
 from langflow.custom import Component
@@ -359,7 +326,7 @@ class DataToDataFrame(Component):
         self.status = f"Built DataFrame with {len(rows)} rows."
         return df
 ```
-In this example, the DataToDataFrame component defines its output using the outputs list. The df_out output is linked to the build_df method, so when connected in the UI, Langflow calls this method and passes its returned DataFrame to the next node. This demonstrates how each Output maps to a method that generates the actual output data.
+
 
 ## Typed Annotations
 
@@ -577,7 +544,7 @@ To build more reliable components, keep these principles in mind:
 - **Return Structured Errors**: When appropriate, return `Data(data={"error": ...})` instead of raising exceptions to allow downstream handling.
 - **Stop Outputs Selectively**: Only halt specific outputs with `self.stop(...)` if necessary, preserving correct flow behavior elsewhere.
 
-## Contribute Custom Components to Langflow
+## Contribute custom components to Langflow
 
 See [How to Contribute](/contributing-components) to contribute your custom component to Langflow.
 
