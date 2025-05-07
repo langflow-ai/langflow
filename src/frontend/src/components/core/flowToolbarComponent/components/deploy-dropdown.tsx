@@ -35,6 +35,7 @@ export default function PublishDropdown() {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const isPublished = currentFlow?.access_type === "PUBLIC";
+  const isDeployed = currentFlow?.status === "DEPLOYED";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openApiModal, setOpenApiModal] = useState(false);
@@ -44,6 +45,42 @@ export default function PublishDropdown() {
       {
         id: flowId ?? "",
         access_type: checked ? "PRIVATE" : "PUBLIC",
+      },
+      {
+        onSuccess: (updatedFlow) => {
+          if (flows) {
+            setFlows(
+              flows.map((flow) => {
+                if (flow.id === updatedFlow.id) {
+                  return updatedFlow;
+                }
+                return flow;
+              }),
+            );
+            setCurrentFlow(updatedFlow);
+          } else {
+            setErrorData({
+              title: "Failed to save flow",
+              list: ["Flows variable undefined"],
+            });
+          }
+        },
+        onError: (e) => {
+          setErrorData({
+            title: "Failed to save flow",
+            list: [e.message],
+          });
+        },
+      },
+    );
+  };
+
+  const handleDeployedSwitch = async (checked: boolean) => {
+    console.log("handleDeployedSwitch", checked);
+    mutateAsync(
+      {
+        id: flowId ?? "",
+        status: checked ? "DRAFT" : "DEPLOYED",
       },
       {
         onSuccess: (updatedFlow) => {
@@ -158,63 +195,112 @@ export default function PublishDropdown() {
           )}
 
           {ENABLE_PUBLISH && (
-            <ShadTooltipComponent
-              styleClasses="truncate"
-              side="left"
-              content={
-                hasIO
-                  ? isPublished
-                    ? encodeURI(`${domain}/playground/${flowId}`)
-                    : "Activate to share a public version of this Playground"
-                  : "Add a Chat Input or Chat Output to access your flow"
-              }
-            >
-              <div
-                className={cn(
-                  !hasIO ? "cursor-not-allowed" : "",
-                  "flex items-center",
-                )}
-                data-testid="shareable-playground"
+            <>
+              <ShadTooltipComponent
+                styleClasses="truncate"
+                side="left"
+                content={
+                  hasIO
+                    ? isPublished
+                      ? encodeURI(`${domain}/playground/${flowId}`)
+                      : "Activate to share a public version of this Playground"
+                    : "Add a Chat Input or Chat Output to access your flow"
+                }
               >
-                <CustomLink
+                <div
                   className={cn(
-                    "flex-1",
-                    !hasIO || !isPublished
-                      ? "pointer-events-none cursor-default"
-                      : "",
+                    !hasIO ? "cursor-not-allowed" : "",
+                    "flex items-center",
                   )}
-                  to={`/playground/${flowId}`}
-                  target="_blank"
+                  data-testid="shareable-playground"
+                >
+                  <CustomLink
+                    className={cn(
+                      "flex-1",
+                      !hasIO || !isPublished
+                        ? "pointer-events-none cursor-default"
+                        : "",
+                    )}
+                    to={`/playground/${flowId}`}
+                    target="_blank"
+                  >
+                    <DropdownMenuItem
+                      disabled={!hasIO || !isPublished}
+                      className="deploy-dropdown-item group flex-1"
+                      onClick={() => {}}
+                    >
+                      <div className="group-hover:bg-accent">
+                        <IconComponent
+                          name="Globe"
+                          className={`${groupStyle} icon-size mr-2`}
+                        />
+                        <span>Shareable Playground</span>
+                      </div>
+                    </DropdownMenuItem>
+                  </CustomLink>
+                  <div className={`z-50 mr-2 text-foreground`}>
+                    <Switch
+                      data-testid="publish-switch"
+                      className="scale-[85%]"
+                      checked={isPublished}
+                      disabled={!hasIO}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handlePublishedSwitch(isPublished);
+                      }}
+                    />
+                  </div>
+                </div>
+              </ShadTooltipComponent>
+
+              <ShadTooltipComponent
+                styleClasses="truncate"
+                side="left"
+                content={
+                  hasIO
+                    ? isDeployed
+                      ? "Flow is currently deployed"
+                      : "Deploy this flow to make it available"
+                    : "Add a Chat Input or Chat Output to deploy your flow"
+                }
+              >
+                <div
+                  className={cn(
+                    !hasIO ? "cursor-not-allowed" : "",
+                    "flex items-center",
+                  )}
+                  data-testid="deployed-status"
                 >
                   <DropdownMenuItem
-                    disabled={!hasIO || !isPublished}
+                    disabled={!hasIO}
                     className="deploy-dropdown-item group flex-1"
                     onClick={() => {}}
                   >
                     <div className="group-hover:bg-accent">
                       <IconComponent
-                        name="Globe"
+                        name="Rocket"
                         className={`${groupStyle} icon-size mr-2`}
                       />
-                      <span>Shareable Playground</span>
+                      <span>Deployed Status</span>
                     </div>
                   </DropdownMenuItem>
-                </CustomLink>
-                <div className={`z-50 mr-2 text-foreground`}>
-                  <Switch
-                    data-testid="publish-switch"
-                    className="scale-[85%]"
-                    checked={isPublished}
-                    disabled={!hasIO}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handlePublishedSwitch(isPublished);
-                    }}
-                  />
+                  <div className={`z-50 mr-2 text-foreground`}>
+                    <Switch
+                      data-testid="deploy-switch"
+                      className="scale-[85%]"
+                      checked={isDeployed}
+                      disabled={!hasIO}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeployedSwitch(isDeployed);
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </ShadTooltipComponent>
+              </ShadTooltipComponent>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
