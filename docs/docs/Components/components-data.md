@@ -263,6 +263,12 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 This component executes SQL queries on a specified database.
 
+To use this component in a flow, enter your SQL database parameters and a query for your data.
+
+1. In the **Database URL** field, enter your SQL database's connection string. For example, a SQLite database is formatted as `sqlite:////DATABASE_PATH/DATABASE_NAME.db`.
+2. In the **Query** field, enter an SQL query.
+For example, to select all rows of the `customers` column, enter `SELECT * FROM customers;`.
+
 ### Inputs
 
 | Name | Display Name | Info |
