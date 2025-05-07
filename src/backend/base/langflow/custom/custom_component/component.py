@@ -1140,7 +1140,7 @@ class Component(CustomComponent):
             list[Tool]: Filtered list of tools.
         """
         # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None
+        metadata_dict = {}
         if isinstance(metadata, pd.DataFrame):
             metadata_dict = metadata.to_dict(orient="records")
 
@@ -1162,13 +1162,10 @@ class Component(CustomComponent):
         # Create a mapping of tool names to their status
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
         return [tool for tool in tools if tool_status.get(tool.name, True)]
-
-    async def _build_tools_metadata_input(self):
-        tools = await self._get_tools()
-        # Always use the latest tool data
-
-        tool_data = [
-            {
+    def _build_tool_data(self, tool:Tool) -> dict:
+        if tool.metadata is None:
+            tool.metadata = {}
+        return {
                 "name": tool.name,
                 "description": tool.description,
                 "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
@@ -1179,8 +1176,11 @@ class Component(CustomComponent):
                 "args": tool.args,
                 # "args_schema": tool.args_schema,
             }
-            for tool in tools
-        ]
+
+    async def _build_tools_metadata_input(self):
+        tools = await self._get_tools()
+        # Always use the latest tool data
+        tool_data = [self._build_tool_data(tool) for tool in tools]
         # print(tool_data)
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)

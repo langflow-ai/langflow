@@ -499,6 +499,7 @@ class MCPToolsComponent(Component):
                         func=create_tool_func(tool.name, args_schema, client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
                         tags=[tool.name],
+                        metadata={}
                     )
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
@@ -526,4 +527,3 @@ class MCPToolsComponent(Component):
             msg = "SSE URL is not set"
             raise ValueError(msg)
         return await self.update_tools()
-        # return self.tools
