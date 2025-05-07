@@ -93,14 +93,18 @@ The re-ranker model is `nvidia/llama-3.2-nv.reranker`.
 
 [Hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
 
+:::important
+To use hybrid search, your collection must be created with vector, lexical, and rerank capabilities enabled. These capabilities are enabled by default when you create a collection in a database in the AWS us-east-2 region.
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid).
+:::
+
 To use **Hybrid search** in the **Astra DB** component, do the following:
 
 1. Click **New Flow** > **RAG** > **Hybrid Search RAG**.
 2. In the **OpenAI** model component, add your **OpenAI API key**.
 3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
 4. In the **Database** field, select your database.
-5. In the **Collection** field, select the collection you want to search.
-You must enable support for hybrid search when you create the collection.
+5. In the **Collection** field, select or create a collection with hybrid search capabilities enabled.
 6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
 Your query is sent to two components: an **OpenAI** model component and the **Astra DB** vector database component.
 The **OpenAI** component contains a prompt for creating the lexical query from your input:
