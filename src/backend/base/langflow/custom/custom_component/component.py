@@ -1140,7 +1140,7 @@ class Component(CustomComponent):
             list[Tool]: Filtered list of tools.
         """
         # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None
+        metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
         if isinstance(metadata, pd.DataFrame):
             metadata_dict = metadata.to_dict(orient="records")
 
