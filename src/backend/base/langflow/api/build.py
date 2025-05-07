@@ -7,8 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import suppress
 from typing import Any
 
-from fastapi import BackgroundTasks, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import BackgroundTasks, HTTPException, Response
 from loguru import logger
 from sqlmodel import select
 
@@ -113,34 +112,43 @@ async def get_flow_events_response(
             return resp
 
         # -------------------------------------------------------------------
-        # POLLING: return exactly one event, and if it s the final "end",
-        # cancel the background build task so it does not linger.
+        # POLLING: get all available events
         # -------------------------------------------------------------------
         try:
-            _, value, _ = await main_queue.get()
+            events: list = []
+            # Get all available events from the queue without blocking
+            while not main_queue.empty():
+                _, value, _ = await main_queue.get()
+                if value is None:
+                    # End of stream, trigger end event
+                    if event_task is not None:
+                        event_task.cancel()
+                    event_manager.on_end(data={})
+                    # Include the end event
+                    events.append(None)
+                    break
+                events.append(value.decode("utf-8"))
 
-            # None from the queue means "no event right now" (not the JSON end-marker),
-            # so return {"event": None} and let the client poll again.
-            if value is None:
-                return JSONResponse({"event": None})
+            # If no events were available, wait for one (with timeout)
+            if not events:
+                _, value, _ = await main_queue.get()
+                if value is None:
+                    # End of stream, trigger end event
+                    if event_task is not None:
+                        event_task.cancel()
+                    event_manager.on_end(data={})
+                else:
+                    events.append(value.decode("utf-8"))
 
-            # Decode the JSON string payload
-            data_str = value.decode("utf-8")
-
-            # If this is the final "end" event, tear down the build job:
-            if '"end"' in data_str:
-                with suppress(Exception):
-                    # cancel_flow_build will cancel the event_task and clean up
-                    await cancel_flow_build(job_id=job_id, queue_service=queue_service)
-
-            # Return the event payload (could be vertices, errors, or the "end" event)
-            return JSONResponse({"event": data_str})
+            # Return as NDJSON format - each line is a complete JSON object
+            content = "\n".join([event for event in events if event is not None])
+            return Response(content=content, media_type="application/x-ndjson")
         except asyncio.CancelledError as exc:
             logger.info(f"Event polling was cancelled for job {job_id}")
             raise HTTPException(status_code=499, detail="Event polling was cancelled") from exc
-        except asyncio.TimeoutError as exc:
+        except asyncio.TimeoutError:
             logger.warning(f"Timeout while waiting for events for job {job_id}")
-            raise HTTPException(status_code=408, detail="Timeout while waiting for events") from exc
+            return Response(content="", media_type="application/x-ndjson")  # Return empty response instead of error
 
     except JobQueueNotFoundError as exc:
         logger.error(f"Job not found: {job_id}. Error: {exc!s}")
