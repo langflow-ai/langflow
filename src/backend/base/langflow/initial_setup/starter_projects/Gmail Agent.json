@@ -1484,9 +1484,7 @@
                 "display_name": "Composio API Key",
                 "dynamic": false,
                 "info": "Refer to https://docs.composio.dev/faq/api_key/api_key",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
