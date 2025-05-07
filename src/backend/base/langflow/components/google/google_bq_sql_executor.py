@@ -97,7 +97,8 @@ class BigQueryExecutorComponent(Component):
         try:
             # First try to read the file
             try:
-                with open(self.service_account_json_file) as f:
+                service_account_path = Path(self.service_account_json_file)
+                with service_account_path.open() as f:
                     credentials_json = json.load(f)
                     project_id = credentials_json.get("project_id")
                     if not project_id:
@@ -107,7 +108,7 @@ class BigQueryExecutorComponent(Component):
                 msg = f"Service account file not found: {e}"
                 raise ValueError(msg) from e
             except json.JSONDecodeError as e:
-                msg = "Invalid JSON string for service account credentials."
+                msg = "Invalid JSON string for service account credentials"
                 raise ValueError(msg) from e
 
             # Then try to load credentials

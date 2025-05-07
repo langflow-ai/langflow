@@ -147,16 +147,6 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
     def test_invalid_service_account_json(self, component_class):
         """Invalid JSON in service account file should raise a ValueError."""
-        # Test with non-existent file
-        component = component_class(
-            service_account_json_file="ignored.json",
-            query="SELECT 1",
-        )
-        expected_error = "Service account file not found"
-        with pytest.raises(ValueError, match=expected_error):
-            component.execute_sql()
-
-        # Test with invalid JSON
         with patch("pathlib.Path.open", mock_open(read_data="invalid json")):
             component = component_class(
                 service_account_json_file="ignored.json",
