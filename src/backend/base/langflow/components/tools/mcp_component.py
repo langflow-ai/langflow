@@ -107,6 +107,7 @@ class MCPToolsComponent(Component):
             is_list=True,
             show=True,
             tool_mode=False,
+            advanced=True,
         ),
         MultilineInput(
             name="sse_url",
@@ -138,6 +139,7 @@ class MCPToolsComponent(Component):
                 },
             ],
             value=[],
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
