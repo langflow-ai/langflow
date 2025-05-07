@@ -908,7 +908,7 @@ async def flow_as_tool_websocket(
                             # client_send_event_from_thread(event, main_loop)
                             msg_handler.client_send(event)
 
-                    event = {"type": "response.audio.done", "response_id": rsp.response_id }
+                    event = {"type": "response.audio.done", "response_id": rsp.response_id}
                     # client_send_event_from_thread(event, main_loop)
                     msg_handler.client_send(event)
                 except Exception:  # noqa: BLE001
