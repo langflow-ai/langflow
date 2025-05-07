@@ -76,7 +76,6 @@ export default function PublishDropdown() {
   };
 
   const handleDeployedSwitch = async (checked: boolean) => {
-    console.log("handleDeployedSwitch", checked);
     mutateAsync(
       {
         id: flowId ?? "",
