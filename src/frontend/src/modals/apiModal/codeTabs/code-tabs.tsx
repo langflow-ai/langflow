@@ -21,6 +21,7 @@ import { getNewPythonApiCode } from "../utils/get-python-api-code";
 
 export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
   const flowId = useFlowStore((state) => state.currentFlow?.id);
@@ -41,6 +42,7 @@ export default function APITabsComponent() {
   const tweaks = useTweaksStore((state) => state.tweaks);
   const codeOptions = {
     streaming: streaming,
+    endpointName: currentFlow?.endpoint_name || "",
     flowId: flowId || "",
     isAuthenticated: !autologin || false,
     input_value: input_value,

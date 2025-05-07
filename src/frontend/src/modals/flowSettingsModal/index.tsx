@@ -39,6 +39,7 @@ export default function FlowSettingsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+
   function handleClick(): void {
     setIsSaving(true);
     if (!flow) return;
@@ -47,11 +48,13 @@ export default function FlowSettingsModal({
     newFlow.description = description;
     newFlow.endpoint_name =
       endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
+
     if (autoSaving) {
       saveFlow(newFlow)
         ?.then(() => {
           setOpen(false);
           setIsSaving(false);
+          setCurrentFlow(newFlow);
           setSuccessData({ title: "Changes saved successfully" });
         })
         .catch(() => {
