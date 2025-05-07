@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-buyiB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-buyiBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-BxJm3{œfieldNameœ:œinput_valueœ,œidœ:œAgent-BxJm3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-buyiB",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-buyiBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-buyiBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-BxJm3",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-BxJm3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-BxJm3œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-Agent-BxJm3{œdataTypeœ:œAgentœ,œidœ:œAgent-BxJm3œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-pZ2AW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pZ2AWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-BxJm3",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-BxJm3œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-BxJm3œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-pZ2AW",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pZ2AWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-pZ2AWœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "xy-edge__GmailAPI-J65iP{œdataTypeœ:œGmailAPIœ,œidœ:œGmailAPI-J65iPœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-BxJm3{œfieldNameœ:œtoolsœ,œidœ:œAgent-BxJm3œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "GmailAPI-J65iP",
-        "sourceHandle": "{œdataTypeœ:œGmailAPIœ,œidœ:œGmailAPI-J65iPœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œGmailAPIœ, œidœ: œGmailAPI-J65iPœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-BxJm3",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-BxJm3œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-BxJm3œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1386,7 +1386,7 @@
         "data": {
           "id": "note-3eTkz",
           "node": {
-            "description": "## Gmail Agent\nThis flow uses Gmail through a Composio component to send emails, create drafts, and more.\n\n### Prerequisites\n\n- [Composio API key](https://app.composio.dev)\n- [OpenAI API key](https://platform.openai.com)\n\n### Instructions\n\n1. In the **Gmail** component, enter your **Composio API key**.\n\n2. In the **Agent** component, enter your **OpenAI API key**.\n\n3. In the **Gmail** component, select an action you want the component to perform on behalf of your Agent. For example:\n   - GMAIL_SEND_EMAIL: Send emails directly.\n   - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails.\n   - Select other actions based on your needs.\n\n4. Open the **Playground**, and then prompt the agent. \n  For example:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
+            "description": "## Gmail Agent\nThis flow uses Gmail through a Composio component to send emails, create drafts, and more.\n\n### Prerequisites\n\n- [Composio API key](https://app.composio.dev)\n- [OpenAI API key](https://platform.openai.com)\n\n### Instructions\n\n1. In the **Gmail** component, enter your **Composio API key**, and then click the **Connect** button.\n\n2. In the **Agent** component, enter your **OpenAI API key**.\n\n3. In the **Gmail** component, select an action you want the component to perform on behalf of your Agent. For example:\n   - GMAIL_SEND_EMAIL: Send emails directly.\n   - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails.\n   - Select other actions based on your needs.\n\n4. Open the **Playground**, and then prompt the agent. \n  For example:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1493,60 +1493,7 @@
                 "info": "",
                 "limit": 1,
                 "name": "action",
-                "options": [
-                  {
-                    "metadata": "GMAIL_SEND_EMAIL",
-                    "name": "Send Email"
-                  },
-                  {
-                    "metadata": "GMAIL_FETCH_EMAILS",
-                    "name": "Fetch Emails"
-                  },
-                  {
-                    "metadata": "GMAIL_GET_PROFILE",
-                    "name": "Get User Profile"
-                  },
-                  {
-                    "metadata": "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
-                    "name": "Get Email By ID"
-                  },
-                  {
-                    "metadata": "GMAIL_CREATE_EMAIL_DRAFT",
-                    "name": "Create Draft Email"
-                  },
-                  {
-                    "metadata": "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
-                    "name": "Get Message By Thread ID"
-                  },
-                  {
-                    "metadata": "GMAIL_LIST_THREADS",
-                    "name": "List Email Threads"
-                  },
-                  {
-                    "metadata": "GMAIL_REPLY_TO_THREAD",
-                    "name": "Reply To Thread"
-                  },
-                  {
-                    "metadata": "GMAIL_LIST_LABELS",
-                    "name": "List Email Labels"
-                  },
-                  {
-                    "metadata": "GMAIL_CREATE_LABEL",
-                    "name": "Create Email Label"
-                  },
-                  {
-                    "metadata": "GMAIL_GET_PEOPLE",
-                    "name": "Get Contacts"
-                  },
-                  {
-                    "metadata": "GMAIL_REMOVE_LABEL",
-                    "name": "Delete Email Label"
-                  },
-                  {
-                    "metadata": "GMAIL_GET_ATTACHMENT",
-                    "name": "Get Attachment"
-                  }
-                ],
+                "options": [],
                 "placeholder": "Select action",
                 "real_time_refresh": true,
                 "required": false,
@@ -1563,7 +1510,7 @@
                 "advanced": false,
                 "display_name": "Composio API Key",
                 "dynamic": false,
-                "info": "Refer to https://docs.composio.dev/faq/api_key/api_key",
+                "info": "",
                 "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
