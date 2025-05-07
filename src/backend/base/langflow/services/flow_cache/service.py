@@ -37,7 +37,7 @@ class FlowCacheService(AsyncInMemoryCache):
 
         # Parse the Graph payload, catch parsing issues
         try:
-            graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=flow.user_id, flow_name=flow.name)
         except (ValueError, TypeError) as e:
             logger.error(f"Error parsing graph payload for flow {flow_id_str}: {e!s}")
             return
@@ -45,6 +45,8 @@ class FlowCacheService(AsyncInMemoryCache):
         # Store in cache, catch cache-specific errors
         try:
             await self.set(flow_id_str, graph)
+            if flow.endpoint_name:
+                await self.set(flow.endpoint_name, graph)
             logger.debug(f"Added flow {flow_id_str} to cache")
         except (KeyError, RuntimeError) as e:
             logger.error(f"Error caching graph for flow {flow_id_str}: {e!s}")
@@ -75,6 +77,7 @@ class FlowCacheService(AsyncInMemoryCache):
         """
         try:
             return await self.get(flow_id)
+
         except KeyError as e:
             logger.error(f"Cache miss retrieving graph for flow {flow_id}: {e!s}")
         except RuntimeError as e:
