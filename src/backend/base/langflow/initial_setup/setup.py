@@ -56,21 +56,14 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
 
-        # Skip updating if tool_mode is True
-        if node_data.get("tool_mode", False) or node_data.get("key") == "Agent":
-            continue
-
-        # Skip nodes with outputs of the specified format
-        # NOTE: to account for the fact that the Simple Agent has dynamic outputs
-        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
-            continue
-
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
-            if "outputs" in latest_node:
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
+            if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 node_data["outputs"] = latest_node["outputs"]
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
@@ -146,7 +139,10 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
-                    if field_name not in latest_template:
+                    is_tool_mode_and_field_is_tools_metadata = (
+                        node_data.get("tool_mode", False) and field_name == "tools_metadata"
+                    )
+                    if field_name not in latest_template and not is_tool_mode_and_field_is_tools_metadata:
                         node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
