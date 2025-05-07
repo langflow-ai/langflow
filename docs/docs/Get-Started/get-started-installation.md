@@ -257,7 +257,7 @@ sudo apt-get update
 sudo apt-get install build-essential python3-dev
 ```
 
-2. If upgrading your packages doesn't fix the issue, install gcc separately.
+2. If upgrading your packages doesn't fix the issue, install `gcc` separately.
 
 ```bash
 sudo apt-get install gcc
