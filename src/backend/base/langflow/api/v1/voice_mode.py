@@ -1084,15 +1084,18 @@ async def flow_as_tool_websocket(
                 vad_task = asyncio.create_task(process_vad_audio())
 
             try:
-                # TaskGroup handles cancellation & error propagation for you
-                async with asyncio.TaskGroup() as tg:
-                    tg.create_task(forward_to_openai())
-                    tg.create_task(forward_to_client())
-                # if both finish normally, TaskGroup exits cleanly here
-            except* Exception as excs:  # noqa: BLE001
-                # handle any exceptions from any task
-                for exc in excs.exceptions:
-                    logger.error("WS loop failed:", exc_info=exc)
+                # Use gather with return_exceptions to collect any exceptions
+                tasks = [asyncio.create_task(forward_to_openai()), asyncio.create_task(forward_to_client())]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # Check for exceptions in results
+                for result in results:
+                    if isinstance(result, Exception):
+                        logger.error("WS loop failed:", exc_info=result)
+                        logger.error(traceback.format_exc())
+            except Exception as e:  # noqa: BLE001
+                # Handle any other exceptions
+                logger.error(f"WS loop failed: {e}")
                 logger.error(traceback.format_exc())
             finally:
                 # shared cleanup for writers & sockets
