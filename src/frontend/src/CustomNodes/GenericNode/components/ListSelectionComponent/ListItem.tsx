@@ -26,6 +26,8 @@ const ListItem = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const itemRef = useRef<HTMLButtonElement>(null);
+  const formattedIcon =
+    item?.icon?.charAt(0).toUpperCase() + item?.icon?.slice(1);
 
   // Clear hover state when keyboard navigation is active
   useEffect(() => {
@@ -72,7 +74,10 @@ const ListItem = ({
       <div className="flex w-full items-center gap-2">
         {item.icon && (
           <div>
-            <ForwardedIconComponent name={item.icon} className="mr-2 h-4 w-4" />
+            <ForwardedIconComponent
+              name={formattedIcon}
+              className="mr-2 h-4 w-4"
+            />
           </div>
         )}
         <div className="flex w-full flex-col truncate">
