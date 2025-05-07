@@ -6,13 +6,11 @@ import json
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
-from unittest.mock import MagicMock, mock_open, patch
-
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
+from langflow.components.google.google_bq_sql_executor import BigQueryExecutorComponent
 from pandas import DataFrame
 
-from langflow.components.google.google_bq_sql_executor import BigQueryExecutorComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
