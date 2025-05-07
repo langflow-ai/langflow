@@ -626,9 +626,9 @@ class FunctionCall:
         self.item = item
         self.args = ""
         self.done = False
-        self.prog_rsp_id: str = None
-        self.func_rsp_id: str = None
-        self.func_task: asyncio.Task = None
+        self.prog_rsp_id: str | None = None
+        self.func_rsp_id: str | None = None
+        self.func_task: asyncio.Task | None = None
         self.is_prog_enabled = is_prog_enabled
         self.msg_handler = msg_handler
         self.flow_id = flow_id
@@ -717,7 +717,7 @@ async def flow_as_tool_websocket(
 
         log_event = create_event_logger()
 
-        vad_task: asyncio.Task = None
+        vad_task: asyncio.Task | None = None
         voice_config = get_voice_config(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
@@ -966,6 +966,7 @@ async def flow_as_tool_websocket(
                 nonlocal bot_speaking_flag, responses
                 conversation_id = str(uuid4())
                 function_call = None
+                rsp: Response | None = None
                 # Store function call tasks to prevent garbage collection
 
                 try:
@@ -990,12 +991,12 @@ async def flow_as_tool_websocket(
                                 elif not function_call.func_rsp_id:
                                     function_call.func_rsp_id = response_id
                         elif event_type == "response.text.delta":
-                            rsp: Response = responses[response_id]
+                            rsp = responses[response_id]
                             if voice_config.use_elevenlabs:
                                 delta = event.get("delta", "")
                                 await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
-                            rsp: Response = responses[response_id]
+                            rsp = responses[response_id]
                             if voice_config.use_elevenlabs:
                                 await rsp.text_delta_queue.put(None)
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
