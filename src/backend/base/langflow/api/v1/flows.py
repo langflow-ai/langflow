@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -25,11 +25,12 @@ from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHeader
+from langflow.services.database.models.flow.model import AccessTypeEnum, DeploymentStateEnum, FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_flow_cache_service, get_settings_service
+from langflow.services.flow_cache.service import FlowCacheService
 from langflow.services.settings.service import SettingsService
 from langflow.utils.compression import compress_response
 
@@ -306,6 +307,8 @@ async def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
+    flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
+    background_tasks: BackgroundTasks,
 ):
     """Update a flow."""
     settings_service = get_settings_service()
@@ -338,6 +341,14 @@ async def update_flow(
             default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
+        if db_flow.status == DeploymentStateEnum.DEPLOYED:
+            # add the flow to the in memory cache
+            background_tasks.add_task(flow_cache_service.add_flow_to_cache, db_flow)
+            db_flow.locked = True
+        elif update_data.get("status") in [DeploymentStateEnum.DRAFT, None] and update_data.get("locked") is None:
+            # remove the flow from the in memory cache
+            background_tasks.add_task(flow_cache_service.remove_flow_from_cache, db_flow)
+            db_flow.locked = False
 
         session.add(db_flow)
         await session.commit()
