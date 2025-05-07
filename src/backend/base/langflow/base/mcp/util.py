@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any
+from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -134,7 +134,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 "object": dict,
                 "array": list,
             }.get(t, Any)
-        except:
+        except:  # noqa: E722
             return Any
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
