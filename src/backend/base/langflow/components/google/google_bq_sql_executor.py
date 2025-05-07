@@ -1,5 +1,6 @@
 import json
 import re
+from pathlib import Path
 
 from google.auth.exceptions import RefreshError
 from google.cloud import bigquery
@@ -40,6 +41,7 @@ class BigQueryExecutorComponent(Component):
 
     def _clean_sql_query(self, query: str) -> str:
         """Clean SQL query by removing surrounding quotes and whitespace.
+
         Also extracts SQL statements from text that might contain other content.
 
         Args:
@@ -99,20 +101,24 @@ class BigQueryExecutorComponent(Component):
                     credentials_json = json.load(f)
                     project_id = credentials_json.get("project_id")
                     if not project_id:
-                        raise ValueError("No project_id found in service account credentials file.")
+                        msg = "No project_id found in service account credentials file."
+                        raise ValueError(msg)
             except FileNotFoundError as e:
-                raise ValueError(f"Service account file not found: {e}") from e
+                msg = f"Service account file not found: {e}"
+                raise ValueError(msg) from e
             except json.JSONDecodeError as e:
-                raise ValueError("Invalid JSON string for service account credentials.") from e
+                msg = "Invalid JSON string for service account credentials."
+                raise ValueError(msg) from e
 
             # Then try to load credentials
             try:
                 credentials = Credentials.from_service_account_file(self.service_account_json_file)
             except Exception as e:
-                raise ValueError(f"Error loading service account credentials: {e}") from e
+                msg = f"Error loading service account credentials: {e}"
+                raise ValueError(msg) from e
 
-        except ValueError as e:
-            raise e
+        except ValueError:
+            raise
         except Exception as e:
             msg = f"Error executing BigQuery SQL query: {e}"
             raise ValueError(msg) from e
