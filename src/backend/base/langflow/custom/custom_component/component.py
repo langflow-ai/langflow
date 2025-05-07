@@ -1162,20 +1162,21 @@ class Component(CustomComponent):
         # Create a mapping of tool names to their status
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
         return [tool for tool in tools if tool_status.get(tool.name, True)]
-    def _build_tool_data(self, tool:Tool) -> dict:
+
+    def _build_tool_data(self, tool: Tool) -> dict:
         if tool.metadata is None:
             tool.metadata = {}
         return {
-                "name": tool.name,
-                "description": tool.description,
-                "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
-                "status": True,  # Initialize all tools with status True
-                "display_name": tool.metadata.get("display_name", tool.name),
-                "display_description": tool.metadata.get("display_description", tool.description),
-                "readonly": tool.metadata.get("readonly", False),
-                "args": tool.args,
-                # "args_schema": tool.args_schema,
-            }
+            "name": tool.name,
+            "description": tool.description,
+            "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
+            "status": True,  # Initialize all tools with status True
+            "display_name": tool.metadata.get("display_name", tool.name),
+            "display_description": tool.metadata.get("display_description", tool.description),
+            "readonly": tool.metadata.get("readonly", False),
+            "args": tool.args,
+            # "args_schema": tool.args_schema,
+        }
 
     async def _build_tools_metadata_input(self):
         tools = await self._get_tools()
