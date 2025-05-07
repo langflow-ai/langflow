@@ -86,7 +86,7 @@ class LangSmithTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,  # noqa: ARG002
     ) -> None:
-        if not self._run_tree:
+        if not self._ready or not self._run_tree:
             return
         processed_inputs = {}
         if inputs:
@@ -175,7 +175,7 @@ class LangSmithTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        if not self._run_tree:
+        if not self._ready or not self._run_tree:
             return
         self._run_tree.add_metadata({"inputs": serialize(inputs)})
         if metadata:
