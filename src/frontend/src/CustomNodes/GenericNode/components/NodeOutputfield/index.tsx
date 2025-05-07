@@ -367,7 +367,7 @@ function NodeOutputField({
       {LoopHandle}
       <div className="flex w-full items-center justify-end truncate text-sm">
         <div className="flex flex-1">
-          {data.node?.outputs![index].allows_loop && (
+          {data.node?.outputs![index].allows_loop && title !== "done" && (
             <Badge variant="pinkStatic" size="xq" className="mr-2 px-1">
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
