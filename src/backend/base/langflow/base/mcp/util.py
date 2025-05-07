@@ -107,15 +107,17 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         if "anyOf" in s:
+            # For anyOf, we'll simplify by using the first non-null type
             subtypes = [parse_type(sub) for sub in s["anyOf"]]
-            return tuple | subtypes
+            non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
+            if non_null_types:
+                return non_null_types[0]
+            return str
 
         t = s.get("type", Any)
         if t == "array":
             item_schema = s.get("items", {})
-            # schema_type: type[Any]
             schema_type: Any = parse_type(item_schema)
-
             return list[schema_type]
 
         if t == "object":
@@ -131,9 +133,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             "object": dict,
             "array": list,
         }.get(t, Any)
-        # if result == "":
-        #     return Any
-        # return result
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""
