@@ -5,10 +5,54 @@ slug: /deployment-docker
 
 This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
+Three options are available:
+
+* The [Quickstart](#Quickstart-with-SQLite-in-memory-database) option provides Langflow's default SQLite database. This memory is ephemeral, and all data is lost when the container is stopped.
+* The [docker-compose.yml](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a PostgreSQL database service.
+* The [Package your flow as a docker image](#package-your-flow-as-a-docker-image) option demonstrates packaging an existing flow with the Dockerfile.
+
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
+
+## Quickstart with a SQLite in-memory database
+
+For quick testing and development, create a Dockerfile with Langflow's default in-memory SQLite database.
+The SQLite in-memory configuration is ephemeral, and all data is lost when the container is stopped.
+
+To use the Dockerfile:
+
+1. Create a new directory for your project:
+   ```bash
+   mkdir langflow-docker && cd langflow-docker
+   ```
+
+2. Create the Dockerfile with the following configuration.
+
+```dockerfile
+# Use the official Langflow image
+FROM langflowai/langflow:latest
+
+# Set environment variables
+ENV LANGFLOW_DATABASE_URL=sqlite:///:memory:
+ENV LANGFLOW_HOST=0.0.0.0
+ENV LANGFLOW_PORT=7860
+
+# Expose the port
+EXPOSE 7860
+
+# Run Langflow
+CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
+```
+
+3. Build and run the container:
+   ```bash
+   docker build -t langflow-docker .
+   docker run -p 7860:7860 langflow-docker
+   ```
+
+Langflow is accessible at `http://localhost:7860/`.
 
 ## Clone the repo and build the Langflow Docker container
 
