@@ -17,6 +17,7 @@ from sqlmodel import select
 from langflow.services.database.models import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
+NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., Awaitable]:
@@ -107,7 +108,24 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         if "anyOf" in s:
-            # For anyOf, we'll simplify by using the first non-null type
+            # Handle common pattern for nullable types (anyOf with string and null)
+            subtypes = [sub.get("type") for sub in s["anyOf"] if isinstance(sub, dict) and "type" in sub]
+
+            # Check if this is a simple nullable type (e.g., str | None)
+            if len(subtypes) == NULLABLE_TYPE_LENGTH and "null" in subtypes:
+                # Get the non-null type
+                non_null_type = next(t for t in subtypes if t != "null")
+                # Map it to Python type
+                return {
+                    "string": str,
+                    "integer": int,
+                    "number": float,
+                    "boolean": bool,
+                    "object": dict,
+                    "array": list,
+                }.get(non_null_type, Any)
+
+            # For other anyOf cases, use the first non-null type
             subtypes = [parse_type(sub) for sub in s["anyOf"]]
             non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
             if non_null_types:
