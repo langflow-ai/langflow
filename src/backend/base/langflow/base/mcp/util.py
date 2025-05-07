@@ -102,38 +102,41 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     def parse_type(s: dict[str, Any] | None) -> Any:
         """Map a JSON Schema subschema to a Python type (possibly nested)."""
-        if s is None:
-            return None
-        s = resolve_ref(s)
+        try:
+            if s is None:
+                return None
+            s = resolve_ref(s)
 
-        if "anyOf" in s:
-            subtypes = [parse_type(sub) for sub in s["anyOf"]]
-            return tuple | subtypes
+            if "anyOf" in s:
+                subtypes = [parse_type(sub) for sub in s["anyOf"]]
+                if Any in subtypes:
+                    return Any
+                return Union[tuple, subtypes]
 
-        t = s.get("type", Any)
-        if t == "array":
-            item_schema = s.get("items", {})
-            # schema_type: type[Any]
-            schema_type: Any = parse_type(item_schema)
+            t = s.get("type", Any)
+            if t == "array":
+                item_schema = s.get("items", {})
+                # schema_type: type[Any]
+                schema_type: Any = parse_type(item_schema)
 
-            return list[schema_type]
+                return list[schema_type]
 
-        if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
-            return _build_model(f"AnonModel{len(model_cache)}", s)
+            if t == "object":
+                # inline object not in $defs ⇒ anonymous nested model
+                return _build_model(f"AnonModel{len(model_cache)}", s)
 
-        # primitive fallback
-        return {
-            "string": str,
-            "integer": int,
-            "number": float,
-            "boolean": bool,
-            "object": dict,
-            "array": list,
-        }.get(t, Any)
-        # if result == "":
-        #     return Any
-        # return result
+            # primitive fallback
+            return {
+                "string": str,
+                "integer": int,
+                "number": float,
+                "boolean": bool,
+                "object": dict,
+                "array": list,
+            }.get(t, Any)
+        except:
+            return Any
+
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""
@@ -188,7 +191,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
 
     return create_model("InputSchema", **top_fields)
-
 
 class MCPStdioClient:
     def __init__(self):
