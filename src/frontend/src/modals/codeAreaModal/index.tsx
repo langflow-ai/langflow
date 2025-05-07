@@ -54,13 +54,12 @@ export default function CodeAreaModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const codeRef = useRef<ReactAce | null>(null);
-  const { mutate, isPending } = usePostValidateCode();
+  const { mutate } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-  const setNode = useFlowStore((state) => state.setNode);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -177,6 +176,8 @@ export default function CodeAreaModal({
         } else {
           if (
             !(
+              codeRef.current?.editor.completer &&
+              "popup" in codeRef.current?.editor.completer &&
               codeRef.current?.editor.completer.popup &&
               codeRef.current?.editor.completer.popup.isOpen
             )
