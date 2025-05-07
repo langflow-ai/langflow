@@ -73,10 +73,15 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="cursor-pointer"
     >
       <ShadTooltip
-        content={disabled ? null : hidden ? "Show output" : "Hide output"}
+        content={
+          disabled
+            ? "Connected outputs can't be hidden."
+            : hidden
+              ? "Show output"
+              : "Hide output"
+        }
       >
         <div>
           <EyeIcon
@@ -84,9 +89,7 @@ const HideShowButton = memo(
             className={cn(
               "icon-size",
               disabled
-                ? isToolMode
-                  ? "text-placeholder-foreground opacity-60"
-                  : "text-placeholder-foreground hover:text-foreground"
+                ? "text-placeholder-foreground opacity-60"
                 : isToolMode
                   ? "text-background hover:text-secondary-hover"
                   : "text-placeholder-foreground hover:text-primary-hover",
