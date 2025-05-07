@@ -65,7 +65,6 @@ class BigQueryExecutorComponent(Component):
             sql_lines = []
             in_sql = False
 
-<<<<<<< HEAD
             for line in lines:
                 line = line.strip()
                 if re.match(sql_keywords, line):
@@ -73,15 +72,6 @@ class BigQueryExecutorComponent(Component):
                 if in_sql:
                     sql_lines.append(line)
                 if line.endswith(";"):
-=======
-            for line_text in lines:
-                line_text = line_text.strip()
-                if re.match(sql_keywords, line_text):
-                    in_sql = True
-                if in_sql:
-                    sql_lines.append(line_text)
-                if line_text.endswith(";"):
->>>>>>> 38e857dac (ruff formatting)
                     in_sql = False
 
             if sql_lines:
@@ -99,24 +89,15 @@ class BigQueryExecutorComponent(Component):
         query = query.strip()
         # Remove any remaining backticks, but preserve them if they're part of a table/column name
         # This regex will remove backticks that are not part of a valid identifier
-<<<<<<< HEAD
         query = re.sub(r"`(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])`", "", query)
 
         return query
-=======
-        return re.sub(r"`(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])`", "", query)
->>>>>>> 38e857dac (ruff formatting)
 
     def execute_sql(self) -> DataFrame:
         try:
             # First try to read the file
             try:
-<<<<<<< HEAD
                 with open(self.service_account_json_file) as f:
-=======
-                service_account_path = Path(self.service_account_json_file)
-                with service_account_path.open() as f:
->>>>>>> 38e857dac (ruff formatting)
                     credentials_json = json.load(f)
                     project_id = credentials_json.get("project_id")
                     if not project_id:
