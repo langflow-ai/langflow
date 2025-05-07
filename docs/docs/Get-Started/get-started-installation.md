@@ -239,6 +239,30 @@ To run Langflow with uv:
 uv run langflow run
 ```
 
+#### Failed to build required package
+
+When you try to install Langflow on Linux, installation fails because of outdated or missing packages.
+
+```bash
+Resolved 455 packages in 18.92s
+  × Failed to build `webrtcvad==2.0.10`
+  ├─▶ The build backend returned an error
+  ╰─▶ Call to `setuptools.build_meta:__legacy__.build_wheel` failed (exit status: 1)
+```
+
+1. Install the required build dependencies.
+
+```bash
+sudo apt-get update
+sudo apt-get install build-essential python3-dev
+```
+
+2. If upgrading your packages doesn't fix the issue, install gcc separately.
+
+```bash
+sudo apt-get install gcc
+```
+
 ## Install and run Langflow Desktop
 
 :::important
