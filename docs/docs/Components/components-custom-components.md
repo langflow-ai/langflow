@@ -159,7 +159,7 @@ def _pre_run_setup(self):
 You can override `async def _run(self): ...` to define custom execution logic, although the default behavior from the base class usually covers most cases.
 
 #### Store data in `self.ctx`
-Use `self.ctx` as a shared storage for data or counters across the component’s execution flow:
+Use `self.ctx` as a shared storage for data or counters across the component's execution flow:
 
 ```python
 def some_method(self):
@@ -328,23 +328,16 @@ class DataToDataFrame(Component):
 ```
 
 
-## Typed Annotations
+## Typed annotations
 
-In Langflow, **typed annotations** enhance:
+In Langflow, **typed annotations** allow Langflow to visually guide users and maintain flow consistency.
 
-- **Visuals**: Color-coded output handles.
-- **Validation**: Prevent invalid connections.
-- **Clarity**: Easier code understanding.
-- **Tooling**: Better autocompletion and static checks.
+Typed annotations provide:
 
-Annotating return types allows Langflow to visually guide users and maintain flow consistency.
-
-### Why Use Typed Annotations?
-
-- **Color-Coding**: Outputs like `-> Data` or `-> Message` get distinct colors.
-- **Validation**: Langflow blocks incompatible connections automatically.
-- **Readability**: Developers can quickly understand data flow.
-- **IDE Support**: Boosts autocompletion and static analysis.
+* **Color-coding**: Outputs like `-> Data` or `-> Message` get distinct colors.
+* **Validation**: Langflow blocks incompatible connections automatically.
+* **Readability**: Developers can quickly understand data flow.
+* **Development tools**: Better code suggestions and error checking in your code editor.
 
 ### Common Return Types
 
@@ -356,7 +349,7 @@ For chat-style outputs.
 def produce_message(self) -> Message:
     return Message(text="Hello! from typed method!", sender="System")
 ```
-- UI: Connects only to Message-compatible inputs.
+In the UI, connects only to Message-compatible inputs.
 
 **`Data`**
 
@@ -366,7 +359,8 @@ def get_processed_data(self) -> Data:
     processed = {"key1": "value1", "key2": 123}
     return Data(data=processed)
 ```
-- UI: Compatible with DataInput.
+
+In the UI, connects only with DataInput.
 
 **`DataFrame`**
 
@@ -379,7 +373,7 @@ def build_df(self) -> DataFrame:
 
 ```
 
-- UI: Connects to DataFrameInput.
+In the UI, connects only to DataFrameInput.
 
 **Primitive Types (`str`, `int`, `bool`)**
 
@@ -390,29 +384,25 @@ def compute_sum(self) -> int:
     return sum(self.numbers)
 ```
 
-### Tips for Typed Annotations
+### Tips for typed annotations
 
-When using typed annotations, follow these guidelines for better consistency and usability:
+When using typed annotations, consider the following best practices:
 
-- **Always Annotate Outputs**: Specify return types like `-> Data`, `-> Message`, or `-> DataFrame` to enable proper UI color-coding and validation.
-- **Wrap Raw Data**: Use `Data`, `Message`, or `DataFrame` wrappers instead of returning plain structures.
-- **Use Primitives Carefully**: Direct `str` or `int` returns are fine for simple flows, but wrapping improves flexibility.
-- **Annotate Helpers Too**: Even if internal, typing improves maintainability and clarity.
-- **Handle Edge Cases**: Prefer returning structured `Data` with error fields when needed.
-- **Stay Consistent**: Use the same types across your components to make flows predictable and easier to build.
-
-
-## Dynamic Fields
-
-In **Langflow**, dynamic fields allow inputs to change or appear based on user interactions. You can make an input dynamic by setting `dynamic=True` and, optionally, `real_time_refresh=True`. This triggers the `update_build_config` method to adjust the input's visibility or properties in real time, creating a contextual UI that only displays relevant fields based on the user's choices.
-
-To use them:
-
-- Set `dynamic=True` on the input.
-- Implement `update_build_config`, triggered when a field with `real_time_refresh=True` changes.
+* **Always Annotate Outputs**: Specify return types like `-> Data`, `-> Message`, or `-> DataFrame` to enable proper UI color-coding and validation.
+* **Wrap Raw Data**: Use `Data`, `Message`, or `DataFrame` wrappers instead of returning plain structures.
+* **Use Primitives Carefully**: Direct `str` or `int` returns are fine for simple flows, but wrapping improves flexibility.
+* **Annotate Helpers Too**: Even if internal, typing improves maintainability and clarity.
+* **Handle Edge Cases**: Prefer returning structured `Data` with error fields when needed.
+* **Stay Consistent**: Use the same types across your components to make flows predictable and easier to build.
 
 
-**Example**:
+## Enable dynamic fields
+
+In **Langflow**, dynamic fields allow inputs to change or appear based on user interactions. You can make an input dynamic by setting `dynamic=True`.
+Optionally, setting `real_time_refresh=True` triggers the `update_build_config` method to adjust the input's visibility or properties in real time, creating a contextual UI that only displays relevant fields based on the user's choices.
+
+In this example, the operator field triggers updates via `real_time_refresh=True`.
+The `regex_pattern` field is initially hidden and controlled via `dynamic=True`.
 
 ```python
 from langflow.io import DropdownInput, StrInput
@@ -438,17 +428,12 @@ class RegexRouter(Component):
         ),
     ]
 ```
-In this example:
 
-- The operator field triggers updates via real_time_refresh=True.
+### Implement `update_build_config`
 
-- The regex_pattern field is initially hidden and controlled via dynamic=True.
+When a field with `real_time_refresh=True` is modified, Langflow calls the `update_build_config` method, passing the updated field name, value, and the component's configuration to dynamically adjust the visibility or properties of other fields based on user input.
 
-### Implementing `update_build_config`
-
-When a field with `real_time_refresh=True` is modified, Langflow calls the `update_build_config` method, passing the updated field name, value, and the component's configuration. This allows you to dynamically adjust the visibility or properties of other fields based on user input.
-
-**Example**:
+This example will show or hide the `regex_pattern` field when the user selects a different operator.
 
 ```python
 def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
@@ -460,45 +445,42 @@ def update_build_config(self, build_config: dict, field_value: str, field_name: 
     return build_config
 ```
 
-This example shows how to show or hide the "regex_pattern" field when the user selects a different operator.
-
 ### Additional Dynamic Field Controls
 
 You can also modify other properties within `update_build_config`, such as:
-- `required`: Set `build_config["some_field"]["required"] = True/False`
+* `required`: Set `build_config["some_field"]["required"] = True/False`
 
-- `advanced`: Set `build_config["some_field"]["advanced"] = True`
+* `advanced`: Set `build_config["some_field"]["advanced"] = True`
 
-- `options`: Modify dynamic dropdown options.
+* `options`: Modify dynamic dropdown options.
 
 ### Tips for Managing Dynamic Fields
 
 When working with dynamic fields, consider the following best practices to ensure a smooth user experience:
 
-- **Minimize Field Changes**: Hide only fields that are truly irrelevant to avoid confusing users.
-- **Test Behavior**: Ensure that adding or removing fields doesn't accidentally erase user input.
-- **Preserve Data**: Use `build_config["some_field"]["show"] = False` to hide fields without losing their values.
-- **Clarify Logic**: Add `info` notes to explain why fields appear or disappear based on conditions.
-- **Keep It Manageable**: If the dynamic logic becomes too complex, consider breaking it into smaller components, unless it serves a clear purpose in a single node.
+* **Minimize field changes**: Hide only fields that are truly irrelevant to avoid confusing users.
+* **Test behavior**: Ensure that adding or removing fields doesn't accidentally erase user input.
+* **Preserve data**: Use `build_config["some_field"]["show"] = False` to hide fields without losing their values.
+* **Clarify logic**: Add `info` notes to explain why fields appear or disappear based on conditions.
+* **Keep it manageable**: If the dynamic logic becomes too complex, consider breaking it into smaller components, unless it serves a clear purpose in a single node.
 
 
-## Error Handling and Logging
+## Error handling and logging
 
-In Langflow, robust error handling ensures that your components behave predictably, even when unexpected situations occur—such as invalid inputs, external API failures, or internal logic errors.
+In Langflow, robust error handling ensures that your components behave predictably, even when unexpected situations occur, such as invalid inputs, external API failures, or internal logic errors.
 
-### Error Handling Techniques:
+### Error handling techniques
 
-- **Raising Exceptions**:  
-  If a critical error occurs, you can raise standard Python exceptions (e.g., `ValueError`) or specialized ones like `ToolException`. Langflow will automatically catch these and display appropriate error messages in the UI, helping users quickly identify what went wrong.
-  
-  ```python  
+* **Raise Exceptions**:
+  If a critical error occurs, you can raise standard Python exceptions such as `ValueError`, or specialized exceptions like `ToolException`. Langflow will automatically catch these and display appropriate error messages in the UI, helping users quickly identify what went wrong.
+  ```python
   def compute_result(self) -> str:
       if not self.user_input:
           raise ValueError("No input provided.")
       # ...
   ```
-- **Returning Structured Error Data**:
-  Instead of stopping the flow abruptly, you can return a Data object containing an "error" field. This approach allows the flow to continue operating and enables downstream components to detect and handle the error gracefully.
+* **Return Structured Error Data**:
+  Instead of stopping a flow abruptly, you can return a Data object containing an "error" field. This approach allows the flow to continue operating and enables downstream components to detect and handle the error gracefully.
   ```python
   def run_model(self) -> Data:
     try:
@@ -507,9 +489,9 @@ In Langflow, robust error handling ensures that your components behave predictab
         return Data(data={"error": str(e)})
   ```
 
-**Improving Debugging and Flow Management:**
+### Improve debugging and flow management
 
-- **Using `self.status`**:
+* **Use `self.status`**:
   Each component has a status field where you can store short messages about the execution result—such as success summaries, partial progress, or error notifications. These appear directly in the UI, making troubleshooting easier for users.
   ```python
   def parse_data(self) -> Data:
@@ -517,7 +499,7 @@ In Langflow, robust error handling ensures that your components behave predictab
   self.status = f"Parsed {len(rows)} rows successfully."
   return Data(data={"rows": rows})
   ```
-- **Stopping Specific Outputs with `self.stop(...)`**:
+* **Stop specific outputs with `self.stop(...)`**:
   You can halt individual output paths when certain conditions fail, without affecting the entire component. This is especially useful when working with components that have multiple output branches.
   ```python
   def some_output(self) -> Data:
@@ -526,7 +508,7 @@ In Langflow, robust error handling ensures that your components behave predictab
       return Data(data={"error": "Condition not met"})
   ```
 
-- **Loggin Events**:
+* **Log events**:
   You can log key execution details inside components. Logs are displayed in the "Logs" or "Events" section of the component's detail view and can be accessed later through the flow's debug panel or exported files, providing a clear trace of the component's behavior for easier debugging.
   ```python
   def process_file(self, file_path: str):
@@ -534,15 +516,15 @@ In Langflow, robust error handling ensures that your components behave predictab
   # ...
   ```
 
-### Tips for Error Handling and Logging
+### Tips for error handling and logging
 
-To build more reliable components, keep these principles in mind:
+To build more reliable components, consider the following best practices:
 
-- **Validate Inputs Early**: Catch missing or invalid inputs at the start to prevent broken logic.
-- **Summarize with `self.status`**: Use short success or error summaries to help users understand results quickly.
-- **Keep Logs Concise**: Focus on meaningful messages to avoid cluttering the UI.
-- **Return Structured Errors**: When appropriate, return `Data(data={"error": ...})` instead of raising exceptions to allow downstream handling.
-- **Stop Outputs Selectively**: Only halt specific outputs with `self.stop(...)` if necessary, preserving correct flow behavior elsewhere.
+* **Validate inputs early**: Catch missing or invalid inputs at the start to prevent broken logic.
+* **Summarize with `self.status`**: Use short success or error summaries to help users understand results quickly.
+* **Keep logs concise**: Focus on meaningful messages to avoid cluttering the UI.
+* **Return structured errors**: When appropriate, return `Data(data={"error": ...})` instead of raising exceptions to allow downstream handling.
+* **Stop outputs selectively**: Only halt specific outputs with `self.stop(...)` if necessary, to preserve correct flow behavior elsewhere.
 
 ## Contribute custom components to Langflow
 
