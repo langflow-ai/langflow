@@ -3,6 +3,8 @@ title: Embeddings
 slug: /components-embedding-models
 ---
 
+import Icon from "@site/src/components/icon";
+
 # Embeddings models in Langflow
 
 Embeddings models convert text into numerical vectors. These embeddings capture semantic meaning of the input text, and allow LLMs to understand context.
@@ -239,6 +241,51 @@ There are two embeddings models in this flow that you can replace with **Hugging
 4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
 5. Run the flow. The local inference models generate embeddings for the input text.
 
+## IBM watsonx embeddings
+
+This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
+
+To use **IBM watsonx.ai** embeddings components, replace an embeddings component with the IBM watsonx.ai component in a flow.
+
+An example document processing flow looks like the following:
+
+![IBM watsonx embeddings model loading a chroma-db with split text](/img/component-watsonx-embeddings-chroma.png)
+
+This flow loads a PDF file from local storage and splits the text into chunks.
+
+The **IBM watsonx** embeddings component converts the text chunks into embeddings, which are then stored in a Chroma DB vector store.
+
+The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
+For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
+
+### Default models
+
+The component supports several default models with the following vector dimensions:
+
+- `sentence-transformers/all-minilm-l12-v2`: 384-dimensional embeddings
+- `ibm/slate-125m-english-rtrvr-v2`: 768-dimensional embeddings
+- `ibm/slate-30m-english-rtrvr-v2`: 768-dimensional embeddings
+- `intfloat/multilingual-e5-large`: 1024-dimensional embeddings
+
+The component automatically fetches and updates the list of available models from your watsonx.ai instance when you provide your API endpoint and credentials.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| url | watsonx API Endpoint | The base URL of the API.|
+| project_id | watsonx project id | The project ID for your watsonx.ai instance. |
+| api_key | API Key | The API Key to use for the model.|
+| model_name | Model Name | The name of the embedding model to use.|
+| truncate_input_tokens | Truncate Input Tokens | The maximum number of tokens to process. Default: `200`. |
+| input_text | Include the original text in the output | Determines if the original text is included in the output. Default: `True`. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | An instance for generating embeddings using watsonx.ai |
+
 ## LM Studio Embeddings
 
 This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
@@ -257,7 +304,6 @@ This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) 
 | Name | Display Name | Info |
 |------|--------------|------|
 | embeddings | Embeddings | The generated embeddings |
-
 
 ## MistralAI
 
@@ -299,9 +345,24 @@ This component generates embeddings using [NVIDIA models](https://docs.nvidia.co
 |------|------|-------------|
 | embeddings | Embeddings | NVIDIAEmbeddings instance for generating embeddings |
 
-## Ollama Embeddings
+## Ollama embeddings
 
 This component generates embeddings using [Ollama models](https://ollama.com/).
+
+For a list of Ollama embeddings models, see the [Ollama documentation](https://ollama.com/search?c=embedding).
+
+To use this component in a flow, connect Langflow to your locally running Ollama server and select an embeddings model.
+
+1. In the Ollama component, in the **Ollama Base URL** field, enter the address for your locally running Ollama server.
+This value is set as the `OLLAMA_HOST` environment variable in Ollama. The default base URL is `http://127.0.0.1:11434`.
+2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
+4. Connect the **Ollama** embeddings component to a flow.
+For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma) vector store to generate embeddings for split text.
+
+![Ollama embeddings connected to Chroma DB](/img/component-ollama-embeddings-chromadb.png)
+
+For more information, see the [Ollama documentation](https://ollama.com/).
 
 ### Inputs
 

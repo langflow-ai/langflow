@@ -33,15 +33,21 @@ test("user must be able to update outdated components", async ({ page }) => {
 
   await page.getByTestId("list-card").first().click();
 
-  await expect(page.getByText("components are ready to update")).toBeVisible({
+  await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
   });
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   expect(outdatedComponents).toBeGreaterThan(0);
 
-  await page.getByText("Update All", { exact: true }).click();
-
+  await page.getByTestId("update-all-button").click();
+  await page
+    .getByRole("checkbox", { name: "Column with Header Selection" })
+    .check();
+  await page
+    .getByRole("checkbox", { name: "Create backup flow before" })
+    .click();
+  await page.getByRole("button", { name: "Update Components" }).click();
   await expect(page.getByTestId("icon-AlertTriangle")).toHaveCount(0, {
     timeout: 5000,
   });

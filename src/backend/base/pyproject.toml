@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.3.3"
+version = "0.3.4"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -78,7 +78,7 @@ dependencies = [
     "validators>=0.34.0",
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
-    "mcp>=1.1.2",
+    "mcp>=1.6.0",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
