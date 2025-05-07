@@ -1,7 +1,7 @@
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BASE_URL_API,
-  POLLING_INTERVAL,
+  BUILD_POLLING_INTERVAL,
   POLLING_MESSAGES,
 } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
@@ -184,6 +184,7 @@ async function pollBuildEvents(
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/x-ndjson",
         },
         signal: abortController.signal, // Add abort signal to fetch
       },
@@ -197,34 +198,51 @@ async function pollBuildEvents(
       );
     }
 
-    const data = await response.json();
-    if (!data.event) {
-      // No event in this request, try again
+    // Get the response text - will be NDJSON format (one JSON per line)
+    const responseText = await response.text();
+
+    // Skip if empty response
+    if (!responseText.trim()) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       continue;
     }
 
-    // Process the event
-    const event = JSON.parse(data.event);
-    const result = await onEvent(
-      event.event,
-      event.data,
-      buildResults,
-      verticesStartTimeMs,
-      callbacks,
-    );
-    if (!result) {
-      isDone = true;
-      abortController.abort();
+    // Split by newlines to get individual JSON objects
+    const eventLines = responseText.split("\n").filter((line) => line.trim());
+
+    // If no events, continue polling
+    if (eventLines.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      continue;
     }
 
-    // Check if this was the end event or if we got a null value
-    if (event.event === "end" || data.event === null) {
-      isDone = true;
+    // Process all events in the NDJSON response
+    for (const eventStr of eventLines) {
+      // Process the event
+      const event = JSON.parse(eventStr);
+      const result = await onEvent(
+        event.event,
+        event.data,
+        buildResults,
+        verticesStartTimeMs,
+        callbacks,
+      );
+
+      if (!result) {
+        isDone = true;
+        abortController.abort();
+        break;
+      }
+
+      // Check if this was the end event
+      if (event.event === "end") {
+        isDone = true;
+        break;
+      }
     }
 
-    // Add a small delay between polls to avoid overwhelming the server
-    await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL));
+    // Add a small delay between polls
+    await new Promise((resolve) => setTimeout(resolve, BUILD_POLLING_INTERVAL));
   }
 }
 

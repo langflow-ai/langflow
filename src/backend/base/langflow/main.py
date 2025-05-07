@@ -191,7 +191,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 sync_flows_from_fs_task.cancel()
                 await asyncio.wait([sync_flows_from_fs_task])
             await teardown_services()
+
+            await asyncio.sleep(0.1)  # let logger flush async logs
             await logger.complete()
+
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
             # Final message
@@ -207,7 +210,11 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        title="Langflow",
+        version=__version__,
+        lifespan=lifespan,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
