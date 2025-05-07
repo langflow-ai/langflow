@@ -116,14 +116,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 # Get the non-null type
                 non_null_type = next(t for t in subtypes if t != "null")
                 # Map it to Python type
-                return {
-                    "string": str,
-                    "integer": int,
-                    "number": float,
-                    "boolean": bool,
-                    "object": dict,
-                    "array": list,
-                }.get(non_null_type, Any)
+                if isinstance(non_null_type, str):
+                    return {
+                        "string": str,
+                        "integer": int,
+                        "number": float,
+                        "boolean": bool,
+                        "object": dict,
+                        "array": list,
+                    }.get(non_null_type, Any)
+                return Any
 
             # For other anyOf cases, use the first non-null type
             subtypes = [parse_type(sub) for sub in s["anyOf"]]
@@ -132,7 +134,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 return non_null_types[0]
             return str
 
-        t = s.get("type", Any)
+        t = s.get("type", "any")  # Use string "any" as default instead of Any type
         if t == "array":
             item_schema = s.get("items", {})
             schema_type: Any = parse_type(item_schema)
