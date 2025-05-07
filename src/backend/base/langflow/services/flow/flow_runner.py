@@ -58,6 +58,7 @@ class LangflowRunnerExperimental:
         session_id: str,  # UUID required currently
         flow: Path | str | dict,
         input_value: str,
+        *,
         input_type: str = "chat",
         output_type: str = "chat",
         cache: str | None = None,
