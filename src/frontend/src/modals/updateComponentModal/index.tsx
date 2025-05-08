@@ -204,6 +204,7 @@ export default function UpdateComponentModal({
               }
               className="bg-muted"
               id="backupFlow"
+              data-testid="backup-flow-checkbox"
             />
             <label htmlFor="backupFlow" className="cursor-pointer select-none">
               Create backup flow before updating
