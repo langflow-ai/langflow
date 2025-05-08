@@ -1,7 +1,10 @@
 import asyncio
+import contextlib
 import os
+import tempfile
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -233,39 +236,79 @@ class MCPStdioClient:
             env={"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})},
         )
 
-        last_error = None
-        for attempt in range(self.max_retries):
-            try:
-                async with asyncio.timeout(self.timeout_seconds):
-                    try:
-                        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-                    except FileNotFoundError as e:
-                        # Command not found, raise immediately
-                        msg = f"Command not found: {command[0]}. Error: {e}"
-                        raise ValueError(msg) from e
-                    except OSError as e:
-                        # Other OS errors (e.g., permission denied)
-                        msg = f"Failed to start command '{command[0]}': {e}"
-                        raise ValueError(msg) from e
+        # Create a temporary file to capture stderr
+        tmp = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False)
+        errlog_path = tmp.name
 
+        try:
+            async with asyncio.timeout(self.timeout_seconds):
+                try:
+                    # Pass the temp file as errlog to capture stderr
+                    stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params, errlog=tmp))
                     self.stdio, self.write = stdio_transport
                     self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-                    await self.session.initialize()
+
+                    # Create a watcher task to monitor stderr
+                    async def watch_stderr():
+                        last_size = 0
+                        while True:
+                            await asyncio.sleep(0.05)
+                            tmp.flush()
+                            current = os.stat(errlog_path).st_size
+                            if current > last_size:
+                                with open(errlog_path, encoding="utf-8") as f:
+                                    f.seek(last_size)
+                                    data = f.read().strip()
+                                msg = f"MCP server stderr output: {data}"
+                                raise RuntimeError(msg)
+                            last_size = current
+
+                    # Create tasks for both operations
+                    watcher = asyncio.create_task(watch_stderr())
+                    initializer = asyncio.create_task(self.session.initialize())
+
+                    # Race them: first to finish wins
+                    done, pending = await asyncio.wait({watcher, initializer}, return_when=asyncio.FIRST_COMPLETED)
+
+                    if watcher in done:
+                        # stderr watcher fired → cancel and propagate its error
+                        initializer.cancel()
+                        watcher.result()  # This will re-raise the RuntimeError
+                    else:
+                        # initialize succeeded → cancel watcher
+                        watcher.cancel()
+                        initializer.result()  # Will re-raise any initialization errors
+
+                    # If we get here, initialization succeeded
                     response = await self.session.list_tools()
                     return response.tools
-            except asyncio.TimeoutError as e:
-                last_error = f"Command execution timed out after {self.timeout_seconds} seconds"
-                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
-                raise ConnectionError(last_error) from e
-            except Exception as e:  # noqa: BLE001
-                last_error = f"Failed to initialize MCP session: {e}"
-                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
 
-            if attempt < self.max_retries - 1:
-                await asyncio.sleep(self.retry_delay * (attempt + 1))
+                except FileNotFoundError as e:
+                    # Command not found, raise immediately
+                    msg = f"Command not found: {command[0]}. Error: {e}"
+                    raise ValueError(msg) from e
+                except OSError as e:
+                    # Other OS errors (e.g., permission denied)
+                    msg = f"Failed to start command '{command[0]}': {e}"
+                    raise ValueError(msg) from e
+                except RuntimeError as e:
+                    # This is from our stderr watcher
+                    msg = f"MCP server error: {e}"
+                    raise ConnectionError(msg) from e
+                except Exception as e:
+                    msg = f"Failed to initialize MCP session: {e}"
+                    logger.warning(msg)
+                    raise ConnectionError(msg) from e
 
-        msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
-        raise ConnectionError(msg)
+        except asyncio.TimeoutError as e:
+            msg = f"Command execution timed out after {self.timeout_seconds} seconds"
+            logger.warning(msg)
+            raise ConnectionError(msg) from e
+        finally:
+            # Clean up the temp file
+            tmp.close()
+            with contextlib.suppress(FileNotFoundError, PermissionError):
+                Path.unlink(errlog_path)
 
 
 class MCPSseClient:
