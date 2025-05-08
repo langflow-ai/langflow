@@ -24,7 +24,7 @@ To disable automatic login and enforce user authentication, set this value to `F
 By default, this variable is set to `True`.
 
 Langflow **does not** allow users simultaneous or shared access to flows.
-If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment, but it is not password protected. If two users access the same flow, only the work of the last user to save is saved.
+If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.
 
 ```bash
 LANGFLOW_AUTO_LOGIN=True
