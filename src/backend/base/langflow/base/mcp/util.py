@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+import platform
 import tempfile
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
@@ -231,11 +232,25 @@ class MCPStdioClient:
                 raise ValueError(msg)
             env_dict[var.split("=")[0]] = var.split("=")[1]
         command = command_str.split(" ")
-        server_params = StdioServerParameters(
-            command=command[0],
-            args=command[1:],
-            env={"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})},
-        )
+        server_params = None
+        env: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})}
+
+        # Create platform-specific command wrapper
+        if platform.system() == "Windows":
+            # For Windows, use cmd.exe with error reporting
+            server_params = StdioServerParameters(
+                command="cmd",
+                args=[
+                    "/c",
+                    f"{command[0]} " f"{' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                ],
+                env=env,
+            )
+        else:
+            # For Unix-like systems, use bash with error reporting
+            server_params = StdioServerParameters(
+                command="bash", args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"], env=env
+            )
 
         # Create a temporary file to capture stderr
         errlog_path = ""
@@ -251,6 +266,7 @@ class MCPStdioClient:
                 # Create a watcher task to monitor stderr
                 async def watch_stderr():
                     last_size = 0
+                    full_log = ""
                     while True:
                         await asyncio.sleep(0.05)
                         tmp.flush()
@@ -259,9 +275,16 @@ class MCPStdioClient:
                             async with aiofiles.open(errlog_path, encoding="utf-8") as f:
                                 await f.seek(last_size)
                                 data = await f.read()
+                                full_log += data
                                 data = data.strip()
-                            msg = f"MCP server stderr output: {data}"
-                            raise RuntimeError(msg)
+
+                            # Check for our specific error message pattern
+                            if "Command failed with exit code" in data:
+                                msg = f"MCP server command failed: {command_str}\nFull error log:\n{full_log}"
+                                raise RuntimeError(msg)
+                            if data:  # Any other stderr output
+                                msg = f"MCP server stderr output: {data}"
+                                raise RuntimeError(msg)
                         last_size = current
 
                 # Create tasks for both operations
