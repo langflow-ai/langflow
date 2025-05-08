@@ -135,6 +135,10 @@ function GenericNode({
     updateNodeInternals,
   );
 
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [data.node.template]);
+
   if (!data.node!.template) {
     setErrorData({
       title: `Error in component ${data.node!.display_name}`,
