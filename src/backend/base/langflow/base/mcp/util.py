@@ -253,11 +253,11 @@ class MCPStdioClient:
                     await self.session.initialize()
                     response = await self.session.list_tools()
                     return response.tools
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 last_error = f"Command execution timed out after {self.timeout_seconds} seconds"
                 logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
-                raise ConnectionError(last_error)
-            except Exception as e:
+                raise ConnectionError(last_error) from e
+            except Exception as e:  # noqa: BLE001
                 last_error = f"Failed to initialize MCP session: {e}"
                 logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
 
