@@ -38,7 +38,7 @@ This component searches and retrieves papers from [arXiv.org](https://arXiv.org)
 
 | Name | Type | Description |
 |------|------|-------------|
-| search_query | String | The search query for arXiv papers (for example, `quantum computing`). |
+| search_query | String | The search query for arXiv papers. For example, `quantum computing`. |
 | search_type | String | The field to search in. |
 | max_results | Integer | The maximum number of results to return. |
 
@@ -104,17 +104,18 @@ If you want to apply filters regardless of the LLM's input, use the **Static Fil
 
 **Inputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| Tool Name | String | The name used to reference the tool in the agent's prompt. |
-| Tool Description | String | A brief description of the tool. This helps the model decide when to use it. |
-| Collection Name | String | The name of the Astra DB collection to query. |
-| Token | SecretString | The authentication token required for accessing Astra DB. |
-| API Endpoint | String | The Astra DB API endpoint. |
-| Projection Fields | String | The attributes to return, separated by commas. Default: `"*"`. |
-| Tool Parameters | Dict | The parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark (for example, `!customer_id`). |
-| Static Filters | Dict | The attribute-value pairs used to filter query results. |
-| Limit | String | The number of documents to return. |
+| Name              | Type   | Description                                                                                                                      |
+|-------------------|--------|----------------------------------------------------------------------------------------------------------------------------------|
+| Tool Name         | String | The name used to reference the tool in the agent's prompt.                                                                       |
+| Tool Description  | String | A brief description of the tool. This helps the model decide when to use it.                                                     |
+| Collection Name   | String | The name of the Astra DB collection to query.                                                                                    |
+| Token             | SecretString | The authentication token for accessing Astra DB.                                                                                 |
+| API Endpoint      | String | The Astra DB API endpoint.                                                                                                       |
+| Projection Fields | String | The attributes to return, separated by commas. The default is `*`.                                                                     |
+| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark, for example `!customer_id`. |
+| Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                              |
+| Limit             | String | The number of documents to return.                                                                                               |
+
 
 **Outputs**
 
@@ -142,20 +143,20 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 | Tool Description | String | A brief description of the tool to guide the model in using it. |
 | Keyspace | String | The name of the keyspace. |
 | Table Name | String | The name of the Astra DB CQL table to query. |
-| Token | SecretString | The authentication token required for Astra DB. |
+| Token | SecretString | The authentication token for Astra DB. |
 | API Endpoint | String | The Astra DB API endpoint. |
-| Projection Fields | String | The attributes to return, separated by commas. Default: `"*"`. |
-| Partition Keys | Dict | The required parameters that the model must fill to query the tool. |
-| Clustering Keys | Dict | The optional parameters the model can fill to refine the query. Required parameters should be marked with an exclamation mark (for example, `!customer_id`). |
-| Static Filters | Dict | The attribute-value pairs used to filter query results. |
+| Projection Fields | String | The attributes to return, separated by commas. Default: "*". |
+| Partition Keys | Dict | Required parameters that the model must fill to query the tool. |
+| Clustering Keys | Dict | Optional parameters the model can fill to refine the query. Required parameters should be marked with an exclamation mark, for example, `!customer_id`. |
+| Static Filters | Dict | Attribute-value pairs used to filter query results. |
 | Limit | String | The number of records to return. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each `Data` object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
-| Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
+| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
+| Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
 </details>
 
@@ -170,9 +171,9 @@ This component allows you to call the Bing Search API.
 
 | Name | Type | Description |
 |------|------|-------------|
-| bing_subscription_key | SecretString | The Bing API subscription key. |
+| bing_subscription_key | SecretString | A Bing API subscription key. |
 | input_value | String | The search query input. |
-| bing_search_url | String | The custom Bing Search URL (optional). |
+| bing_search_url | String | A custom Bing Search URL. |
 | k | Integer | The number of search results to return. |
 
 **Outputs**
@@ -180,7 +181,7 @@ This component allows you to call the Bing Search API.
 | Name | Type | Description |
 |------|------|-------------|
 | results | List[Data] | A list of search results. |
-| tool | Tool | The Bing Search tool for use in LangChain. |
+| tool | Tool | A Bing Search tool for use in LangChain. |
 
 </details>
 
@@ -196,9 +197,9 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 | Name | Type | Description |
 |------|------|-------------|
 | prompt | String | The input to run CR on. |
-| openai_api_key | SecretString | The OpenAI API key required for authentication. |
-| username | String | The username for Icosa API authentication. |
-| password | SecretString | The password for Icosa API authentication. |
+| openai_api_key | SecretString | An OpenAI API key for authentication. |
+| username | String | A username for Icosa API authentication. |
+| password | SecretString | A password for Icosa API authentication. |
 | model_name | String | The OpenAI LLM to use for reason generation. |
 
 **Outputs**
@@ -222,8 +223,8 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 | Name | Type | Description |
 |------|------|-------------|
 | input_value | String | The search query to execute with DuckDuckGo. |
-| max_results | Integer | The maximum number of search results to return. Default: `5`. |
-| max_snippet_length | Integer | The maximum length of each result snippet. Default: `100`. |
+| max_results | Integer | The maximum number of search results to return. Default: 5. |
+| max_snippet_length | Integer | The maximum length of each result snippet. Default: 100. |
 
 **Outputs**
 
@@ -236,7 +237,7 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 
 ## Exa Search
 
-This component provides an [https://exa.ai/](Exa Search) toolkit for search and content retrieval.
+This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
 
 <details>
 <summary>Parameters</summary>
@@ -245,10 +246,10 @@ This component provides an [https://exa.ai/](Exa Search) toolkit for search and 
 
 | Name | Type | Description |
 |------|------|-------------|
-| metaphor_api_key | SecretString | The API key required for Exa Search (entered as a password). |
-| use_autoprompt | Boolean | Whether to use the autoprompt feature. Default: `true`. |
-| search_num_results | Integer | The number of results to return for search. Default: `5`. |
-| similar_num_results | Integer | The number of similar results to return. Default: `5`. |
+| metaphor_api_key | SecretString | An API key for Exa Search. |
+| use_autoprompt | Boolean | Whether to use the autoprompt feature. Default: true. |
+| search_num_results | Integer | The number of results to return for search. Default: 5. |
+| similar_num_results | Integer | The number of similar results to return. Default: 5. |
 
 **Outputs**
 
@@ -270,17 +271,17 @@ This component allows you to call the Glean Search API.
 | Name | Type | Description |
 |------|------|-------------|
 | glean_api_url | String | The URL of the Glean API. |
-| glean_access_token | SecretString | The access token required for Glean API authentication. |
+| glean_access_token | SecretString | An access token for Glean API authentication. |
 | query | String | The search query input. |
-| page_size | Integer | The number of results per page. Default: `10`. |
-| request_options | Dict | Additional options for the API request (optional). |
+| page_size | Integer | The number of results per page. Default: 10. |
+| request_options | Dict | Additional options for the API request. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
 | results | List[Data] | A list of search results. |
-| tool | Tool | The Glean Search tool for use in LangChain. |
+| tool | Tool | A Glean Search tool for use in LangChain. |
 
 </details>
 
@@ -295,7 +296,7 @@ This component allows you to call the Serper.dev Google Search API.
 
 | Name | Type | Description |
 |------|------|-------------|
-| serper_api_key | SecretString | The API key required for Serper.dev authentication. |
+| serper_api_key | SecretString | An API key for Serper.dev authentication. |
 | input_value | String | The search query input. |
 | k | Integer | The number of search results to return. |
 
@@ -304,7 +305,7 @@ This component allows you to call the Serper.dev Google Search API.
 | Name | Type | Description |
 |------|------|-------------|
 | results | List[Data] | A list of search results. |
-| tool | Tool | The Google Serper search tool for use in LangChain. |
+| tool | Tool | A Google Serper search tool for use in LangChain. |
 
 </details>
 
@@ -414,7 +415,7 @@ This component performs a search using the Wikidata API.
 
 | Name | Type | Description |
 |------|------|-------------|
-| data | List[Data] | The search results from the Wikidata API as a list of Data objects. |
+| data | List[Data] | The search results from Wikidata API as a list of Data objects. |
 | text | Message | The search results formatted as a text message. |
 
 </details>
@@ -434,13 +435,13 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 
 | Name | Type | Description |
 |------|------|-------------|
-| expression | String | The arithmetic expression to evaluate (for example, `4*4*(33/22)+12-20`). |
+| expression | String | The arithmetic expression to evaluate. For example, `4*4*(33/22)+12-20`. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| result | Tool | The calculator tool for use in LangChain. |
+| result | Tool | A calculator tool for use in LangChain. |
 
 </details>
 
@@ -455,8 +456,8 @@ This component allows you to call the Google Search API.
 
 | Name | Type | Description |
 |------|------|-------------|
-| google_api_key | SecretString | The Google API key required for authentication. |
-| google_cse_id | SecretString | The Google Custom Search Engine ID. |
+| google_api_key | SecretString | A Google API key for authentication. |
+| google_cse_id | SecretString | A Google Custom Search Engine ID. |
 | input_value | String | The search query input. |
 | k | Integer | The number of search results to return. |
 
@@ -465,7 +466,7 @@ This component allows you to call the Google Search API.
 | Name | Type | Description |
 |------|------|-------------|
 | results | List[Data] | A list of search results. |
-| tool | Tool | The Google Search tool for use in LangChain. |
+| tool | Tool | A Google Search tool for use in LangChain. |
 
 </details>
 
@@ -487,13 +488,13 @@ The component dynamically updates its configuration based on the provided Python
 | tool_description | String | The description of the tool. |
 | return_direct | Boolean | Whether to return the function output directly. |
 | tool_function | String | The selected function for the tool. |
-| global_variables | Dict | The global variables or data for the tool. |
+| global_variables | Dict | Global variables or data for the tool. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| result_tool | Tool | The structured tool created from the Python code. |
+| result_tool | Tool | A structured tool created from the Python code. |
 
 </details>
 
@@ -508,15 +509,15 @@ This component creates a Python REPL (Read-Eval-Print Loop) tool for executing P
 
 | Name | Type | Description |
 |------|------|-------------|
-| name | String | The name of the tool. Default: `"python_repl"`. |
+| name | String | The name of the tool. Default: `python_repl`. |
 | description | String | A description of the tool's functionality. |
-| global_imports | List[String] | A list of modules to import globally. Default: `["math"]`. |
+| global_imports | List[String] | A list of modules to import globally. Default: `math`. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| tool | Tool | The Python REPL tool for use in LangChain. |
+| tool | Tool | A Python REPL tool for use in LangChain. |
 
 </details>
 
@@ -531,15 +532,15 @@ This component creates a tool for interacting with a retriever in LangChain.
 
 | Name | Type | Description |
 |------|------|-------------|
-| retriever | BaseRetriever | The retriever to interact with |
-| name | String | The name of the tool |
-| description | String | A description of the tool's functionality |
+| retriever | BaseRetriever | The retriever to interact with. |
+| name | String | The name of the tool. |
+| description | String | A description of the tool's functionality. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| tool | Tool | Retriever tool for use in LangChain |
+| tool | Tool | A retriever tool for use in LangChain. |
 
 </details>
 
@@ -556,17 +557,17 @@ For more information, see the [SearchAPI documentation](https://www.searchapi.io
 
 | Name | Type | Description |
 |------|------|-------------|
-| engine | String | The search engine to use (default: "google") |
-| api_key | SecretString | The API key for authenticating with SearchAPI |
-| input_value | String | The search query or input for the API call |
-| search_params | Dict | Additional parameters for customizing the search |
+| engine | String | The search engine to use. Default: `google`. |
+| api_key | SecretString | The API key for authenticating with SearchAPI. |
+| input_value | String | The search query or input for the API call. |
+| search_params | Dict | Additional parameters for customizing the search. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| data | List[Data] | List of Data objects containing search results |
-| tool | Tool | A Tool object for use in LangChain workflows |
+| data | List[Data] | A list of Data objects containing search results. |
+| tool | Tool | A Tool object for use in LangChain workflows. |
 
 </details>
 
@@ -581,16 +582,16 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 
 | Name | Type | Description |
 |------|------|-------------|
-| url | String | The URL of the SearXNG instance |
-| max_results | Integer | Maximum number of results to return |
-| categories | List[String] | Categories to search in |
-| language | String | Language for the search results |
+| url | String | The URL of the SearXNG instance. |
+| max_results | Integer | The maximum number of results to return. |
+| categories | List[String] | The categories to search in. |
+| language | String | The language for the search results. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| result_tool | Tool | SearXNG search tool for use in LangChain |
+| result_tool | Tool | A SearXNG search tool for use in LangChain. |
 
 </details>
 
@@ -605,18 +606,18 @@ This component creates a tool for searching and retrieving information from Wiki
 
 | Name | Type | Description |
 |------|------|-------------|
-| input_value | String | Search query input |
-| lang | String | Language code for Wikipedia (default: "en") |
-| k | Integer | Number of results to return |
-| load_all_available_meta | Boolean | Whether to load all available metadata (advanced) |
-| doc_content_chars_max | Integer | Maximum number of characters for document content (advanced) |
+| input_value | String | The search query input. |
+| lang | String | The language code for Wikipedia. Default: `en`. |
+| k | Integer | The number of results to return. |
+| load_all_available_meta | Boolean | Whether to load all available metadata. |
+| doc_content_chars_max | Integer | The maximum number of characters for document content. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| results | List[Data] | List of Wikipedia search results |
-| tool | Tool | Wikipedia search tool for use in LangChain |
+| results | List[Data] | A list of Wikipedia search results. |
+| tool | Tool | A Wikipedia search tool for use in LangChain. |
 
 </details>
 
