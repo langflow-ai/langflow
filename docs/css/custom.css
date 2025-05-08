@@ -388,3 +388,23 @@ body {
   );
 }
 
+/* Component details styling */
+.markdown details {
+  width: 100%;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  margin-bottom: 1rem;
+}
+
+.markdown details summary {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.markdown details > div {
+  padding: 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
