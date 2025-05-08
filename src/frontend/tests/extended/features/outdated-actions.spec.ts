@@ -29,7 +29,7 @@ test("user must be able to update outdated components by update all button", asy
     dataTransfer,
   });
 
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1000);
 
   await page.waitForSelector("data-testid=list-card", {
     timeout: 3000,
@@ -118,7 +118,7 @@ test("user must be able to update outdated components by each outdated component
     dataTransfer,
   });
 
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1000);
 
   await page.waitForSelector("data-testid=list-card", {
     timeout: 3000,
