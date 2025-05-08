@@ -43,6 +43,7 @@ export default function APITabsComponent() {
   const tweaks = useTweaksStore((state) => state.tweaks);
   const codeOptions = {
     endpointName: endpointName || "",
+    streaming: streaming,
     flowId: flowId || "",
     isAuthenticated: !autologin || false,
     input_value: input_value,
