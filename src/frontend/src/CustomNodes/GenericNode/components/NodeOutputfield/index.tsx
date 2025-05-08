@@ -38,6 +38,8 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 
+const STROKE_WIDTH = 2;
+
 // Memoize IconComponent instances
 const EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
@@ -86,7 +88,7 @@ const InspectButton = memo(
       >
         <IconComponent
           name="TextSearchIcon"
-          strokeWidth={2}
+          strokeWidth={STROKE_WIDTH}
           className={cn(
             "icon-size h-4.5 w-4.5 text-placeholder-foreground hover:text-foreground",
             isToolMode
