@@ -7,7 +7,7 @@ This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
 Three options are available:
 
-* The [Quickstart](#Quickstart-with-SQLite-database) option build Langflow with Langflow's default SQLite database. This database is stored in the container's filesystem, which means all data is lost when the container is stopped since no persistent volume is configured.
+* The [Quickstart](#quickstart-with-a-sqlite-database) option builds a Langflow image with Langflow's default SQLite database.
 * The [docker-compose.yml](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
 * The [Package your flow as a docker image](#package-your-flow-as-a-docker-image) option demonstrates packaging an existing flow with a Dockerfile.
 
@@ -18,7 +18,7 @@ Three options are available:
 
 ## Quickstart with a SQLite database
 
-For quick testing and development, create a Dockerfile with Langflow's default SQLite database.
+Create a Dockerfile with Langflow's default SQLite database.
 The SQLite database is stored in the container's filesystem, which means all data is lost when the container is stopped since no persistent volume is configured.
 
 To use the Dockerfile:
