@@ -1,3 +1,4 @@
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useFlowStore from "@/stores/flowStore";
 import { GetCodeType } from "@/types/tweaks";
 
@@ -24,8 +25,10 @@ export default function getJsApiCode({
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
 
+  const { protocol, host } = customGetHostProtocol();
+
   return `${activeTweaks ? "" : 'let inputValue = ""; // Insert input value here\n\n'}fetch(
-  "${window.location.protocol}//${window.location.host}/api/v1/run/${endpointName || flowId}?stream=false",
+  "${protocol}//${host}/api/v1/run/${endpointName || flowId}?stream=false",
   {
     method: "POST",
     headers: {
@@ -74,8 +77,7 @@ export function getNewJsApiCode({
   tweaksObject: any;
   activeTweaks: boolean;
 }): string {
-  const host = window.location.host;
-  const protocol = window.location.protocol;
+  const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
   const tweaksString =

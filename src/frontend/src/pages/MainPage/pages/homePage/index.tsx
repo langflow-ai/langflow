@@ -2,6 +2,7 @@ import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
+import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -15,7 +16,6 @@ import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import EmptyFolder from "../emptyFolder";
-import McpServerTab from "./components/McpServerTab";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
@@ -135,7 +135,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "mcp" ? (
-                    <McpServerTab folderName={folderName} />
+                    <CustomMcpServerTab folderName={folderName} />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (
