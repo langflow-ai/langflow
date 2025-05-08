@@ -354,7 +354,7 @@ This value is set as the `OLLAMA_HOST` environment variable in Ollama. The defau
 2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
 3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
 4. Connect the **Ollama** embeddings component to a flow.
-For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma) vector store to generate embeddings for split text.
+For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma-db) vector store to generate embeddings for split text.
 
 ![Ollama embeddings connected to Chroma DB](/img/component-ollama-embeddings-chromadb.png)
 
