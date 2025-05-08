@@ -1,13 +1,10 @@
 import React, { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
-import { getNodeIcon } from "../../../utils/styleUtils";
+import { getNodeIcon, iconCache } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCallback, useEffect, useState } from "react";
-
-// Create a cache for storing fetched icons
-const iconCache = new Map<string, any>();
 
 export const ForwardedIconComponent = memo(
   forwardRef(
