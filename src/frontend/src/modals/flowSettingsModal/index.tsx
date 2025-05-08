@@ -54,7 +54,6 @@ export default function FlowSettingsModal({
         ?.then(() => {
           setOpen(false);
           setIsSaving(false);
-          // setCurrentFlow(newFlow);
           setSuccessData({ title: "Changes saved successfully" });
         })
         .catch(() => {
