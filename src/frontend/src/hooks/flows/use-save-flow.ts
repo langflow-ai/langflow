@@ -77,7 +77,7 @@ const useSaveFlow = () => {
                 data: data!,
                 description,
                 folder_id,
-                endpoint_name,
+                endpoint_name: endpoint_name!,
                 locked,
               },
               {
