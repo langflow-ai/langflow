@@ -8,8 +8,10 @@ This guide demonstrates deploying Langflow with Docker and Docker Compose.
 Three options are available:
 
 * The [Quickstart](#quickstart-with-a-sqlite-database) option builds a Langflow image with Langflow's default SQLite database.
-* The [docker-compose.yml](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
+* The [Docker compose](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
 * The [Package your flow as a docker image](#package-your-flow-as-a-docker-image) option demonstrates packaging an existing flow with a Dockerfile.
+
+For more information on configuring the Docker image, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image-with-your-own-code).
 
 ## Prerequisites
 
@@ -65,7 +67,7 @@ Langflow is accessible at `http://localhost:7860/`.
 
 Langflow is now accessible at `http://localhost:7860/`.
 
-## Configure Docker services
+### Configure Docker services
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
 
