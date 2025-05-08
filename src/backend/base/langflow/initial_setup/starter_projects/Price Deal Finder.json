@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-BPZh4",
+            "id": "AgentQL-reBlu",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-BPZh4{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-BPZh4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Bh2Yb{œfieldNameœ:œtoolsœ,œidœ:œAgent-Bh2Ybœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-reBlu{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-reBluœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oRYZX{œfieldNameœ:œtoolsœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-BPZh4",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-BPZh4œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Bh2Yb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Bh2Ybœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-reBlu",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-reBluœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oRYZX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-E2Kiz",
+            "id": "ChatOutput-hdvqT",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Bh2Yb{œdataTypeœ:œAgentœ,œidœ:œAgent-Bh2Ybœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-E2Kiz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-E2Kizœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-oRYZX{œdataTypeœ:œAgentœ,œidœ:œAgent-oRYZXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-hdvqT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hdvqTœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Bh2Yb",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Bh2Ybœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-E2Kiz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-E2Kizœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-oRYZX",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-oRYZXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-hdvqT",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hdvqTœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-EKeDo",
+            "id": "TavilySearchComponent-STQC5",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-EKeDo{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-EKeDoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Bh2Yb{œfieldNameœ:œtoolsœ,œidœ:œAgent-Bh2Ybœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-STQC5{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-STQC5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oRYZX{œfieldNameœ:œtoolsœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-EKeDo",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-EKeDoœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Bh2Yb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Bh2Ybœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-STQC5",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-STQC5œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oRYZX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5OxIN",
+            "id": "ChatInput-DwzkZ",
             "name": "message",
             "output_types": [
               "Message"
@@ -101,25 +101,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Bh2Yb",
+            "id": "Agent-oRYZX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-5OxIN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5OxINœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Bh2Yb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Bh2Ybœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-DwzkZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DwzkZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-oRYZX{œfieldNameœ:œinput_valueœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-5OxIN",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5OxINœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Bh2Yb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Bh2Ybœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-DwzkZ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DwzkZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-oRYZX",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-5OxIN",
+          "id": "ChatInput-DwzkZ",
           "node": {
             "base_classes": [
               "Message"
@@ -147,7 +147,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -297,7 +297,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "iPhone 16 Pro 512 GB"
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -416,7 +416,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-5OxIN",
+        "id": "ChatInput-DwzkZ",
         "measured": {
           "height": 66,
           "width": 192
@@ -430,7 +430,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-E2Kiz",
+          "id": "ChatOutput-hdvqT",
           "node": {
             "base_classes": [
               "Message"
@@ -458,7 +458,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -728,7 +728,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-E2Kiz",
+        "id": "ChatOutput-hdvqT",
         "measured": {
           "height": 66,
           "width": 192
@@ -742,7 +742,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-EKeDo",
+          "id": "TavilySearchComponent-STQC5",
           "node": {
             "base_classes": [
               "Data",
@@ -751,7 +751,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+            "description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
             "display_name": "Tavily AI Search",
             "documentation": "",
             "edited": false,
@@ -768,7 +768,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -798,9 +798,7 @@
                 "display_name": "Tavily API Key",
                 "dynamic": false,
                 "info": "Your Tavily API Key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -810,6 +808,24 @@
                 "title_case": false,
                 "type": "str",
                 "value": "TAVILY_API_KEY"
+              },
+              "chunks_per_source": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Chunks Per Source",
+                "dynamic": false,
+                "info": "The number of content chunks to retrieve from each source (1-3). Only works with advanced search.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "chunks_per_source",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 3
               },
               "code": {
                 "advanced": true,
@@ -827,7 +843,48 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to include in the search results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,\n            advanced=True,\n            combobox=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"time_range\": self.time_range,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily Search API\"\n    description = \"\"\"**Tavily Search** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunks_per_source\",\n            display_name=\"Chunks Per Source\",\n            info=(\"The number of content chunks to retrieve from each source (1-3). Only works with advanced search.\"),\n            value=3,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"days\",\n            display_name=\"Days\",\n            info=\"Number of days back from current date to include. Only available with news topic.\",\n            value=7,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to filter results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,  # Default to None to make it optional\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"include_domains\",\n            display_name=\"Include Domains\",\n            info=\"Comma-separated list of domains to include in the search results.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"exclude_domains\",\n            display_name=\"Exclude Domains\",\n            info=\"Comma-separated list of domains to exclude from the search results.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_raw_content\",\n            display_name=\"Include Raw Content\",\n            info=\"Include the cleaned and parsed HTML content of each search result.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            # Only process domains if they're provided\n            include_domains = None\n            exclude_domains = None\n\n            if self.include_domains:\n                include_domains = [domain.strip() for domain in self.include_domains.split(\",\") if domain.strip()]\n\n            if self.exclude_domains:\n                exclude_domains = [domain.strip() for domain in self.exclude_domains.split(\",\") if domain.strip()]\n\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"include_raw_content\": self.include_raw_content,\n                \"days\": self.days,\n                \"time_range\": self.time_range,\n            }\n\n            # Only add domains to payload if they exist and have values\n            if include_domains:\n                payload[\"include_domains\"] = include_domains\n            if exclude_domains:\n                payload[\"exclude_domains\"] = exclude_domains\n\n            # Add conditional parameters only if they should be included\n            if self.search_depth == \"advanced\" and self.chunks_per_source:\n                payload[\"chunks_per_source\"] = self.chunks_per_source\n\n            if self.topic == \"news\" and self.days:\n                payload[\"days\"] = int(self.days)  # Ensure days is an integer\n\n            # Add time_range if it's set\n            if hasattr(self, \"time_range\") and self.time_range:\n                payload[\"time_range\"] = self.time_range\n\n            # Add timeout handling\n            with httpx.Client(timeout=90.0) as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                result_data = {\n                    \"title\": result.get(\"title\"),\n                    \"url\": result.get(\"url\"),\n                    \"content\": content,\n                    \"score\": result.get(\"score\"),\n                }\n                if self.include_raw_content:\n                    result_data[\"raw_content\"] = result.get(\"raw_content\")\n\n                data_results.append(Data(text=content, data=result_data))\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n\n        except httpx.TimeoutException:\n            error_message = \"Request timed out (90s). Please try again or adjust parameters.\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+              },
+              "days": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Days",
+                "dynamic": false,
+                "info": "Number of days back from current date to include. Only available with news topic.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "days",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 7
+              },
+              "exclude_domains": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Exclude Domains",
+                "dynamic": false,
+                "info": "Comma-separated list of domains to exclude from the search results.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "exclude_domains",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "include_answer": {
                 "_input_type": "BoolInput",
@@ -847,6 +904,29 @@
                 "type": "bool",
                 "value": true
               },
+              "include_domains": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Include Domains",
+                "dynamic": false,
+                "info": "Comma-separated list of domains to include in the search results.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "include_domains",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "include_images": {
                 "_input_type": "BoolInput",
                 "advanced": true,
@@ -864,6 +944,24 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "include_raw_content": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Raw Content",
+                "dynamic": false,
+                "info": "Include the cleaned and parsed HTML content of each search result.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_raw_content",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "max_results": {
                 "_input_type": "IntInput",
@@ -932,11 +1030,11 @@
               "time_range": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
-                "combobox": true,
+                "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Time Range",
                 "dynamic": false,
-                "info": "The time range back from the current date to include in the search results.",
+                "info": "The time range back from the current date to filter results.",
                 "name": "time_range",
                 "options": [
                   "day",
@@ -1081,7 +1179,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-EKeDo",
+        "id": "TavilySearchComponent-STQC5",
         "measured": {
           "height": 437,
           "width": 320
@@ -1097,7 +1195,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-BPZh4",
+          "id": "AgentQL-reBlu",
           "node": {
             "base_classes": [
               "Data"
@@ -1124,7 +1222,7 @@
             "frozen": false,
             "icon": "AgentQL",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1155,9 +1253,7 @@
                 "display_name": "API Key",
                 "dynamic": false,
                 "info": "Your AgentQL API key from dev.agentql.com",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1238,7 +1334,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
-                "value": false
+                "value": true
               },
               "mode": {
                 "_input_type": "DropdownInput",
@@ -1490,9 +1586,9 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-BPZh4",
+        "id": "AgentQL-reBlu",
         "measured": {
-          "height": 602,
+          "height": 644,
           "width": 320
         },
         "position": {
@@ -1504,7 +1600,7 @@
       },
       {
         "data": {
-          "id": "Agent-Bh2Yb",
+          "id": "Agent-oRYZX",
           "node": {
             "base_classes": [
               "Message"
@@ -1547,7 +1643,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1649,9 +1745,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1849,11 +1943,15 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
                   "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -1864,7 +1962,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1-mini"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2036,7 +2134,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an deal finder assistant that helps find and compare the prices of products across different e-commerce platforms. You must use the Tavily Search API to find the URLs of the ecommerce platforms that sell these products. Then use the AgentQL tool to extract the prices of the product in those websites. Make sure to include the name of the product, the shop name, and the price of the product. The price has to be retrieved, so if it can't don't include it.\n\nHere's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
+                "value": "You are an deal finder assistant that helps find and compare the prices of products across different e-commerce platforms. You must use the Tavily Search API to find the URLs of the ecommerce platforms that sell these products. Then use the AgentQL tool to extract the prices of the product in those websites. Make sure to include the name of the product, the price of the product, the shop name, and the URL link of the page to where you can add the product to a cart or checkout immediately. The price and URL link has to be retrieved, so if it's not available or doesn't work don't include it.\n\nHere's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -2153,7 +2251,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Bh2Yb",
+        "id": "Agent-oRYZX",
         "measured": {
           "height": 624,
           "width": 320
@@ -2167,7 +2265,7 @@
       },
       {
         "data": {
-          "id": "note-IpT5f",
+          "id": "note-4MelF",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2179,7 +2277,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-IpT5f",
+        "id": "note-4MelF",
         "measured": {
           "height": 324,
           "width": 324
@@ -2193,7 +2291,7 @@
       },
       {
         "data": {
-          "id": "note-vZk9B",
+          "id": "note-eqCK2",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2206,7 +2304,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-vZk9B",
+        "id": "note-eqCK2",
         "measured": {
           "height": 346,
           "width": 324
@@ -2220,9 +2318,9 @@
       },
       {
         "data": {
-          "id": "note-ljICz",
+          "id": "note-Dkzfl",
           "node": {
-            "description": "# Price Deal Finder \n\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
+            "description": "# Price Deal Finder \n\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"iPhone 16 Pro 512 GB\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -2231,7 +2329,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-ljICz",
+        "id": "note-Dkzfl",
         "measured": {
           "height": 674,
           "width": 467
@@ -2247,7 +2345,7 @@
       },
       {
         "data": {
-          "id": "note-izBjK",
+          "id": "note-NQ1ez",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2260,7 +2358,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-izBjK",
+        "id": "note-NQ1ez",
         "measured": {
           "height": 324,
           "width": 344
@@ -2276,18 +2374,18 @@
       }
     ],
     "viewport": {
-      "x": 347.94750627231167,
-      "y": 72.60494065370943,
-      "zoom": 0.5984998010566305
+      "x": 340.94156691373735,
+      "y": 122.308952499881,
+      "zoom": 0.5784136824388973
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
   "icon": "DollarSign",
-  "id": "325260a0-6ecf-4e55-b96f-0a56536ddc66",
+  "id": "05ef0b34-a755-4c9e-af28-8cf989d2a9a5",
   "is_component": false,
-  "last_tested_version": "1.2.0",
-  "name": "Price Deal Finder ",
+  "last_tested_version": "1.3.2",
+  "name": "Price Deal Finder",
   "tags": [
     "web-scraping",
     "agents"

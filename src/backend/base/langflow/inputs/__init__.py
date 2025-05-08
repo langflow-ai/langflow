@@ -21,12 +21,14 @@ from .inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     SortableListInput,
     StrInput,
     TabInput,
     TableInput,
+    ToolsInput,
 )
 
 __all__ = [
@@ -54,10 +56,12 @@ __all__ = [
     "MultiselectInput",
     "NestedDictInput",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "SortableListInput",
     "StrInput",
     "TabInput",
     "TableInput",
+    "ToolsInput",
 ]

@@ -1,5 +1,10 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APIClassType, InputFieldType, TableOptionsTypeAPI } from "@/types/api";
+import {
+  APIClassType,
+  APITemplateType,
+  InputFieldType,
+  TableOptionsTypeAPI,
+} from "@/types/api";
 import { RangeSpecType } from "@/types/components";
 import { ColumnField } from "@/types/utils/functions";
 
@@ -38,6 +43,15 @@ export type TableComponentType = {
   trigger_text?: string;
   trigger_icon?: string;
   table_icon?: string;
+};
+
+export type ToolsComponentType = {
+  description: string;
+  title: string;
+  icon?: string;
+  button_description?: string;
+  isAction?: boolean;
+  template?: APITemplateType;
 };
 
 export type FloatComponentType = {
@@ -97,11 +111,20 @@ export type DropDownComponentType = {
   nodeId: string;
   nodeClass: APIClassType;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
+  toggle?: boolean;
+  toggleValue?: boolean;
+  toggleDisable?: boolean;
 };
 
 export type TextAreaComponentType = {
   password?: boolean;
   updateVisibility?: () => void;
+};
+
+export type QueryComponentType = {
+  display_name: string;
+  info: string;
+  separator?: string;
 };
 
 export type InputGlobalComponentType = {

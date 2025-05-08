@@ -73,10 +73,15 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="cursor-pointer"
     >
       <ShadTooltip
-        content={disabled ? null : hidden ? "Show output" : "Hide output"}
+        content={
+          disabled
+            ? "Connected outputs can't be hidden."
+            : hidden
+              ? "Show output"
+              : "Hide output"
+        }
       >
         <div>
           <EyeIcon
@@ -84,9 +89,7 @@ const HideShowButton = memo(
             className={cn(
               "icon-size",
               disabled
-                ? isToolMode
-                  ? "text-placeholder-foreground opacity-60"
-                  : "text-placeholder-foreground hover:text-foreground"
+                ? "text-placeholder-foreground opacity-60"
                 : isToolMode
                   ? "text-background hover:text-secondary-hover"
                   : "text-placeholder-foreground hover:text-primary-hover",
@@ -167,6 +170,8 @@ function NodeOutputField({
   lastOutput,
   colorName,
   isToolMode = false,
+  showHiddenOutputs,
+  hidden,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -261,10 +266,10 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && data.node?.outputs![index].hidden) {
+    if (disabledOutput && hidden) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
+  }, [disabledOutput, handleUpdateOutputHide, hidden]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -378,6 +383,7 @@ function NodeOutputField({
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
 
+  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (
@@ -400,7 +406,7 @@ function NodeOutputField({
           <HideShowButton
             disabled={disabledOutput}
             onClick={() => handleUpdateOutputHide()}
-            hidden={!!data.node?.outputs![index].hidden}
+            hidden={!!hidden}
             isToolMode={isToolMode}
             title={title}
           />
