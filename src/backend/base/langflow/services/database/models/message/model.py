@@ -124,7 +124,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     files: list[str] = Field(sa_column=Column(JSON))
     properties: dict | Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
+    content_blocks: list[dict | ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
     # We need to make sure the datetimes have timezone after running session.refresh
     # because we are losing the timezone information when we save the message to the database
