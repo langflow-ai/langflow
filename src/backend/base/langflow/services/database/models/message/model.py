@@ -122,7 +122,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     flow_id: UUID | None = Field(default=None)
     files: list[str] = Field(sa_column=Column(JSON))
-    properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
+    properties: dict | Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
     content_blocks: list[ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
@@ -140,7 +140,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             value = UUID(value)
         return value
 
-    @field_validator("properties", "content_blocks")
+    @field_validator("properties", "content_blocks", mode="before")
     @classmethod
     def validate_properties_or_content_blocks(cls, value):
         if isinstance(value, list):
@@ -152,9 +152,10 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         return value
 
     @field_serializer("properties", "content_blocks")
-    def serialize_properties_or_content_blocks(self, value) -> dict | list[dict]:
+    @classmethod
+    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         if isinstance(value, list):
-            return [self.serialize_properties_or_content_blocks(item) for item in value]
+            return [cls.serialize_properties_or_content_blocks(item) for item in value]
         if hasattr(value, "model_dump"):
             return value.model_dump()
         if isinstance(value, str):
