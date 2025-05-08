@@ -173,4 +173,8 @@ test("user must be able to update outdated components by each outdated component
   await expect(page.getByTestId("review-button")).toHaveCount(3, {
     timeout: 5000,
   });
+
+  await awaitBootstrapTest(page, { skipModal: true });
+
+  await expect(page.getByText("Backup").count()).toBeGreaterThan(0);
 });
