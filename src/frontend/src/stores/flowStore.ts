@@ -1,7 +1,4 @@
-import {
-  BROKEN_EDGES_WARNING,
-  componentsToIgnoreUpdate,
-} from "@/constants/constants";
+import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
   track,
