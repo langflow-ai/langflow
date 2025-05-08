@@ -49,7 +49,7 @@ class LangSmithTracer(BaseTracer):
                 self._trace = trace(
                     project_name=self.project_name,
                     name=self.trace_name,
-                    run_type=self.trace_type,
+                    run_type=self.get_run_type(self.trace_type),
                     run_id=self.trace_id if parent is None else None,
                     parent=parent,
                 )
@@ -63,6 +63,16 @@ class LangSmithTracer(BaseTracer):
     @property
     def ready(self):
         return self._ready
+
+    def get_run_type(self, run_type: str) -> str:
+        from langsmith import client
+
+        # check if run_type is valid
+        # if not return chain
+        if run_type not in client.RUN_TYPE_T:
+            logger.warning(f"Run type {run_type} is not valid. Using default run type.")
+            return client.RUN_TYPE_T["chain"]
+        return run_type
 
     def setup_langsmith(self) -> bool:
         if os.getenv("LANGCHAIN_API_KEY") is None:
@@ -96,7 +106,7 @@ class LangSmithTracer(BaseTracer):
 
         child_trace = trace(
             name=trace_name,
-            run_type=trace_type,
+            run_type=self.get_run_type(trace_type),
             parent=self._run_tree,
             inputs=processed_inputs,
             metadata=self._convert_to_langchain_types(metadata) if metadata else None,
