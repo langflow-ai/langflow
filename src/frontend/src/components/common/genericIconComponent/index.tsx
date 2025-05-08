@@ -6,6 +6,9 @@ import { cn } from "../../../utils/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCallback, useEffect, useState } from "react";
 
+// Create a cache for storing fetched icons
+const iconCache = new Map<string, any>();
+
 export const ForwardedIconComponent = memo(
   forwardRef(
     (
