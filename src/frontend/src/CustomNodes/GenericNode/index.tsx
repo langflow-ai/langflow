@@ -227,11 +227,6 @@ function GenericNode({
     [data.node?.outputs, data.node?.tool_mode],
   );
 
-  const hasToolMode = useMemo(
-    () => checkHasToolMode(data.node?.template ?? {}),
-    [data.node?.template],
-  );
-
   const hasOutputs = useMemo(
     () => data.node?.outputs && data.node.outputs.length > 0,
     [data.node?.outputs],
