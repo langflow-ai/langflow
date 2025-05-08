@@ -99,12 +99,6 @@ export const MenuBar = memo((): JSX.Element => {
     [folders, currentFlowFolderId],
   );
 
-  useEffect(() => {
-    if (measureRef.current) {
-      setInputWidth(measureRef.current.offsetWidth);
-    }
-  }, [flowName]);
-
   function handleAddFlow() {
     try {
       addFlow().then((id) => {
@@ -231,7 +225,7 @@ export const MenuBar = memo((): JSX.Element => {
     if (measureRef.current) {
       setInputWidth(measureRef.current.offsetWidth + 10);
     }
-  }, [flowName]);
+  }, [flowName, onFlowPage]);
 
   const swatchIndex =
     (currentFlowGradient && !isNaN(parseInt(currentFlowGradient))

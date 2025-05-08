@@ -126,6 +126,12 @@ export default function Page({
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
+  useEffect(() => {
+    if (currentFlowId !== "") {
+      isEmptyFlow.current = nodes.length === 0;
+    }
+  }, [currentFlowId]);
+
   const [isAddingNote, setIsAddingNote] = useState(false);
 
   const addComponent = useAddComponent();
