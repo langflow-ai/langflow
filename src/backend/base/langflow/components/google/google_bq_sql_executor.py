@@ -65,8 +65,8 @@ class BigQueryExecutorComponent(Component):
             sql_lines = []
             in_sql = False
 
-            for line in lines:
-                line = line.strip()
+            for _line in lines:
+                line = _line.strip()
                 if re.match(sql_keywords, line):
                     in_sql = True
                 if in_sql:
@@ -89,9 +89,7 @@ class BigQueryExecutorComponent(Component):
         query = query.strip()
         # Remove any remaining backticks, but preserve them if they're part of a table/column name
         # This regex will remove backticks that are not part of a valid identifier
-        query = re.sub(r"`(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])`", "", query)
-
-        return query
+        return re.sub(r"`(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])`", "", query)
 
     def execute_sql(self) -> DataFrame:
         try:
