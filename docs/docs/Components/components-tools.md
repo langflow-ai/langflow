@@ -237,7 +237,7 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 
 ## Exa Search
 
-This component provides an [https://exa.ai/](Exa Search) toolkit for search and content retrieval.
+This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
 
 <details>
 <summary>Parameters</summary>
