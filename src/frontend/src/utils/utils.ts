@@ -4,6 +4,8 @@ import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
+import moment from "moment";
+import "moment-timezone";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -47,9 +49,9 @@ export function toNormalCase(str: string): string {
     .split("_")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
     .join(" ");
 
@@ -57,9 +59,9 @@ export function toNormalCase(str: string): string {
     .split("-")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
     .join(" ");
 }
@@ -69,11 +71,11 @@ export function normalCaseToSnakeCase(str: string): string {
     .split(" ")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
-    .join("_");
+    ?.join("_");
 }
 
 export function toTitleCase(
@@ -82,41 +84,41 @@ export function toTitleCase(
 ): string {
   if (!str) return "";
   let result = str
-    .split("_")
-    .map((word, index) => {
+    ?.split("_")
+    ?.map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
     .join(" ");
 
   return result
-    .split("-")
-    .map((word, index) => {
+    ?.split("-")
+    ?.map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
-    .join(" ");
+    ?.join(" ");
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string): string {
-  const words = str.split(" ").map((word) => {
-    return upperCaseWords.includes(word.toLowerCase())
-      ? word.toUpperCase()
-      : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  const words = str?.split(" ")?.map((word) => {
+    return upperCaseWords.includes(word?.toLowerCase())
+      ? word?.toUpperCase()
+      : word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
   });
 
-  return words.join(" ");
+  return words?.join(" ");
 }
 
 export function buildInputs(): string {
@@ -855,3 +857,30 @@ export function setCookie(
 
   document.cookie = cookieString;
 }
+
+/**
+ * Converts a string to snake_case
+ * Example: "New York" becomes "new_york"
+ * @param {string} str - The string to convert
+ * @returns {string} The snake_case string
+ */
+export function testIdCase(str: string): string {
+  return str.toLowerCase().replace(/\s+/g, "_");
+}
+
+export const convertUTCToLocalTimezone = (timestamp: string) => {
+  const localTimezone = moment.tz.guess();
+  return moment.utc(timestamp).tz(localTimezone).format("MM/DD/YYYY HH:mm:ss");
+};
+
+export const formatNumber = (num: number | undefined): string => {
+  if (num === undefined) return "0";
+
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(0) + "M";
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(0) + "k";
+  }
+  return num?.toString();
+};

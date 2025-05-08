@@ -14,6 +14,7 @@ interface MessagesQueryParams {
   params?: object;
   onSuccess?: (data: MessagesResponse) => void;
   stopPollingOn?: (data: MessagesResponse) => boolean;
+  session_id?: string;
 }
 
 interface MessagesResponse {
@@ -109,6 +110,7 @@ export const useGetMessagesPollingMutation = (
     payload: MessagesQueryParams,
   ): Promise<MessagesResponse> => {
     const requestId = payload.id || "default";
+    const sessionId = payload.session_id;
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");
@@ -118,9 +120,11 @@ export const useGetMessagesPollingMutation = (
       requestInProgressRef.current[requestId] = true;
       const { id, mode, excludedFields, params } = payload;
       const config = {};
+
       if (id) {
         config["params"] = { flow_id: id };
       }
+
       if (params) {
         config["params"] = { ...config["params"], ...params };
       }

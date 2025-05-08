@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
@@ -28,6 +29,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
@@ -169,10 +172,8 @@ test(
         timeout: 1000,
       });
 
-      await page
-        .getByText(`${jsonFileName}.json`)
-        .first()
-        .click({ clickCount: 2 });
+      await page.getByTestId(`context-menu-button-${jsonFileName}`).click();
+      await page.getByTestId("btn-rename-file").click();
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);

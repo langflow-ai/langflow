@@ -1,8 +1,10 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -41,6 +43,20 @@ export default function ChatInput({
 
   const [showAudioInput, setShowAudioInput] = useState(false);
 
+  const setIsVoiceAssistantActive = useVoiceStore(
+    (state) => state.setIsVoiceAssistantActive,
+  );
+
+  const newSessionCloseVoiceAssistant = useVoiceStore(
+    (state) => state.newSessionCloseVoiceAssistant,
+  );
+
+  useEffect(() => {
+    if (showAudioInput) {
+      setIsVoiceAssistantActive(true);
+    }
+  }, [showAudioInput]);
+
   useFocusOnUnlock(isBuilding, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
@@ -49,7 +65,7 @@ export default function ChatInput({
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
-    if (playgroundPage) {
+    if (playgroundPage && !ENABLE_IMAGE_ON_PLAYGROUND) {
       return;
     }
 
@@ -184,7 +200,7 @@ export default function ChatInput({
 
   return (
     <AnimatePresence mode="wait">
-      {showAudioInput ? (
+      {showAudioInput && !newSessionCloseVoiceAssistant ? (
         <motion.div
           key="voice-assistant"
           initial={{ opacity: 0 }}

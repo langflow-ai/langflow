@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "user must be able to save or delete a global variable",
@@ -27,6 +28,13 @@ test(
       });
 
     await page.getByTestId("fit_view").click();
+
+    await initialGPTsetup(page, {
+      skipAdjustScreenView: true,
+      skipUpdateOldComponents: true,
+      skipAddNewApiKeys: true,
+      skipSelectGptModel: true,
+    });
 
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();

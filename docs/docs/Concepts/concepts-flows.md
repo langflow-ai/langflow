@@ -1,4 +1,7 @@
-# Flows
+---
+title: Flows
+slug: /concepts-flows
+---
 
 Flows in Langflow are fully serializable and can be saved and loaded from the file system. In this guide, we'll explore how to import and export flows.
 

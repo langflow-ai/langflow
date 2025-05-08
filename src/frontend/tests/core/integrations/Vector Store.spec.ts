@@ -11,7 +11,7 @@ declare const __dirname: string;
 
 withEventDeliveryModes(
   "Vector Store RAG",
-  { tag: ["@release", "@starter-projects", "@development"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -36,35 +36,6 @@ withEventDeliveryModes(
     await page.getByTestId("fit_view").click();
 
     await initialGPTsetup(page);
-
-    if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
-      await page.getByTestId("title-Astra DB").first().click();
-      await page.getByTestId("code-button-modal").click();
-      await page.waitForSelector("text=Edit Code", {
-        timeout: 3000,
-      });
-      let cleanCode = await extractAndCleanCode(page);
-      cleanCode = cleanCode!.replace(
-        '"pre_delete_collection": self.pre_delete_collection or False,',
-        '"pre_delete_collection": self.pre_delete_collection or False,\n            "environment": "dev",',
-      );
-      await page.locator("textarea").last().press(`ControlOrMeta+a`);
-      await page.keyboard.press("Backspace");
-      await page.locator("textarea").last().fill(cleanCode);
-      await page.locator('//*[@id="checkAndSaveBtn"]').click();
-      await page.waitForSelector('[data-testid="title-Astra DB"]', {
-        timeout: 3000,
-      });
-      await page.getByTestId("title-Astra DB").last().click();
-      await page.getByTestId("code-button-modal").click();
-      await page.waitForSelector("text=Edit Code", {
-        timeout: 3000,
-      });
-      await page.locator("textarea").last().press(`ControlOrMeta+a`);
-      await page.keyboard.press("Backspace");
-      await page.locator("textarea").last().fill(cleanCode);
-      await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    }
 
     await page.waitForSelector('[data-testid="title-Astra DB"]', {
       timeout: 3000,
@@ -263,7 +234,10 @@ withEventDeliveryModes(
       path.join(__dirname, "../../assets/test_file.txt"),
     );
     await page.getByText("test_file.txt").last().isVisible();
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=file uploaded successfully", {
+      timeout: 10000,
+    });
+    await page.waitForTimeout(3000);
     await page.getByTestId("select-files-modal-button").click();
     await page.getByTestId("button_run_astra db").last().click();
     await page.waitForSelector("text=built successfully", {
