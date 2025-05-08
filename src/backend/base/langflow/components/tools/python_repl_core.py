@@ -23,11 +23,12 @@ class PythonREPLComponent(Component):
             value="math,pandas",
             required=True,
         ),
-        MultilineInput(
+        CodeInput(
             name="python_code",
             display_name="Python Code",
             info="The Python code to execute. Only modules specified in Global Imports can be used.",
             value="print('Hello, World!')",
+            input_types=["Message"],
             tool_mode=True,
             required=True,
         ),
