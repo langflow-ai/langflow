@@ -7,7 +7,7 @@ test(
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
-        status: 500,
+        status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           detail: { auto_login: false },

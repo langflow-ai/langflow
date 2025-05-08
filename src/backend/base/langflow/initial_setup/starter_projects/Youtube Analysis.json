@@ -348,6 +348,7 @@
                 "display_name": "DataFrame",
                 "method": "run_batch",
                 "name": "batch_results",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -561,6 +562,13 @@
                 "display_name": "Comments",
                 "method": "get_video_comments",
                 "name": "comments",
+                "required_inputs": [
+                  "include_metrics",
+                  "include_replies",
+                  "max_results",
+                  "sort_by",
+                  "video_url"
+                ],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -786,7 +794,16 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "api_key"
+                  "api_key",
+                  "json_mode",
+                  "max_retries",
+                  "max_tokens",
+                  "model_kwargs",
+                  "model_name",
+                  "openai_api_base",
+                  "seed",
+                  "temperature",
+                  "timeout"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -1821,6 +1838,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1995,6 +2013,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2586,6 +2605,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2983,6 +3003,13 @@
                 "display_name": "True",
                 "method": "true_response",
                 "name": "true_result",
+                "required_inputs": [
+                  "case_sensitive",
+                  "input_text",
+                  "match_text",
+                  "message",
+                  "operator"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2996,6 +3023,13 @@
                 "display_name": "False",
                 "method": "false_response",
                 "name": "false_result",
+                "required_inputs": [
+                  "case_sensitive",
+                  "input_text",
+                  "match_text",
+                  "message",
+                  "operator"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

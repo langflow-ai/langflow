@@ -633,5 +633,3 @@ This component does not have any input parameters.
 | Name | Type | Description                                  |
 |------|------|----------------------------------------------|
 | tool | Tool | Yahoo Finance News tool for use in LangChain |
-
-

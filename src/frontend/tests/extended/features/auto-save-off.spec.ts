@@ -62,6 +62,9 @@ test(
         ).toBeVisible({ timeout: 3000 });
       });
 
+    // Maybe additional delay if needed for CI job
+    await page.waitForTimeout(1000);
+
     expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 
     await page.waitForSelector("text=loading", {

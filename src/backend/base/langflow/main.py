@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 import anyio
+import fastapi
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,11 +36,7 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import (
-    get_queue_service,
-    get_settings_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -114,61 +111,66 @@ def get_lifespan(*, fix_migration=False, version=None):
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        configure(async_file=True)
+        async_file_env = os.getenv("LANGFLOW_ASYNC_FILE")
+        async_file = async_file_env.lower() in ("true", "1", "yes") if async_file_env is not None else True
+        configure(async_file=async_file)
 
-        # Startup message
-        if version:
-            logger.debug(f"Starting Langflow v{version}...")
-        else:
-            logger.debug("Starting Langflow...")
+        startup_msg = f"Starting Langflow v{version}" if version else "Starting Langflow"
+        logger.info(f"🚀 {startup_msg}")
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         try:
             start_time = asyncio.get_event_loop().time()
 
-            logger.debug("Initializing services")
+            logger.debug("Initializing core services...")
             await initialize_services(fix_migration=fix_migration)
             logger.debug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Setting up LLM caching")
+            logger.debug("Setting up LLM caching...")
             setup_llm_caching()
             logger.debug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Initializing super user")
+            logger.debug("Initializing super user if needed...")
             await initialize_super_user_if_needed()
             logger.debug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading bundles")
+            logger.debug("Loading component bundles...")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+            logger.info(f"Loaded bundles from: {bundles_components_paths}")
+
+            logger.debug("Extending component paths in settings...")
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             logger.debug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Caching types")
+            logger.debug("Caching types...")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            logger.debug(f"Cached {len(all_types_dict)} component types")
             logger.debug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Creating/updating starter projects")
+            logger.debug("Creating/updating starter projects...")
             await create_or_update_starter_projects(all_types_dict)
             logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Starting telemetry service")
-            telemetry_service.start()
+            logger.debug("Starting telemetry service...")
+            telemetry_service.start(fastapi_version=fastapi.__version__, langflow_version=version)
             logger.debug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading flows")
+            logger.debug("Loading user flows from directory...")
             await load_flows_from_directory()
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
+            logger.debug("Starting queue service if not already running...")
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+                logger.info("Queue service started")
             logger.debug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
@@ -181,8 +183,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             yield
 
         except Exception as exc:
+            logger.exception(f"Unhandled startup error: {exc}")
             if "langflow migration --fix" not in str(exc):
-                logger.exception(exc)
+                logger.error("Consider running 'langflow migration --fix' if this is a migration issue.")
             raise
         finally:
             # Clean shutdown
@@ -277,7 +280,10 @@ def create_app():
         return await call_next(request)
 
     settings = get_settings_service().settings
-    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
+    prome_port_str = os.getenv("LANGFLOW_PROMETHEUS_PORT")
+    metrics_mode = os.getenv("LANGFLOW_METRICS_PORT_MODE")
+
+    if prome_port_str:
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
         if prome_port > 0 or prome_port < MAX_PORT:
@@ -288,10 +294,21 @@ def create_app():
             msg = f"Invalid port number {prome_port_str}"
             raise ValueError(msg)
 
-    if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
+    logger.info(f"Prometheus metrics enabled | mode: '{metrics_mode}' | port: {prome_port_str}")
 
-        start_http_server(settings.prometheus_port)
+    if settings.prometheus_enabled:
+        if metrics_mode == "inline":
+            from prometheus_client import make_asgi_app
+
+            logger.debug("Mounting Prometheus /metrics endpoint on main FastAPI app")
+            app.mount("/metrics", make_asgi_app())
+        elif metrics_mode == "separate":
+            logger.debug("Prometheus metrics will be served on a separate port by the TelemetryService")
+        else:
+            logger.warning(f"Unknown LANGFLOW_METRICS_PORT_MODE='{metrics_mode}', defaulting to 'inline'")
+            from prometheus_client import make_asgi_app
+
+            app.mount("/metrics", make_asgi_app())
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -316,7 +333,7 @@ def create_app():
             content={"message": str(exc)},
         )
 
-    FastAPIInstrumentor.instrument_app(app)
+    FastAPIInstrumentor.instrument_app(app, excluded_urls="health,health_check")
 
     add_pagination(app)
 

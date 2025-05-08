@@ -933,7 +933,12 @@ async def initialize_super_user_if_needed() -> None:
         raise ValueError(msg)
 
     async with session_scope() as async_session:
-        super_user = await create_super_user(db=async_session, username=username, password=password)
+        from langflow.services.database.models.user.model import User
+
+        stmt = select(User).where(User.username == username)
+        super_user = (await async_session.exec(stmt)).first()
+        if not super_user:
+            super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
     logger.info("Super user initialized")

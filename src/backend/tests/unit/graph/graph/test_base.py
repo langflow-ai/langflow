@@ -1,4 +1,5 @@
 import logging
+import time
 from collections import deque
 
 import pytest
@@ -26,10 +27,27 @@ def test_graph(caplog: pytest.LogCaptureFixture):
     graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
-    caplog.clear()
-    with caplog.at_level(logging.WARNING):
-        graph.prepare()
-        assert "Graph has vertices but no edges" in caplog.text
+    # Set up a custom logger with a handler that we can control
+    logger = logging.getLogger("langflow.graph.graph.base")
+    original_level = logger.level
+    logger.setLevel(logging.WARNING)
+
+    # Call prepare and check if the warning was logged
+    graph.prepare()
+
+    # Instead of relying on caplog timing, check the warning directly
+    # or wait for the warning to be processed
+    max_attempts = 5
+    for _ in range(max_attempts):
+        if "Graph has vertices but no edges" in caplog.text:
+            break
+        time.sleep(0.2)  # Longer sleep with multiple attempts
+
+    # Reset logger level
+    logger.setLevel(original_level)
+
+    # Assert the warning message
+    assert "Graph has vertices but no edges" in caplog.text
 
 
 async def test_graph_with_edge():

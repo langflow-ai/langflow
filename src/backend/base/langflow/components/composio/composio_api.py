@@ -1,5 +1,7 @@
 # Standard library imports
+import os
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from composio import Action, App
@@ -7,15 +9,11 @@ from composio import Action, App
 # Third-party imports
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
+from loguru import logger
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import (
-    ConnectionInput,
-    MessageTextInput,
-    SecretStrInput,
-    SortableListInput,
-)
+from langflow.inputs import ConnectionInput, MessageTextInput, SecretStrInput, SortableListInput
 from langflow.io import Output
 
 # TODO: We get the list from the API but we need to filter it
@@ -281,7 +279,24 @@ class ComposioAPIComponent(LCToolComponent):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)
+
+            # Use COMPOSIO_TMP_DIR environment variable or default to /app/tmp
+            tmp_dir = Path(os.environ.get("COMPOSIO_TMP_DIR", "/app/tmp"))
+
+            # Make sure the directory exists
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+
+            # Set path for lockfile
+            lockfile_path = tmp_dir / ".composio.lock"
+
+            # Debug information
+            logger.info(f"Using tmp_dir: {tmp_dir}")
+            logger.info(f"Lockfile path: {lockfile_path}")
+            logger.info(f"Directory exists: {tmp_dir.exists()}")
+            logger.info(f"Directory is writable: {os.access(tmp_dir, os.W_OK)}")
+
+            # Pass the lockfile explicitly
+            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id, lockfile=lockfile_path)
         except ValueError as e:
             self.log(f"Error building Composio wrapper: {e}")
             msg = "Please provide a valid Composio API Key in the component settings"

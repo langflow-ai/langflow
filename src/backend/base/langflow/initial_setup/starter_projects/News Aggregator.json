@@ -618,6 +618,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -945,6 +946,7 @@
                 "display_name": "Response",
                 "method": "message_response",
                 "name": "response",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1644,6 +1646,14 @@
                 "display_name": "Confirmation",
                 "method": "save_to_file",
                 "name": "confirmation",
+                "required_inputs": [
+                  "data",
+                  "df",
+                  "file_format",
+                  "file_path",
+                  "input_type",
+                  "message"
+                ],
                 "selected": "Text",
                 "tool_mode": true,
                 "types": [
@@ -1869,6 +1879,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

@@ -242,6 +242,7 @@
                 "display_name": "Data",
                 "method": "retrieve_messages",
                 "name": "messages",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -255,6 +256,7 @@
                 "display_name": "Message",
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -268,6 +270,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -506,6 +509,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1424,7 +1428,11 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "api_key"
+                  "api_key",
+                  "max_tokens",
+                  "model_name",
+                  "stream",
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -1738,6 +1746,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2050,6 +2059,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

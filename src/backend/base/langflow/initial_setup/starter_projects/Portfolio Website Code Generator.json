@@ -236,6 +236,9 @@
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "text",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -367,7 +370,11 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "api_key"
+                  "api_key",
+                  "max_tokens",
+                  "model_name",
+                  "stream",
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -699,7 +706,11 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "api_key"
+                  "api_key",
+                  "max_tokens",
+                  "model_name",
+                  "stream",
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -1014,6 +1025,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1465,6 +1477,7 @@
                 "display_name": "Structured Output",
                 "method": "build_structured_output",
                 "name": "structured_output",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1478,6 +1491,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "structured_output_dataframe",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2139,6 +2153,11 @@
                 "display_name": "Parsed Text",
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "required_inputs": [
+                  "mode",
+                  "pattern",
+                  "sep"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

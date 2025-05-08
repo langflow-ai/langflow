@@ -26,6 +26,15 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
+
+    # Keycloak fields
+    email: str | None = Field(default=None, nullable=True, sa_column_kwargs={"default": None})
+    is_keycloak_user: bool = Field(default=False, sa_column_kwargs={"default": False})
+
+    # Soft delete field
+    is_deleted: bool = Field(default=False, sa_column_kwargs={"default": False})
+    deleted_at: datetime | None = Field(default=None, nullable=True)
+
     profile_image: str | None = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
@@ -57,15 +66,18 @@ class UserCreate(SQLModel):
     optins: dict[str, Any] | None = Field(
         default={"github_starred": False, "dialog_dismissed": False, "discord_clicked": False}
     )
+    email: str | None = None
 
 
 class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
     username: str = Field()
+    email: str | None = Field(nullable=True, default=None)
     profile_image: str | None = Field()
     store_api_key: str | None = Field(nullable=True)
     is_active: bool = Field()
     is_superuser: bool = Field()
+    is_keycloak_user: bool = Field(default=False)
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
@@ -74,9 +86,13 @@ class UserRead(SQLModel):
 
 class UserUpdate(SQLModel):
     username: str | None = None
+    email: str | None = None
     profile_image: str | None = None
     password: str | None = None
     is_active: bool | None = None
     is_superuser: bool | None = None
+    is_keycloak_user: bool | None = None
+    is_deleted: bool | None = None
+    deleted_at: datetime | None = None
     last_login_at: datetime | None = None
     optins: dict[str, Any] | None = None

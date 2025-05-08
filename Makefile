@@ -4,9 +4,12 @@
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
 DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
+DOCKERFILE_BACKEND_ONLY=docker/build_and_push_backend_only.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
 DOCKER_COMPOSE=docker_example/docker-compose.yml
 PYTHON_REQUIRED=$(shell grep '^requires-python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
+PLATFORMS ?= linux/arm64,linux/amd64
+BUILDER_NAME=langflow_builder
 RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
@@ -332,6 +335,67 @@ ifdef restore
 	mv uv.lock.bak uv.lock
 endif
 
+######################
+# DOCKER & BUILDX
+######################
+
+# Docker setup and configuration
+docker_buildx_setup: ## create and configure a Docker buildx builder
+	@echo "Setting up Docker buildx..."
+	@docker buildx create --name $(BUILDER_NAME) --platform $(PLATFORMS) --use || true
+	@docker buildx inspect --bootstrap
+	@echo "$(GREEN)Docker buildx builder $(BUILDER_NAME) is ready.$(NC)"
+
+# Multi-arch image building
+docker_build_multiarch: docker_buildx_setup ## build images for multiple architectures
+	@echo "Building multi-architecture images for platforms: $(PLATFORMS)"
+	@make docker_build_frontend_multiarch
+	@make docker_build_backend_multiarch
+	@echo "$(GREEN)All multi-architecture images built successfully.$(NC)"
+
+docker_build_frontend_multiarch: docker_buildx_setup ## build frontend image for multiple architectures
+	@echo "Building frontend image for platforms: $(PLATFORMS)"
+	@docker buildx build --platform $(PLATFORMS) \
+		-t langflow_frontend:${VERSION} \
+		-f ${DOCKERFILE_FRONTEND} .
+	@echo "$(GREEN)Frontend multi-architecture image built.$(NC)"
+
+docker_build_backend_multiarch: docker_buildx_setup ## build backend image for multiple architectures
+	@echo "Building backend image for platforms: $(PLATFORMS)"
+	@docker buildx build --platform $(PLATFORMS) \
+		-t langflow_backend:${VERSION} \
+		-f ${DOCKERFILE_BACKEND_ONLY} .
+	@echo "$(GREEN)Backend multi-architecture image built.$(NC)"
+
+docker_build_backend_multiarch_tools: docker_buildx_setup ## build backend image for multiple architectures
+	@echo "Building backend image for platforms: $(PLATFORMS)"
+	@docker buildx build --target network-tools --platform $(PLATFORMS) \
+		-t langflow_backend:${VERSION} \
+		-f ${DOCKERFILE_BACKEND_ONLY} .
+	@echo "$(GREEN)Backend multi-architecture image built.$(NC)"
+
+# ARM-specific builds (with --load for local use)
+docker_build_arm: ## build images specifically for ARM architecture
+	@echo "Building ARM-specific images..."
+	@make docker_build_frontend_arm
+	@make docker_build_backend_arm
+	@echo "$(GREEN)All ARM images built successfully.$(NC)"
+
+docker_build_frontend_arm: docker_buildx_setup ## build frontend image for ARM architecture
+	@echo "Building frontend image for ARM64..."
+	@docker buildx build --platform linux/arm64 \
+		-t langflow_frontend:${VERSION} \
+		-f ${DOCKERFILE_FRONTEND} \
+		--load .
+	@echo "$(GREEN)Frontend ARM image built and loaded locally.$(NC)"
+
+docker_build_backend_arm: docker_buildx_setup ## build backend image for ARM architecture
+	@echo "Building backend image for ARM64..."
+	@docker buildx build --platform linux/arm64 \
+		-t langflow_backend:${VERSION} \
+		-f ${DOCKERFILE_BACKEND_ONLY} \
+		--load .
+	@echo "$(GREEN)Backend ARM image built and loaded locally.$(NC)"
 
 docker_build: dockerfile_build clear_dockerimage ## build DockerFile
 
@@ -364,6 +428,18 @@ clear_dockerimage:
 	@if docker images -f "dangling=true" -q | grep -q '.*'; then \
 		docker rmi $$(docker images -f "dangling=true" -q); \
 	fi
+
+docker_clean: ## clean up docker resources to free disk space
+	@echo 'Cleaning up Docker resources to free disk space...'
+	@echo 'Removing unused containers...'
+	@docker container prune -f
+	@echo 'Removing unused images...'
+	@docker image prune -a -f
+	@echo 'Removing unused volumes...'
+	@docker volume prune -f
+	@echo 'Removing unused build cache...'
+	@docker builder prune -af
+	@echo "$(GREEN)Docker cleanup complete.$(NC)"
 
 docker_compose_up: docker_build docker_compose_down
 	@echo 'Running docker compose up'

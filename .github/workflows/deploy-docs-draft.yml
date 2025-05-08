@@ -11,6 +11,10 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
+permissions:
+  contents: read
+  pull-requests: write  # Add this line to enable commenting on PRs
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

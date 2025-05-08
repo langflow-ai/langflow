@@ -184,6 +184,9 @@ export type Users = {
     dialog_dismissed?: boolean;
     mcp_dialog_dismissed?: boolean;
   };
+  is_keycloak_user?: boolean;
+  is_deleted?: boolean;
+  deleted_at?: Date;
 };
 
 export type Component = {

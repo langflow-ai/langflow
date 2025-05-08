@@ -426,6 +426,9 @@ export type UserInputType = {
   id?: string;
   create_at?: string;
   updated_at?: string;
+  is_keycloak_user?: boolean;
+  is_deleted?: boolean;
+  deleted_at?: Date;
 };
 
 export type ApiKeyType = {

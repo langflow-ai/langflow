@@ -4,6 +4,8 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import suppress
+from typing import Any
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from loguru import logger
@@ -89,17 +91,29 @@ async def get_flow_events_response(
     """Get events for a specific build job, either as a stream or single event."""
     try:
         main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
+
+        # STREAMING or DIRECT: hand back the full NDJSON response
         if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
             if event_task is None:
                 logger.error(f"No event task found for job {job_id}")
                 raise HTTPException(status_code=404, detail="No event task found for job")
-            return await create_flow_response(
+
+            resp = await create_flow_response(
                 queue=main_queue,
                 event_manager=event_manager,
                 event_task=event_task,
             )
 
-        # Polling mode - get all available events
+            # If DIRECT, cancel the background build when the response is returned
+            if event_delivery == EventDeliveryType.DIRECT and event_task is not None:
+                event_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await event_task
+            return resp
+
+        # -------------------------------------------------------------------
+        # POLLING: get all available events
+        # -------------------------------------------------------------------
         try:
             events: list = []
             # Get all available events from the queue without blocking
@@ -450,18 +464,30 @@ async def generate_flow_events(
 
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
 
-    tasks = []
-    for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager))
-        tasks.append(task)
+    # launch all top level vertex builds, but remember which is which
+    task_map: dict[asyncio.Task[Any], str] = {}
+    for v_id in ids:
+        t = asyncio.create_task(build_vertices(v_id, graph, event_manager))
+        task_map[t] = v_id
+    tasks = list(task_map)
     try:
+        # wait for them (and any children) to finish
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
+        # client disconnected or job was cancelled: tear down in progress builds
+        for t in tasks:
+            t.cancel()
         background_tasks.add_task(graph.end_all_traces_in_context())
         raise
     except Exception as e:
         logger.error(f"Error building vertices: {e}")
-        custom_component = graph.get_vertex(vertex_id).custom_component
+        # figure out which task threw
+        failed: asyncio.Task[Any] | None = next(
+            (t for t in tasks if t.done() and t.exception() is e),
+            None,
+        )
+        vertex_id_failed = task_map.get(failed, "<unknown>") if failed is not None else "<unknown>"
+        custom_component = graph.get_vertex(vertex_id_failed).custom_component
         trace_name = getattr(custom_component, "trace_name", None)
         error_message = ErrorMessage(
             flow_id=flow_id,
@@ -471,7 +497,13 @@ async def generate_flow_events(
         )
         event_manager.on_error(data=error_message.data)
         raise
+    finally:
+        # ensure no background tasks are left pending
+        for t in tasks:
+            if not t.done():
+                t.cancel()
 
+    # normal completion: signal end of stream
     event_manager.on_end(data={})
     await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))

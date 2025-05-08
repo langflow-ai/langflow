@@ -260,6 +260,7 @@
                 "display_name": "Data",
                 "method": "search_papers",
                 "name": "data",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -273,6 +274,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -421,6 +423,7 @@
                 "display_name": "Item",
                 "method": "item_output",
                 "name": "item",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -434,6 +437,7 @@
                 "display_name": "Done",
                 "method": "done_output",
                 "name": "done",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -563,7 +567,11 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "api_key"
+                  "api_key",
+                  "max_tokens",
+                  "model_name",
+                  "stream",
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -870,6 +878,9 @@
                 "display_name": "Data",
                 "method": "convert_message_to_data",
                 "name": "data",
+                "required_inputs": [
+                  "message"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -980,6 +991,11 @@
                 "display_name": "Message",
                 "method": "parse_data",
                 "name": "text",
+                "required_inputs": [
+                  "data",
+                  "sep",
+                  "template"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -993,6 +1009,10 @@
                 "display_name": "Data List",
                 "method": "parse_data_as_list",
                 "name": "data_list",
+                "required_inputs": [
+                  "data",
+                  "template"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1146,6 +1166,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1455,6 +1476,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

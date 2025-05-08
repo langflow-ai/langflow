@@ -1,51 +1,186 @@
 worker_processes auto;
 pid /tmp/nginx.pid;
-events {}
+
+# Worker connections - determines how many clients can be served simultaneously
+events {
+    worker_connections ${WORKER_CONNECTIONS};
+    multi_accept on;
+}
 
 http {
+    # Basic settings
     include /etc/nginx/mime.types;
-    default_type text/plain;
+    default_type application/octet-stream;
+    charset utf-8;
 
-    types {
-        text/html html;
-        text/css css;
-        application/javascript js;
-    }
+    # Temp paths for unprivileged user
+    client_body_temp_path /tmp/client_temp;
+    proxy_temp_path       /tmp/proxy_temp;
+    fastcgi_temp_path     /tmp/fastcgi_temp;
+    uwsgi_temp_path       /tmp/uwsgi_temp;
+    scgi_temp_path        /tmp/scgi_temp;
 
+    # Include dynamically generated logging configuration
+    include /nginx-access-log/logging.conf;
+
+    error_log /var/log/nginx/error.log ${ERROR_LOG_LEVEL};
+
+    # Optimize sendfile
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+
+    # Timeouts
+    keepalive_timeout 65;
+    client_body_timeout ${CLIENT_TIMEOUT};
+    client_header_timeout ${CLIENT_TIMEOUT};
+    send_timeout 10;
+    client_max_body_size ${CLIENT_MAX_BODY_SIZE};
+
+    # Caching settings
+    open_file_cache max=1000 inactive=20s;
+    open_file_cache_valid 30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+    # Compression settings
+    gzip on;
+    gzip_comp_level ${GZIP_COMPRESSION_LEVEL};
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_disable "msie6";
+    gzip_types
+        application/atom+xml
+        application/javascript
+        application/json
+        application/ld+json
+        application/manifest+json
+        application/rss+xml
+        application/vnd.geo+json
+        application/vnd.ms-fontobject
+        application/wasm
+        application/x-font-ttf
+        application/x-web-app-manifest+json
+        application/xhtml+xml
+        application/xml
+        font/opentype
+        image/bmp
+        image/svg+xml
+        image/x-icon
+        text/cache-manifest
+        text/css
+        text/plain
+        text/vcard
+        text/vnd.rim.location.xloc
+        text/vtt
+        text/x-component
+        text/x-cross-domain-policy;
+
+    # Security headers
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Frame-Options SAMEORIGIN;
+
+    # Main server block
     server {
-        gzip on;
-        gzip_comp_level 2;
-        gzip_min_length 1000;
-        gzip_types text/xml text/css;
-        gzip_http_version 1.1;
-        gzip_vary on;
-        gzip_disable "MSIE [4-6] \.";
-
         listen ${FRONTEND_PORT};
+        server_name _;
 
+        # Root directory and index files
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+
+        # Handle frontend routes with HTML5 history API
         location / {
-            root /usr/share/nginx/html;
-            index index.html index.htm;
-            try_files $uri $uri/ /index.html =404;
-            expires 1d;
-            add_header Cache-Control "public";
+            try_files $uri $uri/ /index.html;
+
+            # Handle JS and CSS files with content hashes first
+            location ~* "-[a-zA-Z0-9]{8}\.(js|css)$" {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+
+            # Cache strategy for other asset files
+            location /assets/ {
+                expires 30d;
+                add_header Cache-Control "public, no-transform";
+            }
+
+            # Don't cache HTML
+            location ~* \.html$ {
+                expires -1;
+                add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+            }
         }
-        location = /index.html {
-            root /usr/share/nginx/html;
-            add_header Cache-Control "no-cache, no-store, must-revalidate";
-            etag on;
-        }
-        
+
+        # API proxy
         location /api {
             proxy_pass ${BACKEND_URL};
-        }
-        location /health_check {
-            proxy_pass ${BACKEND_URL};
-        }
-        location /health {
-            proxy_pass ${BACKEND_URL};
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_buffering off;
+            proxy_cache off;
+            proxy_read_timeout 300s;
+
+            # Add error intercept for better debugging
+            proxy_intercept_errors on;
+            error_page 502 504 = @api_down;
         }
 
+        # API down fallback
+        location @api_down {
+            default_type application/json;
+            return 503 '{"error": "API service unavailable", "status": 503}';
+        }
+
+        # Health check endpoints
+        # Frontend-only health check for container health monitoring
+        location = /nginx_health {
+            access_log off;
+            add_header Content-Type application/json;
+            return 200 '{"status":"ok","service":"nginx"}';
+        }
+
+        # Health check endpoints for the backend service
+        location /health_check {
+            proxy_pass ${BACKEND_URL};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /health {
+            proxy_pass ${BACKEND_URL};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # Return 404 for all other php files
+        location ~ \.php$ {
+            return 404;
+        }
+
+        # Deny access to hidden files
+        location ~ /\. {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
+
+        location ~ ~$ {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
+
+        # Include additional configuration files
         include /etc/nginx/extra-conf.d/*.conf;
     }
 }

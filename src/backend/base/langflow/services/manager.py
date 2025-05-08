@@ -105,7 +105,7 @@ class ServiceManager:
         from langflow.services.factory import ServiceFactory
         from langflow.services.schema import ServiceType
 
-        service_names = [ServiceType(service_type).value.replace("_service", "") for service_type in ServiceType]
+        service_names = [ServiceType(service_type).value.replace("_service", "", 1) for service_type in ServiceType]
         base_module = "langflow.services"
         factories = []
 

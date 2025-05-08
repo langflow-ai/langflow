@@ -25,6 +25,9 @@ DEFAULT_LOG_FORMAT = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
 )
 
+# Define all paths you want to exclude from logs
+EXCLUDED_PATHS = ["/health", "/health_check", "/metrics"]
+
 
 class SizedLogBuffer:
     def __init__(
@@ -130,20 +133,39 @@ class SizedLogBuffer:
 log_buffer = SizedLogBuffer()
 
 
-def serialize_log(record):
+def serialize_log(record, dev_mode=None):
+    """Serialize log record to JSON format with detailed information.
+
+    Note: Since DEV is a global variable, is difficult to mock it in tests, especially in tests for Python 3.10.
+    So we need to provide a dev_mode parameter to override the global DEV value.
+    """
+    # Use provided dev_mode or global DEV
+    dev_mode = DEV if dev_mode is None else dev_mode
+
     subset = {
         "timestamp": record["time"].timestamp(),
+        "time": record["time"].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
         "message": record["message"],
         "level": record["level"].name,
         "module": record["module"],
+        "function": record["function"],
+        "line": record["line"],
+        "process": record["process"].id,
+        "thread": record["thread"].name,
     }
-    return orjson.dumps(subset)
 
+    if dev_mode is False:
+        subset["exception"] = None
+    # Add exception info if present
+    elif record.get("exception"):
+        subset["exception"] = {
+            "type": record["exception"].type.__name__ if hasattr(record["exception"], "type") else None,
+            "value": str(record["exception"].value)
+            if hasattr(record["exception"], "value")
+            else str(record["exception"]),
+        }
 
-def patching(record) -> None:
-    record["extra"]["serialized"] = serialize_log(record)
-    if DEV is False:
-        record.pop("exception", None)
+    return orjson.dumps(subset).decode()
 
 
 class LogConfig(TypedDict):
@@ -185,9 +207,8 @@ def is_valid_log_format(format_string) -> bool:
         name="dummy", level=logging.INFO, pathname="dummy_path", lineno=0, msg="dummy message", args=None, exc_info=None
     )
 
-    formatter = logging.Formatter(format_string)
-
     try:
+        formatter = logging.Formatter(format_string)
         # Attempt to format the record
         formatter.format(record)
     except (KeyError, ValueError, TypeError):
@@ -205,6 +226,22 @@ def configure(
     log_format: str | None = None,
     async_file: bool = False,
 ) -> None:
+    """Configure the logging environment.
+
+    This function sets up the logging configuration for the application, allowing customization
+    of logging level, file, and format. It supports different environments, such as containerized
+    environments, with options for JSON and human-readable formats.
+
+    Parameters:
+    - log_level (str | None): The logging level (e.g., "DEBUG", "INFO"). Defaults to "ERROR" if not specified.
+    - log_file (Path | None): The file path for logging output. If not specified, defaults to a cache directory.
+    - disable (bool | None): If True, disables logging for the "langflow" logger.
+    - log_env (str | None): The logging environment (e.g., "container"). Determines the logging format.
+    - log_format (str | None): The logging format string. Defaults to a human-readable format if not specified.
+    - async_file (bool): If True, uses asynchronous file logging with log rotation.
+
+    The function also integrates with Uvicorn and Gunicorn loggers for consistent logging across the application.
+    """
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
@@ -220,47 +257,11 @@ def configure(
         log_env = os.getenv("LANGFLOW_LOG_ENV", "")
 
     logger.remove()  # Remove default handlers
-    logger.patch(patching)
-    if log_env.lower() == "container" or log_env.lower() == "container_json":
-        logger.add(sys.stdout, format="{message}", serialize=True)
-    elif log_env.lower() == "container_csv":
-        logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}")
+
+    if log_env.lower() in ("container", "container_json"):
+        configure_container_logging(log_level, log_format, env_mode=log_env.lower())
     else:
-        if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
-            log_format = os.getenv("LANGFLOW_LOG_FORMAT")
-
-        if log_format is None or not is_valid_log_format(log_format):
-            log_format = DEFAULT_LOG_FORMAT
-        # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
-        # suggest directly print to stdout in production
-        log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
-        if log_stdout_pretty:
-            logger.configure(
-                handlers=[
-                    {
-                        "sink": RichHandler(rich_tracebacks=True, markup=True),
-                        "format": log_format,
-                        "level": log_level.upper(),
-                    }
-                ]
-            )
-        else:
-            logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
-
-        if not log_file:
-            cache_dir = Path(user_cache_dir("langflow"))
-            logger.debug(f"Cache directory: {cache_dir}")
-            log_file = cache_dir / "langflow.log"
-            logger.debug(f"Log file: {log_file}")
-        try:
-            logger.add(
-                sink=AsyncFileSink(log_file) if async_file else log_file,
-                level=log_level.upper(),
-                format=log_format,
-                serialize=True,
-            )
-        except Exception:  # noqa: BLE001
-            logger.exception("Error setting up log file")
+        configure_standard_logging(log_level, log_file, log_format, async_file)
 
     if log_buffer.enabled():
         logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)
@@ -269,6 +270,84 @@ def configure(
 
     setup_uvicorn_logger()
     setup_gunicorn_logger()
+
+
+def configure_container_logging(log_level: str, log_format: str | None, env_mode: str = "container") -> None:
+    """Configure logging for container environments based on the specific container log mode.
+
+    Args:
+        log_level (str): Logging level.
+        log_format (str | None): Log format string (may be unused in specific container modes).
+        env_mode (str): One of "container", "container_json".
+    """
+
+    def log_filter(record):
+        # Check if message contains any excluded path
+        return not any(path in record["message"] for path in EXCLUDED_PATHS)
+
+    if env_mode == "container_json":
+
+        def sink(message):
+            serialized = serialize_log(message.record)
+            # Add a newline character to ensure each log entry is on its own line
+            sys.stdout.write(serialized + "\n")
+            # Make sure it's flushed immediately
+            sys.stdout.flush()
+
+        logger.add(sink, level=log_level.upper(), filter=log_filter)
+    else:
+        if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
+            log_format = os.getenv("LANGFLOW_LOG_FORMAT")
+
+        if log_format is None:
+            log_format = DEFAULT_LOG_FORMAT
+
+        logger.add(
+            sys.stdout,
+            format=log_format,
+            level=log_level.upper(),
+            filter=log_filter,
+        )
+
+
+def configure_standard_logging(log_level: str, log_file: Path | None, log_format: str | None, async_file: bool) -> None:  # noqa: FBT001
+    """Configure standard logging for non-container environments."""
+    if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
+        log_format = os.getenv("LANGFLOW_LOG_FORMAT")
+
+    if log_format is None or not is_valid_log_format(log_format):
+        log_format = DEFAULT_LOG_FORMAT
+
+    # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
+    # suggest directly print to stdout in production
+    log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
+    if log_stdout_pretty:
+        logger.configure(
+            handlers=[
+                {
+                    "sink": RichHandler(rich_tracebacks=True, markup=True),
+                    "format": log_format,
+                    "level": log_level.upper(),
+                }
+            ]
+        )
+    else:
+        logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
+
+    if not log_file:
+        cache_dir = Path(user_cache_dir("langflow"))
+        logger.debug(f"Cache directory: {cache_dir}")
+        log_file = cache_dir / "langflow.log"
+        logger.debug(f"Log file: {log_file}")
+    try:
+        logger.add(
+            sink=AsyncFileSink(log_file) if async_file else log_file,
+            level=log_level.upper(),
+            format=log_format,
+            serialize=True,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Error setting up log file")
 
 
 def setup_uvicorn_logger() -> None:

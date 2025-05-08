@@ -122,6 +122,7 @@ dependencies = [
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
+    "python-keycloak>=5.3.1",
     "openai>=1.68.2",
 ]
 
@@ -160,7 +161,7 @@ dev = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "pytest-codspeed>=3.0.0",
-    "blockbuster>=1.5.20,<1.6",
+    "blockbuster>=1.5.23,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
@@ -229,14 +230,25 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 [tool.pytest.ini_options]
 timeout = 120
-timeout_method = "signal"
+timeout_method = "thread"
+timeout_func_only = false
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+
+# Silence noisy warnings:
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+    "ignore::sqlalchemy.exc.SAWarning",
+    "ignore:An API key is required for the hosted NIM.:UserWarning",
+    "ignore::pydantic._internal._config.PydanticDeprecatedSince20",
+]
+
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
 markers = ["async_test", "api_key_required"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

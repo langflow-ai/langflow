@@ -464,6 +464,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-property"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/12/900eb34b3af75c11b69d6b78b74ec0fd1ba489376eceb3785f787d1a0a1d/async_property-0.2.2.tar.gz", hash = "sha256:17d9bd6ca67e27915a75d92549df64b5c7174e9dc806b30a3934dc4ff0506380", size = 16523 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/80/9f608d13b4b3afcebd1dd13baf9551c95fc424d6390e4b1cfd7b1810cd06/async_property-0.2.2-py2.py3-none-any.whl", hash = "sha256:8924d792b5843994537f8ed411165700b27b2bd966cefc4daeefc1253442a9d7", size = 9546 },
+]
+
+[[package]]
 name = "async-timeout"
 version = "4.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -4024,6 +4033,19 @@ wheels = [
 ]
 
 [[package]]
+name = "jwcrypto"
+version = "1.5.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/db/870e5d5fb311b0bcf049630b5ba3abca2d339fd5e13ba175b4c13b456d08/jwcrypto-1.5.6.tar.gz", hash = "sha256:771a87762a0c081ae6166958a954f80848820b2ab066937dc8b8379d65b1b039", size = 87168 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/58/4a1880ea64032185e9ae9f63940c9327c6952d5584ea544a8f66972f2fda/jwcrypto-1.5.6-py3-none-any.whl", hash = "sha256:150d2b0ebbdb8f40b77f543fb44ffd2baeff48788be71f67f03566692fd55789", size = 92520 },
+]
+
+[[package]]
 name = "kombu"
 version = "5.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4584,6 +4606,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pylint" },
     { name = "pymongo" },
+    { name = "python-keycloak" },
     { name = "pytube" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "qdrant-client" },
@@ -4776,6 +4799,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pylint", specifier = ">=3.3.4" },
     { name = "pymongo", specifier = "==4.10.1" },
+    { name = "python-keycloak", specifier = ">=5.3.1" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
     { name = "qdrant-client", specifier = "==1.9.2" },
@@ -4809,7 +4833,7 @@ provides-extras = ["deploy", "couchbase", "cassio", "local", "clickhouse-connect
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
+    { name = "blockbuster", specifier = ">=1.5.23,<1.6" },
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "elevenlabs", specifier = ">=1.52.0" },
@@ -4909,7 +4933,6 @@ dependencies = [
     { name = "passlib" },
     { name = "pillow" },
     { name = "platformdirs" },
-    { name = "prometheus-client" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pypdf" },
@@ -5054,7 +5077,6 @@ requires-dist = [
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
     { name = "pillow", specifier = ">=11.1.0,<12.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
-    { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pydantic", specifier = "~=2.10.1" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pypdf", specifier = "~=5.1.0" },
@@ -8377,6 +8399,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/a0/c49687cf40cb6128ea4e0559855aff92cd5ebd1a60a31c08526818c0e51e/python-jose-3.4.0.tar.gz", hash = "sha256:9a9a40f418ced8ecaf7e3b28d69887ceaa76adad3bcaa6dae0d9e596fec1d680", size = 92145 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/63/b0/2586ea6b6fd57a994ece0b56418cbe93fff0efb85e2c9eb6b0caf24a4e37/python_jose-3.4.0-py2.py3-none-any.whl", hash = "sha256:9c9f616819652d109bd889ecd1e15e9a162b9b94d682534c9c2146092945b78f", size = 34616 },
+]
+
+[[package]]
+name = "python-keycloak"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiofiles" },
+    { name = "async-property" },
+    { name = "deprecation" },
+    { name = "httpx" },
+    { name = "jwcrypto" },
+    { name = "requests" },
+    { name = "requests-toolbelt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a5/c6/31e37ad279444cbe6631b264808d22cacc15f03cfd222666c8b1c06092af/python_keycloak-5.3.1.tar.gz", hash = "sha256:e4bbdbdddc480d64c6211095d633bea025028eb895aa83ccdc44f90ab70eff28", size = 67379 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/a9/1da758a068b5435c51ad946a8b6e8fc80660354c77d596afe1a0daff1fa9/python_keycloak-5.3.1-py3-none-any.whl", hash = "sha256:d3167d788add29d6cb3fda0629ee0f453fac9f6ee35241938488dbf9ac0635bb", size = 75745 },
 ]
 
 [[package]]

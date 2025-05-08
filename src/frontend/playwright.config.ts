@@ -108,6 +108,16 @@ export default defineConfig({
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_KEYCLOAK_ENABLED: "false",
+        LANGFLOW_SSO_TEST_ENABLED: "false",
+        //LANGFLOW_KEYCLOAK_SERVER_URL: "",
+        //LANGFLOW_KEYCLOAK_REALM: "",
+        //LANGFLOW_KEYCLOAK_CLIENT_ID: "",
+        //LANGFLOW_KEYCLOAK_CLIENT_SECRET: "",
+        //LANGFLOW_KEYCLOAK_REDIRECT_URI: "",
+        //LANGFLOW_KEYCLOAK_ADMIN_ROLE: "",
+        //LANGFLOW_KEYCLOAK_FORCE_SSO: "",
+        //LANGFLOW_LOG_LEVEL:"info"
       },
       stdout: "ignore",
 
