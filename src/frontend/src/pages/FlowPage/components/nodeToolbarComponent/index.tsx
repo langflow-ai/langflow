@@ -75,7 +75,6 @@ const NodeToolbarComponent = memo(
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
     const frozen = data.node?.frozen ?? false;
-    const currentFlow = useFlowStore((state) => state.currentFlow);
     const updateNodeInternals = useUpdateNodeInternals();
 
     const paste = useFlowStore((state) => state.paste);
@@ -94,21 +93,6 @@ const NodeToolbarComponent = memo(
         });
       },
     });
-
-    const flowDataNodes = useMemo(
-      () => currentFlow?.data?.nodes,
-      [currentFlow],
-    );
-
-    const node = useMemo(
-      () => flowDataNodes?.find((n) => n.id === data.id),
-      [flowDataNodes, data.id],
-    );
-
-    const index = useMemo(
-      () => flowDataNodes?.indexOf(node!)!,
-      [flowDataNodes, node],
-    );
 
     const postToolModeValue = usePostTemplateValue({
       node: data.node!,
@@ -179,6 +163,7 @@ const NodeToolbarComponent = memo(
       setToolMode(newValue);
       mutateTemplate(
         newValue,
+        data.id,
         data.node!,
         handleNodeClass,
         postToolModeValue,

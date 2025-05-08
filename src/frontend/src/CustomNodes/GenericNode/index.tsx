@@ -262,7 +262,13 @@ function GenericNode({
           showNode={showNode}
           isToolMode={isToolMode}
           showHiddenOutputs={showHiddenOutputs}
-          hidden={key === "hidden"}
+          hidden={
+            key === "hidden"
+              ? showHiddenOutputs
+                ? output.hidden
+                : true
+              : false
+          }
         />
       ));
     },
@@ -397,10 +403,9 @@ function GenericNode({
         showNode={showNode}
         icon={data.node?.icon}
         isGroup={!!data.node?.flow}
-        hasToolMode={hasToolMode ?? false}
       />
     );
-  }, [data.type, showNode, data.node?.icon, data.node?.flow, hasToolMode]);
+  }, [data.type, showNode, data.node?.icon, data.node?.flow]);
 
   const renderNodeName = useCallback(() => {
     return (

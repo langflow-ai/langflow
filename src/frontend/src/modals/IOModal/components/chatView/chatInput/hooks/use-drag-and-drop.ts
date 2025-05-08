@@ -1,8 +1,11 @@
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 
-const useDragAndDrop = (setIsDragging: (value: boolean) => void) => {
+const useDragAndDrop = (
+  setIsDragging: (value: boolean) => void,
+  playgroundPage: boolean,
+) => {
   const dragOver = (e) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND) return;
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) return;
     e.preventDefault();
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       setIsDragging(true);
@@ -10,7 +13,7 @@ const useDragAndDrop = (setIsDragging: (value: boolean) => void) => {
   };
 
   const dragEnter = (e) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND) return;
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) return;
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       setIsDragging(true);
     }
@@ -18,6 +21,7 @@ const useDragAndDrop = (setIsDragging: (value: boolean) => void) => {
   };
 
   const dragLeave = (e) => {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) return;
     e.preventDefault();
     setIsDragging(false);
   };

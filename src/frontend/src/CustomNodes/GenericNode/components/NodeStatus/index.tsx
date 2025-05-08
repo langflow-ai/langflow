@@ -108,6 +108,7 @@ export default function NodeStatus({
     pollingInterval.current = setInterval(() => {
       mutateTemplate(
         { validate: data.node?.template?.auth?.value || "" },
+        data.id,
         data.node,
         (newNode) => {
           setNode(nodeId, (old) => ({
@@ -138,6 +139,7 @@ export default function NodeStatus({
     setIsPolling(true);
     mutateTemplate(
       "disconnect",
+      data.id,
       data.node,
       (newNode) => {
         setNode(nodeId, (old) => ({
