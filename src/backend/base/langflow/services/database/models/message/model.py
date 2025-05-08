@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
+from litellm import ConfigDict
 from pydantic import field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, SQLModel
@@ -115,8 +116,10 @@ class MessageBase(SQLModel):
 
 
 class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+
     flow_id: UUID | None = Field(default=None)
     files: list[str] = Field(sa_column=Column(JSON))
     properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
@@ -157,10 +160,6 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if isinstance(value, str):
             return json.loads(value)
         return value
-
-    # Needed for Column(JSON)
-    class Config:
-        arbitrary_types_allowed = True
 
 
 class MessageRead(MessageBase):
