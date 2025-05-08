@@ -240,10 +240,12 @@ export default function ChatView({
                   playgroundPage={playgroundPage}
                 />
               ))}
-              <ChatScrollAnchor
-                trackVisibility={chatHistory?.[chatHistory.length - 1]}
-                canScroll={canScroll}
-              />
+              {chatHistory?.length > 0 && (
+                <ChatScrollAnchor
+                  trackVisibility={chatHistory?.[chatHistory.length - 1]}
+                  canScroll={canScroll}
+                />
+              )}
             </>
           ) : (
             <>
