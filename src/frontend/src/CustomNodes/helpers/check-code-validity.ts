@@ -1,6 +1,5 @@
 import { componentsToIgnoreUpdate } from "@/constants/constants";
 import { OutputFieldType } from "@/types/api";
-import { useEffect } from "react";
 import { NodeDataType } from "../../types/flow";
 
 // Returns true if the code is outdated (code string changed and not ignored)
@@ -63,17 +62,19 @@ export const checkCodeValidity = (
   const userOutputs = data.node?.outputs;
   const originalTemplate = template;
   const userTemplate = data.node?.template;
-  const hasBreakingChange = codeHasBreakingChange(
-    originalOutputs,
-    userOutputs,
-    originalTemplate,
-    userTemplate,
-  );
+  const isOutdated = codeIsOutdated(currentCode, thisNodesCode, data.type);
+
+  const hasBreakingChange = isOutdated
+    ? codeHasBreakingChange(
+        originalOutputs,
+        userOutputs,
+        originalTemplate,
+        userTemplate,
+      )
+    : false;
 
   return {
-    outdated:
-      hasBreakingChange ||
-      codeIsOutdated(currentCode, thisNodesCode, data.type),
+    outdated: isOutdated,
     breakingChange: hasBreakingChange,
     userEdited: data.node?.edited ?? false,
   };
