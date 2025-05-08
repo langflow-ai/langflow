@@ -92,8 +92,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes) => {
     let outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    for (let i = 0; i < nodes.length; i++) {
-      let node = nodes[i];
+    nodes.forEach((node) => {
       if (node.type === "genericNode") {
         const codeValidity = checkCodeValidity(node.data, templates);
         if (codeValidity && codeValidity.outdated)
@@ -106,7 +105,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             userEdited: codeValidity.userEdited,
           });
       }
-    }
+    });
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
