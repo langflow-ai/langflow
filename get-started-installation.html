@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.77070d65.css">
-<script src="/assets/js/runtime~main.23e1dbde.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.bf0dac5c.js" defer="defer"></script>
 <script src="/assets/js/main.606fad60.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -47,6 +47,7 @@
 <li><a href="https://www.python.org/downloads/release/python-3100/" target="_blank" rel="noopener noreferrer">Python 3.10 to 3.13</a></li>
 <li><a href="https://docs.astral.sh/uv/getting-started/installation/" target="_blank" rel="noopener noreferrer">uv</a> or <a href="https://pypi.org/project/pip/" target="_blank" rel="noopener noreferrer">pip</a></li>
 <li>A virtual environment created with <a href="https://docs.astral.sh/uv/pip/environments" target="_blank" rel="noopener noreferrer">uv</a> or <a href="https://docs.python.org/3/library/venv.html" target="_blank" rel="noopener noreferrer">venv</a></li>
+<li>A dual-core CPU and at least 2 GB of RAM. More intensive use requires a multi-core CPU and at least 4 GB of RAM.</li>
 </ul>
 <p>Install and run Langflow OSS with <a href="https://docs.astral.sh/uv/getting-started/installation/" target="_blank" rel="noopener noreferrer">uv (recommended)</a> or <a href="https://pypi.org/project/pip/" target="_blank" rel="noopener noreferrer">pip</a>.</p>
 <ol>
@@ -114,6 +115,17 @@
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv pip install langflow</span></div></div><br></code></div></div>
 <p>To run Langflow with uv:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div>
+<h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="failed-to-build-required-package">Failed to build required package<a href="#failed-to-build-required-package" class="hash-link" aria-label="Direct link to Failed to build required package" title="Direct link to Failed to build required package">​</a></h4>
+<p>When you try to install Langflow on Linux, installation fails because of outdated or missing packages.</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Resolved 455 packages in 18.92s</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  × Failed to build `webrtcvad==2.0.10`</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  ├─▶ The build backend returned an error</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  ╰─▶ Call to `setuptools.build_meta:__legacy__.build_wheel` failed (exit status: 1)</span></div></div><br></code></div></div>
+<ol>
+<li>Install the required build dependencies.</li>
+</ol>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>sudo apt-get update</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>sudo apt-get install build-essential python3-dev</span></div></div><br></code></div></div>
+<ol start="2">
+<li>If upgrading your packages doesn&#x27;t fix the issue, install <code>gcc</code> separately.</li>
+</ol>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>sudo apt-get install gcc</span></div></div><br></code></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="install-and-run-langflow-desktop">Install and run Langflow Desktop<a href="#install-and-run-langflow-desktop" class="hash-link" aria-label="Direct link to Install and run Langflow Desktop" title="Direct link to Install and run Langflow Desktop">​</a></h2>
 <div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Langflow Desktop is in <strong>Alpha</strong>.
 Development is ongoing, and the features and functionality are subject to change.</p></div></div>
