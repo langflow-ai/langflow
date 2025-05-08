@@ -147,7 +147,7 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 | API Endpoint | String | The Astra DB API endpoint. |
 | Projection Fields | String | The attributes to return, separated by commas. Default: "*". |
 | Partition Keys | Dict | Required parameters that the model must fill to query the tool. |
-| Clustering Keys | Dict | Optional parameters the model can fill to refine the query. Required parameters should be marked with an exclamation mark (for example, `!customer_id`). |
+| Clustering Keys | Dict | Optional parameters the model can fill to refine the query. Required parameters should be marked with an exclamation mark, for example, `!customer_id`. |
 | Static Filters | Dict | Attribute-value pairs used to filter query results. |
 | Limit | String | The number of records to return. |
 
