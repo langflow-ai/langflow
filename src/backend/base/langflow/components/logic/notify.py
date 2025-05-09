@@ -43,27 +43,27 @@ class NotifyComponent(Component):
     ]
 
     async def build(self) -> Data:
-        if self.input_data and not isinstance(self.input_data, Data):
-            if isinstance(self.input_data, str):
-                self.input_data = Data(text=self.input_data)
-            elif isinstance(self.input_data, dict):
-                self.input_data = Data(data=self.input_data)
+        if self.input_value and not isinstance(self.input_value, Data):
+            if isinstance(self.input_value, str):
+                self.input_value = Data(text=self.input_value)
+            elif isinstance(self.input_value, dict):
+                self.input_value = Data(data=self.input_value)
             else:
-                self.input_data = Data(text=str(self.input_data))
-        elif not self.input_data:
-            self.input_data = Data(text="")
-        if self.input_data:
+                self.input_value = Data(text=str(self.input_value))
+        elif not self.input_value:
+            self.input_value = Data(text="")
+        if self.input_value:
             if self.append:
                 current_data = self.ctx.get(self.context_key, [])
                 if not isinstance(current_data, list):
                     current_data = [current_data]
-                current_data.append(self.input_data)
+                current_data.append(self.input_value)
                 self.update_ctx({self.context_key: current_data})
             else:
-                self.update_ctx({self.context_key: self.input_data})
+                self.update_ctx({self.context_key: self.input_value})
         else:
             self.status = "No record provided."
-        self.status = self.input_data
+        self.status = self.input_value
         self._vertex.is_state = True
         self.graph.activate_state_vertices(name=self.context_key, caller=self._id)
-        return self.input_data
+        return self.input_value
