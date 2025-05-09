@@ -82,7 +82,7 @@ This component uses the [Unstructured.io](https://unstructured.io/) Serverless A
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| file | File | The path to the file to be parsed. Supported types are listed [here](https://docs.unstructured.io/api-reference/api-services/overview#supported-file-types). |
+| file | File | The path to the file to be parsed. Supported types are listed in the [Unstructured documentation](https://docs.unstructured.io/api-reference/api-services/overview#supported-file-types). |
 | api_key | API Key | The Unstructured.io Serverless API Key. |
 | api_url | Unstructured.io API URL | The URL for the Unstructured API. This field is optional. |
 | chunking_strategy | Chunking Strategy | The strategy for chunking the document. Options include basic, by_title, by_page, and by_similarity. |

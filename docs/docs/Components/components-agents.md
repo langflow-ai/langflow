@@ -27,7 +27,7 @@ For a multi-agent example see, [Create a problem-solving agent](/agents-tool-cal
 
 This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
 
-The component includes an LLM model integration a system message prompt and a **Tools** port to connect tools to extend its capabilities.
+The component includes an LLM model integration, a system message prompt, and a **Tools** port to connect tools to extend its capabilities.
 
 For more information on this component, see the [tool calling agent documentation](/agents-tool-calling-agent-component).
 

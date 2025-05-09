@@ -703,7 +703,7 @@ For more information, see [Google Vertex AI documentation](https://cloud.google.
 
 | Name | Type | Description |
 |------|------|-------------|
-| credentials | File | JSON credentials file. Leave empty to fallback to environment variables. File type: JSON. |
+| credentials | File | JSON credentials file. Leave empty to fall back to environment variables. File type: JSON. |
 | model_name | String | The name of the Vertex AI model to use. Default: "gemini-1.5-pro". |
 | project | String | The project ID (advanced). |
 | location | String | The location for the Vertex AI API. Default: "us-central1" (advanced). |
