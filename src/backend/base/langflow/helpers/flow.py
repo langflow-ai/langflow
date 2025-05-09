@@ -11,7 +11,7 @@ from sqlmodel import select
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_flow_cache_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -292,6 +292,16 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
         return FlowRead.model_validate(flow, from_attributes=True)
+
+
+async def get_flow_by_id_or_endpoint_name_from_cache(flow_id_or_name: str, *, use_cache: bool = True):
+    if use_cache:
+        flow_cache_service = get_flow_cache_service()
+        flow = await flow_cache_service.get_cached_graph(flow_id_or_name)
+        if flow is None:
+            raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
+        return flow
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name)
 
 
 async def generate_unique_flow_name(flow_name, user_id, session):

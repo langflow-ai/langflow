@@ -21,9 +21,14 @@ def get_all_webhook_components_in_flow(flow_data: dict | None):
 
 def get_components_versions(flow: Flow):
     versions: dict[str, str] = {}
-    if flow.data is None:
+
+    if hasattr(flow, "graph_data"):
+        data = flow.graph_data
+    elif hasattr(flow, "data") and flow.data is not None:
+        data = flow.data
+    else:
         return versions
-    nodes = flow.data.get("nodes", [])
+    nodes = data.get("nodes", [])
     for node in nodes:
         data = node.get("data", {})
         data_node = data.get("node", {})

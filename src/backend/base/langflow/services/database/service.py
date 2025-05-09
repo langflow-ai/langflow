@@ -191,54 +191,53 @@ class DatabaseService(Service):
                 await session.rollback()
                 raise
 
-    async def assign_orphaned_flows_to_superuser(self) -> None:
+    async def assign_orphaned_flows_to_superuser(self, session: AsyncSession) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
         settings_service = get_settings_service()
 
         if not settings_service.auth_settings.AUTO_LOGIN:
             return
 
-        async with self.with_session() as session:
-            # Fetch orphaned flows
-            stmt = (
-                select(models.Flow)
-                .join(models.Folder)
-                .where(
-                    models.Flow.user_id == None,  # noqa: E711
-                    models.Folder.name != STARTER_FOLDER_NAME,
-                )
+        # Fetch orphaned flows
+        stmt = (
+            select(models.Flow)
+            .join(models.Folder)
+            .where(
+                models.Flow.user_id == None,  # noqa: E711
+                models.Folder.name != STARTER_FOLDER_NAME,
             )
-            orphaned_flows = (await session.exec(stmt)).all()
+        )
+        orphaned_flows = (await session.exec(stmt)).all()
 
-            if not orphaned_flows:
-                return
+        if not orphaned_flows:
+            return
 
-            logger.debug("Assigning orphaned flows to the default superuser")
+        logger.debug("Assigning orphaned flows to the default superuser")
 
-            # Retrieve superuser
-            superuser_username = settings_service.auth_settings.SUPERUSER
-            superuser = await get_user_by_username(session, superuser_username)
+        # Retrieve superuser
+        superuser_username = settings_service.auth_settings.SUPERUSER
+        superuser = await get_user_by_username(session, superuser_username)
 
-            if not superuser:
-                error_message = "Default superuser not found"
-                logger.error(error_message)
-                raise RuntimeError(error_message)
+        if not superuser:
+            error_message = "Default superuser not found"
+            logger.error(error_message)
+            raise RuntimeError(error_message)
 
-            # Get existing flow names for the superuser
-            existing_names: set[str] = set(
-                (await session.exec(select(models.Flow.name).where(models.Flow.user_id == superuser.id))).all()
-            )
+        # Get existing flow names for the superuser
+        existing_names: set[str] = set(
+            (await session.exec(select(models.Flow.name).where(models.Flow.user_id == superuser.id))).all()
+        )
 
-            # Process orphaned flows
-            for flow in orphaned_flows:
-                flow.user_id = superuser.id
-                flow.name = self._generate_unique_flow_name(flow.name, existing_names)
-                existing_names.add(flow.name)
-                session.add(flow)
+        # Process orphaned flows
+        for flow in orphaned_flows:
+            flow.user_id = superuser.id
+            flow.name = self._generate_unique_flow_name(flow.name, existing_names)
+            existing_names.add(flow.name)
+            session.add(flow)
 
-            # Commit changes
-            await session.commit()
-            logger.debug("Successfully assigned orphaned flows to the default superuser")
+        # Commit changes
+        await session.commit()
+        logger.debug("Successfully assigned orphaned flows to the default superuser")
 
     @staticmethod
     def _generate_unique_flow_name(original_name: str, existing_names: set[str]) -> str:
