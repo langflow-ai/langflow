@@ -938,7 +938,7 @@
                 "multiline": true,
                 "name": "curl",
                 "placeholder": "",
-                "real_time_refresh": false,
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,

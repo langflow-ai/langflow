@@ -1,12 +1,6 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
-
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import CanvasControls, {
-  CustomControlButton,
-} from "@/components/core/canvasControlsComponent";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -21,12 +15,10 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
-  Background,
   Connection,
   Edge,
   OnNodeDrag,
   OnSelectionChangeParams,
-  Panel,
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
@@ -67,6 +59,11 @@ import {
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import {
+  MemoizedBackground,
+  MemoizedCanvasControls,
+  MemoizedSidebarTrigger,
+} from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -128,6 +125,12 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  useEffect(() => {
+    if (currentFlowId !== "") {
+      isEmptyFlow.current = nodes.length === 0;
+    }
+  }, [currentFlowId]);
 
   const [isAddingNote, setIsAddingNote] = useState(false);
 
@@ -542,6 +545,13 @@ export default function Page({
 
   const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 8;
+  const fitViewOptions = {
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+  };
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -572,13 +582,10 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
-            fitViewOptions={{
-              minZoom: 0.2,
-              maxZoom: 8,
-            }}
+            fitViewOptions={fitViewOptions}
             className="theme-attribution"
-            minZoom={0.2}
-            maxZoom={3}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}
@@ -587,44 +594,19 @@ export default function Page({
             onPaneClick={onPaneClick}
             onEdgeClick={handleEdgeClick}
           >
-            <Background size={2} gap={20} className="" />
+            <MemoizedBackground />
             {!view && (
               <>
-                <CanvasControls>
-                  <CustomControlButton
-                    iconName="sticky-note"
-                    tooltipText="Add Note"
-                    onClick={() => {
-                      setIsAddingNote(true);
-                      const shadowBox = document.getElementById("shadow-box");
-                      if (shadowBox) {
-                        shadowBox.style.display = "block";
-                        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
-                        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
-                      }
-                    }}
-                    iconClasses="text-primary"
-                    testId="add_note"
-                  />
-                </CanvasControls>
+                <MemoizedCanvasControls
+                  setIsAddingNote={setIsAddingNote}
+                  position={position.current}
+                  shadowBoxWidth={shadowBoxWidth}
+                  shadowBoxHeight={shadowBoxHeight}
+                />
                 <FlowToolbar />
               </>
             )}
-            <Panel
-              className={cn(
-                "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
-              )}
-              position="top-left"
-            >
-              <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
-                <ForwardedIconComponent
-                  name="PanelRightClose"
-                  className="h-4 w-4"
-                />
-                <span className="text-foreground">Components</span>
-              </SidebarTrigger>
-            </Panel>
+            <MemoizedSidebarTrigger />
             <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
               <UpdateAllComponents />
             </div>
