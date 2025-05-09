@@ -307,9 +307,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         config_dict = {
             "models": [],
             "rails": {
+                "config": {},
                 "input": {"flows": []},
                 "output": {"flows": []},
-                "config": {}
             },
             "prompts": []
         }
