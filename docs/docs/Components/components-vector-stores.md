@@ -532,25 +532,25 @@ To use the HCD vector store for embeddings ingestion, connect it to an embedding
 | username | HCD Username | Authentication username for accessing HCD. Default is "hcd-superuser". Required. |
 | password | HCD Password | Authentication password for accessing HCD. Required. |
 | api_endpoint | HCD API Endpoint | API endpoint URL for the HCD service. Required. |
-| search_input | Search Input | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store |
+| search_input | Search Input | Query string for similarity search. |
+| ingest_data | Ingest Data | Data to be ingested into the vector store. |
 | namespace | Namespace | Optional namespace within HCD to use for the collection. Default is "default_namespace". |
-| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD |
+| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD. |
 | metric | Metric | Optional distance metric for vector comparisons. Options are "cosine", "dot_product", "euclidean". |
-| batch_size | Batch Size | Optional number of data to process in a single batch |
-| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations |
-| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data |
-| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations |
+| batch_size | Batch Size | Optional number of data to process in a single batch. |
+| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations. |
+| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data. |
+| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations. |
 | setup_mode | Setup Mode | Configuration mode for setting up the vector store. Options are "Sync", "Async", "Off". Default is "Sync". |
-| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
-| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing |
-| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration |
-| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing |
-| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
+| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing. |
+| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration. |
+| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing. |
+| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection. |
 | number_of_results | Number of Results | Number of results to return in similarity search. Default is 4. |
 | search_type | Search Type | Search type to use. Options are "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)". Default is "Similarity". |
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. Default is 0. |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
 
 **Outputs**
 
