@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.3.4"
+version = "0.4.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -23,13 +23,13 @@ dependencies = [
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<24.0.0",
-    "langchain~=0.3.10",
-    "langchain-community~=0.3.10",
-    "langchain-core~=0.3.15",
+    "langchain~=0.3.21",
+    "langchain-community~=0.3.20",
+    "langchain-core~=0.3.45",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "rich>=13.7.0,<14.0.0",
-    "langchain-experimental>=0.0.61,<1.0.0",
+    "langchain-experimental>=0.3.4,<1.0.0",
     "sqlmodel==0.0.22",
     "pydantic~=2.10.1",
     "pydantic-settings>=2.2.0,<3.0.0",
@@ -78,7 +78,7 @@ dependencies = [
     "validators>=0.34.0",
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
-    "mcp>=1.1.2",
+    "mcp>=1.6.0",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",

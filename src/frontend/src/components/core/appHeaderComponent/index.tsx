@@ -10,10 +10,7 @@ import { CustomProductSelector } from "@/customization/components/custom-product
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
-import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
@@ -23,7 +20,6 @@ export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const navigate = useCustomNavigate();
   const [activeState, setActiveState] = useState<"notifications" | null>(null);
-  const lastPath = window.location.pathname.split("/").filter(Boolean).pop();
   const notificationRef = useRef<HTMLButtonElement | null>(null);
   const notificationContentRef = useRef<HTMLDivElement | null>(null);
   useTheme();
@@ -46,14 +42,6 @@ export default function AppHeader(): JSX.Element {
     };
   }, []);
 
-  useResetDismissUpdateAll();
-
-  const flows = useFlowsManagerStore((state) => state.flows);
-  const examples = useFlowsManagerStore((state) => state.examples);
-  const folders = useFolderStore((state) => state.folders);
-
-  const isEmpty = flows?.length !== examples?.length || folders?.length > 1;
-
   const getNotificationBadge = () => {
     const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
     return notificationCenter
@@ -63,9 +51,7 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background ${
-        !isEmpty ? "hidden" : ""
-      }`}
+      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
