@@ -242,7 +242,7 @@ class MCPStdioClient:
                 command="cmd",
                 args=[
                     "/c",
-                    f"{command[0]} " f"{' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
                 ],
                 env=env,
             )
