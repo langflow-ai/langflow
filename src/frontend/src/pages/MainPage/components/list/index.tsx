@@ -203,9 +203,7 @@ const ListComponent = ({
           onConfirm={handleDelete}
           description={descriptionModal}
           note={!flowData.is_component ? "and its message history" : ""}
-        >
-          <></>
-        </DeleteConfirmationModal>
+        />
       )}
       <FlowSettingsModal
         open={openSettings}
