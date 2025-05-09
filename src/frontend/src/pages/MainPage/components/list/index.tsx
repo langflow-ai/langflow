@@ -124,6 +124,7 @@ const ListComponent = ({
                   "ml-2 transition-opacity focus-visible:ring-0",
                   !selected && "opacity-0 group-hover/checkbox:opacity-100",
                 )}
+                data-testid={`checkbox-${flowData.id}`}
               />
             </div>
             <div
@@ -145,8 +146,16 @@ const ListComponent = ({
 
           <div className="flex min-w-0 flex-col justify-start">
             <div className="line-clamp-1 flex min-w-0 items-baseline truncate max-md:flex-col">
-              <div className="flex truncate pr-2 text-sm font-semibold max-md:w-full">
-                <span className="truncate">{flowData.name}</span>
+              <div
+                className="flex truncate pr-2 text-sm font-semibold max-md:w-full"
+                data-testid={`flow-name-div`}
+              >
+                <span
+                  className="truncate"
+                  data-testid={`flow-name-${flowData.id}`}
+                >
+                  {flowData.name}
+                </span>
               </div>
               <div className="item-baseline flex text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago

@@ -11,6 +11,7 @@ import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
@@ -41,6 +42,7 @@ const HeaderComponent = ({
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -83,7 +85,14 @@ const HeaderComponent = ({
   };
 
   const handleDelete = () => {
-    deleteFlows({ flow_ids: selectedFlows });
+    deleteFlows(
+      { flow_ids: selectedFlows },
+      {
+        onSuccess: () => {
+          setSuccessData({ title: "Flows deleted successfully" });
+        },
+      },
+    );
   };
 
   return (
@@ -207,6 +216,7 @@ const HeaderComponent = ({
                       variant="destructive"
                       size="iconMd"
                       className="px-2.5 !text-mmd"
+                      data-testid="delete-bulk-btn"
                       loading={isDeleting}
                     >
                       <ForwardedIconComponent name="Trash2" />
