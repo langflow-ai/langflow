@@ -21,7 +21,7 @@ The [simple agent starter project](/starter-projects-simple-agent) uses an [agen
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
-For a multi-agent example see [Create a problem-solving agent](/agents-tool-calling-agent-component).
+For a multi-agent example see, [Create a problem-solving agent](/agents-tool-calling-agent-component).
 
 ## Agent component {#agent-component}
 
@@ -29,7 +29,7 @@ This component creates an agent that can use tools to answer questions and perfo
 
 The component includes an LLM model integration a system message prompt and a **Tools** port to connect tools to extend its capabilities.
 
-For more information on this component see the [tool calling agent documentation](/agents-tool-calling-agent-component).
+For more information on this component, see the [tool calling agent documentation](/agents-tool-calling-agent-component).
 
 <details>
 <summary>Parameters</summary>
@@ -134,7 +134,7 @@ The following components are available under **Bundles**.
 
 This component represents an Agent of CrewAI allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
 
-For more information see the [CrewAI documentation](https://docs.crewai.com/core-concepts/Agents/).
+For more information, see the [CrewAI documentation](https://docs.crewai.com/core-concepts/Agents/).
 
 <details>
 <summary>Parameters</summary>
@@ -166,7 +166,7 @@ For more information see the [CrewAI documentation](https://docs.crewai.com/core
 
 This component represents a group of agents managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
 
-For more information see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
+For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
 
 <details>
 <summary>Parameters</summary>
@@ -275,7 +275,7 @@ This component creates an agent for interacting with OpenAPI services.
 
 This component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
 
-For more information see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
+For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
 
 <details>
 <summary>Parameters</summary>
@@ -304,7 +304,7 @@ For more information see the [CrewAI documentation](https://docs.crewai.com/how-
 
 This component creates a CrewAI Task and its associated Agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
 
-For more information see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
+For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
 
 <details>
 <summary>Parameters</summary>
