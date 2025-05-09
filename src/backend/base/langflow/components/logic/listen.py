@@ -21,4 +21,4 @@ class ListenComponent(Component):
     outputs = [Output(name="data", display_name="Data", method="build", cache=False)]
 
     def build(self) -> Data:
-        return self.ctx.get(self.context_key, Data(data={}))
+        return self.ctx.get(self.context_key, Data(text=""))
