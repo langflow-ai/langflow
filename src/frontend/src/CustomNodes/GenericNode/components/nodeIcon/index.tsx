@@ -48,7 +48,7 @@ export function NodeIcon({
       return (
         <div
           className={cn(
-            "text-white",
+            "text-foreground",
             !showNode && "flex min-h-8 min-w-8 items-center justify-center",
             "bg-lucide-icon",
           )}

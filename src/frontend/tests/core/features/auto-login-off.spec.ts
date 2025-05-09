@@ -206,12 +206,9 @@ test(
 
     expect(
       (
-        await page.waitForSelector(
-          "text=Begin with a template, or start from scratch.",
-          {
-            timeout: 30000,
-          },
-        )
+        await page.waitForSelector("text=Welcome to LangFlow", {
+          timeout: 30000,
+        })
       ).isVisible(),
     );
 

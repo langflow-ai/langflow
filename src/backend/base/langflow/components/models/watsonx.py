@@ -42,6 +42,8 @@ class WatsonxAIComponent(LCModelComponent):
         StrInput(
             name="project_id",
             display_name="watsonx Project ID",
+            required=True,
+            info="The project ID or deployment space ID that is associated with the foundation model.",
         ),
         SecretStrInput(
             name="api_key",

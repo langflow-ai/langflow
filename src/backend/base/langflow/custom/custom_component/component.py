@@ -1140,7 +1140,7 @@ class Component(CustomComponent):
             list[Tool]: Filtered list of tools.
         """
         # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None
+        metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
         if isinstance(metadata, pd.DataFrame):
             metadata_dict = metadata.to_dict(orient="records")
 
@@ -1163,24 +1163,25 @@ class Component(CustomComponent):
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
         return [tool for tool in tools if tool_status.get(tool.name, True)]
 
+    def _build_tool_data(self, tool: Tool) -> dict:
+        if tool.metadata is None:
+            tool.metadata = {}
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
+            "status": True,  # Initialize all tools with status True
+            "display_name": tool.metadata.get("display_name", tool.name),
+            "display_description": tool.metadata.get("display_description", tool.description),
+            "readonly": tool.metadata.get("readonly", False),
+            "args": tool.args,
+            # "args_schema": tool.args_schema,
+        }
+
     async def _build_tools_metadata_input(self):
         tools = await self._get_tools()
         # Always use the latest tool data
-
-        tool_data = [
-            {
-                "name": tool.name,
-                "description": tool.description,
-                "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
-                "status": True,  # Initialize all tools with status True
-                "display_name": tool.metadata.get("display_name", tool.name),
-                "display_description": tool.metadata.get("display_description", tool.description),
-                "readonly": tool.metadata.get("readonly", False),
-                "args": tool.args,
-                # "args_schema": tool.args_schema,
-            }
-            for tool in tools
-        ]
+        tool_data = [self._build_tool_data(tool) for tool in tools]
         # print(tool_data)
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
@@ -1310,7 +1311,7 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
+            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
             category = category or data_dict.get("category", None)
