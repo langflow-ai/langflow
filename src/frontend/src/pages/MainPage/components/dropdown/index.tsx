@@ -3,7 +3,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";
 import { downloadFlow } from "@/utils/reactflowUtils";
-import useDuplicateFlows from "../../hooks/use-handle-duplicate";
+import useDuplicateFlow from "../../hooks/use-handle-duplicate";
 import useSelectOptionsChange from "../../hooks/use-select-options-change";
 
 type DropdownComponentProps = {
@@ -21,11 +21,15 @@ const DropdownComponent = ({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { handleDuplicate } = useDuplicateFlows({
-    selectedFlowsComponentsCards: [flowData.id],
-    allFlows: [flowData],
-    setSuccessData,
-  });
+  const { handleDuplicate } = useDuplicateFlow({ flow: flowData });
+
+  const duplicateFlow = () => {
+    handleDuplicate().then(() =>
+      setSuccessData({
+        title: `${flowData.is_component ? "Component" : "Flow"} duplicated successfully`,
+      }),
+    );
+  };
 
   const handleExport = () => {
     downloadFlow(flowData, flowData.name, flowData.description);
@@ -35,7 +39,7 @@ const DropdownComponent = ({
     [flowData.id],
     setErrorData,
     setOpenDelete,
-    handleDuplicate,
+    duplicateFlow,
     handleExport,
     handleEdit,
   );

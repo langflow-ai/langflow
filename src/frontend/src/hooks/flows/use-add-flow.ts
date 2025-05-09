@@ -28,7 +28,6 @@ const useAddFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
 
-  const { setFlowToCanvas } = useFlowsManagerStore();
   const setNoticeData = useAlertStore.getState().setNoticeData;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -93,7 +92,6 @@ const useAddFlow = () => {
             }),
           }));
 
-          setFlowToCanvas(createdFlow);
           resolve(createdFlow.id);
         },
         onError: (error) => {
