@@ -325,9 +325,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                     "api_key": self.self_check_model_api_key,
                 },
             })
-            config_dict["rails"]["input"]["flows"].append("self check input $model=self_check_input")
+            config_dict["rails"]["input"]["flows"].append("self check input")
             config_dict["prompts"].append({
-                "task": "self_check_input $model=self_check_input",
+                "task": "self_check_input",
                 "content": self.self_check_input_prompt
             })
 
@@ -341,9 +341,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                     "api_key": self.self_check_model_api_key,
                 },
             })
-            config_dict["rails"]["output"]["flows"].append("self check output $model=self_check_output")
+            config_dict["rails"]["output"]["flows"].append("self check output")
             config_dict["prompts"].append({
-                "task": "self_check_output $model=self_check_output",
+                "task": "self_check_output",
                 "content": self.self_check_output_prompt
             })
 
@@ -357,9 +357,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                     "api_key": self.self_check_model_api_key,
                 },
             })
-            config_dict["rails"]["output"]["flows"].append("self check hallucination $model=self_check_hallucination")
+            config_dict["rails"]["output"]["flows"].append("self check hallucination")
             config_dict["prompts"].append({
-                "task": "self_check_hallucination $model=self_check_hallucination",
+                "task": "self_check_hallucination",
                 "content": self.self_check_hallucination_prompt
             })
 
