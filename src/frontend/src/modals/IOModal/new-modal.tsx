@@ -12,8 +12,8 @@ import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
-import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
+import { v5 as uuidv5, v4 as uuidv4 } from "uuid";
+import LangflowLogoColor from "../../assets/LangflowLogoColor.png?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -207,9 +207,10 @@ export default function IOModal({
 
   useEffect(() => {
     if (!visibleSession) {
-      setSessionId(
-        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
-      );
+      const now = new Date();
+      const dateStr = now.toISOString().replace(/[-:T]/g, '').slice(0, 12); // YYYYMMDDHHMM
+      const sessionId = `Session-${dateStr}-${uuidv4().slice(0, 8)}`;
+      setSessionId(sessionId);
       setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
@@ -356,14 +357,15 @@ export default function IOModal({
                       <div className="text-sm">Theme</div>
                       <ThemeButtons />
                     </div>
-                    <Button
+                    {/* <Button
                       onClick={LangflowButtonClick}
                       variant="primary"
                       className="w-full !rounded-xl shadow-lg"
                     >
                       <LangflowLogoColor />
-                      <div className="text-sm">Built with Langflow</div>
-                    </Button>
+                      <img src={LangflowLogoColor} className="w-[40px] h-[40px]"/>
+                      <div className="text-sm">Built with Agent Craft</div>
+                    </Button> */}
                   </div>
                 )}
               </div>
@@ -373,15 +375,16 @@ export default function IOModal({
                 <ShadTooltip
                   styleClasses="z-50"
                   side="right"
-                  content="Built with Langflow"
+                  content="Built with Agent Craft"
                 >
-                  <Button
+                  {/* <Button
                     variant="primary"
                     className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
                     onClick={LangflowButtonClick}
                   >
                     <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
-                  </Button>
+                    <img src={LangflowLogoColor} className="h-[18px] w-[18px] scale-150" />
+                  </Button> */}
                 </ShadTooltip>
               </div>
             )}

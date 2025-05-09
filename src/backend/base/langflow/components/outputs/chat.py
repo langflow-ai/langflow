@@ -119,6 +119,10 @@ class ChatOutput(ChatComponent):
     async def message_response(self) -> Message:
         # First convert the input to string if needed
         text = self.convert_to_string()
+        # Retrieve 'a' from the context if available
+        # a_value = self.ctx.get("a")
+        # if a_value is not None:
+        #     text = f"{text} (a={a_value})"
         # Get source properties
         source, icon, display_name, source_id = self.get_properties_from_source_component()
         background_color = self.background_color

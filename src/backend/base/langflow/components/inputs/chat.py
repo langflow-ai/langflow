@@ -92,6 +92,8 @@ class ChatInput(ChatComponent):
     ]
 
     async def message_response(self) -> Message:
+        # Store the current session_id in the context for downstream access
+        # self.add_to_ctx("a", self.session_id, overwrite=True)
         background_color = self.background_color
         text_color = self.text_color
         icon = self.chat_icon

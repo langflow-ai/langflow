@@ -32,7 +32,8 @@ from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
 from .yahoo import YfinanceComponent
 from .yahoo_finance import YfinanceToolComponent
-
+from .note_taking import NoteTakingToolComponent
+from .reminder_tool import ReminderToolComponent
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
     from .astradb import AstraDBToolComponent
@@ -71,4 +72,6 @@ __all__ = [
     "WolframAlphaAPIComponent",
     "YfinanceComponent",
     "YfinanceToolComponent",
+    "NoteTakingToolComponent",
+    "ReminderToolComponent"
 ]

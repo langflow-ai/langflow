@@ -13,7 +13,7 @@ const GeneralPageHeaderComponent = () => {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage settings related to Langflow and your account.
+            Manage settings related to Sochflow and your account.
           </p>
         </div>
       </div>

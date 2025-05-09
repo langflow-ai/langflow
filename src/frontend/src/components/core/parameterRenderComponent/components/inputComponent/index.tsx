@@ -43,7 +43,8 @@ export default function InputComponent({
   commandWidth,
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
-}: InputComponentType): JSX.Element {
+  leftIcon,
+}: InputComponentType & { leftIcon?: React.ReactNode }): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
@@ -60,6 +61,11 @@ export default function InputComponent({
 
   return (
     <div className="relative w-full">
+      {leftIcon && (
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          {leftIcon}
+        </span>
+      )}
       {isForm ? (
         <Form.Control asChild>
           <Input
@@ -73,6 +79,7 @@ export default function InputComponent({
             disabled={disabled}
             required={required}
             className={classNames(
+              leftIcon ? "pl-10" : "",
               password && !pwdVisible && value !== ""
                 ? "text-clip password"
                 : "",

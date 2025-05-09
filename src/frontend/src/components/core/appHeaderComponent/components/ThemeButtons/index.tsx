@@ -8,11 +8,10 @@ export const ThemeButtons = () => {
   const [selectedTheme, setSelectedTheme] = useState(
     systemTheme ? "system" : dark ? "dark" : "light",
   );
-  const [hasInteracted, setHasInteracted] = useState(false); // Track user interaction
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
     if (!hasInteracted) {
-      // Set initial theme without triggering the animation
       if (systemTheme) {
         setSelectedTheme("system");
       } else if (dark) {
@@ -24,67 +23,85 @@ export const ThemeButtons = () => {
   }, [systemTheme, dark, hasInteracted]);
 
   const handleThemeChange = (theme) => {
-    setHasInteracted(true); // Mark that a button has been clicked
+    setHasInteracted(true);
     setSelectedTheme(theme);
     setThemePreference(theme);
   };
 
   return (
-    <div className="relative ml-auto inline-flex rounded-full border border-border">
-      {/* Sliding Indicator - Behind the Buttons */}
+    <div className="relative ml-auto inline-flex rounded-full border border-border/50 p-0.5 shadow-inner transition-colors duration-300 hover:border-border">
+      {/* Sliding Indicator */}
       <div
-        className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full bg-amber-400 ${
-          hasInteracted ? "transition-all duration-300" : ""
-        } dark:bg-purple-400`}
+        className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full backdrop-blur-sm ${
+          hasInteracted ? "transition-all duration-300 ease-spring" : ""
+        } ${
+          selectedTheme === "light"
+            ? "bg-amber-400/90"
+            : selectedTheme === "dark"
+            ? "bg-purple-500/90"
+            : "bg-foreground/20"
+        }`}
         style={{
           transform: `translateX(${
             selectedTheme === "light"
               ? "2%"
               : selectedTheme === "dark"
-                ? "112%"
-                : "223%"
+              ? "112%"
+              : "223%"
           })`,
-          zIndex: 0, // Ensure it's behind the buttons
+          zIndex: 0,
         }}
-      ></div>
+      />
 
       {/* Light Theme Button */}
       <Button
         unstyled
-        className={`relative z-10 inline-flex items-center rounded-full px-1 ${
+        className={`relative z-10 inline-flex items-center justify-center rounded-full p-1.5 transition-all duration-200 ${
           selectedTheme === "light"
-            ? "text-foreground"
-            : "text-foreground hover:bg-amber-400 hover:text-background"
+            ? "text-amber-950 dark:text-amber-100"
+            : "text-foreground/70 hover:text-foreground"
         }`}
         onClick={() => handleThemeChange("light")}
         data-testid="menu_light_button"
         id="menu_light_button"
       >
-        <ForwardedIconComponent strokeWidth={2} name="Sun" className="w-4" />
+        <ForwardedIconComponent 
+          strokeWidth={2} 
+          name="Sun" 
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${
+            selectedTheme === "light" ? "scale-110" : "scale-90"
+          }`}
+        />
       </Button>
 
       {/* Dark Theme Button */}
       <Button
         unstyled
-        className={`relative z-10 mx-1 inline-flex items-center rounded-full px-1 ${
+        className={`relative z-10 mx-1 inline-flex items-center justify-center rounded-full p-1.5 transition-all duration-200 ${
           selectedTheme === "dark"
-            ? "bg-indigo-foreground text-primary hover:bg-indigo-foreground"
-            : "text-foreground hover:bg-indigo-foreground hover:text-background"
+            ? "text-purple-100 dark:text-purple-100"
+            : "text-foreground/70 hover:text-foreground"
         }`}
         onClick={() => handleThemeChange("dark")}
         data-testid="menu_dark_button"
         id="menu_dark_button"
       >
-        <ForwardedIconComponent strokeWidth={2} name="Moon" className="w-4" />
+        <ForwardedIconComponent 
+          strokeWidth={2} 
+          name="Moon" 
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${
+            selectedTheme === "dark" ? "scale-110" : "scale-90"
+          }`}
+        />
       </Button>
 
       {/* System Theme Button */}
       <Button
         unstyled
-        className={`relative z-10 inline-flex items-center rounded-full px-1 ${
+        className={`relative z-10 inline-flex items-center justify-center rounded-full p-1.5 transition-all duration-200 ${
           selectedTheme === "system"
-            ? "bg-foreground text-background"
-            : "hover:bg-foreground hover:text-background"
+            ? "text-background dark:text-background"
+            : "text-foreground/70 hover:text-foreground"
         }`}
         onClick={() => handleThemeChange("system")}
         data-testid="menu_system_button"
@@ -92,7 +109,9 @@ export const ThemeButtons = () => {
       >
         <ForwardedIconComponent
           name="Monitor"
-          className="w-4"
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${
+            selectedTheme === "system" ? "scale-110" : "scale-90"
+          }`}
           strokeWidth={2}
         />
       </Button>

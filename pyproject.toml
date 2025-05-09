@@ -173,6 +173,9 @@ dev = [
     "pytest-timeout>=2.3.1",
 ]
 
+[tool.poetry.dependencies]
+python = ">=3.12.4,<3.13"
+
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }

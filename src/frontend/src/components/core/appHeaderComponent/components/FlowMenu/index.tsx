@@ -1,4 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+// import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -15,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
@@ -234,8 +237,10 @@ export const MenuBar = memo((): JSX.Element => {
     swatchColors.length;
 
   return currentFlowName && onFlowPage ? (
-    <div
-      className="flex w-full items-center justify-center gap-2"
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex w-full items-center justify-center gap-3 px-4 py-2"
       data-testid="menu_bar_wrapper"
     >
       <div
@@ -244,9 +249,12 @@ export const MenuBar = memo((): JSX.Element => {
         id="menu_flow_bar_navigation"
       >
         {currentFolder?.name && (
-          <div className="hidden truncate md:flex">
+          <motion.div 
+            className="hidden truncate md:flex"
+            whileHover={{ scale: 1.02 }}
+          >
             <div
-              className="cursor-pointer truncate pr-1 text-sm text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-sm font-medium text-muted-foreground hover:text-primary transition-colors duration-200"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -257,45 +265,34 @@ export const MenuBar = memo((): JSX.Element => {
             >
               {currentFolder?.name}
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
-      <div
-        className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
-        data-testid="menu_bar_separator"
+      
+      <div className="hidden w-fit shrink-0 select-none font-medium text-muted-foreground/50 md:flex">/</div>
+
+      <motion.div 
+        className={cn(`flex rounded-lg p-1.5 shadow-sm transition-all duration-200`, swatchColors[swatchIndex])}
+        whileHover={{ scale: 1.05 }}
       >
-        /
-      </div>
-      <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
         <IconComponent
           name={currentFlowIcon ?? "Workflow"}
-          className="h-3.5 w-3.5"
+          className="h-4 w-4"
         />
-      </div>
+      </motion.div>
 
-      <div
-        className="shrink-0 overflow-hidden text-sm sm:whitespace-normal"
-        data-testid="menu_bar_display"
-      >
-        <div
-          className="header-menu-bar-display-2 shrink-0"
-          data-testid="menu_bar_display_wrapper"
-        >
-          <div
-            className="header-menu-flow-name-2 shrink-0"
-            data-testid="flow-configuration-button"
-          >
-            <div
-              className="relative inline-flex"
-              style={{ width: Math.max(10, inputWidth) }}
-            >
+      <div className="shrink-0 overflow-hidden text-sm sm:whitespace-normal">
+        <div className="header-menu-bar-display-2 shrink-0 flex items-center gap-2">
+          <div className="header-menu-flow-name-2 shrink-0" data-testid="flow-configuration-button">
+            <div className="relative inline-flex" style={{ width: Math.max(10, inputWidth) }}>
               <Input
                 className={cn(
-                  "text- h-6 w-full shrink-0 cursor-text font-semibold",
-                  "bg-transparent pl-1 pr-0 transition-colors duration-200",
-                  "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
+                  "text-base h-8 w-full shrink-0 cursor-text font-semibold",
+                  "bg-transparent pl-2 pr-1 transition-all duration-200",
+                  "border-0 outline-none focus:border-0 focus:outline-none focus:ring-1 focus:ring-primary/20 rounded-md",
                   !editingName && "text-primary hover:opacity-80",
-                  isInvalidName && "text-status-red",
+                  isInvalidName && "text-status-red focus:ring-status-red/20",
+                  editingName && "bg-muted/30"
                 )}
                 onChange={handleEditName}
                 maxLength={38}
@@ -318,7 +315,7 @@ export const MenuBar = memo((): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-sm font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre text-base font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
@@ -326,85 +323,80 @@ export const MenuBar = memo((): JSX.Element => {
               </span>
             </div>
           </div>
+
           <DropdownMenu>
-            <DropdownMenuTrigger
-              className="group"
-              data-testid="flow_menu_trigger"
-            >
-              <IconComponent
-                name="ChevronDown"
-                className="flex h-5 w-5 text-muted-foreground hover:text-primary"
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-44 bg-white dark:bg-background">
-              <DropdownMenuLabel>Options</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => {
-                  handleAddFlow();
-                }}
-                className="cursor-pointer"
-                data-testid="menu_new_flow_button"
-                id="menu_new_flow_button"
+            <DropdownMenuTrigger className="group focus:outline-none" data-testid="flow_menu_trigger">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="rounded-md p-1 hover:bg-muted/80 transition-colors duration-200"
               >
-                <IconComponent name="Plus" className="header-menu-options" />
-                New
+                <IconComponent
+                  name="ChevronDown"
+                  className="flex h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-200"
+                />
+              </motion.div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-white dark:bg-background shadow-lg rounded-lg border-muted/20">
+              <DropdownMenuLabel className="text-sm font-semibold">Flow Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuItem
+                onClick={handleAddFlow}
+                className="cursor-pointer group transition-colors duration-200"
+                data-testid="menu_new_flow_button"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <IconComponent name="Plus" className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  <span>New Flow</span>
+                </div>
               </DropdownMenuItem>
 
               <DropdownMenuItem
-                onClick={() => {
-                  setOpenSettings(true);
-                }}
-                className="cursor-pointer"
+                onClick={() => setOpenSettings(true)}
+                className="cursor-pointer group transition-colors duration-200"
                 data-testid="menu_edit_flow_button"
-                id="menu_edit_flow_button"
               >
-                <IconComponent
-                  name="SquarePen"
-                  className="header-menu-options"
-                />
-                Edit Details
+                <div className="flex items-center gap-2 w-full">
+                  <IconComponent name="SquarePen" className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  <span>Edit Details</span>
+                </div>
               </DropdownMenuItem>
+
               {!autoSaving && (
                 <DropdownMenuItem
                   onClick={handleSave}
-                  className="cursor-pointer"
+                  className="cursor-pointer group transition-colors duration-200"
                   data-testid="menu_save_flow_button"
-                  id="menu_save_flow_button"
                 >
                   <ToolbarSelectItem
-                    value="Save"
+                    value="Save Flow"
                     icon="Save"
                     dataTestId=""
-                    shortcut={
-                      shortcuts.find(
-                        (s) => s.name.toLowerCase() === "changes save",
-                      )?.shortcut!
-                    }
+                    shortcut={shortcuts.find((s) => s.name.toLowerCase() === "changes save")?.shortcut!}
                   />
                 </DropdownMenuItem>
               )}
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
-                onClick={() => {
-                  setOpenLogs(true);
-                }}
-                className="cursor-pointer"
+                onClick={() => setOpenLogs(true)}
+                className="cursor-pointer group transition-colors duration-200"
                 data-testid="menu_logs_flow_button"
-                id="menu_logs_flow_button"
               >
-                <IconComponent
-                  name="ScrollText"
-                  className="header-menu-options"
-                />
-                Logs
+                <div className="flex items-center gap-2 w-full">
+                  <IconComponent name="ScrollText" className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  <span>View Logs</span>
+                </div>
               </DropdownMenuItem>
+
               <DropdownMenuItem
-                className="cursor-pointer"
+                className="cursor-pointer group transition-colors duration-200"
                 onClick={() => {
                   uploadFlow({ position: { x: 300, y: 100 } })
                     .then(() => {
-                      setSuccessData({
-                        title: "Uploaded successfully",
-                      });
+                      setSuccessData({ title: "Flow imported successfully" });
                     })
                     .catch((error) => {
                       setErrorData({
@@ -414,112 +406,110 @@ export const MenuBar = memo((): JSX.Element => {
                     });
                 }}
                 data-testid="menu_import_flow_button"
-                id="menu_import_flow_button"
               >
-                <IconComponent name="FileUp" className="header-menu-options" />
-                Import
+                <div className="flex items-center gap-2 w-full">
+                  <IconComponent name="FileUp" className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  <span>Import Flow</span>
+                </div>
               </DropdownMenuItem>
+
               <ExportModal>
-                <div className="header-menubar-item">
-                  <IconComponent
-                    name="FileDown"
-                    className="header-menu-options"
-                  />
-                  Export
+                <div className="flex items-center gap-2 w-full">
+                  <IconComponent name="FileDown" className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  <span>Export Flow</span>
                 </div>
               </ExportModal>
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
-                onClick={() => {
-                  undo();
-                }}
-                className="cursor-pointer"
+                onClick={undo}
+                className="cursor-pointer group transition-colors duration-200"
                 data-testid="menu_undo_flow_button"
-                id="menu_undo_flow_button"
               >
                 <ToolbarSelectItem
                   value="Undo"
                   icon="Undo"
                   dataTestId=""
-                  shortcut={
-                    shortcuts.find((s) => s.name.toLowerCase() === "undo")
-                      ?.shortcut!
-                  }
+                  shortcut={shortcuts.find((s) => s.name.toLowerCase() === "undo")?.shortcut!}
                 />
               </DropdownMenuItem>
+
               <DropdownMenuItem
-                onClick={() => {
-                  redo();
-                }}
-                className="cursor-pointer"
+                onClick={redo}
+                className="cursor-pointer group transition-colors duration-200"
                 data-testid="menu_redo_flow_button"
-                id="menu_redo_flow_button"
               >
                 <ToolbarSelectItem
                   value="Redo"
                   icon="Redo"
                   dataTestId=""
-                  shortcut={
-                    shortcuts.find((s) => s.name.toLowerCase() === "redo")
-                      ?.shortcut!
-                  }
+                  shortcut={shortcuts.find((s) => s.name.toLowerCase() === "redo")?.shortcut!}
                 />
               </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
-                onClick={() => {
-                  handleReloadComponents();
-                }}
-                className="cursor-pointer"
+                onClick={handleReloadComponents}
+                className="cursor-pointer group transition-colors duration-200"
                 data-testid="menu_refresh_flow_button"
-                id="menu_refresh_flow_button"
               >
-                <IconComponent
-                  name="RefreshCcw"
-                  className="header-menu-options"
-                />
-                Refresh All
+                <div className="flex items-center gap-2 w-full">
+                  <IconComponent name="RefreshCcw" className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  <span>Refresh Components</span>
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        <FlowSettingsModal
-          open={openSettings}
-          setOpen={setOpenSettings}
-        ></FlowSettingsModal>
-        <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
+        <FlowSettingsModal open={openSettings} setOpen={setOpenSettings} />
+        <FlowLogsModal open={openLogs} setOpen={setOpenLogs} />
       </div>
-      <div className={"hidden w-28 shrink-0 items-center sm:flex"}>
+
+      <div className="hidden w-28 shrink-0 items-center sm:flex gap-2">
         {!autoSaving && (
-          <Button
-            variant="primary"
-            size="icon"
-            disabled={autoSaving || !changesNotSaved || isBuilding}
-            className={cn("mr-1 h-9 px-2")}
-            onClick={handleSave}
-            data-testid="save-flow-button"
-          >
-            <IconComponent name={"Save"} className={cn("h-5 w-5")} />
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={autoSaving || !changesNotSaved || isBuilding}
+              className={cn(
+                "h-9 px-3 rounded-lg font-medium",
+                "transition-all duration-200",
+                "disabled:opacity-50"
+              )}
+              onClick={handleSave}
+              data-testid="save-flow-button"
+            >
+              <IconComponent name="Save" className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          </motion.div>
         )}
+
         <ShadTooltip
           content={
             autoSaving ? (
-              SAVED_HOVER +
-              (updatedAt
-                ? new Date(updatedAt).toLocaleString("en-US", {
-                    hour: "numeric",
-                    minute: "numeric",
-                  })
-                : "Never")
+              <div className="flex flex-col gap-1 p-2">
+                <span className="font-medium">Last saved:</span>
+                <span className="text-muted-foreground">
+                  {updatedAt
+                    ? new Date(updatedAt).toLocaleString("en-US", {
+                        hour: "numeric",
+                        minute: "numeric",
+                      })
+                    : "Never"}
+                </span>
+              </div>
             ) : (
-              <div className="flex w-48 flex-col gap-1 py-1">
-                <h2 className="text-base font-semibold">
-                  Auto-saving is disabled
-                </h2>
-                <p className="text-muted-foreground">
+              <div className="flex w-48 flex-col gap-1 p-2">
+                <h2 className="text-base font-semibold">Auto-saving disabled</h2>
+                <p className="text-sm text-muted-foreground">
                   <a
                     href="https://docs.langflow.org/configuration-auto-save"
-                    className="text-secondary underline"
+                    className="text-primary underline hover:text-primary/80 transition-colors duration-200"
                   >
                     Enable auto-saving
                   </a>{" "}
@@ -531,33 +521,63 @@ export const MenuBar = memo((): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default z-10"
         >
-          <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
-            <div className="flex cursor-default items-center gap-2 truncate text-sm">
-              <div className="w-full truncate text-sm">
-                {printByBuildStatus()}
-              </div>
-            </div>
-            <button
-              data-testid="stop_building_button"
-              disabled={!isBuilding}
-              onClick={(_) => {
-                if (isBuilding) {
-                  stopBuilding();
-                }
-              }}
-              className={
-                isBuilding
-                  ? "hidden items-center gap-1.5 text-sm text-status-red sm:flex"
-                  : "hidden"
-              }
-            >
-              <IconComponent name="Square" className="h-4 w-4" />
-              <span>Stop</span>
-            </button>
+          <div className="flex cursor-default items-center gap-2">
+            <AnimatePresence mode="wait">
+              {isBuilding ? (
+                <motion.div
+                  key="building"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 text-sm text-primary"
+                >
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-primary"></div>
+                  Building...
+                </motion.div>
+              ) : saveLoading ? (
+                <motion.div
+                  key="saving"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground"></div>
+                  Saving...
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="saved"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 text-sm font-medium text-accent-emerald-foreground"
+                >
+                  <IconComponent name="Check" className="h-4 w-4" />
+                  Saved
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {isBuilding && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={stopBuilding}
+                className="flex items-center gap-1.5 rounded-md bg-status-red/10 px-2 py-1 text-sm text-status-red hover:bg-status-red/20 transition-colors duration-200"
+                data-testid="stop_building_button"
+              >
+                <IconComponent name="Square" className="h-3.5 w-3.5" />
+                <span>Stop</span>
+              </motion.button>
+            )}
           </div>
         </ShadTooltip>
       </div>
-    </div>
+    </motion.div>
   ) : (
     <></>
   );

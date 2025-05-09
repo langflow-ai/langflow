@@ -38,7 +38,7 @@ test(
 
     // Log in as admin and create test user
     await page.goto("/");
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector("text=sign in to Sochflow", { timeout: 30000 });
     await page.getByPlaceholder("Username").fill("langflow");
     await page.getByPlaceholder("Password").fill("langflow");
     await page.evaluate(() => {
@@ -76,7 +76,7 @@ test(
     // ---- USER A SESSION ----
 
     // Log in as User A
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector("text=sign in to Sochflow", { timeout: 30000 });
     await page.getByPlaceholder("Username").fill(userAName);
     await page.getByPlaceholder("Password").fill(userAPassword);
     await page.evaluate(() => {
@@ -137,7 +137,7 @@ test(
     // ---- ADMIN SESSION AGAIN ----
 
     // Log in as admin again
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector("text=sign in to Sochflow", { timeout: 30000 });
     await page.getByPlaceholder("Username").fill("langflow");
     await page.getByPlaceholder("Password").fill("langflow");
     await page.evaluate(() => {

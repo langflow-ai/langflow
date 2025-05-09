@@ -380,19 +380,40 @@ const SideBarFoldersButtonsComponent = ({
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
       data-testid="project-sidebar"
+      className="bg-gradient-to-b from-background via-background/90 to-background/80 dark:from-background dark:via-background/80 dark:to-background/60 backdrop-blur-xl border-r border-border/50 shadow-xl shadow-background/10 rounded-xl m-2 transition-all duration-300"
     >
-      <SidebarHeader className="px-4 py-1">
-        <HeaderButtons
-          handleUploadFlowsToFolder={handleUploadFlowsToFolder}
-          isUpdatingFolder={isUpdatingFolder}
-          isPending={isPending}
-          addNewFolder={addNewFolder}
-        />
+      <SidebarHeader className="px-4 py-4 border-b border-border/50 bg-background/60 dark:bg-background/40 rounded-t-xl">
+        <div className="space-y-3">
+          <HeaderButtons
+            handleUploadFlowsToFolder={handleUploadFlowsToFolder}
+            isUpdatingFolder={isUpdatingFolder}
+            isPending={isPending}
+            addNewFolder={addNewFolder}
+          />
+          {!ENABLE_DATASTAX_LANGFLOW && (
+            <div className="flex w-full items-center" data-testid="button-store">
+              <SidebarMenuButton
+                size="md"
+                className="text-sm font-medium bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary transition-all duration-300 rounded-lg w-full justify-start gap-2 shadow-sm hover:shadow-md hover:scale-[1.02] dark:bg-primary/20 dark:hover:bg-primary/30 dark:text-primary"
+                onClick={() => {
+                  window.open("/store", "_blank");
+                }}
+              >
+                <ForwardedIconComponent name="Store" className="h-4 w-4" />
+                Store
+              </SidebarMenuButton>
+            </div>
+          )}
+        </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="p-4 py-2">
+      <SidebarContent className="scrollbar-thin scrollbar-thumb-border scrollbar-track-background/50">
+        <SidebarGroup className="p-4 py-3">
+          <div className="mb-4 px-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold bg-gradient-to-r from-primary/90 to-primary bg-clip-text text-transparent dark:from-primary/80 dark:to-primary">Projects</h2>
+            <div className="h-[2px] flex-1 mx-3 bg-gradient-to-r from-border/50 to-transparent"></div>
+          </div>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-2">
               {!loading ? (
                 folders.map((item, index) => {
                   const editFolderName = editFolders?.filter(
@@ -401,11 +422,11 @@ const SideBarFoldersButtonsComponent = ({
                   return (
                     <SidebarMenuItem
                       key={index}
-                      className="group/menu-button"
+                      className="group/menu-button transition-all duration-200"
                       onMouseEnter={() => setHoveredFolderId(item.id!)}
                       onMouseLeave={() => setHoveredFolderId(null)}
                     >
-                      <div className="relative flex w-full">
+                      <div className="relative flex w-full rounded-lg overflow-hidden">
                         <SidebarMenuButton
                           size="md"
                           onDragOver={(e) => dragOver(e, item.id!)}
@@ -418,18 +439,34 @@ const SideBarFoldersButtonsComponent = ({
                           isActive={checkPathName(item.id!)}
                           onClick={() => handleChangeFolder!(item.id!)}
                           className={cn(
-                            "flex-grow pr-8",
-                            hoveredFolderId === item.id && "bg-accent",
+                            "flex-grow pr-8 transition-all duration-300",
+                            "hover:bg-primary/10 hover:shadow-md hover:translate-x-1 dark:hover:bg-primary/20",
+                            hoveredFolderId === item.id && "bg-primary/10 shadow-sm dark:bg-primary/20",
+                            checkPathName(item.id!) && "bg-primary/20 shadow-md translate-x-1 font-medium dark:bg-primary/30",
                             checkHoveringFolder(item.id!),
+                            "before:absolute before:left-0 before:top-0 before:h-full before:w-[2px] before:bg-primary/0 before:transition-all",
+                            checkPathName(item.id!) && "before:bg-primary"
                           )}
                         >
                           <div
                             onDoubleClick={(event) => {
                               handleDoubleClick(event, item);
                             }}
-                            className="flex w-full items-center justify-between gap-2"
+                            className="flex w-full items-center justify-between gap-2 py-2.5"
                           >
-                            <div className="flex flex-1 items-center gap-2">
+                            <div className="flex flex-1 items-center gap-3">
+                              <div className={cn(
+                                "p-1 rounded-md transition-colors duration-300",
+                                checkPathName(item.id!) ? "bg-primary/10 dark:bg-primary/20" : "bg-transparent",
+                              )}>
+                                <ForwardedIconComponent 
+                                  name="Folder" 
+                                  className={cn(
+                                    "h-4 w-4 transition-colors duration-300",
+                                    checkPathName(item.id!) ? "text-primary" : "text-muted-foreground dark:text-muted-foreground"
+                                  )} 
+                                />
+                              </div>
                               {editFolderName?.edit && !isUpdatingFolder ? (
                                 <InputEditFolderName
                                   handleEditFolderName={handleEditFolderName}
@@ -442,7 +479,7 @@ const SideBarFoldersButtonsComponent = ({
                                   handleKeyDown={handleKeyDown}
                                 />
                               ) : (
-                                <span className="block w-0 grow truncate text-sm opacity-100">
+                                <span className="block w-0 grow truncate text-sm opacity-100 transition-colors duration-300 dark:text-foreground">
                                   {item.name === DEFAULT_FOLDER_DEPRECATED
                                     ? DEFAULT_FOLDER
                                     : item.name}
@@ -452,7 +489,7 @@ const SideBarFoldersButtonsComponent = ({
                           </div>
                         </SidebarMenuButton>
                         <div
-                          className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover/menu-button:opacity-100 transition-all duration-300 scale-90 group-hover/menu-button:scale-100"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <SelectOptions
@@ -460,9 +497,7 @@ const SideBarFoldersButtonsComponent = ({
                             index={index}
                             handleDeleteFolder={handleDeleteFolder}
                             handleDownloadFolder={handleDownloadFolder}
-                            handleSelectFolderToRename={
-                              handleSelectFolderToRename
-                            }
+                            handleSelectFolderToRename={handleSelectFolderToRename}
                             checkPathName={checkPathName}
                           />
                         </div>
@@ -471,10 +506,10 @@ const SideBarFoldersButtonsComponent = ({
                   );
                 })
               ) : (
-                <>
+                <div className="space-y-2 animate-pulse">
                   <SidebarFolderSkeleton />
                   <SidebarFolderSkeleton />
-                </>
+                </div>
               )}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -482,38 +517,40 @@ const SideBarFoldersButtonsComponent = ({
         <div className="flex-1" />
 
         {ENABLE_MCP_NOTICE && !isDismissedMcpDialog && (
-          <div className="p-2">
+          <div className="p-3">
             <MCPServerNotice handleDismissDialog={handleDismissMcpDialog} />
           </div>
         )}
       </SidebarContent>
       {ENABLE_FILE_MANAGEMENT && (
-        <SidebarFooter className="border-t">
-          <div className="grid w-full items-center gap-2 p-2">
-            {!ENABLE_DATASTAX_LANGFLOW && (
-              <div
-                className="flex w-full items-center"
-                data-testid="button-store"
-              >
-                <SidebarMenuButton
-                  size="md"
-                  className="text-sm"
-                  onClick={() => {
-                    window.open("/store", "_blank");
-                  }}
-                >
-                  <ForwardedIconComponent name="Store" className="h-4 w-4" />
-                  Store
-                </SidebarMenuButton>
-              </div>
-            )}
+        <SidebarFooter className="border-t border-border/50 bg-background/60 dark:bg-background/40 rounded-b-xl">
+          <div className="px-4 py-3">
+            <div className="mb-3 px-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold bg-gradient-to-r from-primary/90 to-primary bg-clip-text text-transparent dark:from-primary/80 dark:to-primary">Resources</h2>
+              <div className="h-[2px] flex-1 mx-3 bg-gradient-to-r from-border/50 to-transparent"></div>
+            </div>
             <SidebarMenuButton
               isActive={checkPathFiles}
               onClick={() => handleFilesClick?.()}
               size="md"
-              className="text-sm"
+              className={cn(
+                "text-sm font-medium transition-all duration-300 rounded-lg w-full justify-start gap-3",
+                "hover:bg-primary/10 hover:shadow-md hover:translate-x-1 dark:hover:bg-primary/20",
+                checkPathFiles && "bg-primary/20 shadow-md translate-x-1 dark:bg-primary/30"
+              )}
             >
-              <ForwardedIconComponent name="File" className="h-4 w-4" />
+              <div className={cn(
+                "p-1 rounded-md transition-colors duration-300",
+                checkPathFiles ? "bg-primary/10 dark:bg-primary/20" : "bg-transparent"
+              )}>
+                <ForwardedIconComponent 
+                  name="File" 
+                  className={cn(
+                    "h-4 w-4 transition-colors duration-300",
+                    checkPathFiles ? "text-primary" : "text-muted-foreground dark:text-muted-foreground"
+                  )} 
+                />
+              </div>
               My Files
             </SidebarMenuButton>
           </div>

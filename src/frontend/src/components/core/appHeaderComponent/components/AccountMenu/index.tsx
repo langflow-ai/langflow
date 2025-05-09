@@ -47,126 +47,91 @@ export const AccountMenu = () => {
       <HeaderMenu>
         <HeaderMenuToggle>
           <div
-            className="h-6 w-6 rounded-lg focus-visible:outline-0"
+            className="group h-9 w-9 overflow-hidden rounded-full ring-2 ring-border/50 transition-all duration-300 hover:ring-4 hover:ring-border focus-visible:outline-0 active:scale-95"
             data-testid="user-profile-settings"
           >
-            <ProfileIcon />
+            <div className="transition-transform duration-300 group-hover:scale-110">
+              <ProfileIcon />
+            </div>
           </div>
         </HeaderMenuToggle>
-        <HeaderMenuItems position="right" classNameSize="w-[272px]">
-          <div className="divide-y divide-foreground/10">
-            <div>
-              <div className="h-[44px] items-center px-4 pt-3">
-                <div className="flex items-center justify-between">
-                  <span
-                    data-testid="menu_version_button"
-                    id="menu_version_button"
-                    className="text-sm"
-                  >
-                    Version
-                  </span>
-                  <div
-                    className={cn(
-                      "float-right text-xs",
-                      isLatestVersion && "text-accent-emerald-foreground",
-                      !isLatestVersion && "text-accent-amber-foreground",
-                    )}
-                  >
-                    {version}{" "}
+        <HeaderMenuItems position="right" classNameSize="w-[320px]">
+          <div className="divide-y divide-border/10 overflow-hidden rounded-xl bg-background/80 shadow-lg backdrop-blur-sm">
+            {/* <div className="px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span
+                  data-testid="menu_version_button"
+                  id="menu_version_button"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Version
+                </span>
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium shadow-sm transition-all duration-300",
+                    isLatestVersion 
+                      ? "bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20" 
+                      : "animate-pulse bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20"
+                  )}
+                >
+                  <div className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    isLatestVersion ? "bg-emerald-500" : "bg-amber-500"
+                  )} />
+                  {version}
+                  <span className="opacity-60">
                     {isLatestVersion ? "(latest)" : "(update available)"}
-                  </div>
+                  </span>
                 </div>
               </div>
-            </div>
+            </div> */}
 
-            <div>
-              <HeaderMenuItemButton
-                onClick={() => {
-                  navigate("/settings");
-                }}
+            <div className="space-y-1 p-1.5">
+              {/* <HeaderMenuItemButton
+                onClick={() => navigate("/settings")}
+                icon="Settings"
               >
-                <span
-                  data-testid="menu_settings_button"
-                  id="menu_settings_button"
-                >
-                  Settings
-                </span>
-              </HeaderMenuItemButton>
+                <div className="flex items-center gap-3 px-2">
+                  <div className="rounded-md bg-muted p-1.5">
+                    <ForwardedIconComponent name="Settings" className="h-4 w-4 text-foreground/70" />
+                  </div>
+                  <span className="font-medium">Settings</span>
+                </div>
+              </HeaderMenuItemButton> */}
 
               {isAdmin && !autoLogin && (
-                <div>
-                  <HeaderMenuItemButton
-                    onClick={() => {
-                      navigate("/admin");
-                    }}
-                  >
-                    <span
-                      data-testid="menu_admin_page_button"
-                      id="menu_admin_page_button"
-                    >
-                      Admin Page
-                    </span>
-                  </HeaderMenuItemButton>
-                </div>
+                <HeaderMenuItemButton
+                  onClick={() => navigate("/admin")}
+                  icon="Shield"
+                >
+                  <div className="flex items-center gap-3 px-2">
+                    <div className="rounded-md bg-muted p-1.5">
+                      <ForwardedIconComponent name="Shield" className="h-4 w-4 text-foreground/70" />
+                    </div>
+                    <span className="font-medium">Admin Page</span>
+                  </div>
+                </HeaderMenuItemButton>
               )}
-              <HeaderMenuItemLink
-                newPage
-                href={ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL}
-              >
-                <span data-testid="menu_docs_button" id="menu_docs_button">
-                  Docs
-                </span>
-              </HeaderMenuItemLink>
             </div>
 
-            <div>
-              <HeaderMenuItemLink newPage href={GITHUB_URL}>
-                <span
-                  data-testid="menu_github_button"
-                  id="menu_github_button"
-                  className="flex items-center gap-2"
-                >
-                  <FaGithub className="h-4 w-4" />
-                  GitHub
-                </span>
-              </HeaderMenuItemLink>
-              <HeaderMenuItemLink newPage href={DISCORD_URL}>
-                <span
-                  data-testid="menu_discord_button"
-                  id="menu_discord_button"
-                  className="flex items-center gap-2"
-                >
-                  <FaDiscord className="h-4 w-4 text-[#5865F2]" />
-                  Discord
-                </span>
-              </HeaderMenuItemLink>
-              <HeaderMenuItemLink newPage href={TWITTER_URL}>
-                <span
-                  data-testid="menu_twitter_button"
-                  id="menu_twitter_button"
-                  className="flex items-center gap-2"
-                >
-                  <ForwardedIconComponent
-                    strokeWidth={2}
-                    name="TwitterX"
-                    className="h-4 w-4"
-                  />
-                  X
-                </span>
-              </HeaderMenuItemLink>
-            </div>
-
-            <div className="flex items-center justify-between px-4 py-[6.5px] text-sm">
-              <span className="">Theme</span>
-              <div className="relative top-[1px] float-right">
-                <ThemeButtons />
+            {/* <div className="p-3">
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2.5">
+                <span className="text-sm font-medium text-muted-foreground">Theme</span>
+                <div className="relative">
+                  <ThemeButtons />
+                </div>
               </div>
-            </div>
+            </div> */}
 
             {!autoLogin && (
-              <div>
+              <div className="p-1.5">
                 <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
-                  Logout
+                  <div className="flex items-center gap-3 px-2">
+                    <div className="rounded-md bg-destructive/10 p-1.5">
+                      <ForwardedIconComponent name="LogOut" className="h-4 w-4 text-destructive" />
+                    </div>
+                    <span className="font-medium text-destructive">Logout</span>
+                  </div>
                 </HeaderMenuItemButton>
               </div>
             )}

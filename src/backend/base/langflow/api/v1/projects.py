@@ -50,6 +50,7 @@ async def create_project(
         # so we need to check if the name is unique with `like` operator
         # if we find a flow with the same name, we add a number to the end of the name
         # based on the highest number found
+        print(Folder.name)
         if (
             await session.exec(
                 statement=select(Folder).where(Folder.name == new_project.name).where(Folder.user_id == current_user.id)

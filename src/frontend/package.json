@@ -135,6 +135,7 @@
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react-swc": "^3.7.0",
     "autoprefixer": "^10.4.19",
+    "daisyui": "^5.0.35",
     "eslint": "^9.5.0",
     "postcss": "^8.4.38",
     "prettier": "^3.3.2",

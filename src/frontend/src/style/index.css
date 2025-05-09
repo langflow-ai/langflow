@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* @plugin "daisyui"; */
 
 /* TODO: Confirm that all colors here are found in tailwind config */
 
@@ -456,3 +457,4 @@
     --indigo-foreground: 234.5 89.5% 73.9%;
   }
 }
+

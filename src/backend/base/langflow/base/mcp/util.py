@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any
+from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -108,8 +108,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         if "anyOf" in s:
-            # Handle common pattern for nullable types (anyOf with string and null)
-            subtypes = [sub.get("type") for sub in s["anyOf"] if isinstance(sub, dict) and "type" in sub]
+            subtypes = [parse_type(sub) for sub in s["anyOf"]]
+            # Remove Any if there are more specific types
+            filtered_subtypes = [t for t in subtypes if t is not Any]
+            # If all were Any, fallback to Any
+            if not filtered_subtypes:
+                filtered_subtypes = [Any]
+            # If only one type, return it directly
+            if len(filtered_subtypes) == 1:
+                return filtered_subtypes[0]
+            return Union[tuple(filtered_subtypes)]
 
             # Check if this is a simple nullable type (e.g., str | None)
             if len(subtypes) == NULLABLE_TYPE_LENGTH and "null" in subtypes:
@@ -141,8 +149,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return list[schema_type]
 
         if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
-            return _build_model(f"AnonModel{len(model_cache)}", s)
+            # Treat all objects as dict for Langflow compatibility
+            return dict
 
         # primitive fallback
         return {
@@ -180,8 +188,11 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         for prop_name, prop_schema in props.items():
             py_type = parse_type(prop_schema)
             is_required = prop_name in reqs
-            if not is_required:
+            if isinstance(py_type, tuple):
+                py_type = Union[(*py_type, type(None))]
+            else:
                 py_type = py_type | None
+            if not is_required:
                 default = prop_schema.get("default", None)
             else:
                 default = ...  # required by Pydantic
@@ -199,8 +210,11 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     for fname, fdef in top_props.items():
         py_type = parse_type(fdef)
-        if fname not in top_reqs:
+        if isinstance(py_type, tuple):
+            py_type = Union[(*py_type, type(None))]
+        else:
             py_type = py_type | None
+        if fname not in top_reqs:
             default = fdef.get("default", None)
         else:
             default = ...
