@@ -55,3 +55,37 @@ To post a message to a flow with a specific Session ID with curl, enter the foll
 
 Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your custom Session ID.
 
+## Work with images in the Playground
+
+The Playground supports handling images in base64 format, allowing you to work with image data directly in your flows.
+
+The Playground accepts the following image formats:
+
+* PNG
+* JPG/JPEG
+* GIF
+* BMP
+* WebP
+
+You can work with base64 images in the Playground in several ways:
+
+* **Direct Upload**: Use the image upload button in the chat interface to upload images directly.
+* **Drag and Drop**: Drag and drop image files into the chat interface.
+* **Programmatic Input**: Send base64-encoded images through the API.
+
+This example sends a base64-encoded image to the Playground using curl:
+
+```bash
+curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "session_id": "custom_session_123",
+    "input_value": "What is in this image?",
+    "input_type": "chat",
+    "output_type": "chat",
+    "files": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."]
+}'
+```
+
+The image is displayed in the chat interface and can be processed by your flow components.
+
