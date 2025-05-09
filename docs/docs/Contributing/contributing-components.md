@@ -122,6 +122,6 @@ Otherwise, create a new component and move the old component to `legacy`.
 Create tests using one of the `ComponentTestBase` classes.
 For more information, see [Contribute component tests](/contributing-component-tests).
 3. Mark deprecated elements.
-Flag outdated fields and outputs as deprecated.
+Flag outdated fields and outputs as `deprecated`.
 4. Document your changes.
 Include migration instructions if breaking changes occur.
