@@ -131,7 +131,7 @@ class BigQueryExecutorComponent(Component):
 
         try:
             client = bigquery.Client(credentials=credentials, project=project_id)
-            
+
             # Check for empty or whitespace-only query before cleaning
             if not str(self.query).strip():
                 msg = "No valid SQL query found in input text."

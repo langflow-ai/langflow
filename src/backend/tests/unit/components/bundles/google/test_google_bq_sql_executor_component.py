@@ -523,7 +523,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with SQL code block and quotes
         query_with_code_block_and_quotes = '```sql\n"SELECT * FROM table"\n```'
-        component = component_class(**{**default_kwargs, "query": query_with_code_block_and_quotes, "clean_query": True})
+        component = component_class(
+            **{**default_kwargs, "query": query_with_code_block_and_quotes, "clean_query": True}
+        )
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
