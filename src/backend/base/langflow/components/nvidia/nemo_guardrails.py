@@ -1,7 +1,12 @@
 import yaml
 import time
 import requests
+import logging
+import http.client as http_client
+import httpx
+import json
 from typing import Any
+from contextlib import nullcontext
 
 from langflow.io import FileInput, MultilineInput, HandleInput, Output
 from langflow.base.models.model import LCModelComponent
@@ -10,6 +15,98 @@ from nemoguardrails import RailsConfig
 from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 from langflow.inputs import MultiselectInput, MessageTextInput, SecretStrInput, DropdownInput, BoolInput
 from langflow.schema.dotdict import dotdict
+
+def setup_logging():
+    """Set up logging configuration"""
+    # Enable debug logging for httpx and httpcore
+    logging.getLogger('httpx').setLevel(logging.DEBUG)
+    logging.getLogger('httpcore').setLevel(logging.DEBUG)
+    # Enable debug logging
+    logging.basicConfig(level=logging.DEBUG)
+
+def setup_request_logging():
+    """Set up request logging for httpx"""
+    def log_request(request):
+        print("\n=== Request Details ===")
+        print(f"URL: {request.url}")
+        print(f"Method: {request.method}")
+        print("Headers:")
+        sensitive_headers = {'authorization', 'api-key', 'x-api-key', 'token', 'bearer', 'secret'}
+        for header, value in request.headers.items():
+            if not any(sensitive in header.lower() for sensitive in sensitive_headers):
+                print(f"  {header}: {value}")
+            else:
+                print(f"  {header}: [REDACTED]")
+        print("Body:")
+        # Try to parse and redact sensitive info from body if it's JSON
+        try:
+            body = request.content.decode('utf-8')
+            if body:
+                try:
+                    body_json = json.loads(body)
+                    # Redact common sensitive fields
+                    sensitive_fields = {'api_key', 'token', 'secret', 'password', 'key', 'auth'}
+                    for field in sensitive_fields:
+                        if field in body_json:
+                            body_json[field] = '[REDACTED]'
+                    print(json.dumps(body_json, indent=2))
+                except json.JSONDecodeError:
+                    # If not JSON, just print the body
+                    print(body)
+        except Exception:
+            print("[Unable to decode body]")
+        print("===================\n")
+    
+    return httpx.Client(event_hooks={'request': [log_request]})
+
+class HTTPDebugContext:
+    """Context manager for HTTP debug logging."""
+    def __init__(self):
+        self.original_levels = {}
+        self.client = None
+
+    def __enter__(self):
+        # Store original logging levels
+        self.original_levels = {
+            'httpx': logging.getLogger('httpx').level,
+            'httpcore': logging.getLogger('httpcore').level,
+            'root': logging.getLogger().level
+        }
+        
+        # Set debug levels
+        logging.getLogger('httpx').setLevel(logging.DEBUG)
+        logging.getLogger('httpcore').setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
+        
+        # Set up request logging
+        self.client = setup_request_logging()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Restore original logging levels
+        for logger_name, level in self.original_levels.items():
+            logging.getLogger(logger_name).setLevel(level)
+        
+        # Clean up client
+        if self.client:
+            self.client.close()
+
+def enable_http_debug_logging():
+    """Enable all HTTP debug logging"""
+    # Set up HTTP connection debugging
+    http_client.HTTPConnection.debuglevel = 1
+    
+    # Set up basic logging
+    logging.basicConfig(level=logging.DEBUG)
+    
+    # Enable urllib3 request logging
+    requests_log = logging.getLogger("requests.packages.urllib3")
+    requests_log.setLevel(logging.DEBUG)
+    requests_log.propagate = True
+    
+    # Set up detailed request logging
+    setup_logging()
+    setup_request_logging()
 
 # Default prompts
 DEFAULT_SELF_CHECK_INPUT_PROMPT = """Instruction: {{ user_input }}
@@ -192,6 +289,13 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=True,
             info="If enabled, sets verbose=True on the underlying RunnableRails for detailed debugging output.",
         ),
+        BoolInput(
+            name="http_logging",
+            display_name="HTTP Request Logging",
+            value=False,
+            advanced=True,
+            info="If enabled, logs detailed HTTP request information (headers and body) with sensitive data redacted.",
+        ),
     ]
 
     def generate_rails_config(self) -> str:
@@ -211,13 +315,9 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         }
 
         # Self check rails
-        if (
-            "self check input" in self.rails
-            or "self check output" in self.rails
-            or "hallucination" in self.rails
-        ):
+        if "self check input" in self.rails:
             config_dict["models"].append({
-                "type": "self_check",
+                "type": "self_check_input",
                 "engine": "nim",
                 "model": self.self_check_model_name,
                 "parameters": {
@@ -225,25 +325,41 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                     "api_key": self.self_check_model_api_key,
                 },
             })
-
-        if "self check input" in self.rails:
-            config_dict["rails"]["input"]["flows"].append("self check input")
+            config_dict["rails"]["input"]["flows"].append("self check input $model=self_check_input")
             config_dict["prompts"].append({
-                "task": "self_check_input",
+                "task": "self_check_input $model=self_check_input",
                 "content": self.self_check_input_prompt
             })
 
         if "self check output" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("self check output")
+            config_dict["models"].append({
+                "type": "self_check_output",
+                "engine": "nim",
+                "model": self.self_check_model_name,
+                "parameters": {
+                    "base_url": self.self_check_model_url,
+                    "api_key": self.self_check_model_api_key,
+                },
+            })
+            config_dict["rails"]["output"]["flows"].append("self check output $model=self_check_output")
             config_dict["prompts"].append({
-                "task": "self_check_output",
+                "task": "self_check_output $model=self_check_output",
                 "content": self.self_check_output_prompt
             })
 
         if "self check hallucination" in self.rails:
-            config_dict["rails"]["output"]["flows"].append("self check hallucination")
+            config_dict["models"].append({
+                "type": "self_check_hallucination",
+                "engine": "nim",
+                "model": self.self_check_model_name,
+                "parameters": {
+                    "base_url": self.self_check_model_url,
+                    "api_key": self.self_check_model_api_key,
+                },
+            })
+            config_dict["rails"]["output"]["flows"].append("self check hallucination $model=self_check_hallucination")
             config_dict["prompts"].append({
-                "task": "self_check_hallucination",
+                "task": "self_check_hallucination $model=self_check_hallucination",
                 "content": self.self_check_hallucination_prompt
             })
 
@@ -315,33 +431,36 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             self._safe_log_config(yaml_content)
             start = time.perf_counter()
 
-        try:
-            yaml.safe_load(yaml_content)
-        except yaml.YAMLError as e:
-            raise ValueError("Invalid YAML syntax") from e
+        # Use context manager for HTTP debug logging if enabled
+        context = HTTPDebugContext() if self.http_logging else nullcontext()
+        with context:
+            try:
+                yaml.safe_load(yaml_content)
+            except yaml.YAMLError as e:
+                raise ValueError("Invalid YAML syntax") from e
 
-        # Create Colang content if topic control is enabled
-        colang_content = None
-        if "topic control" in self.rails:
-            colang_content = f"""
+            # Create Colang content if topic control is enabled
+            colang_content = None
+            if "topic control" in self.rails:
+                colang_content = f"""
 define bot refuse to respond
   "{self.off_topic_message}"
 """
 
-        config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
+            config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
 
-        try:
-            config.model_validate(config)
-        except Exception as e:
-            print(f"Validation Error: {e}")
+            try:
+                config.model_validate(config)
+            except Exception as e:
+                print(f"Validation Error: {e}")
 
-        guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
+            guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
 
-        if self.guardrails_verbose:
-            end = time.perf_counter()
-            self.log(f"Guardrail creation took {end - start:.6f} seconds")
+            if self.guardrails_verbose:
+                end = time.perf_counter()
+                self.log(f"Guardrail creation took {end - start:.6f} seconds")
 
-        return guardrails
+            return guardrails
 
     def get_models(self) -> list[str]:
         """Get available models from NVIDIA API that are suitable for self-check tasks."""
