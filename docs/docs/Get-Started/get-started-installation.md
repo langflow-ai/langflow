@@ -266,18 +266,12 @@ sudo apt-get install gcc
 
 ## Install and run Langflow Desktop
 
-:::important
-Langflow Desktop is in **Alpha**.
-Development is ongoing, and the features and functionality are subject to change.
-:::
-
 **Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
 
-:::important
-Langflow Desktop is available only for macOS.
-:::
-
 To install Langflow Desktop, follow these steps:
+
+<Tabs>
+<TabItem value="macOS" label="macOS" default>
 
 1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
 2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
@@ -287,6 +281,21 @@ To install Langflow Desktop, follow these steps:
 6. When the installation completes, open the Langflow application.
 
 The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
+
+</TabItem>
+<TabItem value="Windows" label="Windows">
+
+1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
+2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+3. Open the **File Explorer**, and then navigate to **Downloads**.
+4. Double-click the downloaded `*.msi` file.
+5. To install Langflow Desktop, follow the instructions to install the executable file.
+6. When the installation completes, open the Langflow application.
+
+The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
+
+</TabItem>
+</Tabs>
 
 ### Manage your Langflow version in Langflow Desktop
 
