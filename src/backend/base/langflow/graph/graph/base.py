@@ -96,7 +96,7 @@ class Graph:
         self.user_id = user_id
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
-        self._is_state_vertices: list[str] = []
+        self._is_state_vertices: list[str] | None = None
         self.has_session_id_vertices: list[str] = []
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
@@ -491,6 +491,40 @@ class Graph:
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
 
+    def get_state(self, name: str) -> Data | None:
+        """Returns the state of the graph with the given name.
+
+        Args:
+            name (str): The name of the state.
+
+        Returns:
+            Optional[Data]: The state record, or None if the state does not exist.
+        """
+        return self.state_manager.get_state(name, run_id=self._run_id)
+
+    def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
+        """Updates the state of the graph with the given name.
+
+        Args:
+            name (str): The name of the state.
+            record (Union[str, Data]): The new state record.
+            caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
+        """
+        if caller:
+            # If there is a caller which is a vertex_id, I want to activate
+            # all StateVertex in self.vertices that are not the caller
+            # essentially notifying all the other vertices that the state has changed
+            # This also has to activate their successors
+            self.activate_state_vertices(name, caller)
+
+        self.state_manager.update_state(name, record, run_id=self._run_id)
+
+    @property
+    def is_state_vertices(self) -> list[str]:
+        if self._is_state_vertices is None:
+            self._is_state_vertices = [vertex.id for vertex in self.vertices if vertex.is_state]
+        return self._is_state_vertices
+
     def activate_state_vertices(self, name: str, caller: str) -> None:
         """Activates the state vertices in the graph with the given name and caller.
 
@@ -500,17 +534,19 @@ class Graph:
         """
         vertices_ids = set()
         new_predecessor_map = {}
-        for vertex_id in self._is_state_vertices:
+        activated_vertices = []
+        for vertex_id in self.is_state_vertices:
             caller_vertex = self.get_vertex(caller)
             vertex = self.get_vertex(vertex_id)
             if vertex_id == caller or vertex.display_name == caller_vertex.display_name:
                 continue
             if (
-                isinstance(vertex.raw_params["name"], str)
-                and name in vertex.raw_params["name"]
+                isinstance(vertex.raw_params["context_key"], str)
+                and name in vertex.raw_params["context_key"]
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
+                activated_vertices.append(vertex_id)
                 vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
                 # Update run_manager.run_predecessors because we are activating vertices
@@ -533,7 +569,7 @@ class Graph:
         vertices_ids.update(new_predecessor_map.keys())
         vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
 
-        self.activated_vertices = list(vertices_ids)
+        self.activated_vertices = activated_vertices
         self.vertices_to_run.update(vertices_ids)
         self.run_manager.update_run_state(
             run_predecessors=new_predecessor_map,
@@ -668,6 +704,8 @@ class Graph:
             if vertex.has_session_id:
                 self.has_session_id_vertices.append(vertex.id)
             if vertex.is_state:
+                if self._is_state_vertices is None:
+                    self._is_state_vertices = []
                 self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
