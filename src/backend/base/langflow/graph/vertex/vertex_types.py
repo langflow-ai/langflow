@@ -465,14 +465,6 @@ class StateVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
         self.steps = [self._build]
-        self.is_state = False
-
-    @property
-    def successors_ids(self) -> list[str]:
-        if self._successors_ids is None:
-            self.is_state = False
-            return super().successors_ids
-        return self._successors_ids
 
     def built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
