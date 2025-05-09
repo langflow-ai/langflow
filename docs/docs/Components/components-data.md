@@ -123,7 +123,7 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| path | Files | The path to file(s) to load. Supports individual files or bundled archives. |
+| path | Files | The path to files to load. Supports individual files or bundled archives. |
 | file_path | Server File Path | A Data object with a `file_path` property pointing to the server file or a Message object with a path to the file. Supersedes 'Path' but supports the same file types. |
 | separator | Separator | The separator to use between multiple outputs in Message format. |
 | silent_errors | Silent Errors | If true, errors do not raise an exception. |
