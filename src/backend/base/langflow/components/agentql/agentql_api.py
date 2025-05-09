@@ -1,5 +1,4 @@
 import httpx
-
 from loguru import logger
 
 from langflow.components.agentql.utils import (
@@ -7,7 +6,6 @@ from langflow.components.agentql.utils import (
     AGENTQL_REST_API_DOCUMENTATION,
     INVALID_API_KEY_MESSAGE,
 )
-
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import (
