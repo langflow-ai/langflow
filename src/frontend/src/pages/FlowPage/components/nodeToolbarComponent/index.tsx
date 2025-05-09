@@ -52,6 +52,8 @@ const NodeToolbarComponent = memo(
     onCloseAdvancedModal,
     updateNode,
     isOutdated,
+    isUserEdited,
+    hasBreakingChange,
     setOpenShowMoreOptions,
   }: nodeToolbarPropsType): JSX.Element => {
     const version = useDarkStore((state) => state.version);
@@ -73,7 +75,6 @@ const NodeToolbarComponent = memo(
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
     const frozen = data.node?.frozen ?? false;
-    const currentFlow = useFlowStore((state) => state.currentFlow);
     const updateNodeInternals = useUpdateNodeInternals();
 
     const paste = useFlowStore((state) => state.paste);
@@ -93,21 +94,6 @@ const NodeToolbarComponent = memo(
       },
     });
 
-    const flowDataNodes = useMemo(
-      () => currentFlow?.data?.nodes,
-      [currentFlow],
-    );
-
-    const node = useMemo(
-      () => flowDataNodes?.find((n) => n.id === data.id),
-      [flowDataNodes, data.id],
-    );
-
-    const index = useMemo(
-      () => flowDataNodes?.indexOf(node!)!,
-      [flowDataNodes, node],
-    );
-
     const postToolModeValue = usePostTemplateValue({
       node: data.node!,
       nodeId: data.id,
@@ -117,8 +103,6 @@ const NodeToolbarComponent = memo(
     const isSaved = flows?.some((flow) =>
       Object.values(flow).includes(data.node?.display_name!),
     );
-
-    const setNode = useFlowStore((state) => state.setNode);
 
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
@@ -622,8 +606,9 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      value={"Restore"}
-                      icon={"RefreshCcwDot"}
+                      style={hasBreakingChange ? "text-warning" : ""}
+                      value={isUserEdited ? "Restore" : "Update"}
+                      icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
                     />
                   </SelectItem>

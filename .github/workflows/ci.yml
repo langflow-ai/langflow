@@ -87,6 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should-run-ci: ${{ (needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group')) }}
+      should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
@@ -94,6 +95,7 @@ jobs:
       - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
       - run: echo "Event name -> ${{ github.event_name }}"
       - run: echo "Nightly build status -> ${{ needs.check-nightly-status.outputs.should-proceed }}"
+      - run: echo "Should run tests -> ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}"
 
   path-filter:
     needs: set-ci-condition
@@ -125,16 +127,16 @@ jobs:
           filters: ./.github/changes-filter.yaml
 
   test-backend:
-    needs: path-filter
+    needs: [path-filter, set-ci-condition]
     name: Run Backend Tests
-    if: ${{ needs.path-filter.outputs.python == 'true'}}
+    if: ${{ needs.path-filter.outputs.python == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
   test-frontend:
-    needs: path-filter
+    needs: [path-filter, set-ci-condition]
     name: Run Frontend Tests
-    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true' }}
+    if: ${{ (needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
@@ -167,6 +169,7 @@ jobs:
         lint-backend,
         test-docs-build,
         set-ci-condition,
+        path-filter
       ]
 
     if: always()
@@ -174,11 +177,13 @@ jobs:
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true' && '0' || '1'}}
+      EXIT_CODE: ${{ ((!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true') || (needs.set-ci-condition.outputs.should-run-tests == 'false' && needs.set-ci-condition.outputs.should-run-ci == 'true')) && '0' || '1' }}
     steps:
       - name: "CI Success"
         run: |
           echo $JOBS_JSON
           echo $RESULTS_JSON
+          echo "Should run tests: ${{ needs.set-ci-condition.outputs.should-run-tests }}"
+          echo "Should run CI: ${{ needs.set-ci-condition.outputs.should-run-ci }}"
           echo "Exiting with $EXIT_CODE"
           exit $EXIT_CODE

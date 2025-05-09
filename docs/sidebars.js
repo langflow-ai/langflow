@@ -39,6 +39,7 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
+        "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
       ],
@@ -112,9 +113,25 @@ module.exports = {
           label: "Docker"
         },
         {
-          type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
+          type: "category",
+          label: "Kubernetes",
+          items: [
+            {
+              type: "doc",
+              id: "Deployment/deployment-prod-best-practices",
+              label: "Langflow architecture and best practices"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-dev",
+              label: "Deploy in development"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-prod",
+              label: "Deploy in production"
+            }
+          ]
         },
         {
           type: "doc",
@@ -135,7 +152,7 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-render",
           label: "Render"
-        }
+        },
       ],
     },
     {
@@ -158,14 +175,6 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
-        {
-          type: 'category',
-          label: 'MCP (Model Context Protocol)',
-          items: [
-            'Integrations/MCP/integrations-mcp',
-            'Integrations/MCP/mcp-component-astra',
-          ],
-        },
         "Integrations/Apify/integrations-apify",
         {
           type: "doc",
@@ -177,6 +186,11 @@ module.exports = {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
           label: "Composio",
+        },
+        {
+          type: "doc",
+          id: "Integrations/mcp-component-astra",
+          label: "Astra DB MCP server",
         },
         {
           type: 'category',

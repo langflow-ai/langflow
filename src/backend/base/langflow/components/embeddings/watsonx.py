@@ -46,6 +46,8 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         StrInput(
             name="project_id",
             display_name="watsonx project id",
+            info="The project ID or deployment space ID that is associated with the foundation model.",
+            required=True,
         ),
         SecretStrInput(
             name="api_key",

@@ -104,6 +104,7 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  method?: string;
   display_name: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;

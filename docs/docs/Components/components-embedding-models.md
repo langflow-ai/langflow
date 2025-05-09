@@ -217,10 +217,6 @@ Use this component to create embeddings with Hugging Face's hosted models, or to
 | API Key | API Key | The API key for accessing the Hugging Face Inference API. |
 | API URL | API URL | The URL of the Hugging Face Inference API. |
 | Model Name | Model Name | The name of the model to use for embeddings. |
-| Cache Folder | Cache Folder | The folder path to cache Hugging Face models. |
-| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process. |
-| Model Kwargs | Model Arguments | Additional arguments for the model. |
-| Multi Process | Multi-Process | Whether to use multiple processes. |
 
 ### Outputs
 
@@ -358,7 +354,7 @@ This value is set as the `OLLAMA_HOST` environment variable in Ollama. The defau
 2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
 3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
 4. Connect the **Ollama** embeddings component to a flow.
-For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma) vector store to generate embeddings for split text.
+For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma-db) vector store to generate embeddings for split text.
 
 ![Ollama embeddings connected to Chroma DB](/img/component-ollama-embeddings-chromadb.png)
 

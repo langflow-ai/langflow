@@ -205,9 +205,7 @@
                 "display_name": "Apify Token",
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "apify_token",
                 "password": true,
@@ -409,9 +407,7 @@
                 "display_name": "Apify Token",
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "apify_token",
                 "password": true,

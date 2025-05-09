@@ -14,6 +14,7 @@ class GoogleDriveSearchComponent(Component):
     display_name = "Google Drive Search"
     description = "Searches Google Drive files using provided credentials and query parameters."
     icon = "Google"
+    legacy: bool = True
 
     inputs = [
         SecretStrInput(

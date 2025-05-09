@@ -1,11 +1,13 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
-import { useUtilityStore } from "@/stores/utilityStore";
+import { FlowStoreType } from "@/types/zustand/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "../../components/ui/button";
 import {
   ICON_STROKE_WIDTH,
@@ -24,12 +26,12 @@ import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
-import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
 import NodeStatus from "./components/NodeStatus";
+import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
@@ -72,13 +74,12 @@ function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
-  const [isOutdated, setIsOutdated] = useState(false);
-  const [isUserEdited, setIsUserEdited] = useState(false);
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
+  const [openUpdateModal, setOpenUpdateModal] = useState(false);
 
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
@@ -90,7 +91,15 @@ function GenericNode({
   const edges = useFlowStore((state) => state.edges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
-  const dismissAll = useUtilityStore((state) => state.dismissAll);
+  const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
+  const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
+  const removeDismissedNodes = useFlowStore(
+    (state) => state.removeDismissedNodes,
+  );
+  const dismissAll = useMemo(
+    () => dismissedNodes.includes(data.id),
+    [dismissedNodes, data.id],
+  );
 
   const showNode = data.showNode ?? true;
 
@@ -104,16 +113,31 @@ function GenericNode({
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
 
+  const componentUpdate = useFlowStore(
+    useShallow((state: FlowStoreType) =>
+      state.componentsToUpdate.find((component) => component.id === data.id),
+    ),
+  );
+  const {
+    outdated: isOutdated,
+    breakingChange: hasBreakingChange,
+    userEdited: isUserEdited,
+  } = componentUpdate ?? {
+    outdated: false,
+    breakingChange: false,
+    userEdited: false,
+  };
+
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
     data.node!,
     setNode,
-    setIsOutdated,
-    setIsUserEdited,
     updateNodeInternals,
   );
 
-  useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [data.node.template]);
 
   if (!data.node!.template) {
     setErrorData({
@@ -127,52 +151,61 @@ function GenericNode({
     deleteNode(data.id);
   }
 
-  const handleUpdateCode = useCallback(() => {
-    setLoadingUpdate(true);
-    takeSnapshot();
+  const handleUpdateCode = useCallback(
+    (confirmed: boolean = false) => {
+      if (!confirmed && hasBreakingChange) {
+        setOpenUpdateModal(true);
+        return;
+      }
+      setLoadingUpdate(true);
+      takeSnapshot();
 
-    const thisNodeTemplate = templates[data.type]?.template;
-    if (!thisNodeTemplate?.code) return;
+      const thisNodeTemplate = templates[data.type]?.template;
+      if (!thisNodeTemplate?.code) return;
 
-    const currentCode = thisNodeTemplate.code.value;
-    if (data.node) {
-      validateComponentCode(
-        { code: currentCode, frontend_node: data.node },
-        {
-          onSuccess: ({ data: resData, type }) => {
-            if (resData && type && updateNodeCode) {
-              const newNode = processNodeAdvancedFields(
-                resData,
-                edges,
-                data.id,
-              );
-              updateNodeCode(newNode, currentCode, "code", type);
+      const currentCode = thisNodeTemplate.code.value;
+      if (data.node) {
+        validateComponentCode(
+          { code: currentCode, frontend_node: data.node },
+          {
+            onSuccess: ({ data: resData, type }) => {
+              if (resData && type && updateNodeCode) {
+                const newNode = processNodeAdvancedFields(
+                  resData,
+                  edges,
+                  data.id,
+                );
+                updateNodeCode(newNode, currentCode, "code", type);
+                removeDismissedNodes([data.id]);
+                setLoadingUpdate(false);
+              }
+            },
+            onError: (error) => {
+              setErrorData({
+                title: "Error updating Component code",
+                list: [
+                  "There was an error updating the Component.",
+                  "If the error persists, please report it on our Discord or GitHub.",
+                ],
+              });
+              console.error(error);
               setLoadingUpdate(false);
-            }
+            },
           },
-          onError: (error) => {
-            setErrorData({
-              title: "Error updating Component code",
-              list: [
-                "There was an error updating the Component.",
-                "If the error persists, please report it on our Discord or GitHub.",
-              ],
-            });
-            console.error(error);
-            setLoadingUpdate(false);
-          },
-        },
-      );
-    }
-  }, [
-    data,
-    templates,
-    edges,
-    updateNodeCode,
-    validateComponentCode,
-    setErrorData,
-    takeSnapshot,
-  ]);
+        );
+      }
+    },
+    [
+      data,
+      templates,
+      hasBreakingChange,
+      edges,
+      updateNodeCode,
+      validateComponentCode,
+      setErrorData,
+      takeSnapshot,
+    ],
+  );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
     if (isOutdated && selected) {
@@ -192,11 +225,6 @@ function GenericNode({
       data.node?.tool_mode ??
       false,
     [data.node?.outputs, data.node?.tool_mode],
-  );
-
-  const hasToolMode = useMemo(
-    () => checkHasToolMode(data.node?.template ?? {}),
-    [data.node?.template],
   );
 
   const hasOutputs = useMemo(
@@ -233,7 +261,13 @@ function GenericNode({
           showNode={showNode}
           isToolMode={isToolMode}
           showHiddenOutputs={showHiddenOutputs}
-          hidden={key === "hidden"}
+          hidden={
+            key === "hidden"
+              ? showHiddenOutputs
+                ? output.hidden
+                : true
+              : false
+          }
         />
       ));
     },
@@ -264,6 +298,11 @@ function GenericNode({
     return useFlowStore.getState().nodes.filter((node) => node.selected).length;
   }, [selected]);
 
+  const shouldShowUpdateComponent = useMemo(
+    () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+  );
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected && selectedNodesCount === 1 ? (
       <>
@@ -289,8 +328,10 @@ function GenericNode({
             showNode={showNode}
             openAdvancedModal={false}
             onCloseAdvancedModal={() => {}}
-            updateNode={handleUpdateCode}
-            isOutdated={isOutdated && isUserEdited}
+            updateNode={() => handleUpdateCode()}
+            isOutdated={isOutdated && dismissAll}
+            isUserEdited={isUserEdited}
+            hasBreakingChange={hasBreakingChange}
           />
         </div>
         <div className="-z-10">
@@ -361,10 +402,9 @@ function GenericNode({
         showNode={showNode}
         icon={data.node?.icon}
         isGroup={!!data.node?.flow}
-        hasToolMode={hasToolMode ?? false}
       />
     );
-  }, [data.type, showNode, data.node?.icon, data.node?.flow, hasToolMode]);
+  }, [data.type, showNode, data.node?.icon, data.node?.flow]);
 
   const renderNodeName = useCallback(() => {
     return (
@@ -405,10 +445,11 @@ function GenericNode({
         selected={selected}
         setBorderColor={setBorderColor}
         buildStatus={buildStatus}
+        dismissAll={dismissAll}
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
+        isBreakingChange={hasBreakingChange}
         getValidationStatus={getValidationStatus}
-        handleUpdateComponent={handleUpdateCode}
       />
     );
   }, [
@@ -458,42 +499,30 @@ function GenericNode({
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
-    <div
-      className={cn(
-        isOutdated && !isUserEdited && !dismissAll ? "relative -mt-10" : "",
-      )}
-    >
+    <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
           showNode ? "w-80" : `w-48`,
-          "generic-node-div group/node relative rounded-xl shadow-sm hover:shadow-md",
+          "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >
+        <UpdateComponentModal
+          open={openUpdateModal}
+          setOpen={setOpenUpdateModal}
+          onUpdateNode={() => handleUpdateCode(true)}
+          components={componentUpdate ? [componentUpdate] : []}
+        />
         {memoizedNodeToolbarComponent}
-        {isOutdated && !isUserEdited && !dismissAll && (
-          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
-            <ForwardedIconComponent
-              name="AlertTriangle"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="icon-size shrink-0"
-            />
-            <span className="flex-1 truncate text-sm font-medium">
-              {showNode && "Update Ready"}
-            </span>
-
-            <Button
-              variant="warning"
-              size="iconMd"
-              className="shrink-0 px-2.5 text-xs"
-              onClick={handleUpdateCode}
-              loading={loadingUpdate}
-              data-testid="update-button"
-            >
-              Update
-            </Button>
-          </div>
+        {shouldShowUpdateComponent && (
+          <NodeUpdateComponent
+            hasBreakingChange={hasBreakingChange}
+            showNode={showNode}
+            handleUpdateCode={() => handleUpdateCode()}
+            loadingUpdate={loadingUpdate}
+            setDismissAll={() => addDismissedNodes([data.id])}
+          />
         )}
         <div
           data-testid={`${data.id}-main-node`}
@@ -524,8 +553,7 @@ function GenericNode({
               {!showNode && (
                 <>
                   {renderInputParameters()}
-                  {shownOutputs &&
-                    shownOutputs.length > 0 &&
+                  {shownOutputs.length > 0 &&
                     renderOutputs(shownOutputs, "render-outputs")}
                 </>
               )}
