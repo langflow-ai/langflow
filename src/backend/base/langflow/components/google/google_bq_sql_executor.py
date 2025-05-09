@@ -131,12 +131,17 @@ class BigQueryExecutorComponent(Component):
 
         try:
             client = bigquery.Client(credentials=credentials, project=project_id)
-            sql_query = self._clean_sql_query(str(self.query)) if self.clean_query else str(self.query)
-
-            # Check for empty or whitespace-only query
-            if not sql_query:
+            
+            # Check for empty or whitespace-only query before cleaning
+            if not str(self.query).strip():
                 msg = "No valid SQL query found in input text."
                 raise ValueError(msg)
+
+            # Always clean the query if it contains code block markers, quotes, or if clean_query is enabled
+            if "```" in str(self.query) or '"' in str(self.query) or "'" in str(self.query) or self.clean_query:
+                sql_query = self._clean_sql_query(str(self.query))
+            else:
+                sql_query = str(self.query).strip()  # At minimum, strip whitespace
 
             query_job = client.query(sql_query)
             results = query_job.result()

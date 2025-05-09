@@ -258,7 +258,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client_cls.return_value = fake_client
 
         query_with_code_block = "```sql\nSELECT * FROM table\n```"
-        component = component_class(**{**default_kwargs, "query": query_with_code_block})
+        component = component_class(**{**default_kwargs, "query": query_with_code_block, "clean_query": True})
 
         result = component.execute_sql()
 
@@ -296,7 +296,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client_cls.return_value = mock_client
 
         query_with_whitespace = "  SELECT * FROM table  "
-        component = component_class(**{**default_kwargs, "query": query_with_whitespace})
+        component = component_class(**{**default_kwargs, "query": query_with_whitespace, "clean_query": True})
 
         result = component.execute_sql()
 
@@ -493,7 +493,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with double quotes
         query_with_double_quotes = '"SELECT * FROM table"'
-        component = component_class(**{**default_kwargs, "query": query_with_double_quotes})
+        component = component_class(**{**default_kwargs, "query": query_with_double_quotes, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -503,7 +503,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with single quotes
         query_with_single_quotes = "'SELECT * FROM table'"
-        component = component_class(**{**default_kwargs, "query": query_with_single_quotes})
+        component = component_class(**{**default_kwargs, "query": query_with_single_quotes, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -513,7 +513,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with SQL code block
         query_with_code_block = "```sql\nSELECT * FROM table\n```"
-        component = component_class(**{**default_kwargs, "query": query_with_code_block})
+        component = component_class(**{**default_kwargs, "query": query_with_code_block, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -523,7 +523,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with SQL code block and quotes
         query_with_code_block_and_quotes = '```sql\n"SELECT * FROM table"\n```'
-        component = component_class(**{**default_kwargs, "query": query_with_code_block_and_quotes})
+        component = component_class(**{**default_kwargs, "query": query_with_code_block_and_quotes, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -533,7 +533,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with just backticks
         query_with_backticks = "`SELECT * FROM table`"
-        component = component_class(**{**default_kwargs, "query": query_with_backticks})
+        component = component_class(**{**default_kwargs, "query": query_with_backticks, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -543,7 +543,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with mixed markers
         query_with_mixed = '```sql\n`"SELECT * FROM table"`\n```'
-        component = component_class(**{**default_kwargs, "query": query_with_mixed})
+        component = component_class(**{**default_kwargs, "query": query_with_mixed, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM table")
         assert isinstance(result, DataFrame)
@@ -553,7 +553,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with backticks in the middle of the query
         query_with_middle_backticks = "SELECT * FROM project.dataset.table"
-        component = component_class(**{**default_kwargs, "query": query_with_middle_backticks})
+        component = component_class(**{**default_kwargs, "query": query_with_middle_backticks, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM project.dataset.table")
         assert isinstance(result, DataFrame)
@@ -563,7 +563,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
         # Test with multiple backticks in the query
         query_with_multiple_backticks = "SELECT * FROM project.dataset.table WHERE column = 'value'"
-        component = component_class(**{**default_kwargs, "query": query_with_multiple_backticks})
+        component = component_class(**{**default_kwargs, "query": query_with_multiple_backticks, "clean_query": True})
         result = component.execute_sql()
         mock_client.query.assert_called_once_with("SELECT * FROM project.dataset.table WHERE column = 'value'")
         assert isinstance(result, DataFrame)
