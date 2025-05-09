@@ -34,9 +34,6 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { folderId } = useParams();
   const isComponent = flowData.is_component ?? false;
-  const setFlowToCanvas = useFlowsManagerStore(
-    (state) => state.setFlowToCanvas,
-  );
 
   const { getIcon } = useGetTemplateStyle(flowData);
 
@@ -50,7 +47,6 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
 
   const handleClick = async () => {
     if (!isComponent) {
-      await setFlowToCanvas(flowData);
       navigate(editFlowLink);
     }
   };
