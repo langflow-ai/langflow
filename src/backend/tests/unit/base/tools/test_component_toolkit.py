@@ -15,7 +15,7 @@ def test_component_tool():
     calculator_component = CalculatorToolComponent()
     component_toolkit = ComponentToolkit(component=calculator_component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "CalculatorTool-run_model"
+    assert component_tool.name == "run_model"
     assert issubclass(component_tool.args_schema, BaseModel)
     # TODO: fix this
     # assert component_tool.args_schema.model_json_schema()["properties"] == {
