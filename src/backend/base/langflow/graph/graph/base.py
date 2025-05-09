@@ -46,6 +46,7 @@ from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
+    from contextlib import AbstractAsyncContextManager
 
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
@@ -652,12 +653,14 @@ class Graph:
 
         self._run_id = str(run_id)
 
-    async def initialize_run(self) -> None:
+    async def initialize_run(self, session_scope: Callable[[], AbstractAsyncContextManager[Any]] | None = None) -> None:
         if not self._run_id:
             self.set_run_id()
-        if self.tracing_service:
+
+        if self.tracing_service and session_scope:
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
+                session_scope=session_scope,
                 run_id=uuid.UUID(self._run_id),
                 run_name=run_name,
                 user_id=self.user_id,

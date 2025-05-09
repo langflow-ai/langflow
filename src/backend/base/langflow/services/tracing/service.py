@@ -6,13 +6,16 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from loguru import logger
 
 from langflow.services.base import Service
+from langflow.services.deps import get_variable_service
 
 if TYPE_CHECKING:
-    from uuid import UUID
+    from collections.abc import Callable
+    from contextlib import AbstractAsyncContextManager
 
     from langchain.callbacks.base import BaseCallbackHandler
 
@@ -140,16 +143,17 @@ class TracingService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error starting tracing service")
 
-    def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
+    def _initialize_langsmith_tracer(self, trace_context: TraceContext, variables: dict) -> None:
         langsmith_tracer = _get_langsmith_tracer()
         trace_context.tracers["langsmith"] = langsmith_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
             trace_id=trace_context.run_id,
+            global_vars=variables,
         )
 
-    def _initialize_langwatch_tracer(self, trace_context: TraceContext) -> None:
+    def _initialize_langwatch_tracer(self, trace_context: TraceContext, variables: dict) -> None:
         if (
             "langwatch" not in trace_context.tracers
             or trace_context.tracers["langwatch"].trace_id != trace_context.run_id
@@ -160,9 +164,10 @@ class TracingService(Service):
                 trace_type="chain",
                 project_name=trace_context.project_name,
                 trace_id=trace_context.run_id,
+                global_vars=variables,
             )
 
-    def _initialize_langfuse_tracer(self, trace_context: TraceContext) -> None:
+    def _initialize_langfuse_tracer(self, trace_context: TraceContext, variables: dict) -> None:
         langfuse_tracer = _get_langfuse_tracer()
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
@@ -171,18 +176,20 @@ class TracingService(Service):
             trace_id=trace_context.run_id,
             user_id=trace_context.user_id,
             session_id=trace_context.session_id,
+            global_vars=variables,
         )
 
-    def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext) -> None:
+    def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext, variables: dict) -> None:
         arize_phoenix_tracer = _get_arize_phoenix_tracer()
         trace_context.tracers["arize_phoenix"] = arize_phoenix_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
             trace_id=trace_context.run_id,
+            global_vars=variables,
         )
 
-    def _initialize_opik_tracer(self, trace_context: TraceContext) -> None:
+    def _initialize_opik_tracer(self, trace_context: TraceContext, variables: dict) -> None:
         opik_tracer = _get_opik_tracer()
         trace_context.tracers["opik"] = opik_tracer(
             trace_name=trace_context.run_name,
@@ -191,10 +198,31 @@ class TracingService(Service):
             trace_id=trace_context.run_id,
             user_id=trace_context.user_id,
             session_id=trace_context.session_id,
+            global_vars=variables,
         )
+
+    async def get_varaibles_from_db(self, session_scope, user_id, variable_names) -> dict[str, Any]:
+        variable_service = get_variable_service()
+        result = {}
+        async with session_scope() as session:
+            for name in variable_names:
+                try:
+                    value = await variable_service.get_variable(
+                        user_id=UUID(user_id),
+                        name=name,
+                        field="",
+                        session=session,
+                    )
+                except Exception as exp:  # noqa: BLE001
+                    msg = f"Error getting global variable '{name}' from db: {exp}"
+                    logger.error(msg)
+                    value = None
+                result[name] = value
+        return result
 
     async def start_tracers(
         self,
+        session_scope: Callable[[], AbstractAsyncContextManager[Any]],
         run_id: UUID,
         run_name: str,
         user_id: str | None,
@@ -213,12 +241,38 @@ class TracingService(Service):
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
             trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id)
             trace_context_var.set(trace_context)
+
+            tracers = {
+                "langsmith": {
+                    "names": _get_langsmith_tracer().get_required_variable_names(),
+                    "init_fn": self._initialize_langsmith_tracer,
+                },
+                "langwatch": {
+                    "names": _get_langwatch_tracer().get_required_variable_names(),
+                    "init_fn": self._initialize_langwatch_tracer,
+                },
+                "langfuse": {
+                    "names": _get_langfuse_tracer().get_required_variable_names(),
+                    "init_fn": self._initialize_langfuse_tracer,
+                },
+                "arize_phoenix": {
+                    "names": _get_arize_phoenix_tracer().get_required_variable_names(),
+                    "init_fn": self._initialize_arize_phoenix_tracer,
+                },
+                "opik": {
+                    "names": _get_opik_tracer().get_required_variable_names(),
+                    "init_fn": self._initialize_opik_tracer,
+                },
+            }
+
+            all_variable_names = list({name for t in tracers.values() for name in t["names"]})
+            variables = await self.get_varaibles_from_db(session_scope, user_id, all_variable_names)
             await self._start(trace_context)
-            self._initialize_langsmith_tracer(trace_context)
-            self._initialize_langwatch_tracer(trace_context)
-            self._initialize_langfuse_tracer(trace_context)
-            self._initialize_arize_phoenix_tracer(trace_context)
-            self._initialize_opik_tracer(trace_context)
+
+            for tracer in tracers.values():
+                filtered_vars = {k: v for k, v in variables.items() if k in tracer["names"]}
+                tracer["init_fn"](trace_context, filtered_vars)
+
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")
 
