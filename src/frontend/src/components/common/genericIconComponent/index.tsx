@@ -1,6 +1,6 @@
 import React, { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
-import { getNodeIcon } from "../../../utils/styleUtils";
+import { getNodeIcon, iconCache } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,35 +23,54 @@ export const ForwardedIconComponent = memo(
     ) => {
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
-      const [TargetIcon, setTargetIcon] = useState<any>(null);
+      const [initialName, setInitialName] = useState(name);
+      const [TargetIcon, setTargetIcon] = useState<any>(iconCache.get(name));
 
       useEffect(() => {
         // Reset states when icon name changes
-        if (!TargetIcon) {
+        if (!TargetIcon || initialName !== name) {
+          setInitialName(name);
           setIconError(false);
           setTargetIcon(null);
 
-          const timer = setTimeout(() => {
-            setShowFallback(true);
-          }, 30);
+          const cachedIcon = iconCache.get(name);
+
+          const timer = cachedIcon
+            ? setTimeout(() => {
+                setShowFallback(true);
+              }, 30)
+            : null;
 
           // Load the icon if we have a name
           if (name && typeof name === "string") {
-            getNodeIcon(name)
-              .then((component) => {
-                setTargetIcon(component);
-                setShowFallback(false);
-              })
-              .catch((error) => {
-                console.error(`Error loading icon ${name}:`, error);
-                setIconError(true);
-                setShowFallback(false);
-              });
+            // Check if the icon is already in cache
+
+            if (cachedIcon && cachedIcon !== TargetIcon) {
+              setTargetIcon(cachedIcon);
+              setShowFallback(false);
+            } else {
+              getNodeIcon(name)
+                .then((component) => {
+                  // Store the fetched icon in cache
+                  iconCache.set(name, component);
+                  setTargetIcon(component);
+                  setShowFallback(false);
+                })
+                .catch((error) => {
+                  console.error(`Error loading icon ${name}:`, error);
+                  setIconError(true);
+                  setShowFallback(false);
+                });
+            }
           } else {
             setShowFallback(false);
           }
 
-          return () => clearTimeout(timer);
+          return () => {
+            if (timer) {
+              clearTimeout(timer);
+            }
+          };
         }
       }, [name]);
 
@@ -93,14 +112,34 @@ export const ForwardedIconComponent = memo(
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
           <ErrorBoundary onError={handleError}>
-            <TargetIcon
-              className={className}
-              style={style}
-              ref={ref}
-              data-testid={
-                dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
-              }
-            />
+            {TargetIcon?.render || TargetIcon?._payload ? (
+              <TargetIcon
+                className={className}
+                style={style}
+                ref={ref}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              />
+            ) : (
+              <div
+                className={className}
+                style={style}
+                data-testid={
+                  dataTestId
+                    ? dataTestId
+                    : id
+                      ? `${id}-${name}`
+                      : `icon-${name}`
+                }
+              >
+                {TargetIcon}
+              </div>
+            )}
           </ErrorBoundary>
         </Suspense>
       );
