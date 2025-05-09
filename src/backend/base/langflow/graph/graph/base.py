@@ -1553,6 +1553,8 @@ class Graph:
             if cache and self.flow_id is not None:
                 set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
                 await set_cache_coro(data=self, lock=lock)
+        if vertex.is_state:
+            next_runnable_vertices.extend(self.activated_vertices)
         return next_runnable_vertices
 
     async def _log_vertex_build_from_exception(self, vertex_id: str, result: Exception) -> None:
