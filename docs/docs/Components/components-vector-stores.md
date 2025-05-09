@@ -50,7 +50,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 | keyspace | Keyspace | An optional keyspace within Astra DB to use for the collection. |
 | embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. |
 | embedding_model | Embedding Model | Specify the embedding model. Not required for Astra vectorize collections. |
-| number_of_results | Number of Search Results | The number of search results to return (default: `4`). |
+| number_of_results | Number of Search Results | The number of search results to return. Default:`4`. |
 | search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
 | search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
 | advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
@@ -159,7 +159,7 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 | metric | Metric | Distance metric for vector comparisons. The options are "cosine", "euclidean", "dot_product". |
 | setup_mode | Setup Mode | Configuration mode for setting up the vector store. The options are "Sync", "Async", "Off". |
 | pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4). |
+| number_of_results | Number of Results | Number of results to return in similarity search. Default: 4. |
 | search_type | Search Type | Search type to use. The options are "Similarity", "Graph Traversal", "Hybrid". |
 | traversal_depth | Traversal Depth | Maximum depth for graph traversal searches. Default: 1. |
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. |
@@ -235,7 +235,7 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 | search_query | Search Query | The query string for similarity search. |
 | ingest_data | Ingest Data | The list of data to be ingested into the vector store. |
 | embedding | Embedding | The embedding model to use. |
-| number_of_results | Number of Results | The number of results to return in similarity search (default: 4). |
+| number_of_results | Number of Results | The number of results to return in similarity search. Default: 4. |
 | search_type | Search Type | The search type to use. The options are "Traversal", "MMR traversal", "Similarity", "Similarity with score threshold", or "MMR (Max Marginal Relevance)". Default: "Traversal". |
 | depth | Depth of traversal | The maximum depth of edges to traverse. Used for "Traversal" or "MMR traversal" search types. Default: 1. |
 | search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results. Used for "Similarity with score threshold" search types. |

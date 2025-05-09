@@ -307,7 +307,7 @@ Legacy components are available for use but are no longer supported.
 
 This component loads emails from Gmail using provided credentials and filters.
 
-For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
+For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
 <details>
 <summary>Parameters</summary>
@@ -332,7 +332,7 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 This component loads documents from Google Drive using provided credentials and a single document ID.
 
-For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
+For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
 <details>
 <summary>Parameters</summary>
@@ -356,7 +356,7 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 
 This component searches Google Drive files using provided credentials and query parameters.
 
-For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
+For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
 <details>
 <summary>Parameters</summary>
@@ -369,7 +369,7 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | query_item     | DropdownInput    | The field to query.                                                                  |
 | valid_operator | DropdownInput    | The operator to use in the query.                                                    |
 | search_term    | MessageTextInput | The value to search for in the specified query item.                                 |
-| query_string   | MessageTextInput | The query string used for searching (can be edited manually).                        |
+| query_string   | MessageTextInput | The query string used for searching.                      |
 
 **Outputs**
 

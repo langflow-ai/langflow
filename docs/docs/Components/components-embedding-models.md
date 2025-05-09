@@ -53,9 +53,9 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 | Name | Type | Description |
 |------|------|-------------|
 | credentials_profile_name | String | The name of the AWS credentials profile in `~/.aws/credentials` or `~/.aws/config`, which has access keys or role information. |
-| model_id | String | The ID of the model to call, e.g., `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API. |
+| model_id | String | The ID of the model to call, such as `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API. |
 | endpoint_url | String | The URL to set a specific service endpoint other than the default AWS endpoint. |
-| region_name | String | The AWS region to use, e.g., `us-west-2`. Falls back to the `AWS_DEFAULT_REGION` environment variable or region specified in `~/.aws/config` if not provided. |
+| region_name | String | The AWS region to use, such as `us-west-2`. Falls back to the `AWS_DEFAULT_REGION` environment variable or region specified in `~/.aws/config` if not provided. |
 
 **Outputs**
 
@@ -109,8 +109,8 @@ This component generates embeddings using Azure OpenAI models.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Model | String | The name of the model to use (default: `text-embedding-3-small`). |
-| Azure Endpoint | String | Your Azure endpoint, including the resource, e.g., `https://example-resource.azure.openai.com/`. |
+| Model | String | The name of the model to use. Default: `text-embedding-3-small`. |
+| Azure Endpoint | String | Your Azure endpoint, including the resource, such as `https://example-resource.azure.openai.com/`. |
 | Deployment Name | String | The name of the deployment. |
 | API Version | String | The API version to use, with options including various dates. |
 | API Key | String | The API key required to access the Azure OpenAI service. |
@@ -162,8 +162,8 @@ This component is used to load embedding models from [Cohere](https://cohere.com
 | Name | Type | Description |
 |------|------|-------------|
 | cohere_api_key | String | The API key required to authenticate with the Cohere service. |
-| model | String | The language model used for embedding text documents and performing queries (default: `embed-english-v2.0`). |
-| truncate | Boolean | Whether to truncate the input text to fit within the model's constraints (default: `False`). |
+| model | String | The language model used for embedding text documents and performing queries. Default: `embed-english-v2.0`. |
+| truncate | Boolean | Whether to truncate the input text to fit within the model's constraints. Default: `False`. |
 
 **Outputs**
 
@@ -206,8 +206,8 @@ This component connects to Google's generative AI embedding service using the Go
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| api_key | API Key | The secret API key for accessing Google's generative AI service (required). |
-| model_name | Model Name | The name of the embedding model to use (default: "models/text-embedding-004"). |
+| api_key | API Key | The secret API key for accessing Google's generative AI service. Required. |
+| model_name | Model Name | The name of the embedding model to use. Default: "models/text-embedding-004". |
 
 **Outputs**
 
@@ -372,12 +372,12 @@ This component generates embeddings using [MistralAI](https://docs.mistral.ai/) 
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | String | The MistralAI model to use (default: "mistral-embed"). |
+| model | String | The MistralAI model to use. Default: "mistral-embed". |
 | mistral_api_key | SecretString | The API key for authenticating with MistralAI. |
-| max_concurrent_requests | Integer | The maximum number of concurrent API requests (default: 64). |
-| max_retries | Integer | The maximum number of retry attempts for failed requests (default: 5). |
-| timeout | Integer | The request timeout in seconds (default: 120). |
-| endpoint | String | The custom API endpoint URL (default: `https://api.mistral.ai/v1/`). |
+| max_concurrent_requests | Integer | The maximum number of concurrent API requests. Default: 64. |
+| max_retries | Integer | The maximum number of retry attempts for failed requests. Default: 5. |
+| timeout | Integer | The request timeout in seconds. Default: 120. |
+| endpoint | String | The custom API endpoint URL. Default: `https://api.mistral.ai/v1/`). |
 
 **Outputs**
 
@@ -398,10 +398,10 @@ This component generates embeddings using [NVIDIA models](https://docs.nvidia.co
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | String | The NVIDIA model to use for embeddings (e.g., `nvidia/nv-embed-v1`). |
-| base_url | String | The base URL for the NVIDIA API (default: `https://integrate.api.nvidia.com/v1`). |
+| model | String | The NVIDIA model to use for embeddings, such as `nvidia/nv-embed-v1`. |
+| base_url | String | The base URL for the NVIDIA API. Default: `https://integrate.api.nvidia.com/v1`. |
 | nvidia_api_key | SecretString | The API key for authenticating with NVIDIA's service. |
-| temperature | Float | The model temperature for embedding generation (default: `0.1`). |
+| temperature | Float | The model temperature for embedding generation. Default: `0.1`. |
 
 **Outputs**
 
@@ -437,8 +437,8 @@ For more information, see the [Ollama documentation](https://ollama.com/).
 
 | Name | Type | Description |
 |------|------|-------------|
-| Ollama Model | String | The name of the Ollama model to use (default: `llama2`). |
-| Ollama Base URL | String | The base URL of the Ollama API (default: `http://localhost:11434`). |
+| Ollama Model | String | The name of the Ollama model to use. Default: `llama2`. |
+| Ollama Base URL | String | The base URL of the Ollama API. Default: `http://localhost:11434`. |
 | Model Temperature | Float | The temperature parameter for the model. Adjusts the randomness in the generated embeddings. |
 
 **Outputs**
@@ -463,14 +463,14 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 | OpenAI API Key | String | The API key to use for accessing the OpenAI API. |
 | Default Headers | Dict | The default headers for the HTTP requests. |
 | Default Query | NestedDict | The default query parameters for the HTTP requests. |
-| Allowed Special | List | The special tokens allowed for processing (default: `[]`). |
-| Disallowed Special | List | The special tokens disallowed for processing (default: `["all"]`). |
-| Chunk Size | Integer | The chunk size for processing (default: `1000`). |
+| Allowed Special | List | The special tokens allowed for processing. Default: `[]`. |
+| Disallowed Special | List | The special tokens disallowed for processing. Default: `["all"]`. |
+| Chunk Size | Integer | The chunk size for processing. Default: `1000`. |
 | Client | Any | The HTTP client for making requests. |
-| Deployment | String | The deployment name for the model (default: `text-embedding-3-small`). |
-| Embedding Context Length | Integer | The length of embedding context (default: `8191`). |
-| Max Retries | Integer | The maximum number of retries for failed requests (default: `6`). |
-| Model | String | The name of the model to use (default: `text-embedding-3-small`). |
+| Deployment | String | The deployment name for the model. Default: `text-embedding-3-small`. |
+| Embedding Context Length | Integer | The length of embedding context. Default: `8191`. |
+| Max Retries | Integer | The maximum number of retries for failed requests. Default: `6`. |
+| Model | String | The name of the model to use. Default: `text-embedding-3-small`. |
 | Model Kwargs | NestedDict | Additional keyword arguments for the model. |
 | OpenAI API Base | String | The base URL of the OpenAI API. |
 | OpenAI API Type | String | The type of the OpenAI API. |
@@ -478,9 +478,9 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 | OpenAI Organization | String | The organization associated with the API key. |
 | OpenAI Proxy | String | The proxy server for the requests. |
 | Request Timeout | Float | The timeout for the HTTP requests. |
-| Show Progress Bar | Boolean | Whether to show a progress bar for processing (default: `False`). |
-| Skip Empty | Boolean | Whether to skip empty inputs (default: `False`). |
-| TikToken Enable | Boolean | Whether to enable TikToken (default: `True`). |
+| Show Progress Bar | Boolean | Whether to show a progress bar for processing. Default: `False`. |
+| Skip Empty | Boolean | Whether to skip empty inputs. Default: `False`. |
+| TikToken Enable | Boolean | Whether to enable TikToken. Default: `True`. |
 | TikToken Model Name | String | The name of the TikToken model. |
 
 **Outputs**
@@ -525,16 +525,16 @@ This component is a wrapper around [Google Vertex AI](https://cloud.google.com/v
 | Name | Type | Description |
 |------|------|-------------|
 | credentials | Credentials | The default custom credentials to use. |
-| location | String | The default location to use when making API calls (default: `us-central1`). |
-| max_output_tokens | Integer | The token limit determines the maximum amount of text output from one prompt (default: `128`). |
-| model_name | String | The name of the Vertex AI large language model (default: `text-bison`). |
+| location | String | The default location to use when making API calls. Default: `us-central1`. |
+| max_output_tokens | Integer | The token limit determines the maximum amount of text output from one prompt. Default: `128`. |
+| model_name | String | The name of the Vertex AI large language model. Default: `text-bison`. |
 | project | String | The default GCP project to use when making Vertex API calls. |
-| request_parallelism | Integer | The amount of parallelism allowed for requests issued to VertexAI models (default: `5`). |
-| temperature | Float | Tunes the degree of randomness in text generations. Should be a non-negative value (default: `0`). |
-| top_k | Integer | How the model selects tokens for output. The next token is selected from the top `k` tokens (default: `40`). |
-| top_p | Float | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value (default: `0.95`). |
+| request_parallelism | Integer | The amount of parallelism allowed for requests issued to VertexAI models. Default: `5`. |
+| temperature | Float | Tunes the degree of randomness in text generations. Should be a non-negative value. Default: `0`. |
+| top_k | Integer | How the model selects tokens for output. The next token is selected from the top `k` tokens. Default: `40`. |
+| top_p | Float | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value. Default: `0.95`. |
 | tuned_model_name | String | The name of a tuned model. If provided, `model_name` is ignored. |
-| verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug (default: `False`). |
+| verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. Default: `False`. |
 
 **Outputs**
 
