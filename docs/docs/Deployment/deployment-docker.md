@@ -18,39 +18,13 @@ For more information on configuring the Docker image, see [Customize the Langflo
 - [Docker](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
-## Quickstart with a SQLite database
+## Quickstart
 
-Create a Dockerfile with Langflow's default SQLite database.
-The SQLite database is stored in the container's filesystem, which means all data is lost when the container is stopped since no persistent volume is configured.
+With Docker installed and running on your system, run this command:
 
-To use the Dockerfile:
+`docker run -p 7860:7860 langflowai/langflow:latest`
 
-1. Create a new directory for your project:
-   ```bash
-   mkdir langflow-docker && cd langflow-docker
-   ```
-
-2. Create the Dockerfile with the following configuration.
-
-```dockerfile
-# Use the official Langflow image
-FROM langflowai/langflow:latest
-
-# Expose the default port
-EXPOSE 7860
-
-# Run Langflow
-CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
-```
-
-3. Build and run the container:
-   ```bash
-   docker build -t langflow-docker .
-   docker run -p 7860:7860 langflow-docker
-   ```
-
-Langflow is accessible at `http://localhost:7860/`.
-
+Langflow is now accessible at `http://localhost:7860/`.
 ## Clone the repo and build the Langflow Docker container
 
 1. Clone the Langflow repository:
