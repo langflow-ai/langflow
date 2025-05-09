@@ -1,5 +1,5 @@
 ---
-description: Rules and checklist for adding and using component icons.
+description: Rules and checklist for adding and using langflow component icons.
 globs: 
 alwaysApply: false
 ---
@@ -31,6 +31,15 @@ To ensure consistent, clear, and functional icon usage for components, covering 
   In a new directory for your icon, e.g., `src/frontend/src/icons/AstraDB/`.
 - **How:**  
   - Add your SVG as a React component, e.g., `AstraSVG` in `AstraDB.jsx`.
+    ```jsx
+    const AstraSVG = (props) => (
+      <svg {...props}>
+        <path
+          // ...
+        />
+      </svg>
+    );
+    ```
   - Create an `index.tsx` that exports your icon using `forwardRef`:
     ```tsx
     import { useDarkStore } from "@/stores/darkStore";

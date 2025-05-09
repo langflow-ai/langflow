@@ -17,6 +17,7 @@ Ask the user for:
 - **Description:** What does the component do?
 - **Inputs:** What are the required inputs? (e.g., text, dropdown, boolean, etc.)
 - **Outputs:** What should the component output? (e.g., a message, a value, etc.)
+- **Category:** Which component category should this component be stored under in `langflow/src/backend/base/langflow/components`
 
 ### 2. Define the Component
 
