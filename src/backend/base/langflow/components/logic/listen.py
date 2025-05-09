@@ -1,29 +1,17 @@
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.io import Output, StrInput
 from langflow.schema import Data
 
 
-class ListenComponent(CustomComponent):
+class ListenComponent(Component):
     display_name = "Listen"
     description = "A component to listen for a notification."
     name = "Listen"
     beta: bool = True
     icon = "Radio"
+    inputs = [StrInput(name="context_key", display_name="Context Key", info="The key of the context to listen for.")]
 
-    def build_config(self):
-        return {
-            "name": {
-                "display_name": "Name",
-                "info": "The name of the notification to listen for.",
-            },
-        }
+    outputs = [Output(name="data", display_name="Data", method="build")]
 
-    def build(self, name: str) -> Data:
-        state = self.get_state(name)
-        self._set_successors_ids()
-        self.status = state
-        return state
-
-    def _set_successors_ids(self):
-        self._vertex.is_state = True
-        successors = self._vertex.graph.successor_map.get(self._vertex.id, [])
-        return successors + self._vertex.graph.activated_vertices
+    def build(self) -> Data:
+        return self.ctx.get(self.context_key, Data(data={}))
