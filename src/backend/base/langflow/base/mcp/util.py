@@ -282,9 +282,6 @@ class MCPStdioClient:
                             if "Command failed with exit code" in data:
                                 msg = f"MCP server command failed: {command_str}\nFull error log:\n{full_log}"
                                 raise RuntimeError(msg)
-                            if data:  # Any other stderr output
-                                msg = f"MCP server stderr output: {data}"
-                                raise RuntimeError(msg)
                         last_size = current
 
                 # Create tasks for both operations
