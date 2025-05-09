@@ -9,9 +9,16 @@ class ListenComponent(Component):
     name = "Listen"
     beta: bool = True
     icon = "Radio"
-    inputs = [StrInput(name="context_key", display_name="Context Key", info="The key of the context to listen for.")]
+    inputs = [
+        StrInput(
+            name="context_key",
+            display_name="Context Key",
+            info="The key of the context to listen for.",
+            input_types=["Data", "Message", "DataFrame"],
+        )
+    ]
 
-    outputs = [Output(name="data", display_name="Data", method="build")]
+    outputs = [Output(name="data", display_name="Data", method="build", cache=False)]
 
     def build(self) -> Data:
         return self.ctx.get(self.context_key, Data(data={}))

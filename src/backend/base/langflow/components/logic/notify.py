@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.io import BoolInput, DataInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -17,11 +17,12 @@ class NotifyComponent(Component):
             info="The key of the context to store the notification.",
             required=True,
         ),
-        DataInput(
-            name="input_data",
+        HandleInput(
+            name="input_value",
             display_name="Input Data",
             info="The data to store.",
             required=False,
+            input_types=["Data", "Message", "DataFrame"],
         ),
         BoolInput(
             name="append",
@@ -37,7 +38,7 @@ class NotifyComponent(Component):
             display_name="Data",
             name="result",
             method="build",
-            info="The data that was stored in the notification.",
+            cache=False,
         ),
     ]
 
@@ -64,17 +65,5 @@ class NotifyComponent(Component):
             self.status = "No record provided."
         self.status = self.input_data
         self._vertex.is_state = True
-        self.set_activated_vertices()
+        self.graph.activate_state_vertices(name=self.context_key, caller=self._id)
         return self.input_data
-
-    def set_activated_vertices(self):
-        # Append all `Listen` components that have the same `context_key`
-        self._vertex.graph.activated_vertices.extend(
-            [
-                vertex.id
-                for vertex in self._vertex.graph.vertices
-                if vertex.custom_component
-                and vertex.custom_component.name == "Listen"
-                and vertex.custom_component.context_key == self.context_key
-            ]
-        )
