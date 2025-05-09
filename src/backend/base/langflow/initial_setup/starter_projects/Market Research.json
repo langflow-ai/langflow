@@ -1293,6 +1293,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "watsonxAI",
                   "Custom"
                 ],
                 "placeholder": "",
