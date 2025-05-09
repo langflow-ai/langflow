@@ -90,28 +90,36 @@ Include tests for your changes using `ComponentTestBase` classes. For more infor
 When documenting changes in pull requests, clearly explain what changed, such as display name updates or new fields, why it changed (for example, clarity improvements or bug fixes), and the impact on existing users (whether no action is needed or if migration steps are required).
 
 For example:
-```markdown
-## Pull request with changes to Notify component
 
-### What changed
+<details>
+<summary>Example PR</summary>
+
+```markdown
+# Pull request with changes to Notify component
+
+This pull request updates the Notify component.
+
+## What changed
 - Added new `timeout` field to control how long the component waits for a response
 - Renamed `message` field to `notification_text` for clarity
 - Added support for async operations
 - Deprecated the `retry_count` field in favor of `max_retries`
 
-### Why it changed
+## Why it changed
 - `timeout` field addresses user requests for better control over wait times
 - `message` to `notification_text` change makes the field's purpose clearer
 - Async support improves performance in complex flows
 - `retry_count` to `max_retries` aligns with common retry pattern terminology
 
-### Impact on users
+## Impact on users
 - New `timeout` field is optional (defaults to 30 seconds)
 - Users will see a deprecation warning for `retry_count`
   - Migration: Replace `retry_count` with `max_retries` in existing flows
   - Both fields will work until version 2.0
 - No action needed for async support - it's backward compatible
 ```
+
+</details>
 
 ## Example pull request flow
 
