@@ -197,6 +197,11 @@ const HeaderComponent = ({
                   <DeleteConfirmationModal
                     onConfirm={handleDelete}
                     description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
+                    note={
+                      "and " +
+                      (selectedFlows.length > 1 ? "their" : "its") +
+                      " message history"
+                    }
                   >
                     <Button
                       variant="destructive"

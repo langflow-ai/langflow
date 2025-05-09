@@ -202,11 +202,7 @@ const ListComponent = ({
           setOpen={setOpenDelete}
           onConfirm={handleDelete}
           description={descriptionModal}
-          note={
-            !flowData.is_component
-              ? "Deleting the selected flow will remove all associated messages."
-              : ""
-          }
+          note={!flowData.is_component ? "and its message history" : ""}
         >
           <></>
         </DeleteConfirmationModal>
