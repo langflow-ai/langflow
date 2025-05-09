@@ -7,7 +7,7 @@ This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
 Three options are available:
 
-* The [Quickstart](#quickstart-with-a-sqlite-database) option starts a Docker container with default values.
+* The [Quickstart](#quickstart) option starts a Docker container with default values.
 * The [Docker compose](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
 * The [Package your flow as a docker image](#package-your-flow-as-a-Docker-image) option demonstrates packaging an existing flow with a Dockerfile.
 
