@@ -7,7 +7,7 @@ from google.cloud import bigquery
 from google.oauth2.service_account import Credentials
 
 from langflow.custom import Component
-from langflow.io import FileInput, MessageTextInput, Output
+from langflow.io import BoolInput, FileInput, MessageTextInput, Output
 from langflow.schema.dataframe import DataFrame
 
 
@@ -32,6 +32,13 @@ class BigQueryExecutorComponent(Component):
             info="The SQL query to execute on BigQuery.",
             required=True,
             tool_mode=True,
+        ),
+        BoolInput(
+            name="clean_query",
+            display_name="Clean Query",
+            info=" If turned on clean the query and prevent format issues",
+            value=False,
+            advanced=True,
         ),
     ]
 
@@ -124,7 +131,7 @@ class BigQueryExecutorComponent(Component):
 
         try:
             client = bigquery.Client(credentials=credentials, project=project_id)
-            sql_query = self._clean_sql_query(str(self.query))
+            sql_query = self._clean_sql_query(str(self.query)) if self.clean_query else str(self.query)
 
             # Check for empty or whitespace-only query
             if not sql_query:
