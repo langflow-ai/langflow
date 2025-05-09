@@ -21,7 +21,7 @@ This is represented in Langflow by connecting the Parse Data component's **Data 
 
 ![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
 
-The output will look similar to this:
+The output is similar to this:
 ```text
 Document Summary
 Total Pages Processed
@@ -93,7 +93,7 @@ A new message has been received and added to the Urgent queue. Please review it 
 | input_text     | String   | The primary text input for the operation. |
 | match_text     | String   | The text to compare against. |
 | operator       | Dropdown | The operator used to compare texts. Options include equals, not equals, contains, starts with, ends with, and regex. The default is equals. |
-| case_sensitive | Boolean  | When set to true, the comparison will be case sensitive. This setting does not apply to regex comparison. The default is false. |
+| case_sensitive | Boolean  | When set to true, the comparison is case sensitive. This setting does not apply to regex comparison. The default is false. |
 | message        | Message  | The message to pass through either route. |
 | max_iterations | Integer  | The maximum number of iterations allowed for the conditional router. The default is 10. |
 | default_route  | Dropdown | The route to take when max iterations are reached. Options include true_result or false_result. The default is false_result. |
@@ -192,7 +192,7 @@ This component generates a notification for the Listen component to use.
 |--------|---------|-------------------------------------------------------------------|
 | name   | String  | The name of the notification. |
 | data   | Data    | The data to store in the notification. |
-| append | Boolean | When set to true, the record will be added to the existing notification. |
+| append | Boolean | When set to true, the record is added to the existing notification. |
 
 **Outputs**
 
@@ -214,7 +214,7 @@ This component forwards the input message, unchanged.
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_message | Input Message | The message to forward. |
-| ignored_message | Ignored Message | A second message that will be ignored. Used as a workaround for continuity. |
+| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
 
 **Outputs**
 

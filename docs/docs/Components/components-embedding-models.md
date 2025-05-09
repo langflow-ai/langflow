@@ -531,7 +531,7 @@ This component is a wrapper around [Google Vertex AI](https://cloud.google.com/v
 | project | String | The default GCP project to use when making Vertex API calls. |
 | request_parallelism | Integer | The amount of parallelism allowed for requests issued to VertexAI models (default: `5`). |
 | temperature | Float | Tunes the degree of randomness in text generations. Should be a non-negative value (default: `0`). |
-| top_k | Integer | How the model selects tokens for output, the next token is selected from the top `k` tokens (default: `40`). |
+| top_k | Integer | How the model selects tokens for output. The next token is selected from the top `k` tokens (default: `40`). |
 | top_p | Float | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value (default: `0.95`). |
 | tuned_model_name | String | The name of a tuned model. If provided, `model_name` is ignored. |
 | verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug (default: `False`). |

@@ -149,7 +149,7 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| collection_name | Collection Name | The name of the collection within AstraDB where the vectors will be stored. Required. |
+| collection_name | Collection Name | The name of the collection within AstraDB where the vectors are stored. Required. |
 | token | Astra DB Application Token | Authentication token for accessing AstraDB. Required. |
 | api_endpoint | API Endpoint | API endpoint URL for the AstraDB service. Required. |
 | search_input | Search Input | Query string for similarity search. |
@@ -229,7 +229,7 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 | username | Username | The username for the database. Leave this field empty for AstraDB. |
 | token | Password / AstraDB Token | The user password for the database or AstraDB token. Required. |
 | keyspace | Keyspace | The table Keyspace or AstraDB namespace. Required. |
-| table_name | Table Name | The name of the table or AstraDB collection where vectors will be stored. Required. |
+| table_name | Table Name | The name of the table or AstraDB collection where vectors are stored. Required. |
 | setup_mode | Setup Mode | The configuration mode for setting up the Cassandra table. The options are "Sync" or "Off". Default: "Sync". |
 | cluster_kwargs | Cluster arguments | An optional dictionary of additional keyword arguments for the Cassandra cluster. |
 | search_query | Search Query | The query string for similarity search. |
@@ -399,12 +399,12 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name | Type | Description |
 |------|------|-------------|
 | collection_name | String | The name of the Chroma collection. Default: "langflow". |
-| persist_directory | String | Custom base directory to save the vector store. Collections will be stored under `{directory}/vector_stores/{collection_name}`. If not specified, it will use your system's cache folder. |
+| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `{directory}/vector_stores/{collection_name}`. If not specified, it will use your system's cache folder. |
 | existing_collections | String | Select a previously created collection to search through its stored data. |
 | embedding | Embeddings | The embedding function to use for the vector store. |
 | allow_duplicates | Boolean | If false, will not add documents that are already in the Vector Store. |
 | search_type | String | Type of search to perform: "Similarity" or "MMR". |
-| ingest_data | Data/DataFrame | Data to store. It will be embedded and indexed for semantic search. |
+| ingest_data | Data/DataFrame | Data to store. It is embedded and indexed for semantic search. |
 | search_query | String | Enter text to search for similar content in the selected collection. |
 | number_of_results | Integer | Number of results to return. Default: 10. |
 | limit | Integer | Limit the number of records to compare when Allow Duplicates is False. |
@@ -463,7 +463,7 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 | Name                      | Type          | Description                                      |
 |---------------------------|---------------|--------------------------------------------------|
 | index_name                 | String        | The name of the FAISS index. Default: "langflow_index". |
-| persist_directory          | String        | Path to save the FAISS index. It will be relative to where Langflow is running. |
+| persist_directory          | String        | Path to save the FAISS index. It is relative to where Langflow is running. |
 | search_query               | String        | The query to search for in the vector store.     |
 | ingest_data                | Data          | The list of data to ingest into the vector store. |
 | allow_dangerous_deserialization | Boolean  | Set to True to allow loading pickle files from untrusted sources. Default: True. |
@@ -636,7 +636,7 @@ For more information, see [Opensearch documentation](https://opensearch.org/plat
 | Name                   | Type         | Description                                                                                                            |
 |------------------------|--------------|------------------------------------------------------------------------------------------------------------------------|
 | opensearch_url         | String       | URL for OpenSearch cluster, such as `https://192.168.1.1:9200`.                                                             |
-| index_name             | String       | The index name where the vectors will be stored in OpenSearch cluster.                                                  |
+| index_name             | String       | The index name where the vectors are stored in OpenSearch cluster.                                                  |
 | search_input           | String       | Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used.                          |
 | ingest_data            | Data         | The data to be ingested into the vector store.                                                                              |
 | embedding              | Embeddings   | The embedding function to use.                                                                                              |

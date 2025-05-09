@@ -38,7 +38,7 @@ For more information on this component, see the [tool calling agent documentatio
 
 | Name | Type | Description |
 |------|------|-------------|
-| agent_llm | Dropdown | The provider of the language model that the agent will use to generate responses. Options include OpenAI and other providers or Custom. |
+| agent_llm | Dropdown | The provider of the language model that the agent uses to generate responses. Options include OpenAI and other providers or Custom. |
 | system_prompt | String | The system prompt provides initial instructions and context to guide the agent's behavior. |
 | tools | List | The list of tools available for the agent to use. |
 | input_value | String | The input task or question for the agent to process. |
@@ -147,7 +147,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/cor
 | goal | Goal | The objective of the agent. |
 | backstory | Backstory | The backstory of the agent. |
 | tools | Tools | The tools at the agent's disposal. |
-| llm | Language Model | The language model that will run the agent. |
+| llm | Language Model | The language model that runs the agent. |
 | memory | Memory | This determines whether the agent should have memory or not. |
 | verbose | Verbose | This enables verbose output. |
 | allow_delegation | Allow Delegation | This determines whether the agent is allowed to delegate tasks to other agents. |
@@ -317,7 +317,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 | goal | Goal | The objective of the agent. |
 | backstory | Backstory | The backstory of the agent. |
 | tools | Tools | The tools at the agent's disposal. |
-| llm | Language Model | The language model that will run the agent. |
+| llm | Language Model | The language model that runs the agent. |
 | memory | Memory | This determines whether the agent should have memory or not. |
 | verbose | Verbose | This enables verbose output. |
 | allow_delegation | Allow Delegation | This determines whether the agent is allowed to delegate tasks to other agents. |

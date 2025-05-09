@@ -136,11 +136,11 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 
 | Name | Type | Description |
 |------|------|-------------|
-| memory | Memory | Retrieve messages from an external memory. If empty, it will use the Langflow tables. |
+| memory | Memory | Retrieve messages from an external memory. If empty, the Langflow tables are used. |
 | sender | String | Filter by sender type. |
 | sender_name | String | Filter by sender name. |
 | n_messages | Integer | The number of messages to retrieve. |
-| session_id | String | The session ID of the chat. If empty, the current session ID parameter will be used. |
+| session_id | String | The session ID of the chat. If empty, the current session ID parameter is used. |
 | order | String | The order of the messages. |
 | template | String | The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
 
@@ -172,10 +172,10 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 | Name | Type | Description |
 |------|------|-------------|
 | message | String | The chat message to be stored. (Required) |
-| memory | Memory | The external memory to store the message. If empty, it will use the Langflow tables. |
-| sender | String | The sender of the message. Can be Machine or User. If empty, the current sender parameter will be used. |
-| sender_name | String | The name of the sender. Can be AI or User. If empty, the current sender parameter will be used. |
-| session_id | String | The session ID of the chat. If empty, the current session ID parameter will be used. |
+| memory | Memory | The external memory to store the message. If empty, the Langflow tables are used. |
+| sender | String | The sender of the message. Can be Machine or User. If empty, the current sender parameter is used. |
+| sender_name | String | The name of the sender. Can be AI or User. If empty, the current sender parameter is used. |
+| session_id | String | The session ID of the chat. If empty, the current session ID parameter is used. |
 
 **Outputs**
 

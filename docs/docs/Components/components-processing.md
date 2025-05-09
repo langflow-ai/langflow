@@ -343,7 +343,7 @@ This component routes requests to the most appropriate LLM based on OpenRouter m
 |------|--------------|------|
 | models | Language Models | A list of LLMs to route between. |
 | input_value | Input | The input message to be routed. |
-| judge_llm | Judge LLM | The LLM that will evaluate and select the most appropriate model. |
+| judge_llm | Judge LLM | The LLM that evaluates and selects the most appropriate model. |
 | optimization | Optimization | The optimization preference between quality, speed, cost, or balanced. |
 
 **Outputs**
@@ -473,7 +473,7 @@ This example uses `./output/employees.xlsx` and `./output/employees.md` to save 
 The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
 :::tip
 If you enter a format in the `file_path` that is not accepted, the component appends the proper format to the file.
-For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file will be saved as `./output/test.txt.csv` so the file is not corrupted.
+For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file is saved as `./output/test.txt.csv` so the file is not corrupted.
 :::
 5. Send a POST request to the **Webhook** containing your JSON data.
 Replace `YOUR_FLOW_ID` with your flow ID.
@@ -651,7 +651,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_value | Input | Objects to which Metadata should be added |
-| text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
+| text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object |
 | remove_fields | Fields to Remove | Metadata fields to remove |
 
