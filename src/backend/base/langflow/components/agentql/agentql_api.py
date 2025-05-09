@@ -1,6 +1,12 @@
 import httpx
 from loguru import logger
 
+from langflow.components.agentql.utils import (
+    AGENTQL_QUERY_DOCUMENTATION,
+    AGENTQL_REST_API_DOCUMENTATION,
+    INVALID_API_KEY_MESSAGE,
+)
+
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import (
@@ -15,12 +21,12 @@ from langflow.io import (
 from langflow.schema import Data
 
 
-class AgentQL(Component):
+class AgentQLQueryWeb(Component):
     display_name = "Extract Web Data"
     description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
-    documentation: str = "https://docs.agentql.com/rest-api/api-reference"
+    documentation: str = AGENTQL_REST_API_DOCUMENTATION
     icon = "AgentQL"
-    name = "AgentQL"
+    name = "AgentQL Query Web"
 
     inputs = [
         SecretStrInput(
@@ -41,7 +47,7 @@ class AgentQL(Component):
             name="query",
             display_name="AgentQL Query",
             required=False,
-            info="The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
+            info=f"The AgentQL query to execute. Learn more at {AGENTQL_QUERY_DOCUMENTATION} or use a prompt.",
             tool_mode=True,
         ),
         MultilineInput(
@@ -135,13 +141,13 @@ class AgentQL(Component):
             response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
             response.raise_for_status()
 
-            json = response.json()
-            data = Data(result=json["data"], metadata=json["metadata"])
+            response_json = response.json()
+            data = Data(result=response_json["data"], metadata=response_json["metadata"])
 
         except httpx.HTTPStatusError as e:
             response = e.response
             if response.status_code == httpx.codes.UNAUTHORIZED:
-                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
+                self.status = INVALID_API_KEY_MESSAGE
             else:
                 try:
                     error_json = response.json()

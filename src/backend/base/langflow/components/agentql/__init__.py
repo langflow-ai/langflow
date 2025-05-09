@@ -1,3 +1,4 @@
-from .agentql_api import AgentQL
+from .agentql_api import AgentQLQueryWeb
+from .agentql_query_doc import AgentQLQueryDocument
 
-__all__ = ["AgentQL"]
+__all__ = ["AgentQLQueryWeb", "AgentQLQueryDocument"]
