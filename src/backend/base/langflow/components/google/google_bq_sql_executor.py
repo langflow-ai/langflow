@@ -36,7 +36,7 @@ class BigQueryExecutorComponent(Component):
         BoolInput(
             name="clean_query",
             display_name="Clean Query",
-            info=" If turned on clean the query and prevent format issues",
+            info="When enabled, this will automatically clean up your SQL query.",
             value=False,
             advanced=True,
         ),
