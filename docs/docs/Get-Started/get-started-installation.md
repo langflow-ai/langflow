@@ -19,6 +19,7 @@ Before you install and run Langflow OSS, be sure you have the following items.
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/)
 - A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
+- A dual-core CPU and at least 2 GB of RAM. More intensive use requires a multi-core CPU and at least 4 GB of RAM.
 
 Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/).
 
@@ -237,6 +238,30 @@ To run Langflow with uv:
 
 ```text
 uv run langflow run
+```
+
+#### Failed to build required package
+
+When you try to install Langflow on Linux, installation fails because of outdated or missing packages.
+
+```bash
+Resolved 455 packages in 18.92s
+  × Failed to build `webrtcvad==2.0.10`
+  ├─▶ The build backend returned an error
+  ╰─▶ Call to `setuptools.build_meta:__legacy__.build_wheel` failed (exit status: 1)
+```
+
+1. Install the required build dependencies.
+
+```bash
+sudo apt-get update
+sudo apt-get install build-essential python3-dev
+```
+
+2. If upgrading your packages doesn't fix the issue, install `gcc` separately.
+
+```bash
+sudo apt-get install gcc
 ```
 
 ## Install and run Langflow Desktop
