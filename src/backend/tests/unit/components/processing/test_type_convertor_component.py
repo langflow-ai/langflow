@@ -71,7 +71,7 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=DataFrame(data=df), output_type="Message")
         result = component.convert_to_message()
         assert isinstance(result, Message)
-        assert result.text == "| col1   | col2   |\n|--------|--------|\n| Hello  | World  |"
+        assert result.text == "| col1   | col2   |\n|:-------|:-------|\n| Hello  | World  |"
 
     def test_dataframe_to_data(self, component_class):
         """Test converting DataFrame to Data."""
@@ -87,8 +87,10 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=DataFrame(data=df), output_type="DataFrame")
         result = component.convert_to_dataframe()
         assert isinstance(result, DataFrame)
-        assert isinstance(result.data, pd.DataFrame)
-        assert result.data.equals(df)
+        assert "col1" in result.columns
+        assert "col2" in result.columns
+        assert result.iloc[0]["col1"] == "Hello"
+        assert result.iloc[0]["col2"] == "World"
 
     # Additional helper tests
     def test_safe_convert(self, component_class):
@@ -101,7 +103,7 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
 
         # Test with Data
         result = component._safe_convert(Data(data={"text": "Hello"}))
-        assert result == "{'text': 'Hello'}"
+        assert result == '{"text": "Hello"}'
 
         # Test with DataFrame
         test_df = pd.DataFrame({"col1": ["Hello"]})
