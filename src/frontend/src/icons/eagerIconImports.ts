@@ -228,4 +228,3 @@ export const eagerIconsMapping = {
   YouTube: YouTubeIcon,
   ZepMemory: ZepMemoryIcon,
 };
-
