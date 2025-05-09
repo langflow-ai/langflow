@@ -2,6 +2,7 @@ from .alter_metadata import AlterMetadataComponent
 from .combine_text import CombineTextComponent
 from .convertor import TypeConverterComponent
 from .create_data import CreateDataComponent
+from .data_operations import DataOperationsComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
@@ -22,6 +23,7 @@ __all__ = [
     "CombineTextComponent",
     "CreateDataComponent",
     "DataFilterComponent",
+    "DataOperationsComponent",
     "ExtractDataKeyComponent",
     "JSONCleaner",
     "LLMRouterComponent",

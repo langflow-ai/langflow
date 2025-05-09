@@ -1,5 +1,6 @@
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { GradientSave } from "@/icons/GradientSparkles";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
@@ -434,7 +435,11 @@ const iconMappingsPromise = import("../icons/lazyIconImports").then(
 );
 
 export const eagerLoadedIconsMap = {
-  // React icons
+  // Custom icons
+  GradientSave: GradientSave,
+  BotMessageSquareIcon: BotMessageSquareIcon,
+
+  // React icon
   FaApple: FaApple,
   FaDiscord: FaDiscord,
   FaGithub: FaGithub,
@@ -446,6 +451,10 @@ export const getNodeIcon = async (name: string) => {
   const iconName = nodeIconToDisplayIconMap[name];
   if (eagerLoadedIconsMap[iconName || name]) {
     return eagerLoadedIconsMap[iconName || name];
+  }
+
+  if (isFontAwesomeIcon(iconName || name)) {
+    return fontAwesomeIcons[iconName || name];
   }
 
   const iconMappings = await iconMappingsPromise;
@@ -477,6 +486,7 @@ export const iconExists = async (name: string): Promise<boolean> => {
 
   return !!(
     eagerLoadedIconsMap[iconName] ||
+    isFontAwesomeIcon(iconName) ||
     iconMappings[iconName] ||
     dynamicIconImports[getLucideIconName(iconName)]
   );
