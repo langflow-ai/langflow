@@ -95,6 +95,8 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    enabled_output_cache: bool = True
+    """The output_cache controller in the _get_output_result() function of the component. Defaults to True."""
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
@@ -971,7 +973,7 @@ class Component(CustomComponent):
         return (output for output in self._outputs_map.values() if self._should_process_output(output))
 
     async def _get_output_result(self, output):
-        if output.cache and output.value != UNDEFINED:
+        if output.cache and output.value != UNDEFINED and self.enabled_output_cache:
             return output.value
 
         if output.method is None:
