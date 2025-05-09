@@ -17,6 +17,7 @@ from sqlmodel import select
 from langflow.services.database.models import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
+NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., Awaitable]:
@@ -107,15 +108,36 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         if "anyOf" in s:
-            subtypes = [parse_type(sub) for sub in s["anyOf"]]
-            return tuple | subtypes
+            # Handle common pattern for nullable types (anyOf with string and null)
+            subtypes = [sub.get("type") for sub in s["anyOf"] if isinstance(sub, dict) and "type" in sub]
 
-        t = s.get("type", Any)
+            # Check if this is a simple nullable type (e.g., str | None)
+            if len(subtypes) == NULLABLE_TYPE_LENGTH and "null" in subtypes:
+                # Get the non-null type
+                non_null_type = next(t for t in subtypes if t != "null")
+                # Map it to Python type
+                if isinstance(non_null_type, str):
+                    return {
+                        "string": str,
+                        "integer": int,
+                        "number": float,
+                        "boolean": bool,
+                        "object": dict,
+                        "array": list,
+                    }.get(non_null_type, Any)
+                return Any
+
+            # For other anyOf cases, use the first non-null type
+            subtypes = [parse_type(sub) for sub in s["anyOf"]]
+            non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
+            if non_null_types:
+                return non_null_types[0]
+            return str
+
+        t = s.get("type", "any")  # Use string "any" as default instead of Any type
         if t == "array":
             item_schema = s.get("items", {})
-            # schema_type: type[Any]
             schema_type: Any = parse_type(item_schema)
-
             return list[schema_type]
 
         if t == "object":
@@ -131,9 +153,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             "object": dict,
             "array": list,
         }.get(t, Any)
-        # if result == "":
-        #     return Any
-        # return result
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""

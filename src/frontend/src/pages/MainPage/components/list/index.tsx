@@ -43,9 +43,7 @@ const ListComponent = ({
   const { folderId } = useParams();
   const [openSettings, setOpenSettings] = useState(false);
   const isComponent = flowData.is_component ?? false;
-  const setFlowToCanvas = useFlowsManagerStore(
-    (state) => state.setFlowToCanvas,
-  );
+
   const { getIcon } = useGetTemplateStyle(flowData);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
@@ -55,7 +53,6 @@ const ListComponent = ({
       setSelected(!selected);
     } else {
       if (!isComponent) {
-        await setFlowToCanvas(flowData);
         navigate(editFlowLink);
       }
     }

@@ -3,6 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
 import { createApiKey } from "@/controllers/API";
+import { api } from "@/controllers/API/api";
 import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
@@ -61,23 +62,24 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = `${PROXY_TARGET}/api/v1/mcp/project/${projectId}/sse`;
+  const apiHost = api.defaults.baseURL || window.location.origin;
+
+  const apiUrl = `${apiHost}/api/v1/mcp/project/${projectId}/sse`;
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "${apiUrl}"${
+        "mcp-proxy",${
           isAutoLogin
             ? ""
-            : `,
-        "--header",
-        "x-api-key:${apiKey || "YOUR_API_KEY"}"`
+            : `
+        "--headers",
+        "x-api-key",
+        "${apiKey || "YOUR_API_KEY"}",`
         }
+        "${apiUrl}"
       ]
     }
   }
@@ -119,7 +121,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         MCP Server
       </div>
       <div className="pb-4 text-mmd text-muted-foreground">
-        Access your Project's flows as Actions within a MCP Server. Learn how to
+        Access your Project's flows as Actions within a MCP Server. Learn more
+        in our
         <a
           className="text-accent-pink-foreground"
           href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
@@ -127,7 +130,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           rel="noreferrer"
         >
           {" "}
-          deploy your MCP server to the internet.
+          Projects as MCP Servers guide.
         </a>
       </div>
       <div className="flex flex-row">
@@ -212,7 +215,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             </SyntaxHighlighter>
           </div>
           <div className="p-2 text-mmd text-muted-foreground">
-            Use this config in your client. Need help? See the{" "}
+            Add this config to your client of choice. Need help? See the{" "}
             <a
               href={MCP_SERVER_TUTORIAL_LINK}
               target="_blank"
