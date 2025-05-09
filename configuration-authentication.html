@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.cf9a4109.css">
-<script src="/assets/js/runtime~main.3a4bfde3.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.d5634c43.js" defer="defer"></script>
 <script src="/assets/js/main.606fad60.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -44,6 +44,8 @@ You can copy the contents of this file into your own <code>.env</code> file and 
 <p>When <code>True</code>, Langflow automatically logs users in with username <code>langflow</code> and password <code>langflow</code> without requiring user authentication.
 To disable automatic login and enforce user authentication, set this value to <code>False</code> in your <code>.env</code> file.
 By default, this variable is set to <code>True</code>.</p>
+<p>Langflow <strong>does not</strong> allow users to have simultaneous or shared access to flows.
+If <code>AUTO_LOGIN</code> is enabled and user management is disabled (<code>LANGFLOW_NEW_USER_IS_ACTIVE=true</code>), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_AUTO_LOGIN=True</span></div></div><br></code></div></div>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow_superuser-and-langflow_superuser_password">LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD<a href="#langflow_superuser-and-langflow_superuser_password" class="hash-link" aria-label="Direct link to LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD" title="Direct link to LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD">​</a></h3>
 <p>These environment variables are only relevant when <code>LANGFLOW_AUTO_LOGIN</code> is set to <code>False</code>.
