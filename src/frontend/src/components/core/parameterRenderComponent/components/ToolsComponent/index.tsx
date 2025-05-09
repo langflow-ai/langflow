@@ -52,7 +52,6 @@ export default function ToolsComponent({
           setOpen={setIsModalOpen}
           isAction={isAction}
           description={description}
-          template={template}
           rows={value}
           handleOnNewValue={handleOnNewValue}
           title={title}

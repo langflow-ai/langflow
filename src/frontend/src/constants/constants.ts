@@ -551,7 +551,8 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
-export const DEFAULT_FOLDER = "My Projects";
+export const DEFAULT_FOLDER = "Starter Project";
+export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
 
 /**
  * Header text for admin page
@@ -768,7 +769,9 @@ export const BROKEN_EDGES_WARNING =
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
-export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
+export const IS_MAC =
+  typeof navigator !== "undefined" &&
+  navigator.userAgent.toUpperCase().includes("MAC");
 
 export const defaultShortcuts = [
   {
@@ -1021,7 +1024,7 @@ export const POLLING_MESSAGES = {
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
-export const POLLING_INTERVAL = 100;
+export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =
   !process?.env?.LANGFLOW_AUTO_LOGIN ||
