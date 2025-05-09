@@ -22,6 +22,10 @@ export const lazyIconsMapping = {
     })),
   AstraDB: () =>
     import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
+  GridGain: () =>
+    import("../icons/GridGain").then((module) => ({
+      default: module.GridGainIcon,
+    })),
   Athena: () =>
     import("@/icons/athena").then((mod) => ({ default: mod.AthenaIcon })),
   AWS: () => import("@/icons/AWS").then((mod) => ({ default: mod.AWSIcon })),
