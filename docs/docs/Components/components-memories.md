@@ -61,6 +61,27 @@ This component creates a `CassandraChatMessageHistory` instance, enabling storag
 |-----------------|-------------------------|--------------------------------------------------------------|
 | message_history | BaseChatMessageHistory  | An instance of CassandraChatMessageHistory for the session.  |
 
+## GridGainChatMemory Component
+
+This component creates a chat message history using GridGain, enabling storage and retrieval of chat messages using GridGain's distributed caching capabilities.
+
+### Inputs
+
+| Name         | Type          | Description                                                           |
+|--------------|---------------|-----------------------------------------------------------------------|
+| host         | String        | GridGain server host address. Required. Default value: "localhost".        |
+| port         | String        | GridGain server port number. Required. Default value: "10800".            |
+| cache_name   | String        | Name of the GridGain cache that is used to store messages. Required. Default value: "langchain_message_store" |
+| session_id   | MessageText   | Chat session ID. Uses current session ID if not provided.             |
+| client_type  | String        | Type of client to use. Required. Default value: "pygridgain".                     |
+
+
+### Outputs
+
+| Name            | Type                    | Description                                               |
+|-----------------|-------------------------|-----------------------------------------------------------|
+| message_history | BaseChatMessageHistory  | An instance of GridGainChatMessageHistory for the session. |
+
 ## Mem0 Chat Memory
 
 The Mem0 Chat Memory component retrieves and stores chat messages using Mem0 memory storage.
