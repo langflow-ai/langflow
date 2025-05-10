@@ -4876,7 +4876,7 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = "==0.2.2" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
-    { name = "langflow-api", virtual = "src/langflow-api" },
+    { name = "langflow-api", editable = "src/langflow-api" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
     { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
@@ -4988,7 +4988,127 @@ dev = [
 [[package]]
 name = "langflow-api"
 version = "0.1.0"
-source = { virtual = "src/langflow-api" }
+source = { editable = "src/langflow-api" }
+
+[package.optional-dependencies]
+all = [
+    { name = "celery" },
+    { name = "ctransformers" },
+    { name = "flower" },
+    { name = "llama-cpp-python" },
+    { name = "redis" },
+    { name = "sentence-transformers" },
+]
+deploy = [
+    { name = "celery" },
+    { name = "flower" },
+    { name = "redis" },
+]
+local = [
+    { name = "ctransformers" },
+    { name = "llama-cpp-python" },
+    { name = "sentence-transformers" },
+]
+postgresql = [
+    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+    { name = "codeflash" },
+    { name = "devtools" },
+    { name = "dictdiffer" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "ipykernel" },
+    { name = "mypy" },
+    { name = "pandas-stubs" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-codspeed" },
+    { name = "pytest-cov" },
+    { name = "pytest-flakefinder" },
+    { name = "pytest-github-actions-annotate-failures" },
+    { name = "pytest-instafail" },
+    { name = "pytest-mock" },
+    { name = "pytest-profiling" },
+    { name = "pytest-split" },
+    { name = "pytest-sugar" },
+    { name = "pytest-xdist" },
+    { name = "requests" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "types-aiofiles" },
+    { name = "types-google-cloud-ndb" },
+    { name = "types-markdown" },
+    { name = "types-passlib" },
+    { name = "types-pillow" },
+    { name = "types-python-jose" },
+    { name = "types-pywin32" },
+    { name = "types-pyyaml" },
+    { name = "types-redis" },
+    { name = "types-requests" },
+    { name = "vulture" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "celery", marker = "extra == 'all'", specifier = ">=5.3.1" },
+    { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
+    { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
+    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
+    { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
+    { name = "flower", marker = "extra == 'deploy'", specifier = ">=1.0.0" },
+    { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
+    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
+    { name = "redis", marker = "extra == 'all'", specifier = ">=4.6.0" },
+    { name = "redis", marker = "extra == 'deploy'", specifier = ">=4.6.0" },
+    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
+    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'" },
+]
+provides-extras = ["postgresql", "deploy", "local", "all"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "codeflash", specifier = ">=0.8.4" },
+    { name = "devtools", specifier = ">=0.12.2" },
+    { name = "dictdiffer", specifier = ">=0.9.0" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
+    { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "mypy", specifier = ">=1.11.0" },
+    { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
+    { name = "pre-commit", specifier = ">=3.7.0" },
+    { name = "pytest", specifier = ">=8.2.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23.0" },
+    { name = "pytest-codspeed", specifier = ">=3.0.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
+    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
+    { name = "pytest-instafail", specifier = ">=0.5.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-profiling", specifier = ">=1.7.0" },
+    { name = "pytest-split", specifier = ">=0.9.0" },
+    { name = "pytest-sugar", specifier = ">=1.0.0" },
+    { name = "pytest-xdist", specifier = ">=3.6.0" },
+    { name = "requests", specifier = ">=2.32.0" },
+    { name = "respx", specifier = ">=0.21.1" },
+    { name = "ruff", specifier = ">=0.6.2" },
+    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
+    { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
+    { name = "types-markdown", specifier = ">=3.7.0.20240822" },
+    { name = "types-passlib", specifier = ">=1.7.7.13" },
+    { name = "types-pillow", specifier = ">=10.2.0.20240213" },
+    { name = "types-python-jose", specifier = ">=3.3.4.8" },
+    { name = "types-pywin32", specifier = ">=306.0.0.4" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.8" },
+    { name = "types-redis", specifier = ">=4.6.0.5" },
+    { name = "types-requests", specifier = ">=2.32.0" },
+    { name = "vulture", specifier = ">=2.11" },
+]
 
 [[package]]
 name = "langflow-base"
@@ -5030,6 +5150,7 @@ dependencies = [
     { name = "langchain-experimental" },
     { name = "langchain-ibm" },
     { name = "langchainhub" },
+    { name = "langflow-api" },
     { name = "loguru" },
     { name = "mcp" },
     { name = "multiprocess" },
@@ -5173,6 +5294,7 @@ requires-dist = [
     { name = "langchain-experimental", specifier = ">=0.3.4,<1.0.0" },
     { name = "langchain-ibm", specifier = ">=0.3.8" },
     { name = "langchainhub", specifier = "~=0.1.15" },
+    { name = "langflow-api", editable = "src/langflow-api" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
