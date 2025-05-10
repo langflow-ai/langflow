@@ -320,3 +320,7 @@ ignore_missing_imports = true
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.pyright]
+include = ["langflow", "src/langflow-api"]
+extraPaths = ["src/langflow-api/src"]
+

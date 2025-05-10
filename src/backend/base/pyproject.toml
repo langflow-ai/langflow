@@ -260,3 +260,7 @@ all = [
 
 [project.scripts]
 langflow-base = "langflow.__main__:main"
+
+[tool.pyright]
+include = ["langflow", "src/langflow-api"]
+extraPaths = ["src/langflow-api/src"]
