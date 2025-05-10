@@ -19,6 +19,7 @@ maintainers = [
 # Define your main dependencies here
 dependencies = [
     "langflow-base==0.4.1",
+    "langflow-api==0.1.0",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -177,9 +178,10 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
+langflow-api = { workspace = true }
 
 [tool.uv.workspace]
-members = ["src/backend/base", "."]
+members = ["src/backend/base", "src/langflow-api", "."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
@@ -303,7 +305,6 @@ external = ["RUF027"]
     "S101",
     "SLF001",
 ]
-
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
 
@@ -318,3 +319,4 @@ ignore_missing_imports = true
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+

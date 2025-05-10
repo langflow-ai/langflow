@@ -1,0 +1,8 @@
+[project]
+name = "langflow-api"
+version = "0.1.0"
+description = "Langflow API package"
+requires-python = ">=3.10"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."] 

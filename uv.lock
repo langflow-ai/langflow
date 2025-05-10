@@ -12,6 +12,7 @@ resolution-markers = [
 [manifest]
 members = [
     "langflow",
+    "langflow-api",
     "langflow-base",
 ]
 
@@ -4683,6 +4684,7 @@ dependencies = [
     { name = "langchain-pinecone" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
+    { name = "langflow-api" },
     { name = "langflow-base" },
     { name = "langfuse" },
     { name = "langsmith" },
@@ -4874,6 +4876,7 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = "==0.2.2" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
+    { name = "langflow-api", virtual = "src/langflow-api" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
     { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
@@ -4981,6 +4984,11 @@ dev = [
     { name = "types-requests", specifier = ">=2.32.0" },
     { name = "vulture", specifier = ">=2.11" },
 ]
+
+[[package]]
+name = "langflow-api"
+version = "0.1.0"
+source = { virtual = "src/langflow-api" }
 
 [[package]]
 name = "langflow-base"
