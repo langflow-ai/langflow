@@ -1,3 +1,5 @@
+from typing import cast
+
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
@@ -88,8 +90,10 @@ class MemoryComponent(Component):
             memory_name = type(self.memory).__name__
             err_msg = f"External Memory object ({memory_name}) must have 'aget_messages' method."
             raise AttributeError(err_msg)
-
-        if self.memory:
+        # Check if n_messages is None or 0
+        if n_messages == 0:
+            stored = []
+        elif self.memory:
             # override session_id
             self.memory.session_id = session_id
 
@@ -112,7 +116,7 @@ class MemoryComponent(Component):
                 order=order,
             )
         self.status = stored
-        return stored
+        return cast(Data, stored)
 
     async def retrieve_messages_as_text(self) -> Message:
         stored_text = data_to_text(self.template, await self.retrieve_messages())
