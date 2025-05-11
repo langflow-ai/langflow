@@ -116,3 +116,52 @@ def test_files_independence(chat_input_instances):
     assert chat1.files != chat2.files
     assert chat1.files == files1
     assert chat2.files == files2
+
+
+async def test_message_output_cache(chat_input_instances):
+    """Test that message outputs are cached by enabled_output_cache controlled"""
+    chat1, chat2 = chat_input_instances
+    chat2.enabled_output_cache = False  # It's Ture by default
+
+    # Configure different messages
+    chat1.build(
+        input_value="Hello from chat1, it's the first message",
+        sender_name="Alice",
+        should_store_message=False,  # Prevent actual message storage
+    )
+    chat2.build(
+        input_value="Hello from chat2, it's the first message",
+        sender_name="Bob",
+        should_store_message=False,  # Prevent actual message storage
+    )
+    results1, _ = await chat1._build_results()
+    results2, _ = await chat2._build_results()
+
+    # Get messages from both instances in round1
+    assert isinstance(results1["message"], Message)
+    assert isinstance(results2["message"], Message)
+
+    # Verify messages are different
+    assert results1["message"].text == "Hello from chat1, it's the first message"
+    assert results2["message"].text == "Hello from chat2, it's the first message"
+
+    chat1.build(
+        input_value="Hello from chat1, it's the second message",
+        sender_name="Alice",
+        should_store_message=False,  # Prevent actual message storage
+    )
+    chat2.build(
+        input_value="Hello from chat2, it's the second message",
+        sender_name="Bob",
+        should_store_message=False,  # Prevent actual message storage
+    )
+
+    # Get messages from both instances in round2
+    results1, _ = await chat1._build_results()
+    results2, _ = await chat2._build_results()
+
+    # Verify messages are cached
+    assert isinstance(results1["message"], Message)
+    assert isinstance(results2["message"], Message)
+    assert results1["message"].text == "Hello from chat1, it's the first message"
+    assert results2["message"].text == "Hello from chat2, it's the second message"
