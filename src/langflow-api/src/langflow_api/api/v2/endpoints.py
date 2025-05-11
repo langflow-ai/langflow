@@ -15,17 +15,23 @@ from loguru import logger
 from sqlmodel import select
 
 from langflow_api.api.utils import CurrentActiveUser, DbSession, parse_value
-from langflow_api.api.v2.schemas import (
+from langflow_api.api.v2.schemas.flow import (
+    FlowListRead,
+    FlowListReadWithFolderName,
+    FlowListIds,
+    FlowDataRequest,
+    FlowListCreate,
+)
+from langflow_api.api.v2.schemas.common import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
-    InputValueRequest,
     RunResponse,
-    SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
-    UploadFileResponse,
 )
+from langflow_api.api.v2.schemas.mcp import InputValueRequest, SimplifiedAPIRequest
+from langflow_api.api.v2.schemas.flow import UploadFileResponse
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -51,7 +57,7 @@ from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.event_manager import EventManager
+    from langflow.events.event_manager import EventManager
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])

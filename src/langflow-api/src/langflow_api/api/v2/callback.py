@@ -8,9 +8,9 @@ from langchain_core.callbacks.base import AsyncCallbackHandler
 from loguru import logger
 from typing_extensions import override
 
-from langflow.api.v1.schemas import ChatResponse, PromptResponse
 from langflow.services.deps import get_chat_service, get_socket_service
 from langflow.utils.util import remove_ansi_escape_codes
+from langflow_api.api.v2.schemas.chat import ChatResponse, PromptResponse
 
 if TYPE_CHECKING:
     from langflow.services.socket.service import SocketIOService

@@ -36,15 +36,9 @@ from langflow_api.api.utils import (
     parse_exception,
     verify_public_flow_and_get_user,
 )
-from langflow_api.api.v2.schemas import (
-    CancelFlowResponse,
-    FlowDataRequest,
-    InputValueRequest,
-    ResultDataResponse,
-    StreamData,
-    VertexBuildResponse,
-    VerticesOrderResponse,
-)
+from langflow_api.api.v2.schemas.flow import FlowDataRequest, VertexBuildResponse, StreamData, CancelFlowResponse, VerticesOrderResponse
+from langflow_api.api.v2.schemas.mcp import InputValueRequest
+from langflow_api.api.v2.schemas.common import ResultDataResponse
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build

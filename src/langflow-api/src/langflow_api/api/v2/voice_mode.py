@@ -25,7 +25,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow_api.api.utils import CurrentActiveUser, DbSession
 from langflow_api.api.v2.chat import build_flow_and_stream
-from langflow_api.api.v2.schemas import InputValueRequest
+from langflow_api.api.v2.schemas.mcp import InputValueRequest
 from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties

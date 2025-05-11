@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from langflow_api.api.utils import DbSession
-from langflow_api.api.v2.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -16,6 +15,8 @@ from langflow.services.auth.utils import (
 )
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_variable_service
+
+from langflow_api.api.v2.schemas.api_key import Token
 
 router = APIRouter(tags=["Login"])
 

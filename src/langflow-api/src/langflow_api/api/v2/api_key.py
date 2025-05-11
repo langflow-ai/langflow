@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from langflow_api.api.utils import CurrentActiveUser, DbSession
-from langflow_api.api.v2.schemas import ApiKeyCreateRequest, ApiKeysResponse
+from langflow_api.api.v2.schemas.api_key import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
 
 # Assuming you have these methods in your service layer

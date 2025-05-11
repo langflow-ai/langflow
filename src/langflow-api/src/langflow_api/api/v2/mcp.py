@@ -20,7 +20,7 @@ from sqlmodel import select
 from starlette.background import BackgroundTasks
 
 from langflow_api.api.v2.chat import build_flow_and_stream
-from langflow_api.api.v2.schemas import InputValueRequest
+from langflow_api.api.v2.schemas.mcp import InputValueRequest
 
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
