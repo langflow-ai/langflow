@@ -85,6 +85,7 @@ export function getNewCurlCode({
   output_type,
   tweaksObject,
   activeTweaks,
+  endpointName,
 }: {
   flowId: string;
   isAuthenticated: boolean;
@@ -93,9 +94,10 @@ export function getNewCurlCode({
   output_type: string;
   tweaksObject: any;
   activeTweaks: boolean;
+  endpointName: string;
 }): string {
   const { protocol, host } = customGetHostProtocol();
-  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+  const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
