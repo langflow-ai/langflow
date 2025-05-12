@@ -2,11 +2,10 @@ import asyncio
 import contextlib
 import os
 import platform
-import tempfile
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -256,8 +255,8 @@ class MCPStdioClient:
 
         # Create a temporary file to capture stderr
         errlog_path = ""
-        with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as tmp:
-            errlog_path = tmp.name
+        async with aiofiles.tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as tmp:
+            errlog_path = cast(str, tmp.name)
 
             try:
                 # Pass the temp file as errlog to capture stderr
@@ -271,7 +270,7 @@ class MCPStdioClient:
                     full_log = ""
                     while True:
                         await asyncio.sleep(0.05)
-                        tmp.flush()
+                        await tmp.flush()
                         current = Path(errlog_path).stat().st_size
                         if current > last_size:
                             async with aiofiles.open(errlog_path, encoding="utf-8") as f:
