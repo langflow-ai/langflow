@@ -294,7 +294,7 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
         return FlowRead.model_validate(flow, from_attributes=True)
 
 
-async def get_flow_by_id_or_endpoint_name_from_cache(flow_id_or_name: str, *, use_cache: bool = True):
+async def get_flow_by_id_or_endpoint_name_from_cache(flow_id_or_name: str, *, use_cache: bool = False):
     if use_cache:
         flow_cache_service = get_flow_cache_service()
         flow = await flow_cache_service.get_cached_graph(flow_id_or_name)
