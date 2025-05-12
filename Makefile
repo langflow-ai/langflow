@@ -11,7 +11,7 @@ RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
 
-log_level ?= debug
+log_level ?= info # make this back to debug
 host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
