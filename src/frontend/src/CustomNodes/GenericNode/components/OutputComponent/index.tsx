@@ -106,7 +106,12 @@ export default function OutputComponent({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent forceMount className="min-w-[200px]">
+      <DropdownMenuContent
+        side="bottom"
+        align="start"
+        forceMount
+        className="min-w-[200px]"
+      >
         {/* TODO: When we have a way to auto-detect the output type, we can add this back */}
         {/* <DropdownMenuItem
           onClick={() => {
@@ -129,12 +134,13 @@ export default function OutputComponent({
         {outputs &&
           outputs.map((item) => (
             <DropdownMenuItem
+              className="rounded-none"
               key={item.name}
               onClick={() => {
                 handleOutputSelection(item);
               }}
             >
-              <div className="w-full p-1 text-[13px] font-medium hover:bg-muted">
+              <div className="w-full p-1 text-[13px] font-medium">
                 <span>{item.display_name}</span>
               </div>
             </DropdownMenuItem>

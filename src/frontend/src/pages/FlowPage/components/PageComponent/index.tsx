@@ -546,7 +546,7 @@ export default function Page({
   const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
   const MIN_ZOOM = 0.2;
-  const MAX_ZOOM = 8;
+  const MAX_ZOOM = 2;
   const fitViewOptions = {
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
