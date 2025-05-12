@@ -585,6 +585,8 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
+  isUserEdited: boolean;
+  hasBreakingChange: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
   setOpenShowMoreOptions?: (open: boolean) => void;
