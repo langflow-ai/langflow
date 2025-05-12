@@ -14,9 +14,33 @@ from langflow.utils.component_utils import set_current_fields
 class DataOperationsComponent(Component):
     display_name = "Data Operations"
     description = "Perform various operations on a Data object."
-    icon = "file-json-2"
+    icon = "file-json"
     name = "DataOperations"
     default_keys = ["operations", "data"]
+    metadata = {
+        "keywords": [
+            "data",
+            "operations",
+            "filter values",
+            "append / update",
+            "remove keys",
+            "rename keys",
+            "select keys",
+            "literal eval",
+            "combine",
+            "filter",
+            "append",
+            "update",
+            "remove",
+            "rename",
+            "data operations",
+            "data manipulation",
+            "data transformation",
+            "data filtering",
+            "data selection",
+            "data combination",
+        ],
+    }
     actions_data = {
         "Select Keys": ["select_keys_input", "operations"],
         "Literal Eval": [],
