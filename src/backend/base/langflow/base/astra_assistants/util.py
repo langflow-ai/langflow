@@ -60,8 +60,11 @@ def tools_from_package(your_package) -> None:
 
         # Dynamically import the module
         import warnings
+
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning)
+            warnings.filterwarnings(
+                "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+            )
             warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
             module = importlib.import_module(module_name)
 
