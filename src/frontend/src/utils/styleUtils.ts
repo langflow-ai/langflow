@@ -1,4 +1,3 @@
-import { LinearIcon } from "../icons/Linear";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { GradientSave } from "@/icons/GradientSparkles";
@@ -6,6 +5,7 @@ import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { LinearIcon } from "../icons/Linear";
 import { lucideIcons } from "../icons/lucideIcons";
 
 export const BG_NOISE =

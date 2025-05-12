@@ -4,7 +4,6 @@ from composio import Action
 
 from langflow.base.composio.composio_base import ComposioBaseComponent
 from langflow.inputs import (
-    BoolInput,
     IntInput,
     MessageTextInput,
 )
@@ -17,17 +16,460 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
     icon = "Linear"
     documentation: str = "https://docs.composio.dev"
     app_name = "linear"
-    
-    _actions_data: dict = {}
-    
+
+    _actions_data: dict = {
+        "LINEAR_CREATE_LINEAR_ATTACHMENT": {
+            "display_name": "Create Linear Attachment",
+            "action_fields": [
+                "LINEAR_CREATE_LINEAR_ATTACHMENT_issue_id",
+                "LINEAR_CREATE_LINEAR_ATTACHMENT_subtitle",
+                "LINEAR_CREATE_LINEAR_ATTACHMENT_title",
+                "LINEAR_CREATE_LINEAR_ATTACHMENT_url",
+            ],
+        },
+        "LINEAR_CREATE_LINEAR_COMMENT": {
+            "display_name": "Create Linear Comment",
+            "action_fields": ["LINEAR_CREATE_LINEAR_COMMENT_body", "LINEAR_CREATE_LINEAR_COMMENT_issue_id"],
+        },
+        "LINEAR_CREATE_LINEAR_ISSUE": {
+            "display_name": "Create Linear Issue",
+            "action_fields": [
+                "LINEAR_CREATE_LINEAR_ISSUE_assignee_id",
+                "LINEAR_CREATE_LINEAR_ISSUE_description",
+                "LINEAR_CREATE_LINEAR_ISSUE_due_date",
+                "LINEAR_CREATE_LINEAR_ISSUE_estimate",
+                "LINEAR_CREATE_LINEAR_ISSUE_label_ids",
+                "LINEAR_CREATE_LINEAR_ISSUE_parent_id",
+                "LINEAR_CREATE_LINEAR_ISSUE_priority",
+                "LINEAR_CREATE_LINEAR_ISSUE_project_id",
+                "LINEAR_CREATE_LINEAR_ISSUE_state_id",
+                "LINEAR_CREATE_LINEAR_ISSUE_team_id",
+                "LINEAR_CREATE_LINEAR_ISSUE_title",
+            ],
+        },
+        "LINEAR_CREATE_LINEAR_ISSUE_DETAILS": {
+            "display_name": "Get Create Issue Default Params",
+            "action_fields": ["LINEAR_CREATE_LINEAR_ISSUE_DETAILS_team_id"],
+        },
+        "LINEAR_CREATE_LINEAR_LABEL": {
+            "display_name": "Create Label",
+            "action_fields": [
+                "LINEAR_CREATE_LINEAR_LABEL_color",
+                "LINEAR_CREATE_LINEAR_LABEL_description",
+                "LINEAR_CREATE_LINEAR_LABEL_name",
+                "LINEAR_CREATE_LINEAR_LABEL_team_id",
+            ],
+        },
+        "LINEAR_DELETE_LINEAR_ISSUE": {
+            "display_name": "Delete Issue",
+            "action_fields": ["LINEAR_DELETE_LINEAR_ISSUE_issue_id"],
+        },
+        "LINEAR_GET_ATTACHMENTS": {
+            "display_name": "Donwload Issue Attachments",
+            "action_fields": [
+                "LINEAR_GET_ATTACHMENTS_attachment_id",
+                "LINEAR_GET_ATTACHMENTS_file_name",
+                "LINEAR_GET_ATTACHMENTS_issue_id",
+            ],
+        },
+        "LINEAR_GET_CYCLES_BY_TEAM_ID": {
+            "display_name": "Get Cycles By Team",
+            "action_fields": ["LINEAR_GET_CYCLES_BY_TEAM_ID_team_id"],
+        },
+        "LINEAR_GET_LINEAR_ISSUE": {
+            "display_name": "Get Linear Issue",
+            "action_fields": ["LINEAR_GET_LINEAR_ISSUE_issue_id"],
+        },
+        "LINEAR_LIST_LINEAR_CYCLES": {"display_name": "Get All Cycles", "action_fields": []},
+        "LINEAR_LIST_LINEAR_ISSUES": {
+            "display_name": "Get Issues By Project",
+            "action_fields": [
+                "LINEAR_LIST_LINEAR_ISSUES_after",
+                "LINEAR_LIST_LINEAR_ISSUES_first",
+                "LINEAR_LIST_LINEAR_ISSUES_project_id",
+            ],
+        },
+        "LINEAR_LIST_LINEAR_LABELS": {
+            "display_name": "Get Labels By Team",
+            "action_fields": ["LINEAR_LIST_LINEAR_LABELS_team_id"],
+        },
+        "LINEAR_LIST_LINEAR_PROJECTS": {"display_name": "List Linear Projects", "action_fields": []},
+        "LINEAR_LIST_LINEAR_STATES": {
+            "display_name": "Get States By Team",
+            "action_fields": ["LINEAR_LIST_LINEAR_STATES_team_id"],
+        },
+        "LINEAR_LIST_LINEAR_TEAMS": {
+            "display_name": "Get Teams By Project",
+            "action_fields": ["LINEAR_LIST_LINEAR_TEAMS_project_id"],
+        },
+        "LINEAR_REMOVE_ISSUE_LABEL": {
+            "display_name": "Remove Label From Linear Issue",
+            "action_fields": ["LINEAR_REMOVE_ISSUE_LABEL_issue_id", "LINEAR_REMOVE_ISSUE_LABEL_label_id"],
+        },
+        "LINEAR_RUN_QUERY_OR_MUTATION": {
+            "display_name": "Run Query Or Mutation",
+            "action_fields": [
+                "LINEAR_RUN_QUERY_OR_MUTATION_query_or_mutation",
+                "LINEAR_RUN_QUERY_OR_MUTATION_variables",
+            ],
+        },
+        "LINEAR_UPDATE_ISSUE": {
+            "display_name": "Update Issue",
+            "action_fields": [
+                "LINEAR_UPDATE_ISSUE_assignee_id",
+                "LINEAR_UPDATE_ISSUE_description",
+                "LINEAR_UPDATE_ISSUE_due_date",
+                "LINEAR_UPDATE_ISSUE_estimate",
+                "LINEAR_UPDATE_ISSUE_issue_id",
+                "LINEAR_UPDATE_ISSUE_label_ids",
+                "LINEAR_UPDATE_ISSUE_parent_id",
+                "LINEAR_UPDATE_ISSUE_priority",
+                "LINEAR_UPDATE_ISSUE_project_id",
+                "LINEAR_UPDATE_ISSUE_state_id",
+                "LINEAR_UPDATE_ISSUE_team_id",
+                "LINEAR_UPDATE_ISSUE_title",
+            ],
+        },
+    }
+
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
-    
-    _bool_variables = {}
-    
+
     inputs = [
         *ComposioBaseComponent._base_inputs,
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ATTACHMENT_issue_id",
+            display_name="Issue Id",
+            info="ID of the issue to attach to",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ATTACHMENT_subtitle",
+            display_name="Subtitle",
+            info="Subtitle of the attachment",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ATTACHMENT_title",
+            display_name="Title",
+            info="Title of the attachment",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ATTACHMENT_url",
+            display_name="Url",
+            info="URL of the attachment",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_COMMENT_body",
+            display_name="Body",
+            info="Content of the comment",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_COMMENT_issue_id",
+            display_name="Issue Id",
+            info="ID of the issue to comment on",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_assignee_id",
+            display_name="Assignee Id",
+            info="ID of the assignee",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_description",
+            display_name="Description",
+            info="Description of the issue",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_due_date",
+            display_name="Due Date",
+            info="Due date of the issue in the comma separated format YYYY,MM,DD,hh,mm,ss. For example, 2024,10,27,12,58,00.",  # noqa: E501
+            show=False,
+        ),
+        IntInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_estimate",
+            display_name="Estimate",
+            info="The Int scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",  # noqa: E501
+            show=False,
+            value=0,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_label_ids",
+            display_name="Label Ids",
+            info="List of label IDs",
+            show=False,
+            value=[],
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_parent_id",
+            display_name="Parent Id",
+            info="ID of the parent issue",
+            show=False,
+        ),
+        IntInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_priority",
+            display_name="Priority",
+            info="The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
+            show=False,
+            value=0,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_project_id",
+            display_name="Project Id",
+            info="ID of the project",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_state_id",
+            display_name="State Id",
+            info="ID of the issue state",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_team_id",
+            display_name="Team Id",
+            info="ID of the team",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_title",
+            display_name="Title",
+            info="Title of the issue",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_ISSUE_DETAILS_team_id",
+            display_name="Team Id",
+            info="ID of the team for which to fetch details",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_LABEL_color",
+            display_name="Color",
+            info="Color of the label (hex code)",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_LABEL_description",
+            display_name="Description",
+            info="Description of the label",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_LABEL_name",
+            display_name="Name",
+            info="Name of the label",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_CREATE_LINEAR_LABEL_team_id",
+            display_name="Team Id",
+            info="ID of the team to create the label for",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_DELETE_LINEAR_ISSUE_issue_id",
+            display_name="Issue Id",
+            info="The ID of the issue to delete (can be UUID or shorthand ID like 'LIN-123')",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_GET_ATTACHMENTS_attachment_id",
+            display_name="Attachment Id",
+            info="ID of the attachment to be fetched",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_GET_ATTACHMENTS_file_name",
+            display_name="File Name",
+            info="Name of the file to be saved by. The file downloaded will be saved with this name. Make sure to include the file extension.",  # noqa: E501
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_GET_ATTACHMENTS_issue_id",
+            display_name="Issue Id",
+            info="ID of the issue for which to fetch details",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_GET_CYCLES_BY_TEAM_ID_team_id",
+            display_name="Team Id",
+            info="ID of the team for which to list cycles",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_GET_LINEAR_ISSUE_issue_id",
+            display_name="Issue Id",
+            info="ID of the issue for which to fetch details",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_LIST_LINEAR_ISSUES_after",
+            display_name="After",
+            info="Cursor to start from",
+            show=False,
+        ),
+        IntInput(
+            name="LINEAR_LIST_LINEAR_ISSUES_first",
+            display_name="First",
+            info="Number of issues to return",
+            show=False,
+            value=10,
+        ),
+        MessageTextInput(
+            name="LINEAR_LIST_LINEAR_ISSUES_project_id",
+            display_name="Project Id",
+            info="ID of the project for which to list issues. If this is provided the issues returned will be filtered by the given project ID.",  # noqa: E501
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_LIST_LINEAR_LABELS_team_id",
+            display_name="Team Id",
+            info="ID of the team for which to list labels",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_LIST_LINEAR_STATES_team_id",
+            display_name="Team Id",
+            info="ID of the team for which to list states",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_LIST_LINEAR_TEAMS_project_id",
+            display_name="Project Id",
+            info="ID of the project for which to list teams",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_REMOVE_ISSUE_LABEL_issue_id",
+            display_name="Issue Id",
+            info="The ID of the Linear issue from which to remove the label",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_REMOVE_ISSUE_LABEL_label_id",
+            display_name="Label Id",
+            info="The ID of the label to remove from the issue",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_RUN_QUERY_OR_MUTATION_query_or_mutation",
+            display_name="Query Or Mutation",
+            info="Query or mutation to run",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_RUN_QUERY_OR_MUTATION_variables",
+            display_name="Variables",
+            info="Variables to pass to the query or mutation",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_assignee_id",
+            display_name="Assignee Id",
+            info="ID of the assignee",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_description",
+            display_name="Description",
+            info="New description for the issue",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_due_date",
+            display_name="Due Date",
+            info="Due date of the issue in the comma separated format YYYY,MM,DD,hh,mm,ss. For example, 2024,10,27,12,58,00.",  # noqa: E501
+            show=False,
+        ),
+        IntInput(
+            name="LINEAR_UPDATE_ISSUE_estimate",
+            display_name="Estimate",
+            info="Time estimate for the issue in minutes",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_issue_id",
+            display_name="Issue Id",
+            info="ID of the issue to update",
+            show=False,
+            required=True,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_label_ids",
+            display_name="Label Ids",
+            info="List of label IDs to assign to the issue",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_parent_id",
+            display_name="Parent Id",
+            info="ID of the parent issue",
+            show=False,
+        ),
+        IntInput(
+            name="LINEAR_UPDATE_ISSUE_priority",
+            display_name="Priority",
+            info="The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_project_id",
+            display_name="Project Id",
+            info="ID of the project",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_state_id",
+            display_name="State Id",
+            info="ID of the issue state",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_team_id",
+            display_name="Team Id",
+            info="ID of the team",
+            show=False,
+        ),
+        MessageTextInput(
+            name="LINEAR_UPDATE_ISSUE_title",
+            display_name="Title",
+            info="New title for the issue",
+            show=False,
+        ),
     ]
-    
+
     def execute_action(self):
         """Execute action and return response as Message."""
         toolset = self._build_wrapper()
@@ -49,8 +491,8 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
                     if value is None or value == "":
                         continue
 
-                    if field in self._bool_variables:
-                        value = bool(value)
+                    if field in ["LINEAR_CREATE_LINEAR_ISSUE_label_ids", "LINEAR_UPDATE_ISSUE_label_ids"] and value:
+                        value = [item.strip() for item in value.split(",")]
 
                     param_name = field.replace(action_key + "_", "")
 
@@ -75,6 +517,6 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
 
     def set_default_tools(self):
         self._default_tools = {
-            self.sanitize_action_name("<default action 1>").replace(" ", "-"),
-            self.sanitize_action_name("<default action 2>").replace(" ", "-"),
+            self.sanitize_action_name("LINEAR_CREATE_LINEAR_ISSUE").replace(" ", "-"),
+            self.sanitize_action_name("LINEAR_GET_LINEAR_ISSUE").replace(" ", "-"),
         }
