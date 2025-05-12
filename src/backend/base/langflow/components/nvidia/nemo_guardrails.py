@@ -1,27 +1,29 @@
-import yaml
-import time
-import requests
-import logging
 import http.client as http_client
-import httpx
 import json
-from typing import Any
+import logging
+import time
 from contextlib import nullcontext
+from typing import Any
 
-from langflow.io import FileInput, MultilineInput, HandleInput, Output
-from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import LanguageModel
+import httpx
+import requests
+import yaml
 from nemoguardrails import RailsConfig
 from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
-from langflow.inputs import MultiselectInput, MessageTextInput, SecretStrInput, DropdownInput, BoolInput
+
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import LanguageModel
+from langflow.inputs import BoolInput, DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput
+from langflow.io import HandleInput, MultilineInput
 from langflow.schema.dotdict import dotdict
+
 
 def setup_logging():
     """Set up logging configuration"""
     # Enable debug logging for httpx and httpcore
-    logging.getLogger('httpx').setLevel(logging.DEBUG)
-    logging.getLogger('httpcore').setLevel(logging.DEBUG)
-    logging.getLogger('nemoguardrails').setLevel(logging.DEBUG)
+    logging.getLogger("httpx").setLevel(logging.DEBUG)
+    logging.getLogger("httpcore").setLevel(logging.DEBUG)
+    logging.getLogger("nemoguardrails").setLevel(logging.DEBUG)
     # Enable debug logging
     logging.basicConfig(level=logging.DEBUG)
 
@@ -32,7 +34,7 @@ def setup_request_logging():
         print(f"URL: {request.url}")
         print(f"Method: {request.method}")
         print("Headers:")
-        sensitive_headers = {'authorization', 'api-key', 'x-api-key', 'token', 'bearer', 'secret'}
+        sensitive_headers = {"authorization", "api-key", "x-api-key", "token", "bearer", "secret"}
         for header, value in request.headers.items():
             if not any(sensitive in header.lower() for sensitive in sensitive_headers):
                 print(f"  {header}: {value}")
@@ -41,15 +43,15 @@ def setup_request_logging():
         print("Body:")
         # Try to parse and redact sensitive info from body if it's JSON
         try:
-            body = request.content.decode('utf-8')
+            body = request.content.decode("utf-8")
             if body:
                 try:
                     body_json = json.loads(body)
                     # Redact common sensitive fields
-                    sensitive_fields = {'api_key', 'token', 'secret', 'password', 'key', 'auth'}
+                    sensitive_fields = {"api_key", "token", "secret", "password", "key", "auth"}
                     for field in sensitive_fields:
                         if field in body_json:
-                            body_json[field] = '[REDACTED]'
+                            body_json[field] = "[REDACTED]"
                     print(json.dumps(body_json, indent=2))
                 except json.JSONDecodeError:
                     # If not JSON, just print the body
@@ -57,8 +59,8 @@ def setup_request_logging():
         except Exception:
             print("[Unable to decode body]")
         print("===================\n")
-    
-    return httpx.Client(event_hooks={'request': [log_request]})
+
+    return httpx.Client(event_hooks={"request": [log_request]})
 
 class HTTPDebugContext:
     """Context manager for HTTP debug logging."""
@@ -69,16 +71,16 @@ class HTTPDebugContext:
     def __enter__(self):
         # Store original logging levels
         self.original_levels = {
-            'httpx': logging.getLogger('httpx').level,
-            'httpcore': logging.getLogger('httpcore').level,
-            'root': logging.getLogger().level
+            "httpx": logging.getLogger("httpx").level,
+            "httpcore": logging.getLogger("httpcore").level,
+            "root": logging.getLogger().level
         }
-        
+
         # Set debug levels
-        logging.getLogger('httpx').setLevel(logging.DEBUG)
-        logging.getLogger('httpcore').setLevel(logging.DEBUG)
+        logging.getLogger("httpx").setLevel(logging.DEBUG)
+        logging.getLogger("httpcore").setLevel(logging.DEBUG)
         logging.getLogger().setLevel(logging.DEBUG)
-        
+
         # Set up request logging
         self.client = setup_request_logging()
         return self
@@ -87,7 +89,7 @@ class HTTPDebugContext:
         # Restore original logging levels
         for logger_name, level in self.original_levels.items():
             logging.getLogger(logger_name).setLevel(level)
-        
+
         # Clean up client
         if self.client:
             self.client.close()
@@ -96,15 +98,15 @@ def enable_http_debug_logging():
     """Enable all HTTP debug logging"""
     # Set up HTTP connection debugging
     http_client.HTTPConnection.debuglevel = 1
-    
+
     # Set up basic logging
     logging.basicConfig(level=logging.DEBUG)
-    
+
     # Enable urllib3 request logging
     requests_log = logging.getLogger("requests.packages.urllib3")
     requests_log.setLevel(logging.DEBUG)
     requests_log.propagate = True
-    
+
     # Set up detailed request logging
     setup_logging()
     setup_request_logging()
@@ -415,7 +417,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         # Jailbreak detection rails
         if "jailbreak detection heuristics" in self.rails:
             config_dict["rails"]["input"]["flows"].append("jailbreak detection heuristics")
-            
+
         if "jailbreak detection model" in self.rails:
             config_dict["rails"]["config"]["jailbreak_detection"] = {
                 "nim_full_url": self.jailbreak_detection_model_url,
@@ -487,16 +489,16 @@ define bot refuse to respond
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
-            
+
             # Filter for models that are in our known good list
             suitable_models = []
             for model in model_list.get("data", []):
                 model_id = model["id"]
                 if model_id in KNOWN_GOOD_MODELS:
                     suitable_models.append(model_id)
-            
+
             return suitable_models
-        except requests.RequestException as e:
+        except requests.RequestException:
             # Let the UI handle the empty list case
             return []
 
@@ -533,7 +535,7 @@ define bot refuse to respond
                     k: "[REDACTED]" if any(s in k.lower() for s in sensitive_keys) else mask_sensitive_values(v)
                     for k, v in d.items()
                 }
-            elif isinstance(d, list):
+            if isinstance(d, list):
                 return [mask_sensitive_values(item) for item in d]
             return d
 
