@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import DataFrame
@@ -19,6 +22,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
+        "Base64 Image",
     ]
 
     inputs = [
@@ -107,7 +111,7 @@ class DataFrameOperationsComponent(Component):
             name="output",
             method="perform_operation",
             info="The resulting DataFrame after the operation.",
-        )
+        ),
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
@@ -175,8 +179,10 @@ class DataFrameOperationsComponent(Component):
             return self.tail(dataframe_copy)
         if operation == "Replace Value":
             return self.replace_values(dataframe_copy)
-        msg = f"Unsupported operation: {operation}"
+        if operation == "Base64":
+            return self.convert_dataframe_to_base64(dataframe_copy)
 
+        msg = f"Unsupported operation: {operation}"
         raise ValueError(msg)
 
     # Existing methods
@@ -210,3 +216,20 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
+
+    def convert_dataframe_to_base64(self, df: DataFrame) -> DataFrame:
+        try:
+            df_base64 = pd.DataFrame(df).copy()
+            fig, ax = plt.subplots(figsize=(len(df_base64.columns) * 1.2, len(df_base64) * 0.5))
+            ax.axis("tight")
+            ax.axis("off")
+            ax.table(cellText=df.values, colLabels=df_base64.columns, loc="center")
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+            plt.close(fig)
+            buf.seek(0)
+            base64_image = base64.b64encode(buf.read()).decode("utf-8")
+            return DataFrame(pd.DataFrame({"base64_image": [base64_image]}))
+        except Exception as e:
+            self.status = f"Error: {e!s}"
+            return DataFrame(pd.DataFrame({"error": [str(e)]}))
