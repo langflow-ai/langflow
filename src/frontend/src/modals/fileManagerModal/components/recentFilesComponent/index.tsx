@@ -20,11 +20,24 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
-  const filesWithType = files.map((file) => ({
-    ...file,
-    type: file.path.split(".").pop()?.toLowerCase(),
-  }));
-  const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
+  const filesWithType = useMemo(
+    () =>
+      files.map((file) => ({
+        ...file,
+        type: file.path.split(".").pop()?.toLowerCase(),
+      })),
+    [files],
+  );
+
+  const fuse = useMemo(
+    () =>
+      new Fuse(filesWithType, {
+        keys: ["name", "type"],
+        threshold: 0.3,
+      }),
+    [filesWithType],
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const { mutate: renameFile } = usePostRenameFileV2();
@@ -39,18 +52,7 @@ export default function RecentFilesComponent({
       return fileExtension && (!types || types.includes(fileExtension));
     });
     return filteredFiles;
-  }, [searchQuery, filesWithType, selectedFiles, types]);
-
-  useEffect(() => {
-    if (filesWithType) {
-      setFuse(
-        new Fuse(filesWithType, {
-          keys: ["name", "type"],
-          threshold: 0.3,
-        }),
-      );
-    }
-  }, [filesWithType]);
+  }, [searchQuery, filesWithType, types]);
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFiles(
