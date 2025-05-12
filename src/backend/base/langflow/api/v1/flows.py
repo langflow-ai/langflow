@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -29,8 +29,10 @@ from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHea
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.settings.service import SettingsService
+from langflow.services.telemetry.schema import FlowCreatedPayload, FlowEditedPayload, FlowRenamedPayload
+from langflow.services.telemetry.service import TelemetryService
 from langflow.utils.compression import compress_response
 
 # build router
@@ -136,12 +138,154 @@ async def _new_flow(
     return db_flow
 
 
+def should_log_add_or_remove_component(
+    flow: Flow,
+    update_flow: FlowUpdate,
+) -> tuple[str, str] | None:
+    """Determine which component node was added or removed between two flows.
+
+    Returns:
+        ("add_component", node_id)    if a node was added,
+        ("remove_component", node_id) if a node was removed,
+        None otherwise.
+    """
+    # Build sets of node IDs for old and new flows
+    old_ids = {node["id"] for node in flow.data.get("nodes", []) if node.get("id") is not None}
+    new_ids = {node["id"] for node in update_flow.data.get("nodes", []) if node.get("id") is not None}
+
+    # Detect added component
+    added = new_ids - old_ids
+    if added:
+        added_id = added.pop()
+        return "add_component", added_id
+
+    # Detect removed component
+    removed = old_ids - new_ids
+    if removed:
+        removed_id = removed.pop()
+        return "remove_component", removed_id
+
+    return None
+
+
+def should_log_update_component(
+    flow: Flow,
+    update_flow: FlowUpdate,
+) -> str | None:
+    """Determine if an existing component (node) has been updated between two flows.
+
+    Returns:
+        "update_component" if any node data differs,
+        None otherwise.
+    """
+    # Build a lookup map of existing node data by ID
+    old_data_by_id = {node["id"]: node.get("data") for node in flow.data.get("nodes", []) if node.get("id") is not None}
+
+    # Iterate through updated nodes and compare payloads
+    for node in update_flow.data.get("nodes", []):
+        node_id = node.get("id")
+        if node_id in old_data_by_id and node.get("data") != old_data_by_id[node_id]:
+            return "update_component"
+
+    return None
+
+
+def should_log_flow_renamed(
+    flow: Flow,
+    update_flow: FlowUpdate,
+) -> dict[str, str] | None:
+    """Determine if a flow has been renamed between two flows.
+
+    Returns:
+        dict[str, str] if the flow name or description has changed,
+        None otherwise.
+    """
+    payload = {}
+    if flow.name != update_flow.name:
+        payload["new_name"] = update_flow.name
+    if flow.description != update_flow.description:
+        payload["new_description"] = update_flow.description
+    return payload if payload else None
+
+
+def log_flow_update_events(
+    flow: Flow,
+    update_flow: FlowUpdate,
+    telemetry_service: TelemetryService,
+    background_tasks: BackgroundTasks,
+):
+    """Log telemetry events for a flow update."""
+    timestamp_now = int(datetime.now(timezone.utc).timestamp())
+
+    # Log rename events
+    if payload := should_log_flow_renamed(flow, update_flow):
+        background_tasks.add_task(
+            telemetry_service.log_package_flow_edited,
+            FlowRenamedPayload(
+                flow_id=flow.id,
+                timestamp=timestamp_now,
+                **payload,
+            ),
+        )
+
+    # Log component update events
+    if edit_type := should_log_update_component(flow, update_flow):
+        background_tasks.add_task(
+            telemetry_service.log_package_flow_edited,
+            FlowEditedPayload(
+                flow_id=flow.id,
+                timestamp=timestamp_now,
+                edit_type=edit_type,
+                component_id=flow.id,
+            ),
+        )
+
+    # Log component add/remove events
+    if result := should_log_add_or_remove_component(flow, update_flow):
+        edit_type, component_id = result
+        background_tasks.add_task(
+            telemetry_service.log_package_flow_edited,
+            FlowEditedPayload(
+                flow_id=flow.id,
+                timestamp=timestamp_now,
+                edit_type=edit_type,
+                component_id=component_id,
+            ),
+        )
+
+
+def log_flow_create_event(
+    flow: dict,
+    telemetry_service: TelemetryService,
+):
+    """Log telemetry events for a flow creation."""
+    initial_component_list = [
+        component["data"]["display_name"]
+        for component in flow.get("data", {}).get("nodes", [])
+        if component.get("data", {}).get("display_name")
+    ]
+
+    source = "blank" if not initial_component_list else "template"
+
+    telemetry_service.log_package_flow_created(
+        FlowCreatedPayload(
+            flow_id=flow.get("id"),
+            timestamp=int(datetime.now(timezone.utc).timestamp()),
+            source=source,
+            initial_component_count=len(initial_component_list),
+            initial_component_list=initial_component_list,
+        )
+    )
+
+
 @router.post("/", response_model=FlowRead, status_code=201)
 async def create_flow(
     *,
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
+    background_tasks: BackgroundTasks,
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
@@ -149,6 +293,8 @@ async def create_flow(
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
+
+        background_tasks.add_task(log_flow_create_event, db_flow.model_dump(), telemetry_service)
 
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -306,6 +452,8 @@ async def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
+    background_tasks: BackgroundTasks,
 ):
     """Update a flow."""
     settings_service = get_settings_service()
@@ -319,6 +467,8 @@ async def update_flow(
 
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
+
+        log_flow_update_events(db_flow, flow, telemetry_service, background_tasks)
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 

@@ -13,6 +13,9 @@ from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
     ComponentPayload,
+    FlowCreatedPayload,
+    FlowEditedPayload,
+    FlowRenamedPayload,
     PlaygroundPayload,
     RunPayload,
     ShutdownPayload,
@@ -118,6 +121,15 @@ class TelemetryService(Service):
 
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
+
+    async def log_package_flow_created(self, payload: FlowCreatedPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "flow_created"))
+
+    async def log_package_flow_edited(self, payload: FlowEditedPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "flow_edited"))
+
+    async def log_package_flow_renamed(self, payload: FlowRenamedPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "flow_renamed"))
 
     def start(self) -> None:
         if self.running or self.do_not_track:
