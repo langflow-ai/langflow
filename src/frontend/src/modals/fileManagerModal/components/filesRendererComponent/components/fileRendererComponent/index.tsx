@@ -88,7 +88,7 @@ export default function FileRendererComponent({
                   name={FILE_ICONS[type]?.icon ?? "File"}
                   className={cn(
                     "h-6 w-6 shrink-0",
-                    file.progress !== undefined
+                    file.progress !== undefined || file.disabled
                       ? "text-placeholder-foreground"
                       : (FILE_ICONS[type]?.color ?? undefined),
                   )}
