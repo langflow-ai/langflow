@@ -123,7 +123,7 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
     "openai>=1.68.2",
-    "rise",
+    "gassist>=0.0.1",
 ]
 
 [dependency-groups]
@@ -177,7 +177,6 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
-rise = { git = "https://github.com/phact/G-Assist.git", subdirectory = "api/bindings/python" }
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]

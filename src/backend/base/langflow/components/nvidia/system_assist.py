@@ -1,6 +1,6 @@
 import asyncio
 
-from rise.rise import register_rise_client, send_rise_command
+from gassist.rise import register_rise_client, send_rise_command
 
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
