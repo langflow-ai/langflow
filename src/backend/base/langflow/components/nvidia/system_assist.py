@@ -2,12 +2,13 @@ import asyncio
 
 from gassist.rise import register_rise_client, send_rise_command
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Message
+from langflow.services.cache.utils import CacheMiss
 
 
-class NvidiaSystemAssistComponent(Component):
+class NvidiaSystemAssistComponent(ComponentWithCache):
     display_name = "NVIDIA System-Assist"
     description = (
         "Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. "
@@ -17,6 +18,22 @@ class NvidiaSystemAssistComponent(Component):
     documentation = "https://docs.langflow.org/components-custom-components"
     icon = "NVIDIA"
     rise_initialized = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def maybe_register_rise_client(self):
+        if self.database_url != "":
+            rise_initialized = self._shared_component_cache.get("rise_initialized")
+            if not isinstance(rise_initialized, CacheMiss) and rise_initialized:
+                return
+            self.log("Initializing Rise Client")
+            try:
+                register_rise_client()
+                self._shared_component_cache.set(key="rise_initialized", value=True)
+            except Exception as e:
+                msg = f"An error occurred initializing rise client: {e}"
+                raise ValueError(msg) from e
 
     inputs = [
         MessageTextInput(
@@ -32,14 +49,9 @@ class NvidiaSystemAssistComponent(Component):
         Output(display_name="Response", name="response", method="sys_assist_prompt"),
     ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not NvidiaSystemAssistComponent.rise_initialized:
-            register_rise_client()
-            NvidiaSystemAssistComponent.rise_initialized = True
-
     async def sys_assist_prompt(self) -> Message:
         # Wrap the blocking send_rise_command call in a thread to avoid blocking the event loop.
+        self.maybe_register_rise_client()
         response = await asyncio.to_thread(send_rise_command, self.prompt)
         if response is not None:
             return Message(text=response["completed_response"])
