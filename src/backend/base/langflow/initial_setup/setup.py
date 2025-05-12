@@ -601,7 +601,7 @@ async def update_project_file(project_path: anyio.Path, project: dict, updated_p
     project["data"] = updated_project_data
     async with async_open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    logger.info(f"Updated starter project {project['name']} file")
+    logger.debug(f"Updated starter project {project['name']} file")
 
 
 def update_existing_project(
