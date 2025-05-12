@@ -1,4 +1,5 @@
 import re
+import shutil
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -77,9 +78,9 @@ class MCPToolsComponent(Component):
         "headers_input",
     ]
 
-    display_name = "MCP Server"
-    description = "Connect to an MCP server and expose tools."
-    icon = "server"
+    display_name = "MCP Connection"
+    description = "Connect to an MCP server to use its tools."
+    icon = "Mcp"
     name = "MCPTools"
 
     inputs = [
@@ -107,6 +108,7 @@ class MCPToolsComponent(Component):
             is_list=True,
             show=True,
             tool_mode=False,
+            advanced=True,
         ),
         MultilineInput(
             name="sse_url",
@@ -138,6 +140,7 @@ class MCPToolsComponent(Component):
                 },
             ],
             value=[],
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -172,9 +175,18 @@ class MCPToolsComponent(Component):
         if mode == "Stdio" and not command:
             msg = "Command is required for Stdio mode"
             raise ValueError(msg)
+        if mode == "Stdio" and command:
+            self._validate_node_installation(command)
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
+
+    def _validate_node_installation(self, command: str) -> str:
+        """Validate the npx command."""
+        if "npx" in command and not shutil.which("node"):
+            msg = "Node.js is not installed. Please install Node.js to use npx commands."
+            raise ValueError(msg)
+        return command
 
     def _process_headers(self, headers: Any) -> dict:
         """Process the headers input into a valid dictionary.
@@ -446,7 +458,12 @@ class MCPToolsComponent(Component):
 
             if mode == "Stdio":
                 if not self.stdio_client.session:
-                    self.tools = await self.stdio_client.connect_to_server(command, env)
+                    try:
+                        self.tools = await self.stdio_client.connect_to_server(command, env)
+                    except ValueError as e:
+                        msg = f"Error connecting to MCP server: {e}"
+                        logger.exception(msg)
+                        raise ValueError(msg) from e
             elif mode == "SSE" and not self.sse_client.session:
                 try:
                     self.tools = await self.sse_client.connect_to_server(url, headers)
@@ -499,6 +516,7 @@ class MCPToolsComponent(Component):
                         func=create_tool_func(tool.name, args_schema, client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
                         tags=[tool.name],
+                        metadata={},
                     )
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
@@ -526,4 +544,3 @@ class MCPToolsComponent(Component):
             msg = "SSE URL is not set"
             raise ValueError(msg)
         return await self.update_tools()
-        # return self.tools

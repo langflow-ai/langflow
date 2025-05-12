@@ -6,92 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "CombineText",
-            "id": "CombineText-dCAaM",
-            "name": "combined_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text2",
-            "id": "CombineText-ISv3t",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-CombineText-dCAaM{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-dCAaMœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-ISv3t{œfieldNameœ:œtext2œ,œidœ:œCombineText-ISv3tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "CombineText-dCAaM",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-dCAaMœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-ISv3t",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-ISv3tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-NNfah",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text1",
-            "id": "CombineText-ISv3t",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-NNfah{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NNfahœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-ISv3t{œfieldNameœ:œtext1œ,œidœ:œCombineText-ISv3tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-NNfah",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NNfahœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-ISv3t",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-ISv3tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CombineText",
-            "id": "CombineText-ISv3t",
-            "name": "combined_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "SambaNovaModel-GCQ9I",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-CombineText-ISv3t{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-ISv3tœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-GCQ9I{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-GCQ9Iœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "CombineText-ISv3t",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-ISv3tœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-GCQ9I",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-GCQ9Iœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-GCQ9I",
+            "id": "SambaNovaModel-NEyqD",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-rLXo6",
+            "id": "ChatOutput-XjOH3",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-GCQ9I{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-GCQ9Iœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rLXo6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rLXo6œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-NEyqD{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-NEyqDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XjOH3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XjOH3œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-GCQ9I",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-GCQ9Iœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-rLXo6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rLXo6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-NEyqD",
+        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-NEyqDœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-XjOH3",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XjOH3œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-NNfah",
+            "id": "ChatInput-X83ni",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,47 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-YFcBS",
+            "id": "Agent-cGZsD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-NNfah{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NNfahœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-YFcBS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YFcBSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-cGZsD{œfieldNameœ:œinput_valueœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-NNfah",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NNfahœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-YFcBS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-YFcBSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-YFcBS",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text2",
-            "id": "CombineText-dCAaM",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-YFcBS{œdataTypeœ:œAgentœ,œidœ:œAgent-YFcBSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-dCAaM{œfieldNameœ:œtext2œ,œidœ:œCombineText-dCAaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-YFcBS",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-YFcBSœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-dCAaM",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-dCAaMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-X83ni",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X83niœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-cGZsD",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-cGZsDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-Epf58",
+            "id": "TavilySearchComponent-7Y3yy",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-YFcBS",
+            "id": "Agent-cGZsD",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-Epf58{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-Epf58œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-YFcBS{œfieldNameœ:œtoolsœ,œidœ:œAgent-YFcBSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-7Y3yy{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-7Y3yyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-cGZsD{œfieldNameœ:œtoolsœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-Epf58",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-Epf58œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-YFcBS",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-YFcBSœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-7Y3yy",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-7Y3yyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-cGZsD",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-cGZsDœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -205,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-GlCo0",
+            "id": "URL-N9CXl",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -213,47 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-wqbpC",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-GlCo0{œdataTypeœ:œURLœ,œidœ:œURL-GlCo0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y0wyL{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y0wyLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-N9CXl{œdataTypeœ:œURLœ,œidœ:œURL-N9CXlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wqbpC{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-GlCo0",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-GlCo0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Y0wyL",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Y0wyLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-LLwst",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-Y0wyL",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-YfinanceComponent-LLwst{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-LLwstœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y0wyL{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y0wyLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "YfinanceComponent-LLwst",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-LLwstœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Y0wyL",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Y0wyLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-N9CXl",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-N9CXlœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-wqbpC",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wqbpCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -261,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-NNfah",
+            "id": "ChatInput-X83ni",
             "name": "message",
             "output_types": [
               "Message"
@@ -269,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-wqbpC",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-NNfah{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NNfahœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Y0wyL{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Y0wyLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-wqbpC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-NNfah",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NNfahœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Y0wyL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Y0wyLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-X83ni",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X83niœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-wqbpC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-wqbpCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -289,33 +149,172 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Y0wyL",
+            "id": "Agent-wqbpC",
             "name": "response",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "text1",
-            "id": "CombineText-dCAaM",
+            "fieldName": "first_text",
+            "id": "Prompt-er8QV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Y0wyL{œdataTypeœ:œAgentœ,œidœ:œAgent-Y0wyLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-dCAaM{œfieldNameœ:œtext1œ,œidœ:œCombineText-dCAaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-wqbpC{œdataTypeœ:œAgentœ,œidœ:œAgent-wqbpCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-er8QV{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Y0wyL",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Y0wyLœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-dCAaM",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-dCAaMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-wqbpC",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-wqbpCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-er8QV",
+        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-er8QVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-cGZsD",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "second_text",
+            "id": "Prompt-er8QV",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-cGZsD{œdataTypeœ:œAgentœ,œidœ:œAgent-cGZsDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-er8QV{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-cGZsD",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-cGZsDœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-er8QV",
+        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-er8QVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-er8QV",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "second_text",
+            "id": "Prompt-AdpTy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-er8QV{œdataTypeœ:œPromptœ,œidœ:œPrompt-er8QVœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Prompt-AdpTy{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-er8QV",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-er8QVœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-AdpTy",
+        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-AdpTyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-X83ni",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "first_text",
+            "id": "Prompt-AdpTy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AdpTy{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-X83ni",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X83niœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-AdpTy",
+        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-AdpTyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-AdpTy",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "SambaNovaModel-NEyqD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-AdpTy{œdataTypeœ:œPromptœ,œidœ:œPrompt-AdpTyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-NEyqD{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-NEyqDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-AdpTy",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AdpTyœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SambaNovaModel-NEyqD",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-NEyqDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "YfinanceComponent",
+            "id": "YfinanceComponent-KpeWR",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-wqbpC",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__YfinanceComponent-KpeWR{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-KpeWRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wqbpC{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "YfinanceComponent-KpeWR",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-KpeWRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-wqbpC",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wqbpCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-NNfah",
+          "id": "ChatInput-X83ni",
           "node": {
             "base_classes": [
               "Message"
@@ -610,7 +609,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-NNfah",
+        "id": "ChatInput-X83ni",
         "measured": {
           "height": 66,
           "width": 192
@@ -624,7 +623,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-Epf58",
+          "id": "TavilySearchComponent-7Y3yy",
           "node": {
             "base_classes": [
               "Data",
@@ -633,7 +632,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+            "description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
             "display_name": "Tavily AI Search",
             "documentation": "",
             "edited": false,
@@ -659,7 +658,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "hidden": null,
+                "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
                 "required_inputs": null,
@@ -680,10 +679,8 @@
                 "display_name": "Tavily API Key",
                 "dynamic": false,
                 "info": "Your Tavily API Key.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": true,
+                "input_types": [],
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -691,7 +688,25 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": ""
+              },
+              "chunks_per_source": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Chunks Per Source",
+                "dynamic": false,
+                "info": "The number of content chunks to retrieve from each source (1-3). Only works with advanced search.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "chunks_per_source",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 3
               },
               "code": {
                 "advanced": true,
@@ -709,7 +724,48 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to include in the search results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,\n            advanced=True,\n            combobox=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"time_range\": self.time_range,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily Search API\"\n    description = \"\"\"**Tavily Search** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunks_per_source\",\n            display_name=\"Chunks Per Source\",\n            info=(\"The number of content chunks to retrieve from each source (1-3). Only works with advanced search.\"),\n            value=3,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"days\",\n            display_name=\"Days\",\n            info=\"Number of days back from current date to include. Only available with news topic.\",\n            value=7,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to filter results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,  # Default to None to make it optional\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"include_domains\",\n            display_name=\"Include Domains\",\n            info=\"Comma-separated list of domains to include in the search results.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"exclude_domains\",\n            display_name=\"Exclude Domains\",\n            info=\"Comma-separated list of domains to exclude from the search results.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_raw_content\",\n            display_name=\"Include Raw Content\",\n            info=\"Include the cleaned and parsed HTML content of each search result.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            # Only process domains if they're provided\n            include_domains = None\n            exclude_domains = None\n\n            if self.include_domains:\n                include_domains = [domain.strip() for domain in self.include_domains.split(\",\") if domain.strip()]\n\n            if self.exclude_domains:\n                exclude_domains = [domain.strip() for domain in self.exclude_domains.split(\",\") if domain.strip()]\n\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"include_raw_content\": self.include_raw_content,\n                \"days\": self.days,\n                \"time_range\": self.time_range,\n            }\n\n            # Only add domains to payload if they exist and have values\n            if include_domains:\n                payload[\"include_domains\"] = include_domains\n            if exclude_domains:\n                payload[\"exclude_domains\"] = exclude_domains\n\n            # Add conditional parameters only if they should be included\n            if self.search_depth == \"advanced\" and self.chunks_per_source:\n                payload[\"chunks_per_source\"] = self.chunks_per_source\n\n            if self.topic == \"news\" and self.days:\n                payload[\"days\"] = int(self.days)  # Ensure days is an integer\n\n            # Add time_range if it's set\n            if hasattr(self, \"time_range\") and self.time_range:\n                payload[\"time_range\"] = self.time_range\n\n            # Add timeout handling\n            with httpx.Client(timeout=90.0) as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                result_data = {\n                    \"title\": result.get(\"title\"),\n                    \"url\": result.get(\"url\"),\n                    \"content\": content,\n                    \"score\": result.get(\"score\"),\n                }\n                if self.include_raw_content:\n                    result_data[\"raw_content\"] = result.get(\"raw_content\")\n\n                data_results.append(Data(text=content, data=result_data))\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n\n        except httpx.TimeoutException:\n            error_message = \"Request timed out (90s). Please try again or adjust parameters.\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+              },
+              "days": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Days",
+                "dynamic": false,
+                "info": "Number of days back from current date to include. Only available with news topic.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "days",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 7
+              },
+              "exclude_domains": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Exclude Domains",
+                "dynamic": false,
+                "info": "Comma-separated list of domains to exclude from the search results.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "exclude_domains",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "include_answer": {
                 "_input_type": "BoolInput",
@@ -729,6 +785,29 @@
                 "type": "bool",
                 "value": true
               },
+              "include_domains": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Include Domains",
+                "dynamic": false,
+                "info": "Comma-separated list of domains to include in the search results.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "include_domains",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "include_images": {
                 "_input_type": "BoolInput",
                 "advanced": true,
@@ -746,6 +825,24 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "include_raw_content": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Raw Content",
+                "dynamic": false,
+                "info": "Include the cleaned and parsed HTML content of each search result.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_raw_content",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "max_results": {
                 "_input_type": "IntInput",
@@ -814,11 +911,11 @@
               "time_range": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
-                "combobox": true,
+                "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Time Range",
                 "dynamic": false,
-                "info": "The time range back from the current date to include in the search results.",
+                "info": "The time range back from the current date to filter results.",
                 "name": "time_range",
                 "options": [
                   "day",
@@ -978,9 +1075,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-Epf58",
+        "id": "TavilySearchComponent-7Y3yy",
         "measured": {
-          "height": 437,
+          "height": 354,
           "width": 320
         },
         "position": {
@@ -994,7 +1091,7 @@
         "data": {
           "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
           "display_name": "Yahoo Finance",
-          "id": "YfinanceComponent-LLwst",
+          "id": "YfinanceComponent-KpeWR",
           "node": {
             "base_classes": [
               "Data",
@@ -1024,7 +1121,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "hidden": null,
+                "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
                 "options": null,
@@ -1147,11 +1244,11 @@
                 "value": ""
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1159,110 +1256,63 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "name": "YfinanceComponent-fetch_content",
+                    "args": {
+                      "symbol": {
+                        "default": "",
+                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+                        "title": "Symbol",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YfinanceComponent. fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "YfinanceComponent. fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
                     "status": true,
                     "tags": [
-                      "YfinanceComponent-fetch_content"
+                      "fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "name": "YfinanceComponent-fetch_content_text",
+                    "args": {
+                      "symbol": {
+                        "default": "",
+                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+                        "title": "Symbol",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YfinanceComponent. fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "YfinanceComponent. fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "fetch_content_text",
+                    "name": "fetch_content_text",
                     "status": true,
                     "tags": [
-                      "YfinanceComponent-fetch_content_text"
+                      "fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "name": "YfinanceComponent-as_dataframe",
+                    "args": {
+                      "symbol": {
+                        "default": "",
+                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+                        "title": "Symbol",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YfinanceComponent. as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "YfinanceComponent. as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
                     "status": true,
                     "tags": [
-                      "YfinanceComponent-as_dataframe"
+                      "as_dataframe"
                     ]
                   }
                 ]
@@ -1274,9 +1324,9 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-LLwst",
+        "id": "YfinanceComponent-KpeWR",
         "measured": {
-          "height": 519,
+          "height": 461,
           "width": 320
         },
         "position": {
@@ -1288,157 +1338,7 @@
       },
       {
         "data": {
-          "id": "CombineText-dCAaM",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Concatenate two text sources into a single text chunk using a specified delimiter.",
-            "display_name": "Combine Text",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "text1",
-              "text2",
-              "delimiter"
-            ],
-            "frozen": false,
-            "icon": "merge",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Combined Text",
-                "method": "combine_texts",
-                "name": "combined_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass CombineTextComponent(Component):\n    display_name = \"Combine Text\"\n    description = \"Concatenate two text sources into a single text chunk using a specified delimiter.\"\n    icon = \"merge\"\n    name = \"CombineText\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"text1\",\n            display_name=\"First Text\",\n            info=\"The first text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"text2\",\n            display_name=\"Second Text\",\n            info=\"The second text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"delimiter\",\n            display_name=\"Delimiter\",\n            info=\"A string used to separate the two text inputs. Defaults to a whitespace.\",\n            value=\" \",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Combined Text\", name=\"combined_text\", method=\"combine_texts\"),\n    ]\n\n    def combine_texts(self) -> Message:\n        combined = self.delimiter.join([self.text1, self.text2])\n        self.status = combined\n        return Message(text=combined)\n"
-              },
-              "delimiter": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Delimiter",
-                "dynamic": false,
-                "info": "A string used to separate the two text inputs. Defaults to a whitespace.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "delimiter",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": " \\n\\n"
-              },
-              "text1": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "First Text",
-                "dynamic": false,
-                "info": "The first text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text1",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "text2": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Second Text",
-                "dynamic": false,
-                "info": "The second text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text2",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "CombineText"
-        },
-        "dragging": false,
-        "id": "CombineText-dCAaM",
-        "measured": {
-          "height": 415,
-          "width": 320
-        },
-        "position": {
-          "x": 340.2356972211369,
-          "y": 402.33351464112826
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-rLXo6",
+          "id": "ChatOutput-XjOH3",
           "node": {
             "base_classes": [
               "Message"
@@ -1733,7 +1633,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-rLXo6",
+        "id": "ChatOutput-XjOH3",
         "measured": {
           "height": 66,
           "width": 192
@@ -1747,157 +1647,7 @@
       },
       {
         "data": {
-          "id": "CombineText-ISv3t",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Concatenate two text sources into a single text chunk using a specified delimiter.",
-            "display_name": "Combine Text",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "text1",
-              "text2",
-              "delimiter"
-            ],
-            "frozen": false,
-            "icon": "merge",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Combined Text",
-                "method": "combine_texts",
-                "name": "combined_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass CombineTextComponent(Component):\n    display_name = \"Combine Text\"\n    description = \"Concatenate two text sources into a single text chunk using a specified delimiter.\"\n    icon = \"merge\"\n    name = \"CombineText\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"text1\",\n            display_name=\"First Text\",\n            info=\"The first text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"text2\",\n            display_name=\"Second Text\",\n            info=\"The second text input to concatenate.\",\n        ),\n        MessageTextInput(\n            name=\"delimiter\",\n            display_name=\"Delimiter\",\n            info=\"A string used to separate the two text inputs. Defaults to a whitespace.\",\n            value=\" \",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Combined Text\", name=\"combined_text\", method=\"combine_texts\"),\n    ]\n\n    def combine_texts(self) -> Message:\n        combined = self.delimiter.join([self.text1, self.text2])\n        self.status = combined\n        return Message(text=combined)\n"
-              },
-              "delimiter": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Delimiter",
-                "dynamic": false,
-                "info": "A string used to separate the two text inputs. Defaults to a whitespace.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "delimiter",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\\n\\nContext: \\n"
-              },
-              "text1": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "First Text",
-                "dynamic": false,
-                "info": "The first text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text1",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "text2": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Second Text",
-                "dynamic": false,
-                "info": "The second text input to concatenate.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text2",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "CombineText"
-        },
-        "dragging": false,
-        "id": "CombineText-ISv3t",
-        "measured": {
-          "height": 415,
-          "width": 320
-        },
-        "position": {
-          "x": 738.8545176038866,
-          "y": 179.6359034027769
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "URL-GlCo0",
+          "id": "URL-N9CXl",
           "node": {
             "base_classes": [
               "Data",
@@ -2026,11 +1776,11 @@
                 "value": "\n\n"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -2038,110 +1788,72 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-fetch_content",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
                     "status": true,
                     "tags": [
-                      "URL-fetch_content"
+                      "fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-fetch_content_text",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "fetch_content_text",
+                    "name": "fetch_content_text",
                     "status": true,
                     "tags": [
-                      "URL-fetch_content_text"
+                      "fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-as_dataframe",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
                     "status": true,
                     "tags": [
-                      "URL-as_dataframe"
+                      "as_dataframe"
                     ]
                   }
                 ]
@@ -2176,9 +1888,9 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-GlCo0",
+        "id": "URL-N9CXl",
         "measured": {
-          "height": 590,
+          "height": 523,
           "width": 320
         },
         "position": {
@@ -2190,7 +1902,7 @@
       },
       {
         "data": {
-          "id": "note-bb2m8",
+          "id": "note-tZG9P",
           "node": {
             "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [SambaNova API key](https://cloud.sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components and **SambaNova** component, add your SambaNova API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Tavily Search** component, add your **Tavily API key**.\n4. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
@@ -2203,7 +1915,7 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-bb2m8",
+        "id": "note-tZG9P",
         "measured": {
           "height": 630,
           "width": 479
@@ -2219,7 +1931,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-GCQ9I",
+          "id": "SambaNovaModel-NEyqD",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2520,7 +2232,7 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-GCQ9I",
+        "id": "SambaNovaModel-NEyqD",
         "measured": {
           "height": 525,
           "width": 320
@@ -2534,7 +2246,7 @@
       },
       {
         "data": {
-          "id": "Agent-YFcBS",
+          "id": "Agent-cGZsD",
           "node": {
             "base_classes": [
               "Message"
@@ -2588,10 +2300,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2711,12 +2421,10 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "Sambanova API Key",
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
-                "info": "The Sambanova API Key to use for the Sambanova model.",
-                "input_types": [
-                  "Message"
-                ],
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -2727,33 +2435,12 @@
                 "type": "str",
                 "value": "SAMBANOVA_API_KEY"
               },
-              "base_url": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "SambaNova Cloud Base Url",
-                "dynamic": false,
-                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "base_url",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2808,6 +2495,24 @@
                 "type": "str",
                 "value": ""
               },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -2827,12 +2532,30 @@
                 "type": "int",
                 "value": 15
               },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate.",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
@@ -2866,6 +2589,24 @@
                 "type": "other",
                 "value": ""
               },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -2877,20 +2618,17 @@
                 "input_types": [],
                 "name": "model_name",
                 "options": [
-                  "Meta-Llama-3.3-70B-Instruct",
-                  "Meta-Llama-3.1-8B-Instruct",
-                  "Meta-Llama-3.1-70B-Instruct",
-                  "Meta-Llama-3.1-405B-Instruct",
-                  "DeepSeek-R1-Distill-Llama-70B",
-                  "DeepSeek-R1",
-                  "Meta-Llama-3.2-1B-Instruct",
-                  "Meta-Llama-3.2-3B-Instruct",
-                  "Llama-3.2-11B-Vision-Instruct",
-                  "Llama-3.2-90B-Vision-Instruct",
-                  "Qwen2.5-Coder-32B-Instruct",
-                  "Qwen2.5-72B-Instruct",
-                  "QwQ-32B-Preview",
-                  "Qwen2-Audio-7B-Instruct"
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4.5-preview",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -2898,6 +2636,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2922,6 +2661,25 @@
                 "type": "int",
                 "value": 100
               },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "order": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -2945,6 +2703,24 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -3096,6 +2872,24 @@
                 "type": "str",
                 "value": "{sender_name}: {text}"
               },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
+              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -3115,35 +2909,6 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
-              },
-              "top_p": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "top_p",
-                "dynamic": false,
-                "info": "Model top_p",
-                "input_types": [],
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "top_p",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 1
               },
               "verbose": {
                 "_input_type": "BoolInput",
@@ -3171,7 +2936,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-YFcBS",
+        "id": "Agent-cGZsD",
         "measured": {
           "height": 624,
           "width": 320
@@ -3180,12 +2945,12 @@
           "x": -114.7705455447527,
           "y": 395.9726937371793
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-Y0wyL",
+          "id": "Agent-wqbpC",
           "node": {
             "base_classes": [
               "Message"
@@ -3239,10 +3004,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3362,12 +3125,10 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "Sambanova API Key",
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
-                "info": "The Sambanova API Key to use for the Sambanova model.",
-                "input_types": [
-                  "Message"
-                ],
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -3378,33 +3139,12 @@
                 "type": "str",
                 "value": "SAMBANOVA_API_KEY"
               },
-              "base_url": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "SambaNova Cloud Base Url",
-                "dynamic": false,
-                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "base_url",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3459,6 +3199,24 @@
                 "type": "str",
                 "value": ""
               },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -3478,12 +3236,30 @@
                 "type": "int",
                 "value": 15
               },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate.",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
@@ -3517,6 +3293,24 @@
                 "type": "other",
                 "value": ""
               },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -3528,20 +3322,17 @@
                 "input_types": [],
                 "name": "model_name",
                 "options": [
-                  "Meta-Llama-3.3-70B-Instruct",
-                  "Meta-Llama-3.1-8B-Instruct",
-                  "Meta-Llama-3.1-70B-Instruct",
-                  "Meta-Llama-3.1-405B-Instruct",
-                  "DeepSeek-R1-Distill-Llama-70B",
-                  "DeepSeek-R1",
-                  "Meta-Llama-3.2-1B-Instruct",
-                  "Meta-Llama-3.2-3B-Instruct",
-                  "Llama-3.2-11B-Vision-Instruct",
-                  "Llama-3.2-90B-Vision-Instruct",
-                  "Qwen2.5-Coder-32B-Instruct",
-                  "Qwen2.5-72B-Instruct",
-                  "QwQ-32B-Preview",
-                  "Qwen2-Audio-7B-Instruct"
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4.5-preview",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3549,6 +3340,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -3573,6 +3365,25 @@
                 "type": "int",
                 "value": 100
               },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "order": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -3596,6 +3407,24 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -3747,6 +3576,24 @@
                 "type": "str",
                 "value": "{sender_name}: {text}"
               },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
+              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -3766,35 +3613,6 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
-              },
-              "top_p": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "top_p",
-                "dynamic": false,
-                "info": "Model top_p",
-                "input_types": [],
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "top_p",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 1
               },
               "verbose": {
                 "_input_type": "BoolInput",
@@ -3822,7 +3640,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Y0wyL",
+        "id": "Agent-wqbpC",
         "measured": {
           "height": 624,
           "width": 320
@@ -3833,19 +3651,370 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-er8QV",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "first_text",
+                "second_text"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": null,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "first_text": {
+                "advanced": false,
+                "display_name": "first_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "first_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "second_text": {
+                "advanced": false,
+                "display_name": "second_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "second_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "{first_text} \\n\\n\n{second_text}"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-er8QV",
+        "measured": {
+          "height": 433,
+          "width": 320
+        },
+        "position": {
+          "x": 363.96874256661516,
+          "y": 420.69943255589567
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-AdpTy",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "first_text",
+                "second_text"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": null,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "first_text": {
+                "advanced": false,
+                "display_name": "first_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "first_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "second_text": {
+                "advanced": false,
+                "display_name": "second_text",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "second_text",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "{first_text} \\n\\n\n{second_text}"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-AdpTy",
+        "measured": {
+          "height": 433,
+          "width": 320
+        },
+        "position": {
+          "x": 767.2407006972445,
+          "y": 115.92884832779234
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 536.943459370574,
-      "y": 444.80519922988594,
-      "zoom": 0.42993669283720065
+      "x": 402.8529727761044,
+      "y": 359.62391032755147,
+      "zoom": 0.5103514759965421
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
-  "id": "4f89d881-2ec0-41ac-9c66-865119b0853d",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.3.4",
   "name": "Financial Agent",
   "tags": [
     "assistants",

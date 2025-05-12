@@ -69,7 +69,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -208,6 +208,17 @@ jobs:
     with:
       main_version: ${{ needs.release-main.outputs.version }}
       release_type: main
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for Langflow
+    if: inputs.build_docker_main == true
+    needs: [release-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      main_version: ${{ needs.release-main.outputs.version }}
+      release_type: main-all
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 

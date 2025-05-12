@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactFlowJsonObject } from "@xyflow/react";
 import { ReactElement, ReactNode } from "react";
 import { InputOutput } from "../../constants/enums";
@@ -302,6 +303,7 @@ export type InputProps = {
   description: string | null;
   endpointName?: string | null;
   maxLength?: number;
+  minLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
   setEndpointName?: (endpointName: string) => void;
@@ -582,6 +584,8 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
+  isUserEdited: boolean;
+  hasBreakingChange: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
   setOpenShowMoreOptions?: (open: boolean) => void;
@@ -676,6 +680,21 @@ export type textModalPropsType = {
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
 };
+
+export interface ToolsModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  description: string;
+  rows: {
+    name: string;
+    tags: string[];
+    description: string;
+    status: boolean;
+  }[];
+  handleOnNewValue: handleOnNewValueType;
+  title: string;
+  icon: string;
+}
 export type queryModalPropsType = {
   setValue: (value: string) => void;
   value: string;
