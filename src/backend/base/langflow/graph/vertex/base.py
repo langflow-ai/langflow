@@ -378,6 +378,9 @@ class Vertex:
                 custom_params=custom_params,
             )
 
+    def reset_component(self) -> None:
+        self.custom_component = None
+
     async def _build(
         self,
         fallback_to_env_vars,
