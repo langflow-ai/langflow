@@ -21,6 +21,7 @@ def setup_logging():
     # Enable debug logging for httpx and httpcore
     logging.getLogger('httpx').setLevel(logging.DEBUG)
     logging.getLogger('httpcore').setLevel(logging.DEBUG)
+    logging.getLogger('nemoguardrails').setLevel(logging.DEBUG)
     # Enable debug logging
     logging.basicConfig(level=logging.DEBUG)
 
@@ -220,7 +221,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         MessageTextInput(
             name="jailbreak_detection_model_url",
             display_name="Jailbreak Detection Model Base URL",
-            value="https://integrate.api.nvidia.com/v1",
+            value="https://ai.api.nvidia.com/v1/security/nvidia/nemoguard-jailbreak-detect",
             advanced=True,
             info="The base URL specifically for jailbreak detection models.",
             real_time_refresh=True,
