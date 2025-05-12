@@ -19,7 +19,7 @@ from langflow.schema.dotdict import dotdict
 
 
 def setup_logging():
-    """Set up logging configuration"""
+    """Set up logging configuration."""
     # Enable debug logging for httpx and httpcore
     logging.getLogger("httpx").setLevel(logging.DEBUG)
     logging.getLogger("httpcore").setLevel(logging.DEBUG)
@@ -28,19 +28,19 @@ def setup_logging():
     logging.basicConfig(level=logging.DEBUG)
 
 def setup_request_logging():
-    """Set up request logging for httpx"""
+    """Set up request logging for httpx."""
     def log_request(request):
-        print("\n=== Request Details ===")
-        print(f"URL: {request.url}")
-        print(f"Method: {request.method}")
-        print("Headers:")
+        logging.debug("\n=== Request Details ===")
+        logging.debug(f"URL: {request.url}")
+        logging.debug(f"Method: {request.method}")
+        logging.debug("Headers:")
         sensitive_headers = {"authorization", "api-key", "x-api-key", "token", "bearer", "secret"}
         for header, value in request.headers.items():
             if not any(sensitive in header.lower() for sensitive in sensitive_headers):
-                print(f"  {header}: {value}")
+                logging.debug(f"  {header}: {value}")
             else:
-                print(f"  {header}: [REDACTED]")
-        print("Body:")
+                logging.debug(f"  {header}: [REDACTED]")
+        logging.debug("Body:")
         # Try to parse and redact sensitive info from body if it's JSON
         try:
             body = request.content.decode("utf-8")
@@ -52,13 +52,13 @@ def setup_request_logging():
                     for field in sensitive_fields:
                         if field in body_json:
                             body_json[field] = "[REDACTED]"
-                    print(json.dumps(body_json, indent=2))
+                    logging.debug(json.dumps(body_json, indent=2))
                 except json.JSONDecodeError:
                     # If not JSON, just print the body
-                    print(body)
-        except Exception:
-            print("[Unable to decode body]")
-        print("===================\n")
+                    logging.debug(body)
+        except UnicodeDecodeError:
+            logging.debug("[Unable to decode body]")
+        logging.debug("===================\n")
 
     return httpx.Client(event_hooks={"request": [log_request]})
 
@@ -95,7 +95,7 @@ class HTTPDebugContext:
             self.client.close()
 
 def enable_http_debug_logging():
-    """Enable all HTTP debug logging"""
+    """Enable all HTTP debug logging."""
     # Set up HTTP connection debugging
     http_client.HTTPConnection.debuglevel = 1
 
@@ -127,15 +127,18 @@ DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT = """You are given a statement.
 
 Check if it is factually consistent with the provided document."""
 
-DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = """Task: Check if there is unsafe content in the user message in the below conversation...
+DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = (
+    """Task: Check if there is unsafe content in the user message in the below conversation...
 <BEGIN CONVERSATION>
 user: {{ user_input }}
 <END CONVERSATION>
 Provide your safety assessment in the following JSON format:
 {"User Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
 Do not include anything other than the output JSON in your response."""
+)
 
-DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = """Task: Check if there is unsafe content in the agent response in the below conversation...
+DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = (
+    """Task: Check if there is unsafe content in the agent response in the below conversation...
 <BEGIN CONVERSATION>
 user: {{ user_input }}
 agent: {{ bot_response }}
@@ -143,10 +146,13 @@ agent: {{ bot_response }}
 Provide your safety assessment in the following JSON format:
 {"Response Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
 Do not include anything other than the output JSON in your response."""
+)
 
 DEFAULT_TOPIC_CONTROL_INPUT_PROMPT = """Ensure that the input stays within the allowed discussion topics."""
 
-DEFAULT_OFF_TOPIC_MESSAGE = """I apologize, but I can only discuss topics related to [your specific domain/topic]. Is there something else I can help you with?"""
+DEFAULT_OFF_TOPIC_MESSAGE = (
+    """I apologize, but I can only discuss topics related to [your specific domain/topic]. Is there something else I can help you with?"""
+)
 
 
 class NVIDIANeMoGuardrailsComponent(LCModelComponent):
@@ -440,7 +446,8 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             try:
                 yaml.safe_load(yaml_content)
             except yaml.YAMLError as e:
-                raise ValueError("Invalid YAML syntax") from e
+                error_message = "Invalid YAML syntax"
+                raise ValueError(error_message) from e
 
             # Create Colang content if topic control is enabled
             colang_content = None
@@ -454,8 +461,8 @@ define bot refuse to respond
 
             try:
                 config.model_validate(config)
-            except Exception as e:
-                print(f"Validation Error: {e}")
+            except ValueError as e:
+                logging.exception("Validation Error")
 
             guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
 
@@ -468,7 +475,7 @@ define bot refuse to respond
     def get_models(self) -> list[str]:
         """Get available models from NVIDIA API that are suitable for self-check tasks."""
         # List of known good models for self-checking tasks
-        KNOWN_GOOD_MODELS = {
+        known_good_models = {
             "openai/gpt-3.5-turbo-instruct",
             "openai/gpt-4-turbo-instruct",
             "anthropic/claude-3-opus-20240229",
@@ -494,13 +501,14 @@ define bot refuse to respond
             suitable_models = []
             for model in model_list.get("data", []):
                 model_id = model["id"]
-                if model_id in KNOWN_GOOD_MODELS:
+                if model_id in known_good_models:
                     suitable_models.append(model_id)
-
-            return suitable_models
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logging.exception("Error getting model names")
             # Let the UI handle the empty list case
             return []
+        else:
+            return suitable_models
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update build configuration with fresh model list when key fields change."""
