@@ -12,10 +12,11 @@ export function CustomNodeStatus({
   showNode,
   data,
   buildStatus,
+  dismissAll,
   isOutdated,
   isUserEdited,
+  isBreakingChange,
   getValidationStatus,
-  handleUpdateComponent,
 }: {
   nodeId: string;
   display_name: string;
@@ -25,10 +26,11 @@ export function CustomNodeStatus({
   showNode: boolean;
   data: NodeDataType;
   buildStatus: BuildStatus;
+  dismissAll: boolean;
   isOutdated: boolean;
   isUserEdited: boolean;
-  getValidationStatus: (data: NodeDataType) => VertexBuildTypeAPI | null;
-  handleUpdateComponent: () => void;
+  isBreakingChange: boolean;
+  getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
   return (
     <NodeStatus
@@ -43,7 +45,8 @@ export function CustomNodeStatus({
       isOutdated={isOutdated}
       isUserEdited={isUserEdited}
       getValidationStatus={getValidationStatus}
-      handleUpdateComponent={handleUpdateComponent}
+      dismissAll={dismissAll}
+      isBreakingChange={isBreakingChange}
     />
   );
 }
