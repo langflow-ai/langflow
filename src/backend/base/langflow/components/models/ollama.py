@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 from urllib.parse import urljoin
 
@@ -294,6 +295,9 @@ class ChatOllamaComponent(LCModelComponent):
                 tags_response = await client.get(tags_url)
                 tags_response.raise_for_status()
                 models = tags_response.json()
+                # IF MODELS IS A COROUTINE, AWAIT IT
+                if asyncio.iscoroutine(models):
+                    models = await models
                 logger.debug(f"Available models: {models}")
 
                 # Filter models that are NOT embedding models
