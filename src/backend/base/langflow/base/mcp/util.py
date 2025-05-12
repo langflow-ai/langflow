@@ -233,7 +233,7 @@ class MCPStdioClient:
             env_dict[var.split("=")[0]] = var.split("=")[1]
         command = command_str.split(" ")
         server_params = None
-        env: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})}
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})}
 
         # Create platform-specific command wrapper
         if platform.system() == "Windows":
@@ -244,12 +244,14 @@ class MCPStdioClient:
                     "/c",
                     f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
                 ],
-                env=env,
+                env=env_data,
             )
         else:
             # For Unix-like systems, use bash with error reporting
             server_params = StdioServerParameters(
-                command="bash", args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"], env=env
+                command="bash",
+                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
+                env=env_data,
             )
 
         # Create a temporary file to capture stderr
