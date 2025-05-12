@@ -20,37 +20,36 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
-  const filesWithType = files.map((file) => ({
-    ...file,
-    type: file.path.split(".").pop()?.toLowerCase(),
-  }));
+  const filesWithDisabled = files.map((file) => {
+    const fileExtension = file.path.split(".").pop()?.toLowerCase();
+    return {
+      ...file,
+      type: fileExtension,
+      disabled: !fileExtension || !types.includes(fileExtension),
+    };
+  });
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
   const [searchQuery, setSearchQuery] = useState("");
 
   const { mutate: renameFile } = usePostRenameFileV2();
 
   const searchResults = useMemo(() => {
-    const filteredFiles = (
-      searchQuery
-        ? fuse.search(searchQuery).map(({ item }) => item)
-        : (filesWithType ?? [])
-    ).filter((file) => {
-      const fileExtension = file.path.split(".").pop()?.toLowerCase();
-      return fileExtension && (!types || types.includes(fileExtension));
-    });
+    const filteredFiles = searchQuery
+      ? fuse.search(searchQuery).map(({ item }) => item)
+      : (filesWithDisabled ?? []);
     return filteredFiles;
-  }, [searchQuery, filesWithType, selectedFiles, types]);
+  }, [searchQuery, filesWithDisabled, selectedFiles, types]);
 
   useEffect(() => {
-    if (filesWithType) {
+    if (filesWithDisabled) {
       setFuse(
-        new Fuse(filesWithType, {
+        new Fuse(filesWithDisabled, {
           keys: ["name", "type"],
           threshold: 0.3,
         }),
       );
     }
-  }, [filesWithType]);
+  }, [filesWithDisabled]);
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFiles(
@@ -88,20 +87,18 @@ export default function RecentFilesComponent({
       >
         {searchResults.length > 0 ? (
           <FilesRendererComponent
-            files={searchResults
-              .toSorted((a, b) => {
-                const selectedOrder = sortByBoolean(
-                  a.progress !== undefined,
-                  b.progress !== undefined,
-                );
-                return selectedOrder === 0
-                  ? sortByDate(
-                      a.updated_at ?? a.created_at,
-                      b.updated_at ?? b.created_at,
-                    )
-                  : selectedOrder;
-              })
-              .slice(0, 10)}
+            files={searchResults.toSorted((a, b) => {
+              const selectedOrder = sortByBoolean(
+                a.progress !== undefined,
+                b.progress !== undefined,
+              );
+              return selectedOrder === 0
+                ? sortByDate(
+                    a.updated_at ?? a.created_at,
+                    b.updated_at ?? b.created_at,
+                  )
+                : selectedOrder;
+            })}
             handleFileSelect={handleFileSelect}
             selectedFiles={selectedFiles}
             handleRename={handleRename}
