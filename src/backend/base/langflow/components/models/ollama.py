@@ -230,7 +230,7 @@ class ChatOllamaComponent(LCModelComponent):
                 valid_url = ""
                 check_urls = URL_LIST
                 if self.base_url:
-                    check_urls = [self.base_url] + URL_LIST
+                    check_urls = [self.base_url, *URL_LIST]
                 for url in check_urls:
                     if await self.is_valid_ollama_url(url):
                         valid_url = url
