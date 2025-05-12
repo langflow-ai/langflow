@@ -107,16 +107,23 @@ class ConditionalRouterComponent(Component):
             try:
                 input_num = float(input_text)
                 match_num = float(match_text)
-                if operator == "less than":
-                    return input_num < match_num
+            except ValueError as e:
+                input_type = "number" if input_text.replace(".", "").isdigit() else "text"
+                match_type = "number" if match_text.replace(".", "").isdigit() else "text"
+                msg = (
+                    f"Unable to compare values: '{input_text}' ({input_type}) and '{match_text}' ({match_type})."
+                    " Please ensure both values are valid numbers."
+                )
+                raise ValueError(msg) from e
+
+            if operator == "less than":
+                return input_num < match_num
                 if operator == "less than or equal":
                     return input_num <= match_num
                 if operator == "greater than":
                     return input_num > match_num
                 if operator == "greater than or equal":
                     return input_num >= match_num
-            except ValueError:
-                return False  # Invalid number format for comparison
         return False
 
     def iterate_and_stop_once(self, route_to_stop: str):
