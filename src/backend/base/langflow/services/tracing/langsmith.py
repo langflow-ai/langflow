@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from langsmith.run_trees import RunTree
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
@@ -29,27 +30,49 @@ class LangSmithTracer(BaseTracer):
             self._ready = self.setup_langsmith()
             if not self._ready:
                 return
-            from langsmith.run_trees import RunTree
-
             self.trace_name = trace_name
             self.trace_type = trace_type
             self.project_name = project_name
             self.trace_id = trace_id
-            self._run_tree = RunTree(
-                project_name=self.project_name,
-                name=self.trace_name,
-                run_type=self.trace_type,
-                id=self.trace_id,
-            )
-            self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
+            from langsmith import get_current_run_tree
+            from langsmith.run_helpers import trace
+
+            self._run_tree: RunTree | None = None
             self._children: dict[str, RunTree] = {}
-        except Exception:  # noqa: BLE001
-            logger.debug("Error setting up LangSmith tracer")
+            self._children_traces: dict[str, trace] = {}
+            self._child_link: dict[str, str] = {}
+            parent = get_current_run_tree()
+            if parent is not None and (parent.id == trace_id or parent.name == trace_name):
+                # duplicate init of LangSmithTracer with same trace_id\\trace_name, using current run tree
+                self._run_tree = parent
+            else:
+                self._trace = trace(
+                    project_name=self.project_name,
+                    name=self.trace_name,
+                    run_type=self.get_run_type(self.trace_type),
+                    run_id=self.trace_id if parent is None else None,
+                    parent=parent,
+                )
+                self._run_tree = self._trace.__enter__()
+            self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
+            self._run_tree.post()
+        except Exception as ex:  # noqa: BLE001
+            logger.warning(f"Error setting up LangSmith tracer: {ex}")
             self._ready = False
 
     @property
     def ready(self):
         return self._ready
+
+    def get_run_type(self, run_type: str) -> str:
+        from langsmith import client
+
+        # check if run_type is valid
+        # if not return chain
+        if run_type not in client.RUN_TYPE_T:
+            logger.warning(f"Run type {run_type} is not valid. Using default run type.")
+            return client.RUN_TYPE_T["chain"]
+        return run_type
 
     def setup_langsmith(self) -> bool:
         if os.getenv("LANGCHAIN_API_KEY") is None:
@@ -66,7 +89,7 @@ class LangSmithTracer(BaseTracer):
 
     def add_trace(
         self,
-        trace_id: str,  # noqa: ARG002
+        trace_id: str,
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
@@ -78,15 +101,20 @@ class LangSmithTracer(BaseTracer):
         processed_inputs = {}
         if inputs:
             processed_inputs = self._convert_to_langchain_types(inputs)
-        child = self._run_tree.create_child(
+
+        from langsmith.run_helpers import trace
+
+        child_trace = trace(
             name=trace_name,
-            run_type=trace_type,  # type: ignore[arg-type]
+            run_type=self.get_run_type(trace_type),
+            parent=self._run_tree,
             inputs=processed_inputs,
+            metadata=self._convert_to_langchain_types(metadata) if metadata else None,
         )
-        if metadata:
-            child.add_metadata(self._convert_to_langchain_types(metadata))
-        self._children[trace_name] = child
-        self._child_link: dict[str, str] = {}
+        child = child_trace.__enter__()
+        child.post()
+        self._children[trace_id] = child
+        self._children_traces[trace_id] = child_trace
 
     def _convert_to_langchain_types(self, io_dict: dict[str, Any]):
         converted = {}
@@ -117,15 +145,18 @@ class LangSmithTracer(BaseTracer):
 
     def end_trace(
         self,
-        trace_id: str,  # noqa: ARG002
-        trace_name: str,
+        trace_id: str,
+        trace_name: str,  # noqa: ARG002
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ):
-        if not self._ready or trace_name not in self._children:
+        if not self._ready or not self._run_tree:
             return
-        child = self._children[trace_name]
+        if trace_id not in self._children:
+            logger.warning(f"Trace {trace_id} not found in children traces")
+            return
+        child = self._children[trace_id]
         raw_outputs = {}
         processed_outputs = {}
         if outputs:
@@ -136,11 +167,8 @@ class LangSmithTracer(BaseTracer):
             child.add_metadata(self._convert_to_langchain_types({"logs": {log.get("name"): log for log in logs_dicts}}))
         child.add_metadata(self._convert_to_langchain_types({"outputs": raw_outputs}))
         child.end(outputs=processed_outputs, error=self._error_to_string(error))
-        if error:
-            child.patch()
-        else:
-            child.post()
-        self._child_link[trace_name] = child.get_url()
+        self._children_traces[trace_id].__exit__()
+        self._child_link[trace_id] = child.get_url()
 
     @staticmethod
     def _error_to_string(error: Exception | None):
@@ -163,8 +191,10 @@ class LangSmithTracer(BaseTracer):
         if metadata:
             self._run_tree.add_metadata(serialize(metadata))
         self._run_tree.end(outputs=serialize(outputs), error=self._error_to_string(error))
-        self._run_tree.post()
+        self._run_tree.patch()
         self._run_link = self._run_tree.get_url()
+        if self._trace:
+            self._trace.__exit__()
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
