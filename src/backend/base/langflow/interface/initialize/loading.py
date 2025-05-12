@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 import warnings
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import orjson
 from loguru import logger
@@ -20,33 +20,69 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 
-def instantiate_class(
-    vertex: Vertex,
-    user_id=None,
-    event_manager: EventManager | None = None,
-) -> Any:
-    """Instantiate class from module type and key, and params."""
-    vertex_type = vertex.vertex_type
-    base_type = vertex.base_type
-    logger.debug(f"Instantiating {vertex_type} of type {base_type}")
+def create_class_object(vertex: Vertex) -> tuple[type[CustomComponent | Component], dict]:
+    """Create a class object from vertex code.
 
-    if not base_type:
+    Args:
+        vertex (Vertex): The vertex containing component information.
+
+    Returns:
+        type[CustomComponent | Component]: The created class object.
+
+    Raises:
+        ValueError: If no base type is provided for the vertex.
+    """
+    if not vertex.base_type:
         msg = "No base type provided for vertex"
         raise ValueError(msg)
 
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
-    class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
-    custom_component: CustomComponent | Component = class_object(
+    return eval_custom_component_code(code), custom_params
+
+
+def instantiate_class(
+    class_object: type[CustomComponent | Component],
+    custom_params: dict | None,
+    vertex: Vertex,
+    user_id=None,
+    event_manager: EventManager | None = None,
+) -> CustomComponent | Component:
+    """Instantiate class from module type and key, and params.
+
+    Args:
+        class_object (type[CustomComponent | Component]): The class object to instantiate.
+        custom_params (dict | None): The custom parameters to pass to the component.
+        vertex (Vertex): The vertex containing component information.
+        user_id: Optional user ID for the component.
+        event_manager (EventManager | None): Optional event manager for the component.
+
+    Returns:
+        tuple containing:
+            - The instantiated custom component
+            - The custom parameters
+            - The class object
+
+    Raises:
+        ValueError: If no base type is provided for the vertex.
+    """
+    vertex_type = vertex.vertex_type
+    base_type = vertex.base_type
+    logger.debug(f"Instantiating {vertex_type} of type {base_type}")
+
+    # Instantiate the component
+    custom_component = class_object(
         _user_id=user_id,
-        _parameters=custom_params,
+        _parameters=custom_params or get_params(vertex.params),
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
         _id=vertex.id,
     )
+
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)
-    return custom_component, custom_params
+
+    return custom_component
 
 
 async def get_instance_results(

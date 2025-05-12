@@ -810,7 +810,7 @@ class Graph:
                 await vertex.consume_async_generator()
             if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
-
+        self._reset_components_in_vertices()
         return vertex_outputs
 
     async def arun(
@@ -1261,6 +1261,11 @@ class Graph:
         """Instantiates the components in the vertices."""
         for vertex in self.vertices:
             vertex.instantiate_component(self.user_id)
+
+    def _reset_components_in_vertices(self) -> None:
+        """Resets the components in the vertices."""
+        for vertex in self.vertices:
+            vertex.reset_component()
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""

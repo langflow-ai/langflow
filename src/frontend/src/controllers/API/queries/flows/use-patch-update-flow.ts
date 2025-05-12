@@ -14,6 +14,7 @@ interface IPatchUpdateFlow {
   endpoint_name?: string | null | undefined;
   locked?: boolean | null | undefined;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  status?: "DRAFT" | "DEPLOYED";
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<

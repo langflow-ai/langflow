@@ -34,6 +34,11 @@ class AccessTypeEnum(str, Enum):
     PUBLIC = "PUBLIC"
 
 
+class DeploymentStateEnum(str, Enum):
+    DRAFT = "DRAFT"
+    DEPLOYED = "DEPLOYED"
+
+
 class FlowBase(SQLModel):
     # Supresses warnings during migrations
     __mapper_args__ = {"confirm_deleted_rows": False}
@@ -70,6 +75,19 @@ class FlowBase(SQLModel):
             nullable=False,
             server_default=text("'PRIVATE'"),
         ),
+    )
+    status: DeploymentStateEnum = Field(
+        default=DeploymentStateEnum.DRAFT,
+        sa_column=Column(
+            SQLEnum(
+                DeploymentStateEnum,
+                name="deployment_state_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            server_default=text("'DRAFT'"),
+        ),
+        description="The current deployment state of the flow",
     )
 
     @field_validator("endpoint_name")
@@ -268,6 +286,7 @@ class FlowUpdate(SQLModel):
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
+    status: DeploymentStateEnum | None = None
     fs_path: str | None = None
 
     @field_validator("endpoint_name")
