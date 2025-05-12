@@ -14,10 +14,6 @@ from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.deps import get_settings_service
 
-# Get settings using the service
-settings_service = get_settings_service()
-user_agent = settings_service.settings.user_agent
-
 
 class URLComponent(Component):
     """A component that loads and parses child links from a root URL recursively."""
