@@ -80,6 +80,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_LIST_THREADS": {
             "display_name": "List Email Threads",
             "action_fields": ["max_results", "query", "gmail_user_id", "page_token"],
+            "get_result_field": True,
+            "result_field": "threads",
         },
         "GMAIL_REPLY_TO_THREAD": {
             "display_name": "Reply To Thread",
@@ -88,6 +90,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_LIST_LABELS": {
             "display_name": "List Email Labels",
             "action_fields": ["gmail_user_id"],
+            "get_result_field": True,
+            "result_field": "labels",
         },
         "GMAIL_CREATE_LABEL": {
             "display_name": "Create Email Label",
@@ -96,6 +100,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         "GMAIL_GET_PEOPLE": {
             "display_name": "Get Contacts",
             "action_fields": ["resource_name", "person_fields"],
+            "get_result_field": True,
+            "result_field": "people_data",
         },
         "GMAIL_REMOVE_LABEL": {
             "display_name": "Delete Email Label",
@@ -374,12 +380,13 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
                     "status": error_data.get("status"),
                 }
 
-            result_data = result.get("data", [])
-            if (
-                len(result_data) != 1
-                and not self._actions_data.get(action_key, {}).get("result_field")
-                and self._actions_data.get(action_key, {}).get("get_result_field")
-            ):
+            result_data = result.get("data", {})
+            actions_data = self._actions_data.get(action_key, {})
+            # If 'get_result_field' is True and 'result_field' is specified, extract the data
+            # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.
+            if actions_data.get("get_result_field") and actions_data.get("result_field"):
+                result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
+            if len(result_data) != 1 and not actions_data.get("result_field") and actions_data.get("get_result_field"):
                 msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
             return result_data  # noqa: TRY300
@@ -394,6 +401,6 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
     def set_default_tools(self):
         self._default_tools = {
-            self.sanitize_action_name("GMAIL_SEND_EMAIL").replace(" ", "-"),
-            self.sanitize_action_name("GMAIL_FETCH_EMAILS").replace(" ", "-"),
+            "GMAIL_SEND_EMAIL",
+            "GMAIL_FETCH_EMAILS",
         }
