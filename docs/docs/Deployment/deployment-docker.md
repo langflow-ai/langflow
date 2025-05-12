@@ -99,7 +99,7 @@ If you want to deploy a specific version of Langflow, you can modify the `image`
 ### Build a Langflow Docker image with all `--extra` dependencies included
 
 The Langflow repository includes a `langflow-all` [Dockerfile](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile) for building a Langflow image containing all dependencies flagged as `--extra` by the `uv sync` command.
-Use this image to include "nv-ingest" or "postgresql" dependencies without having to build a custom container. Additional extra dependencies are found in [uv.lock](https://github.com/langflow-ai/langflow/blob/main/uv.lock#L4851).
+Use this image to include `nv-ingest` or `postgresql` dependencies without having to build a custom container. Additional extra dependencies are found in [uv.lock](https://github.com/langflow-ai/langflow/blob/main/uv.lock#L4851).
 
 To build the `langflow-all` image, do the following:
 
