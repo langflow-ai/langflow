@@ -286,7 +286,7 @@ class ChatOllamaComponent(LCModelComponent):
                 # Fetch available models
                 tags_response = await client.get(tags_url)
                 tags_response.raise_for_status()
-                models = await tags_response.json()
+                models = tags_response.json()
                 logger.debug(f"Available models: {models}")
 
                 # Filter models that are NOT embedding models
@@ -298,7 +298,7 @@ class ChatOllamaComponent(LCModelComponent):
                     payload = {"model": model_name}
                     show_response = await client.post(show_url, json=payload)
                     show_response.raise_for_status()
-                    json_data = await show_response.json()
+                    json_data = show_response.json()
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
                     logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
 
