@@ -118,12 +118,12 @@ class ConditionalRouterComponent(Component):
 
             if operator == "less than":
                 return input_num < match_num
-                if operator == "less than or equal":
-                    return input_num <= match_num
-                if operator == "greater than":
-                    return input_num > match_num
-                if operator == "greater than or equal":
-                    return input_num >= match_num
+            if operator == "less than or equal":
+                return input_num <= match_num
+            if operator == "greater than":
+                return input_num > match_num
+            if operator == "greater than or equal":
+                return input_num >= match_num
         return False
 
     def iterate_and_stop_once(self, route_to_stop: str):
