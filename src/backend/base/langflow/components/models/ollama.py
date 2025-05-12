@@ -224,7 +224,10 @@ class ChatOllamaComponent(LCModelComponent):
         ):
             # Check if any URL in the list is valid
             valid_url = ""
-            for url in URL_LIST:
+            check_urls = URL_LIST
+            if self.base_url:
+                check_urls = [self.base_url] + URL_LIST
+            for url in check_urls:
                 if await self.is_valid_ollama_url(url):
                     valid_url = url
                     break
