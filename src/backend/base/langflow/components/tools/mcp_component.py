@@ -77,9 +77,9 @@ class MCPToolsComponent(Component):
         "headers_input",
     ]
 
-    display_name = "MCP Server"
-    description = "Connect to an MCP server and expose tools."
-    icon = "server"
+    display_name = "MCP Connection"
+    description = "Connect to an MCP server to use its tools."
+    icon = "Mcp"
     name = "MCPTools"
 
     inputs = [
@@ -107,6 +107,7 @@ class MCPToolsComponent(Component):
             is_list=True,
             show=True,
             tool_mode=False,
+            advanced=True,
         ),
         MultilineInput(
             name="sse_url",
@@ -138,6 +139,7 @@ class MCPToolsComponent(Component):
                 },
             ],
             value=[],
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -203,6 +205,10 @@ class MCPToolsComponent(Component):
             return processed_headers
         return {}
 
+    def _is_valid_key_value_item(self, item: Any) -> bool:
+        """Check if an item is a valid key-value dictionary."""
+        return isinstance(item, dict) and "key" in item and "value" in item
+
     async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
         """Validate and process schema inputs for a tool."""
         try:
@@ -234,6 +240,7 @@ class MCPToolsComponent(Component):
         try:
             if field_name == "mode":
                 self.remove_non_default_keys(build_config)
+                build_config["tool"]["options"] = []
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
                     build_config["env"]["show"] = True
@@ -494,6 +501,7 @@ class MCPToolsComponent(Component):
                         func=create_tool_func(tool.name, args_schema, client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
                         tags=[tool.name],
+                        metadata={},
                     )
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
@@ -521,4 +529,3 @@ class MCPToolsComponent(Component):
             msg = "SSE URL is not set"
             raise ValueError(msg)
         return await self.update_tools()
-        # return self.tools
