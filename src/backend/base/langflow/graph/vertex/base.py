@@ -371,7 +371,7 @@ class Vertex:
         if self._custom_component_class is None:
             self._custom_component_class = self.create_class_object()
         if not self.custom_component:
-            self.custom_component, _ = initialize.loading.instantiate_class(
+            self.custom_component = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
                 class_object=self._custom_component_class,
