@@ -1,23 +1,27 @@
 import asyncio
+import contextlib
 import os
+import platform
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import UUID
 
+import aiofiles
 import httpx
 from httpx import codes as httpx_codes
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
-from pydantic import Field, create_model
+from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
-from langflow.helpers.base_model import BaseModel
 from langflow.services.database.models import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
+NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., Awaitable]:
@@ -65,77 +69,264 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], session) -> Ca
     return tool_func
 
 
-async def get_flow_snake_case(flow_name: str, user_id: str, session) -> Flow | None:
+async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
-        this_flow_name = "_".join(flow.name.lower().split())
+        this_flow_name = flow.action_name if is_action and flow.action_name else "_".join(flow.name.lower().split())
         if this_flow_name == flow_name:
             return flow
     return None
 
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
-    """Converts a JSON schema into a Pydantic model dynamically.
+    """Dynamically build a Pydantic model from a JSON schema (with $defs).
 
-    Fields not listed as required are wrapped in Optional[...] and default to None if not provided.
-
-    :param schema: The JSON schema as a dictionary.
-    :return: A Pydantic model class.
+    Non-required fields become Optional[...] with default=None.
     """
     if schema.get("type") != "object":
-        msg = "JSON schema must be of type 'object' at the root level."
+        msg = "Root schema must be type 'object'"
         raise ValueError(msg)
 
-    fields = {}
-    properties = schema.get("properties", {})
-    required_fields = set(schema.get("required", []))
+    defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
+    model_cache: dict[str, type[BaseModel]] = {}
 
-    for field_name, field_def in properties.items():
-        # Determine the base type from the JSON schema type string.
-        field_type_str = field_def.get("type", "str")  # Defaults to string if not specified.
-        base_type = {
+    def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
+        """Follow a $ref chain until you land on a real subschema."""
+        if s is None:
+            return {}
+        while "$ref" in s:
+            ref_name = s["$ref"].split("/")[-1]
+            s = defs.get(ref_name)
+            if s is None:
+                msg = f"Definition '{ref_name}' not found"
+                raise ValueError(msg)
+        return s
+
+    def parse_type(s: dict[str, Any] | None) -> Any:
+        """Map a JSON Schema subschema to a Python type (possibly nested)."""
+        if s is None:
+            return None
+        s = resolve_ref(s)
+
+        if "anyOf" in s:
+            # Handle common pattern for nullable types (anyOf with string and null)
+            subtypes = [sub.get("type") for sub in s["anyOf"] if isinstance(sub, dict) and "type" in sub]
+
+            # Check if this is a simple nullable type (e.g., str | None)
+            if len(subtypes) == NULLABLE_TYPE_LENGTH and "null" in subtypes:
+                # Get the non-null type
+                non_null_type = next(t for t in subtypes if t != "null")
+                # Map it to Python type
+                if isinstance(non_null_type, str):
+                    return {
+                        "string": str,
+                        "integer": int,
+                        "number": float,
+                        "boolean": bool,
+                        "object": dict,
+                        "array": list,
+                    }.get(non_null_type, Any)
+                return Any
+
+            # For other anyOf cases, use the first non-null type
+            subtypes = [parse_type(sub) for sub in s["anyOf"]]
+            non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
+            if non_null_types:
+                return non_null_types[0]
+            return str
+
+        t = s.get("type", "any")  # Use string "any" as default instead of Any type
+        if t == "array":
+            item_schema = s.get("items", {})
+            schema_type: Any = parse_type(item_schema)
+            return list[schema_type]
+
+        if t == "object":
+            # inline object not in $defs ⇒ anonymous nested model
+            return _build_model(f"AnonModel{len(model_cache)}", s)
+
+        # primitive fallback
+        return {
             "string": str,
-            "str": str,
             "integer": int,
-            "int": int,
             "number": float,
             "boolean": bool,
-            "array": list,
             "object": dict,
-        }.get(field_type_str, Any)
+            "array": list,
+        }.get(t, Any)
 
-        field_metadata = {"description": field_def.get("description", "")}
+    def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
+        """Create (or fetch) a BaseModel subclass for the given object schema."""
+        # If this came via a named $ref, use that name
+        if "$ref" in subschema:
+            refname = subschema["$ref"].split("/")[-1]
+            if refname in model_cache:
+                return model_cache[refname]
+            target = defs.get(refname)
+            if not target:
+                msg = f"Definition '{refname}' not found"
+                raise ValueError(msg)
+            cls = _build_model(refname, target)
+            model_cache[refname] = cls
+            return cls
 
-        # For non-required fields, wrap the type in Optional[...] and set a default value.
-        if field_name not in required_fields:
-            field_metadata["default"] = field_def.get("default", None)
+        # Named anonymous or inline: avoid clashes by name
+        if name in model_cache:
+            return model_cache[name]
 
-        fields[field_name] = (base_type, Field(**field_metadata))
+        props = subschema.get("properties", {})
+        reqs = set(subschema.get("required", []))
+        fields: dict[str, Any] = {}
 
-    return create_model("InputSchema", **fields)
+        for prop_name, prop_schema in props.items():
+            py_type = parse_type(prop_schema)
+            is_required = prop_name in reqs
+            if not is_required:
+                py_type = py_type | None
+                default = prop_schema.get("default", None)
+            else:
+                default = ...  # required by Pydantic
+
+            fields[prop_name] = (py_type, Field(default, description=prop_schema.get("description")))
+
+        model_cls = create_model(name, **fields)
+        model_cache[name] = model_cls
+        return model_cls
+
+    # build the top - level "InputSchema" from the root properties
+    top_props = schema.get("properties", {})
+    top_reqs = set(schema.get("required", []))
+    top_fields: dict[str, Any] = {}
+
+    for fname, fdef in top_props.items():
+        py_type = parse_type(fdef)
+        if fname not in top_reqs:
+            py_type = py_type | None
+            default = fdef.get("default", None)
+        else:
+            default = ...
+        top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
+
+    return create_model("InputSchema", **top_fields)
 
 
 class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
+        self.max_retries = 1
+        self.retry_delay = 1.0  # seconds
+        self.timeout_seconds = 30  # default timeout
 
-    async def connect_to_server(self, command_str: str):
+    async def connect_to_server(self, command_str: str, env: list[str] | None = None):
+        env_dict: dict[str, str] = {}
+        if env is None:
+            env = []
+        for var in env:
+            if "=" not in var:
+                msg = f"Invalid env var format: {var}. Must be in the format 'VAR_NAME=VAR_VALUE'"
+                raise ValueError(msg)
+            env_dict[var.split("=")[0]] = var.split("=")[1]
         command = command_str.split(" ")
-        server_params = StdioServerParameters(
-            command=command[0],
-            args=command[1:],
-            env={"DEBUG": "true", "PATH": os.environ["PATH"]},
-        )
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-        self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-        await self.session.initialize()
-        response = await self.session.list_tools()
-        return response.tools
+        server_params = None
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})}
+
+        # Create platform-specific command wrapper
+        if platform.system() == "Windows":
+            # For Windows, use cmd.exe with error reporting
+            server_params = StdioServerParameters(
+                command="cmd",
+                args=[
+                    "/c",
+                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                ],
+                env=env_data,
+            )
+        else:
+            # For Unix-like systems, use bash with error reporting
+            server_params = StdioServerParameters(
+                command="bash",
+                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
+                env=env_data,
+            )
+
+        # Create a temporary file to capture stderr
+        errlog_path = ""
+        async with aiofiles.tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as tmp:
+            errlog_path = cast(str, tmp.name)
+
+            try:
+                # Pass the temp file as errlog to capture stderr
+                stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params, errlog=tmp))
+                self.stdio, self.write = stdio_transport
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+
+                # Create a watcher task to monitor stderr
+                async def watch_stderr():
+                    last_size = 0
+                    full_log = ""
+                    while True:
+                        await asyncio.sleep(0.05)
+                        await tmp.flush()
+                        current = Path(errlog_path).stat().st_size
+                        if current > last_size:
+                            async with aiofiles.open(errlog_path, encoding="utf-8") as f:
+                                await f.seek(last_size)
+                                data = await f.read()
+                                full_log += data
+                                data = data.strip()
+
+                            # Check for our specific error message pattern
+                            if "Command failed with exit code" in data:
+                                msg = f"MCP server command failed: {command_str}\nFull error log:\n{full_log}"
+                                raise RuntimeError(msg)
+                        last_size = current
+
+                # Create tasks for both operations
+                watcher = asyncio.create_task(watch_stderr())
+                initializer = asyncio.create_task(self.session.initialize())
+
+                # Race them: first to finish wins
+                done, pending = await asyncio.wait({watcher, initializer}, return_when=asyncio.FIRST_COMPLETED)
+
+                if watcher in done:
+                    # stderr watcher fired → cancel and propagate its error
+                    initializer.cancel()
+                    watcher.result()  # This will re-raise the RuntimeError
+                else:
+                    # initialize succeeded → cancel watcher
+                    watcher.cancel()
+                    initializer.result()  # Will re-raise any initialization errors
+
+                # If we get here, initialization succeeded
+                response = await self.session.list_tools()
+                # return response.tools
+
+            except FileNotFoundError as e:
+                # Command not found, raise immediately
+                msg = f"Command not found: {command[0]}. Error: {e}"
+                raise ValueError(msg) from e
+            except OSError as e:
+                # Other OS errors (e.g., permission denied)
+                msg = f"Failed to start command '{command[0]}': {e}"
+                raise ValueError(msg) from e
+            except RuntimeError as e:
+                # This is from our stderr watcher
+                msg = f"MCP server error: {e}"
+                raise ConnectionError(msg) from e
+            except Exception as e:
+                msg = f"Failed to initialize MCP session: {e}"
+                logger.warning(msg)
+                raise ConnectionError(msg) from e
+            else:
+                return response.tools
+            finally:
+                # Clean up the temp file
+                with contextlib.suppress(FileNotFoundError, PermissionError):
+                    Path(errlog_path).unlink()
 
 
 class MCPSseClient:

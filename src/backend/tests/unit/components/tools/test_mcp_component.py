@@ -78,9 +78,12 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         """Test build config updates when mode changes."""
         component = component_class(**default_kwargs)
         build_config = {
-            "command": {"show": False},
-            "sse_url": {"show": True},
-            "tool": {"options": [], "show": True},  # Add tool field since component uses it
+            "command": {"show": False, "value": "uvx mcp-server-fetch"},
+            "sse_url": {"show": True, "value": "http://localhost:7860/api/v1/mcp/sse"},
+            "tool": {"options": [], "show": True},
+            "mode": {"value": "Stdio"},
+            "env": {"show": True, "value": []},
+            "headers_input": {"show": False, "value": []},
         }
 
         # Test switching to Stdio mode

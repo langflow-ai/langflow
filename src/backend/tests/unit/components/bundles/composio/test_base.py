@@ -15,7 +15,7 @@ class MockComposioToolSet:
         return []
 
     def execute_action(self, *_, **__):
-        return {"data": {"response": "mocked response"}}
+        return {"successful": True, "data": {"result": "mocked response"}}
 
 
 class TestComposioBase(ComponentTestBaseWithoutClient):
