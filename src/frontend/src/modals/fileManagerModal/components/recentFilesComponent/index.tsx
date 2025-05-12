@@ -26,7 +26,7 @@ export default function RecentFilesComponent({
         ...file,
         type: file.path.split(".").pop()?.toLowerCase(),
       })),
-    [files]
+    [files],
   );
 
   const fuse = useMemo(
@@ -35,7 +35,7 @@ export default function RecentFilesComponent({
         keys: ["name", "type"],
         threshold: 0.3,
       }),
-    [filesWithType]
+    [filesWithType],
   );
 
   const [searchQuery, setSearchQuery] = useState("");
