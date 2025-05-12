@@ -101,4 +101,3 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "name" in result.columns
         assert result.iloc[0]["id"] == 1
         assert result.iloc[0]["name"] == "name_test"
-

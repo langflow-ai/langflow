@@ -5,7 +5,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import BoolInput, MessageTextInput, Output
-from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
