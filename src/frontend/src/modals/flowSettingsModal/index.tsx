@@ -18,8 +18,12 @@ export default function FlowSettingsModal({
   flowData,
   details,
 }: FlowSettingsPropsType): JSX.Element {
+  if (!open) return <></>;
+
   const saveFlow = useSaveFlow();
-  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) =>
+    flowData ? undefined : state.currentFlow,
+  );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -43,6 +47,7 @@ export default function FlowSettingsModal({
     newFlow.description = description;
     newFlow.endpoint_name =
       endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
+
     if (autoSaving) {
       saveFlow(newFlow)
         ?.then(() => {

@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SearchComponent",
-            "id": "SearchComponent-x6LSs",
+            "id": "SearchComponent-kgsWf",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-uVdQJ",
+            "id": "Agent-H916j",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__SearchComponent-x6LSs{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-x6LSsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uVdQJ{œfieldNameœ:œtoolsœ,œidœ:œAgent-uVdQJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SearchComponent-kgsWf{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-kgsWfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-H916j{œfieldNameœ:œtoolsœ,œidœ:œAgent-H916jœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SearchComponent-x6LSs",
-        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-x6LSsœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-uVdQJ",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uVdQJœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "SearchComponent-kgsWf",
+        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-kgsWfœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-H916j",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-H916jœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-AJeqr",
+            "id": "ChatInput-6dlgJ",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,47 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-uVdQJ",
+            "id": "Agent-H916j",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-AJeqr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AJeqrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-uVdQJ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-uVdQJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-6dlgJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-6dlgJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-H916j{œfieldNameœ:œinput_valueœ,œidœ:œAgent-H916jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-AJeqr",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-AJeqrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-uVdQJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-uVdQJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-uqJt8",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-XdRAi",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__URL-uqJt8{œdataTypeœ:œURLœ,œidœ:œURL-uqJt8œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-XdRAi{œfieldNameœ:œtoolsœ,œidœ:œAgent-XdRAiœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "URL-uqJt8",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-uqJt8œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-XdRAi",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-XdRAiœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ChatInput-6dlgJ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-6dlgJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-H916j",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-H916jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-uVdQJ",
+            "id": "Agent-H916j",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,47 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-XdRAi",
+            "id": "Agent-zFKST",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-uVdQJ{œdataTypeœ:œAgentœ,œidœ:œAgent-uVdQJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-XdRAi{œfieldNameœ:œinput_valueœ,œidœ:œAgent-XdRAiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-H916j{œdataTypeœ:œAgentœ,œidœ:œAgent-H916jœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-zFKST{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zFKSTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-uVdQJ",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-uVdQJœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-XdRAi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-XdRAiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-nykGf",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-ZvLnB",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__CalculatorComponent-nykGf{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-nykGfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ZvLnB{œfieldNameœ:œtoolsœ,œidœ:œAgent-ZvLnBœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CalculatorComponent-nykGf",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-nykGfœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-ZvLnB",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ZvLnBœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "Agent-H916j",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-H916jœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-zFKST",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-zFKSTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -147,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-XdRAi",
+            "id": "Agent-zFKST",
             "name": "response",
             "output_types": [
               "Message"
@@ -155,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-ZvLnB",
+            "id": "Agent-3tuWs",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-XdRAi{œdataTypeœ:œAgentœ,œidœ:œAgent-XdRAiœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-ZvLnB{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ZvLnBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-zFKST{œdataTypeœ:œAgentœ,œidœ:œAgent-zFKSTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-3tuWs{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3tuWsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-XdRAi",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-XdRAiœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-ZvLnB",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ZvLnBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-zFKST",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-zFKSTœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-3tuWs",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3tuWsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -175,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-ZvLnB",
+            "id": "Agent-3tuWs",
             "name": "response",
             "output_types": [
               "Message"
@@ -183,7 +127,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-HHJAW",
+            "id": "ChatOutput-n7Oik",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -192,18 +136,72 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-ZvLnB{œdataTypeœ:œAgentœ,œidœ:œAgent-ZvLnBœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HHJAW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HHJAWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-3tuWs{œdataTypeœ:œAgentœ,œidœ:œAgent-3tuWsœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-n7Oik{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n7Oikœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-ZvLnB",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ZvLnBœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-HHJAW",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HHJAWœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-3tuWs",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3tuWsœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-n7Oik",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-n7Oikœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-4LSRv",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-zFKST",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__URL-4LSRv{œdataTypeœ:œURLœ,œidœ:œURL-4LSRvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-zFKST{œfieldNameœ:œtoolsœ,œidœ:œAgent-zFKSTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "URL-4LSRv",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-4LSRvœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-zFKST",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-zFKSTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-hlWP4",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-3tuWs",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CalculatorComponent-hlWP4{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hlWP4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3tuWs{œfieldNameœ:œtoolsœ,œidœ:œAgent-3tuWsœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CalculatorComponent-hlWP4",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-hlWP4œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3tuWs",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3tuWsœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-AJeqr",
+          "id": "ChatInput-6dlgJ",
           "node": {
             "base_classes": [
               "Message"
@@ -475,10 +473,10 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "ChatInput-AJeqr",
+        "id": "ChatInput-6dlgJ",
         "measured": {
           "height": 262,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1731.3224944651397,
@@ -496,7 +494,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-HHJAW",
+          "id": "ChatOutput-n7Oik",
           "node": {
             "base_classes": [
               "Message"
@@ -778,10 +776,10 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "ChatOutput-HHJAW",
+        "id": "ChatOutput-n7Oik",
         "measured": {
           "height": 262,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 4349.229697347143,
@@ -797,7 +795,7 @@
       },
       {
         "data": {
-          "id": "note-MybTk",
+          "id": "note-NwG3w",
           "node": {
             "description": "# Travel Planning Agents \n\nThe travel planning system is a smart setup that uses several specialized \"agents\" to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\n\n- **User-Friendly Start:** You start by telling the system about your travel needs—where you want to go and what you love to do.\n\n- **Data Collection:** The agents uses its tools to gather current info about various destinations, like the best travel times, weather, and costs.\n\n- **Three Key Agents:**\n  - **City Selection Agent:** Picks the best places to visit based on your likes and current data.\n  - **Local Expert Agent:** Gathers interesting details about what to do and see in the chosen city.\n  - **Travel Concierge Agent:** Builds a day-by-day plan that includes where to stay, eat, and explore!\n\n- **Tools and Data:** Each agent uses tools to find and organize the latest information so you get recommendations that are both accurate and exciting.\n\n- **Final Plan:** Once everything is put together, you receive a complete, easy-to-follow travel itinerary, perfect for your adventure!\n",
             "display_name": "",
@@ -808,10 +806,10 @@
         },
         "dragging": false,
         "height": 603,
-        "id": "note-MybTk",
+        "id": "note-NwG3w",
         "measured": {
           "height": 603,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 1319.2860379588103,
@@ -832,7 +830,7 @@
       },
       {
         "data": {
-          "id": "note-bnshz",
+          "id": "note-zaSgy",
           "node": {
             "description": "# **City Selection Agent**\n   - **Purpose:** This agent evaluates potential travel destinations based on user input and external data sources.\n   - **Core Functions:** Analyzes factors such as weather, local events, and travel costs to recommend optimal cities.\n   - **Tools Utilized:** Employs APIs and data-fetching tools to gather real-time information for decision-making.\n",
             "display_name": "",
@@ -845,10 +843,10 @@
         },
         "dragging": false,
         "height": 334,
-        "id": "note-bnshz",
+        "id": "note-zaSgy",
         "measured": {
           "height": 334,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 2112.2352264274264,
@@ -869,7 +867,7 @@
       },
       {
         "data": {
-          "id": "note-sOjBg",
+          "id": "note-imuMP",
           "node": {
             "description": "# **Local Expert Agent**\n   - **Purpose:** Focused on gathering and providing an in-depth guide to the selected city.\n   - **Core Functions:** Compiles insights into cultural attractions, local customs, and unique experiences.\n   - **Tools Utilized:** Uses web content fetchers and data APIs to collect detailed local insights and enhance the user understanding with hidden gems.\n",
             "display_name": "",
@@ -882,10 +880,10 @@
         },
         "dragging": false,
         "height": 342,
-        "id": "note-sOjBg",
+        "id": "note-imuMP",
         "measured": {
           "height": 342,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 2827.660803823376,
@@ -906,7 +904,7 @@
       },
       {
         "data": {
-          "id": "note-2B81k",
+          "id": "note-KFInF",
           "node": {
             "description": "# **Travel Concierge Agent**\n   - **Purpose:** Crafts detailed travel itineraries that are customized to the traveler's interests and needs.\n   - **Core Functions:** Offers a comprehensive daily schedule, including accommodations, dining spots, and activities.\n   - **Tools Utilized:** Integrates calculators and data tools for accurate budget planning and itinerary logistics.",
             "display_name": "",
@@ -919,10 +917,10 @@
         },
         "dragging": false,
         "height": 336,
-        "id": "note-2B81k",
+        "id": "note-KFInF",
         "measured": {
           "height": 336,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 3536.084279543714,
@@ -943,7 +941,7 @@
       },
       {
         "data": {
-          "id": "note-Ndgi9",
+          "id": "note-b1zMq",
           "node": {
             "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
             "display_name": "",
@@ -956,10 +954,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-Ndgi9",
+        "id": "note-b1zMq",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 2463.3881993480218,
@@ -978,7 +976,7 @@
         "data": {
           "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
           "display_name": "URL",
-          "id": "URL-uqJt8",
+          "id": "URL-4LSRv",
           "node": {
             "base_classes": [
               "Data",
@@ -1010,9 +1008,10 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "hidden": null,
+                "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -1106,11 +1105,11 @@
                 "value": "langflow"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1118,94 +1117,72 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-fetch_content",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
+                    "status": true,
                     "tags": [
-                      "URL-fetch_content"
+                      "fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-fetch_content_text",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "fetch_content_text",
+                    "name": "fetch_content_text",
+                    "status": true,
                     "tags": [
-                      "URL-fetch_content_text"
+                      "fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "name": "URL-as_dataframe",
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
+                    "status": true,
                     "tags": [
-                      "URL-as_dataframe"
+                      "as_dataframe"
                     ]
                   }
                 ]
@@ -1240,10 +1217,10 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-uqJt8",
+        "id": "URL-4LSRv",
         "measured": {
-          "height": 660,
-          "width": 360
+          "height": 523,
+          "width": 320
         },
         "position": {
           "x": 2815.5187953791974,
@@ -1254,7 +1231,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-nykGf",
+          "id": "CalculatorComponent-hlWP4",
           "node": {
             "base_classes": [
               "Data"
@@ -1283,11 +1260,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "hidden": null,
+                "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
@@ -1340,11 +1319,11 @@
                 "value": ""
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1352,74 +1331,27 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "name": "CalculatorComponent-evaluate_expression",
+                    "args": {
+                      "expression": {
+                        "default": "",
+                        "description": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+                        "title": "Expression",
+                        "type": "string"
+                      }
+                    },
+                    "description": "CalculatorComponent. evaluate_expression() - Perform basic arithmetic operations on a given expression.",
+                    "display_description": "CalculatorComponent. evaluate_expression() - Perform basic arithmetic operations on a given expression.",
+                    "display_name": "evaluate_expression",
+                    "name": "evaluate_expression",
+                    "status": true,
                     "tags": [
-                      "CalculatorComponent-evaluate_expression"
+                      "evaluate_expression"
                     ]
                   }
                 ]
@@ -1431,10 +1363,10 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-nykGf",
+        "id": "CalculatorComponent-hlWP4",
         "measured": {
-          "height": 374,
-          "width": 360
+          "height": 248,
+          "width": 320
         },
         "position": {
           "x": 3540.356346381247,
@@ -1447,7 +1379,7 @@
         "data": {
           "description": "Call the searchapi.io API with result limiting",
           "display_name": "Search API",
-          "id": "SearchComponent-x6LSs",
+          "id": "SearchComponent-kgsWf",
           "node": {
             "base_classes": [
               "Data",
@@ -1503,9 +1435,7 @@
                 "display_name": "SearchAPI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": false,
                 "name": "api_key",
                 "password": true,
@@ -1638,11 +1568,11 @@
                 "value": {}
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1650,110 +1580,42 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content(api_key: Message) - Call the searchapi.io API with result limiting",
-                    "name": "SearchComponent-fetch_content",
+                    "args": {},
+                    "description": "SearchComponent. fetch_content(SearchComponent. api_key: FieldTypes.TEXT) - Call the searchapi.io API with result limiting",
+                    "display_description": "SearchComponent. fetch_content(SearchComponent. api_key: FieldTypes.TEXT) - Call the searchapi.io API with result limiting",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
                     "status": true,
                     "tags": [
-                      "SearchComponent-fetch_content"
+                      "fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text(api_key: Message) - Call the searchapi.io API with result limiting",
-                    "name": "SearchComponent-fetch_content_text",
+                    "args": {},
+                    "description": "SearchComponent. fetch_content_text(SearchComponent. api_key: FieldTypes.TEXT) - Call the searchapi.io API with result limiting",
+                    "display_description": "SearchComponent. fetch_content_text(SearchComponent. api_key: FieldTypes.TEXT) - Call the searchapi.io API with result limiting",
+                    "display_name": "fetch_content_text",
+                    "name": "fetch_content_text",
                     "status": true,
                     "tags": [
-                      "SearchComponent-fetch_content_text"
+                      "fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe(api_key: Message) - Call the searchapi.io API with result limiting",
-                    "name": "SearchComponent-as_dataframe",
+                    "args": {},
+                    "description": "SearchComponent. as_dataframe(SearchComponent. api_key: FieldTypes.TEXT) - Call the searchapi.io API with result limiting",
+                    "display_description": "SearchComponent. as_dataframe(SearchComponent. api_key: FieldTypes.TEXT) - Call the searchapi.io API with result limiting",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
                     "status": true,
                     "tags": [
-                      "SearchComponent-as_dataframe"
+                      "as_dataframe"
                     ]
                   }
                 ]
@@ -1765,10 +1627,10 @@
           "type": "SearchComponent"
         },
         "dragging": false,
-        "id": "SearchComponent-x6LSs",
+        "id": "SearchComponent-kgsWf",
         "measured": {
-          "height": 536,
-          "width": 360
+          "height": 421,
+          "width": 320
         },
         "position": {
           "x": 2089.0393126914205,
@@ -1779,7 +1641,7 @@
       },
       {
         "data": {
-          "id": "Agent-uVdQJ",
+          "id": "Agent-H916j",
           "node": {
             "base_classes": [
               "Message"
@@ -1956,9 +1818,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -2156,11 +2016,15 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
                   "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -2171,7 +2035,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2462,10 +2326,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-uVdQJ",
+        "id": "Agent-H916j",
         "measured": {
-          "height": 698,
-          "width": 360
+          "height": 624,
+          "width": 320
         },
         "position": {
           "x": 2462.5131863965653,
@@ -2476,7 +2340,7 @@
       },
       {
         "data": {
-          "id": "Agent-XdRAi",
+          "id": "Agent-zFKST",
           "node": {
             "base_classes": [
               "Message"
@@ -2653,9 +2517,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -2853,11 +2715,15 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
                   "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -2868,7 +2734,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -3159,10 +3025,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-XdRAi",
+        "id": "Agent-zFKST",
         "measured": {
-          "height": 698,
-          "width": 360
+          "height": 624,
+          "width": 320
         },
         "position": {
           "x": 3168.5639981397626,
@@ -3173,7 +3039,7 @@
       },
       {
         "data": {
-          "id": "Agent-ZvLnB",
+          "id": "Agent-3tuWs",
           "node": {
             "base_classes": [
               "Message"
@@ -3350,9 +3216,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -3550,11 +3414,15 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
                   "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3565,7 +3433,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -3856,30 +3724,30 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-ZvLnB",
+        "id": "Agent-3tuWs",
         "measured": {
-          "height": 698,
-          "width": 360
+          "height": 624,
+          "width": 320
         },
         "position": {
           "x": 3936.123532016018,
           "y": 356.3534774464019
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -473.30523608095336,
-      "y": 108.76117467654905,
-      "zoom": 0.41164535038506667
+      "x": -750.9105189752929,
+      "y": 96.67627127061348,
+      "zoom": 0.44896152055995414
     }
   },
   "description": "Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.",
   "endpoint_name": null,
-  "id": "bb57ce7a-13e0-40c0-9e7a-7783fd6f32e8",
+  "id": "0148d85f-5339-4ba1-ae38-54b504c0223d",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.3.4",
   "name": "Travel Planning Agents",
   "tags": [
     "agents",

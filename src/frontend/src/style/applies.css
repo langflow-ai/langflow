@@ -1257,6 +1257,10 @@
     @apply h-7 w-7 rounded-md;
   }
 
+  .hit-area-hover {
+    @apply transition-colors duration-200 hover:bg-muted hover:text-foreground;
+  }
+
   .node-toolbar-buttons {
     @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }
@@ -1284,6 +1288,14 @@
   .btn-playground-actions {
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
   }
+
+  .no-focus-visible{
+    @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
+    --tw-ring-offset-width: none !important;
+    --tw-ring-shadow: none !important;
+    --tw-ring-offset-shadow: none !important;
+    --tw-ring-color: none !important;
+  }
 }
 
 /* Gradient background */
@@ -1299,7 +1311,7 @@
 }
 
 .deploy-dropdown-item {
-  @apply h-11 cursor-pointer px-2.5 py-1 text-[14px] font-normal hover:bg-background !important;
+  @apply h-11 cursor-pointer px-2.5 py-1 text-sm font-normal hover:bg-background !important;
 }
 
 .deploy-dropdown-item > :first-child {

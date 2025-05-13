@@ -39,10 +39,11 @@ export default function NodeStatus({
   showNode,
   data,
   buildStatus,
+  dismissAll,
   isOutdated,
   isUserEdited,
+  isBreakingChange,
   getValidationStatus,
-  handleUpdateComponent,
 }: {
   nodeId: string;
   display_name: string;
@@ -52,10 +53,11 @@ export default function NodeStatus({
   showNode: boolean;
   data: NodeDataType;
   buildStatus: BuildStatus;
+  dismissAll: boolean;
   isOutdated: boolean;
   isUserEdited: boolean;
+  isBreakingChange: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
-  handleUpdateComponent: () => void;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
@@ -106,6 +108,7 @@ export default function NodeStatus({
     pollingInterval.current = setInterval(() => {
       mutateTemplate(
         { validate: data.node?.template?.auth?.value || "" },
+        data.id,
         data.node,
         (newNode) => {
           setNode(nodeId, (old) => ({
@@ -136,6 +139,7 @@ export default function NodeStatus({
     setIsPolling(true);
     mutateTemplate(
       "disconnect",
+      data.id,
       data.node,
       (newNode) => {
         setNode(nodeId, (old) => ({
@@ -180,8 +184,6 @@ export default function NodeStatus({
     getValidationStatus,
   );
 
-  const dismissAll = useUtilityStore((state) => state.dismissAll);
-
   const getBaseBorderClass = (selected) => {
     let className =
       selected && !isBuilding
@@ -189,8 +191,8 @@ export default function NodeStatus({
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     let updateClass =
-      isOutdated && !isUserEdited && !dismissAll
-        ? "border-warning ring-2 ring-warning"
+      isOutdated && !isUserEdited && !dismissAll && isBreakingChange
+        ? "border-warning"
         : "";
     return cn(frozen ? frozenClass : className, updateClass);
   };
@@ -369,7 +371,7 @@ export default function NodeStatus({
           >
             <div className="cursor-help">
               {conditionSuccess && validationStatus?.data?.duration ? (
-                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-[11px] font-bold text-accent-emerald-foreground">
+                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-xxs font-bold text-accent-emerald-foreground">
                   <Check className="h-4 w-4 items-center self-center" />
                   <span>
                     {normalizeTimeString(validationStatus?.data?.duration)}
@@ -388,7 +390,7 @@ export default function NodeStatus({
               size="sq"
               className="pointer-events-none mr-1 flex h-[22px] w-10 justify-center rounded-[8px] bg-accent-pink text-accent-pink-foreground"
             >
-              <span className="text-[11px]">Beta</span>
+              <span className="text-xxs">Beta</span>
             </Badge>
           )}
         </div>
@@ -462,36 +464,6 @@ export default function NodeStatus({
             )}
           </div>
         </ShadTooltip>
-        {dismissAll && isOutdated && !isUserEdited && (
-          <ShadTooltip content="Update component">
-            <div
-              className="button-run-bg hit-area-icon ml-1 bg-warning hover:bg-warning/80"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdateComponent();
-                e.stopPropagation();
-              }}
-            >
-              {showNode && (
-                <Button
-                  unstyled
-                  type="button"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <div
-                    data-testid={`button_update_` + display_name.toLowerCase()}
-                  >
-                    <IconComponent
-                      name={"AlertTriangle"}
-                      strokeWidth={ICON_STROKE_WIDTH}
-                      className="icon-size text-black"
-                    />
-                  </div>
-                </Button>
-              )}
-            </div>
-          </ShadTooltip>
-        )}
       </div>
     </>
   ) : (
