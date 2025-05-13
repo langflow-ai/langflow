@@ -9,8 +9,10 @@ import TabItem from '@theme/TabItem';
 This guide covers Langflow's authentication system and API key management, including how to secure your deployment and manage access to flows and components.
 
 :::warning
-**Never expose Langflow ports directly to the internet without proper security measures.**
+Never expose Langflow ports directly to the internet without proper security measures.
+
 Disable `LANGFLOW_AUTO_LOGIN`, use a secure `LANGFLOW_SECRET_KEY`, and ensure your Langflow server is behind a reverse proxy with proper authentication enabled.
+For more information, see [Start a secure Langflow server with authentication](#start-a-secure-langflow-server-with-authentication).
 :::
 
 ## Authentication configuration values
