@@ -167,44 +167,44 @@ The following keyboard shortcuts are available when a component is selected.
 
 | Menu item | Windows shortcut | Mac shortcut | Description |
 |-----------|-----------------|--------------|-------------|
-| Code | Space | Space | Opens the code editor for the component. |
-| Advanced Settings | Ctrl + Shift + A | ⌘ + Shift + A | Opens advanced settings for the component. |
-| Save Changes | Ctrl + S | ⌘ + S | Saves changes to the current flow. |
-| Save Component | Ctrl + Alt + S | ⌘ + Alt + S | Saves the current component to Saved components. |
-| Duplicate | Ctrl + D | ⌘ + D | Creates a duplicate of the component. |
-| Copy | Ctrl + C | ⌘ + C | Copies the selected component. |
-| Cut | Ctrl + X | ⌘ + X | Cuts the selected component. |
-| Paste | Ctrl + V | ⌘ + V | Pastes the copied/cut component. |
-| Docs | Ctrl + Shift + D | ⌘ + Shift + D | Opens related documentation. |
-| Minimize | Ctrl + . | ⌘ + . | Minimizes the current component. |
-| Freeze| Ctrl + Shift + F | ⌘ + Shift + F | Freezes component state and upstream components. |
-| Download | Ctrl + J | ⌘ + J | Downloads the component as JSON. |
-| Delete | Backspace | Backspace | Deletes the component. |
-| Group | Ctrl + G | ⌘ + G | Groups selected components. |
-| Undo | Ctrl + Z | ⌘ + Z | Undoes the last action. |
-| Redo | Ctrl + Y | ⌘ + Y | Redoes the last undone action. |
-| Redo (alternative) | Ctrl + Shift + Z | ⌘ + Shift + Z | Alternative shortcut for redo. |
-| Share Component | Ctrl + Shift + S | ⌘ + Shift + S | Shares the component. |
-| Share Flow | Ctrl + Shift + B | ⌘ + Shift + B | Shares the entire flow. |
-| Toggle Sidebar | Ctrl + B | ⌘ + B | Shows/hides the sidebar. |
-| Search Components | / | / | Focuses the component search bar. |
-| Tool Mode | Ctrl + Shift + M | ⌘ + Shift + M | Toggles tool mode. |
-| Update | Ctrl + U | ⌘ + U | Updates the component. |
-| Open Playground | Ctrl + K | ⌘ + K | Opens the playground. |
-| Output Inspection | O | O | Opens output inspection. |
-| Play | P | P | Plays/executes the flow. |
-| API | R | R | Opens the API view. |
+| Code | <kbd>Space</kbd> | <kbd>Space</kbd> | Opens the code editor for the component. |
+| Advanced Settings | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> | Opens advanced settings for the component. |
+| Save Changes | <kbd>Ctrl</kbd> + <kbd>S</kbd> | <kbd>⌘</kbd> + <kbd>S</kbd> | Saves changes to the current flow. |
+| Save Component | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | <kbd>⌘</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | Saves the current component to Saved components. |
+| Duplicate | <kbd>Ctrl</kbd> + <kbd>D</kbd> | <kbd>⌘</kbd> + <kbd>D</kbd> | Creates a duplicate of the component. |
+| Copy | <kbd>Ctrl</kbd> + <kbd>C</kbd> | <kbd>⌘</kbd> + <kbd>C</kbd> | Copies the selected component. |
+| Cut | <kbd>Ctrl</kbd> + <kbd>X</kbd> | <kbd>⌘</kbd> + <kbd>X</kbd> | Cuts the selected component. |
+| Paste | <kbd>Ctrl</kbd> + <kbd>V</kbd> | <kbd>⌘</kbd> + <kbd>V</kbd> | Pastes the copied/cut component. |
+| Docs | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | Opens related documentation. |
+| Minimize | <kbd>Ctrl</kbd> + <kbd>.</kbd> | <kbd>⌘</kbd> + <kbd>.</kbd> | Minimizes the current component. |
+| Freeze| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Freezes component state and upstream components. |
+| Download | <kbd>Ctrl</kbd> + <kbd>J</kbd> | <kbd>⌘</kbd> + <kbd>J</kbd> | Downloads the component as JSON. |
+| Delete | <kbd>Backspace</kbd> | <kbd>Backspace</kbd> | Deletes the component. |
+| Group | <kbd>Ctrl</kbd> + <kbd>G</kbd> | <kbd>⌘</kbd> + <kbd>G</kbd> | Groups selected components. |
+| Undo | <kbd>Ctrl</kbd> + <kbd>Z</kbd> | <kbd>⌘</kbd> + <kbd>Z</kbd> | Undoes the last action. |
+| Redo | <kbd>Ctrl</kbd> + <kbd>Y</kbd> | <kbd>⌘</kbd> + <kbd>Y</kbd> | Redoes the last undone action. |
+| Redo (alternative) | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | Alternative shortcut for redo. |
+| Share Component | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Shares the component. |
+| Share Flow | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> | Shares the entire flow. |
+| Toggle Sidebar | <kbd>Ctrl</kbd> + <kbd>B</kbd> | <kbd>⌘</kbd> + <kbd>B</kbd> | Shows/hides the sidebar. |
+| Search Components | <kbd>/</kbd> | <kbd>/</kbd> | Focuses the component search bar. |
+| Tool Mode | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | Toggles tool mode. |
+| Update | <kbd>Ctrl</kbd> + <kbd>U</kbd> | <kbd>⌘</kbd> + <kbd>U</kbd> | Updates the component. |
+| Open Playground | <kbd>Ctrl</kbd> + <kbd>K</kbd> | <kbd>⌘</kbd> + <kbd>K</kbd> | Opens the playground. |
+| Output Inspection | <kbd>O</kbd> | <kbd>O</kbd> | Opens output inspection. |
+| Play | <kbd>P</kbd> | <kbd>P</kbd> | Plays/executes the flow. |
+| API | <kbd>R</kbd> | <kbd>R</kbd> | Opens the API view. |
 
 ## Group components in the workspace
 
 Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components, for example RAG with a vector database, and saving space.
 
-1. Hold **Shift** and drag to select components.
+1. Hold <kbd>Shift</kbd> and drag to select components.
 
 The components merge into a single component.
 
-3. To modify the name and description of the single grouped component, in the grouped component, click the <Icon name="PencilLine" aria-label="none" /> icon.
-4. Save your grouped component to the sidebar for later use.
+2. To modify the name and description of the single grouped component, in the grouped component, click the <Icon name="PencilLine" aria-label="Pencil line"/> icon.
+3. Save your grouped component to the sidebar for later use.
 
 ## Component version
 
