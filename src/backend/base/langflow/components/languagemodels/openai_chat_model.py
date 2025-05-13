@@ -12,7 +12,16 @@ from langflow.base.models.openai_constants import (
 )
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.inputs import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    IntInput,
+    MultilineInput,
+    SecretStrInput,
+    SliderInput,
+    StrInput,
+)
 from langflow.logging import logger
 
 
@@ -120,10 +129,9 @@ class OpenAIModelComponent(LCModelComponent):
             "temperature": self.temperature if self.temperature is not None else 0.1,
         }
 
-        CUSTOM_CA_BUNDLE = self.custom_ca_bundle
-        if CUSTOM_CA_BUNDLE:
+        if self.custom_ca_bundle:
             ssl_ctx = ssl.create_default_context()
-            ssl_ctx.load_verify_locations(cadata=CUSTOM_CA_BUNDLE)
+            ssl_ctx.load_verify_locations(cadata=self.custom_ca_bundle)
             parameters["http_client"] = httpx.Client(verify=ssl_ctx)
             parameters["http_async_client"] = httpx.AsyncClient(verify=ssl_ctx)
 
