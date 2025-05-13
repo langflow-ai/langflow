@@ -1,7 +1,8 @@
-from langchain_openai import OpenAIEmbeddings
+import ssl
 
 import httpx
-import ssl
+from langchain_openai import OpenAIEmbeddings
+
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
