@@ -29,7 +29,7 @@ For more information, see [BigQuery access control with IAM](https://cloud.googl
 5. Click **Add Key**, and then click **Create new key**.
 6. Under **Key type**, select **JSON**, and then click **Create**.
 A JSON private key file is downloaded to your machine.
-Now that you have a service account and a JSON private key, you need to configure the credentials in Langflow components.
+Now that you have a service account and a JSON private key, you need to configure the credentials in the Langflow BigQuery component.
 
 ## Configure credentials in the Langflow component
 
@@ -41,8 +41,8 @@ With your service account configured and your credentials JSON file created, fol
 4. In the **My Files** pane, select **Click or drag files here**.
 Your file browser opens.
 5. In your file browser, select the service account JSON file, and then click **Open**.
-6. In the **My Files** pane, select your service account JSON file and click **Select files**.
-The BigQuery component can now query your datasets and tables.
+6. In the **My Files** pane, select your service account JSON file, and then click **Select files**.
+The BigQuery component can now query your datasets and tables using your service account JSON file.
 
 ## Query a BigQuery dataset
 
