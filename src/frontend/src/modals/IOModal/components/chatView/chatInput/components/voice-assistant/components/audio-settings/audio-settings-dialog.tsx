@@ -83,7 +83,7 @@ const SettingsVoiceModal = ({
     data: voiceList,
     isFetched,
     refetch,
-  } = useGetVoiceList({
+  } = useGetVoiceList(elevenLabsApiKey, {
     enabled: shouldFetchVoices,
     refetchOnMount: shouldFetchVoices,
     refetchOnWindowFocus: shouldFetchVoices,
