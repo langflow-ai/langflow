@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.cf9a4109.css">
-<script src="/assets/js/runtime~main.5590616e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.279c31d1.js" defer="defer"></script>
 <script src="/assets/js/main.606fad60.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -38,30 +38,43 @@
 <p>Add a <strong>Webhook</strong> component to your flow to trigger it with external requests.</p>
 <p>To connect the <strong>Webhook</strong> to a <strong>Parser</strong> component to view and parse your data payload, do the following:</p>
 <ol>
-<li>Add a <strong>Webhook</strong> component to your flow.</li>
-<li>Add a <a href="/components-processing#parser">Parser</a> component to your flow.</li>
-<li>Connect the <strong>Webhook</strong> component&#x27;s <strong>Data</strong> output to the <strong>Parser</strong> component&#x27;s <strong>Data</strong> input.</li>
-<li>In the <strong>Template</strong> field of the <strong>Parser</strong> component, enter a template for parsing the <strong>Webhook</strong> component&#x27;s input into structured text.
-Create variables for values in the <code>template</code> the same way you would in a <a href="/components-prompts">Prompt</a> component.
-For example, to parse <code>id</code>, <code>name</code>, and <code>email</code> strings:</li>
-</ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ID: {id} - Name: {name} - Email: {email}</span></div></div><br></code></div></div>
+<li>
+<p>Add a <strong>Webhook</strong> component to your flow.</p>
+</li>
+<li>
+<p>Add a <a href="/components-processing#parser">Parser</a> component to your flow.</p>
+</li>
+<li>
+<p>Connect the <strong>Webhook</strong> component&#x27;s <strong>Data</strong> output to the <strong>Parser</strong> component&#x27;s <strong>Data</strong> input.</p>
+</li>
+<li>
+<p>In the <strong>Template</strong> field of the <strong>Parser</strong> component, enter a template for parsing the <strong>Webhook</strong> component&#x27;s input into structured text.</p>
 <div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>The component may fail to build because it needs data from the <strong>Webhook</strong> first.
 If you experience issues, change the <strong>Mode</strong> on the <strong>Parser</strong> component to <strong>Stringify</strong>, so the component outputs a single string.</p></div></div>
-<ol start="5">
-<li>In the <strong>Endpoint</strong> field of the <strong>Webhook</strong> component, copy the API endpoint for your external requests.</li>
-<li>Optionally, to retrieve a complete example request from the component, click <strong>Controls</strong>, and then copy the command from the <strong>cURL</strong> value field.</li>
-<li>Send a POST request with any data to trigger your flow.
+<p>Create variables for values in the <code>template</code> the same way you would in a <a href="/components-prompts">Prompt</a> component.
+For example, to parse <code>id</code>, <code>name</code>, and <code>email</code> strings:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ID: {id} - Name: {name} - Email: {email}</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>In the <strong>Endpoint</strong> field of the <strong>Webhook</strong> component, copy the API endpoint for your external requests.</p>
+</li>
+<li>
+<p>Optionally, to retrieve a complete example request from the component, click <strong>Controls</strong>, and then copy the command from the <strong>cURL</strong> value field.</p>
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>The default curl command includes a field for <code>x-api-key</code>. This field is <strong>optional</strong> and can be deleted from the command if you aren&#x27;t using authentication.</p></div></div>
+</li>
+<li>
+<p>Send a POST request with any data to trigger your flow.
 This example uses <code>id</code>, <code>name</code>, and <code>email</code> strings.
-Replace <strong>YOUR_FLOW_ID</strong> with your flow ID.</li>
-</ol>
+Replace <strong>YOUR_FLOW_ID</strong> with your flow ID.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X POST &quot;http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    -H &#x27;Content-Type: application/json&#x27; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    -d &#x27;{&quot;id&quot;: &quot;12345&quot;, &quot;name&quot;: &quot;alex&quot;, &quot;email&quot;: &quot;alex@email.com&quot;}&#x27;</span></div></div><br></code></div></div>
 <p>This response indicates Langflow received your request:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>{&quot;message&quot;:&quot;Task started in the background&quot;,&quot;status&quot;:&quot;in progress&quot;}</span></div></div><br></code></div></div>
-<ol start="8">
-<li>To view the data received from your request, in the <strong>Parser</strong> component, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-label="Inspect icon"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg>.</li>
+</li>
+<li>
+<p>To view the data received from your request, in the <strong>Parser</strong> component, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-label="Inspect icon"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg>.</p>
+</li>
 </ol>
-<p>You should see a string of parsed text, like <code>ID: 12345 - Name: alex - Email: alex@email.com</code>.</p>
+<p>You should receive a string of parsed text, like <code>ID: 12345 - Name: alex - Email: alex@email.com</code>.</p>
 <p>You have successfully parsed data out of an external JSON payload.</p>
 <p>By passing the event trigger data payload directly into a flow, you can also parse the event data with a chain of components, and use its data to trigger other events.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="trigger-flows-with-composio-webhooks">Trigger flows with Composio webhooks<a href="#trigger-flows-with-composio-webhooks" class="hash-link" aria-label="Direct link to Trigger flows with Composio webhooks" title="Direct link to Trigger flows with Composio webhooks">​</a></h2>
