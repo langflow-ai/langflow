@@ -351,7 +351,7 @@ For information on the parameters, see the MCP server's documentation.
 Connect the **MCP Connection** component's **Toolset** port to an **Agent** component's **Tools** port.
 
     The flow looks similar to this:
-    ![MCP component](/img/component-mcp-stdio.png)
+    ![MCP connection component](/img/component-mcp-stdio.png)
 
 6. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
