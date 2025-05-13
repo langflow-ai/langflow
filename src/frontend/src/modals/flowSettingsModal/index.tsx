@@ -47,6 +47,7 @@ export default function FlowSettingsModal({
     newFlow.description = description;
     newFlow.endpoint_name =
       endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
+
     if (autoSaving) {
       saveFlow(newFlow)
         ?.then(() => {
