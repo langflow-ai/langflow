@@ -87,6 +87,7 @@ export default function FileRendererComponent({
                   data-testid={`checkbox-${file.name}`}
                   checked={selectedFiles?.includes(file.path)}
                   onCheckedChange={handleItemClick}
+                  disabled={file.disabled}
                 />
               </div>
             )}

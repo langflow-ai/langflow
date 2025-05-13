@@ -628,3 +628,153 @@ test(
     }
   },
 );
+
+test(
+  "should show PNG file as disabled in file component",
+  {
+    tag: ["@release", "@workspace"],
+  },
+  async ({ page }) => {
+    // Generate unique filenames for this test run
+    const pngFileName = generateRandomFilename();
+    const txtFileName = generateRandomFilename();
+
+    // Create PNG content (a simple 1x1 transparent PNG)
+    const pngFileContent = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64",
+    );
+
+    // Read the test file content for text file
+    const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
+    const txtFileContent = fs.readFileSync(testFilePath);
+
+    // Step 1: First navigate to files page and upload both files
+    await awaitBootstrapTest(page, { skipModal: true });
+
+    // Navigate to My Files page
+    await page.getByText("My Files").first().click();
+
+    // Check if we're on the files page
+    await page.waitForSelector('[data-testid="mainpage_title"]');
+    const title = await page.getByTestId("mainpage_title");
+    expect(await title.textContent()).toContain("My Files");
+
+    // Upload the PNG file
+    const fileChooserPromisePng = page.waitForEvent("filechooser");
+    await page.getByTestId("upload-file-btn").click();
+
+    const fileChooserPng = await fileChooserPromisePng;
+    await fileChooserPng.setFiles([
+      {
+        name: `${pngFileName}.png`,
+        mimeType: "image/png",
+        buffer: pngFileContent,
+      },
+    ]);
+
+    // Wait for upload success message
+    await expect(page.getByText("File uploaded successfully")).toBeVisible();
+
+    // Verify PNG file appears in the list
+    await expect(page.getByText(`${pngFileName}.png`)).toBeVisible();
+
+    // Upload the TXT file
+    const fileChooserPromiseTxt = page.waitForEvent("filechooser");
+    await page.getByTestId("upload-file-btn").click();
+
+    const fileChooserTxt = await fileChooserPromiseTxt;
+    await fileChooserTxt.setFiles([
+      {
+        name: `${txtFileName}.txt`,
+        mimeType: "text/plain",
+        buffer: txtFileContent,
+      },
+    ]);
+
+    // Wait for upload success message
+    await expect(page.getByText("File uploaded successfully")).toBeVisible();
+
+    // Verify TXT file appears in the list
+    await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
+
+    // Step 2: Create a flow with File component and check if PNG file is disabled
+    // Navigate to workspace page
+    await page.getByText("Starter Project").first().click();
+
+    await awaitBootstrapTest(page, { skipGoto: true });
+
+    // Create a new flow
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
+
+    // Add a file component to the flow
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("file");
+
+    await page.waitForSelector('[data-testid="dataFile"]', {
+      timeout: 3000,
+    });
+
+    await page
+      .getByTestId("dataFile")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Open the file management modal
+    await page.getByTestId("button_open_file_management").click();
+    console.log(pngFileName);
+
+    // Check if the PNG file has the disabled class (greyed out)
+    await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(
+      /pointer-events-none cursor-not-allowed opacity-50/,
+    );
+
+    // Check that the TXT file is not disabled
+    await expect(page.getByTestId(`file-item-${txtFileName}`)).not.toHaveClass(
+      /pointer-events-none cursor-not-allowed opacity-50/,
+    );
+
+    // Verify the tooltip for PNG file states it's not supported
+    await page
+      .locator(`[data-testid="file-item-${pngFileName}"]`)
+      .locator("..")
+      .hover();
+
+    await expect(
+      page.getByText("Type not supported by component"),
+    ).toBeVisible();
+
+    // Try to select the PNG file (should not change its state)
+    await expect(page.getByTestId(`checkbox-${pngFileName}`)).toBeDisabled();
+
+    // Verify the PNG file checkbox remains unchecked
+    await expect(page.getByTestId(`checkbox-${pngFileName}`)).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+
+    // Select the TXT file (should work normally)
+    await page.getByTestId(`checkbox-${txtFileName}`).click();
+
+    // Verify the TXT file checkbox becomes checked
+    await expect(page.getByTestId(`checkbox-${txtFileName}`)).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+
+    // Submit the file selection
+    await page.getByTestId("select-files-modal-button").click();
+
+    // Verify that only the TXT file was selected in the component
+    await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
+    await expect(page.getByText(`${pngFileName}.png`)).not.toBeVisible();
+  },
+);
