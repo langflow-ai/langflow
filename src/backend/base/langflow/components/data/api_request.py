@@ -314,7 +314,8 @@ class APIRequestComponent(Component):
         if field_name == "method" and not self.use_curl:
             build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
-            # Not reachable, because we don't have a way to update the curl field, self.use_curl is set after the build_config is created
+            # Not reachable, because we don't have a way to update
+            # the curl field, self.use_curl is set after the build_config is created
             build_config = self.parse_curl(field_value, build_config)
         return build_config
 
