@@ -21,15 +21,26 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
-  const filesWithDisabled = files.map((file) => {
-    const fileExtension = file.path.split(".").pop()?.toLowerCase();
-    return {
-      ...file,
-      type: fileExtension,
-      disabled: !fileExtension || !types.includes(fileExtension),
-    };
-  });
-  const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
+  const filesWithDisabled = useMemo(
+    () =>
+      files.map((file) => {
+        const fileExtension = file.path.split(".").pop()?.toLowerCase();
+        return {
+          ...file,
+          type: fileExtension,
+          disabled: !fileExtension || !types.includes(fileExtension),
+        };
+      }),
+    [files, types],
+  );
+  const fuse = useMemo(
+    () =>
+      new Fuse(filesWithDisabled, {
+        keys: ["name", "type"],
+        threshold: 0.3,
+      }),
+    [filesWithDisabled],
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -41,7 +52,7 @@ export default function RecentFilesComponent({
       ? fuse.search(searchQuery).map(({ item }) => item)
       : (filesWithDisabled ?? []);
     return filteredFiles;
-  }, [searchQuery, filesWithDisabled, selectedFiles, types]);
+  }, [searchQuery, filesWithDisabled, types]);
 
   const sortedSearchResults = useMemo(() => {
     return searchResults.toSorted((a, b) => {
@@ -54,17 +65,6 @@ export default function RecentFilesComponent({
         : selectedOrder;
     });
   }, [searchResults]);
-
-  useEffect(() => {
-    if (filesWithDisabled) {
-      setFuse(
-        new Fuse(filesWithDisabled, {
-          keys: ["name", "type"],
-          threshold: 0.3,
-        }),
-      );
-    }
-  }, [filesWithDisabled]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
