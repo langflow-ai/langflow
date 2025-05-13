@@ -66,6 +66,7 @@ For example, the [Recursive character text splitter](https://github.com/langflow
 
 <details>
 <summary>Recursive character text splitter code</summary>
+
 ```python
 from typing import Any
 
@@ -208,8 +209,18 @@ A component's initial state is stored in a database. As soon as you drag a compo
 
 A component keeps the version number it is initialized to the workspace with. If a component is at version `1.0` when it is dragged to the workspace, it will stay at version `1.0` until you update it.
 
-Langflow notifies you when a component's workspace version is behind the database version and an update is available.
-Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+### Review and update components
+
+Langflow notifies you with a pop-up window when a component's workspace version is behind the database version and an update is available.
+
+1. To review the changes, in the pop-up, click **Review**.
+2. The **Update components** pane appears.
+3. This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
+Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
+4. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
+5. To update individual components, select them in the list, and then click **Update Component**.
+Your components are updated to the current version.
+6. If you created a backup flow, it's available in the same project folder as the original flow, with `(backup)` added to its name.
 
 ## Components sidebar
 
