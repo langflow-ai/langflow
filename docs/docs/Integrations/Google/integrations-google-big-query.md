@@ -12,9 +12,8 @@ Langflow integrates with [Google BigQuery](https://cloud.google.com/bigquery) th
 ## Prerequisites
 
 * A [Google Cloud project](https://developers.google.com/workspace/guides/create-project) with the BigQuery API enabled
-* A [service account](https://developers.google.com/workspace/guides/create-credentials#service-accountservice) with the **BigQuery Job User** role
-* A service account JSON key file
-* A BigQuery dataset and table
+* A [service account](https://developers.google.com/workspace/guides/create-credentials#service-account) with the **BigQuery Job User** role
+* A [BigQuery dataset and table](https://cloud.google.com/bigquery/docs/datasets-intro)
 
 ## Create a service account with BigQuery access
 
