@@ -10,7 +10,7 @@ export default function FilesRendererComponent({
 }: {
   files: FileType[];
   isSearch?: boolean;
-  handleFileSelect?: (name: string) => void;
+  handleFileSelect?: (name: string, index: number) => void;
   selectedFiles?: string[];
   handleRemove?: (name: string) => void;
   handleRename?: (id: string, name: string) => void;
@@ -19,7 +19,9 @@ export default function FilesRendererComponent({
     <FileRendererComponent
       key={index}
       file={file}
-      handleFileSelect={handleFileSelect}
+      handleFileSelect={
+        handleFileSelect ? (name) => handleFileSelect(name, index) : undefined
+      }
       selectedFiles={selectedFiles}
       handleRemove={handleRemove}
       handleRename={handleRename}

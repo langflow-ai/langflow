@@ -41,6 +41,12 @@ export default function FileRendererComponent({
     setNewName(file.name);
   }, [openRename]);
 
+  const handleItemClick = () => {
+    if (!file.progress && handleFileSelect) {
+      handleFileSelect(file.path);
+    }
+  };
+
   return (
     <ShadTooltip
       content={file.disabled ? "Type not supported by component" : ""}
@@ -57,9 +63,8 @@ export default function FileRendererComponent({
               ? "pointer-events-none cursor-not-allowed opacity-50"
               : "",
           )}
-          onClick={() => {
-            if (!file.progress) handleFileSelect?.(file.path);
-          }}
+          onClick={handleItemClick}
+          data-testid={`file-item-${file.name}`}
         >
           <div className="flex w-full items-center gap-4 overflow-hidden">
             {handleFileSelect && (
@@ -74,7 +79,7 @@ export default function FileRendererComponent({
                 <Checkbox
                   data-testid={`checkbox-${file.name}`}
                   checked={selectedFiles?.includes(file.path)}
-                  onCheckedChange={() => handleFileSelect?.(file.path)}
+                  onCheckedChange={handleItemClick}
                 />
               </div>
             )}
