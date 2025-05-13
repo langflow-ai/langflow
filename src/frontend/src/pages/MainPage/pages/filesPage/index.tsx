@@ -434,6 +434,7 @@ export const FilesPage = () => {
                             size="iconMd"
                             onClick={handleDownload}
                             loading={isDownloading}
+                            data-testid="bulk-download-btn"
                           >
                             <ForwardedIconComponent name="Download" />
                           </Button>
@@ -449,6 +450,7 @@ export const FilesPage = () => {
                               size="iconMd"
                               className="px-2.5 !text-mmd"
                               loading={isDeleting}
+                              data-testid="bulk-delete-btn"
                             >
                               <ForwardedIconComponent name="Trash2" />
                               Delete
