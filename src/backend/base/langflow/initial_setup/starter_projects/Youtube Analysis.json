@@ -1413,7 +1413,7 @@
                 "advanced": true,
                 "display_name": "External Memory",
                 "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+                "info": "Retrieve messages from an external memory. If empty, it will use the Sochflow tables.",
                 "input_types": [
                   "Memory"
                 ],
@@ -2726,7 +2726,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "https://www.youtube.com/watch?v=8f61j3W-27U&ab_channel=Langflow"
+                "value": "https://www.youtube.com/watch?v=8f61j3W-27U&ab_channel=Sochflow"
               },
               "sender": {
                 "_input_type": "DropdownInput",

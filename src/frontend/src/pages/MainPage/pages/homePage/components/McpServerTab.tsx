@@ -86,10 +86,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 }`;
 
   const MCP_SERVER_TUTORIAL_LINK =
-    "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions";
+    "https://docs.sochflow.com/mcp-server#connect-clients-to-use-the-servers-actions";
 
+  // const MCP_SERVER_DEPLOY_TUTORIAL_LINK =
+  //   "https://docs.langflow.org/mcp-server#deploy-your-server-externally";
   const MCP_SERVER_DEPLOY_TUTORIAL_LINK =
-    "https://docs.langflow.org/mcp-server#deploy-your-server-externally";
+    "https://docs.sochflow.com/mcp-server#deploy-your-server-externally";
 
   const copyToClipboard = () => {
     navigator.clipboard

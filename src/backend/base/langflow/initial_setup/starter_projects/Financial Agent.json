@@ -2574,7 +2574,7 @@
                 "advanced": true,
                 "display_name": "External Memory",
                 "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+                "info": "Retrieve messages from an external memory. If empty, it will use the Sochflow tables.",
                 "input_types": [
                   "Memory"
                 ],
@@ -3278,7 +3278,7 @@
                 "advanced": true,
                 "display_name": "External Memory",
                 "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+                "info": "Retrieve messages from an external memory. If empty, it will use the Sochflow tables.",
                 "input_types": [
                   "Memory"
                 ],

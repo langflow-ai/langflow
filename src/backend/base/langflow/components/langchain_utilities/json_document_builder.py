@@ -24,7 +24,7 @@ class JSONDocumentBuilder(CustomComponent):
     legacy: bool = True
 
     output_types: list[str] = ["Document"]
-    documentation: str = "https://docs.langflow.org/components/utilities#json-document-builder"
+    documentation: str = "https://docs.sochflow.com/components/utilities#json-document-builder"
 
     field_config = {
         "key": {"display_name": "Key"},

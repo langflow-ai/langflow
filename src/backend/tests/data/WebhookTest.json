@@ -60,7 +60,7 @@
               "Data"
             ],
             "display_name": "Async Component",
-            "documentation": "https://docs.langflow.org/components-custom-components",
+            "documentation": "https://docs.sochflow.com/components-custom-components",
             "minimized": false,
             "custom_fields": {},
             "output_types": [],
@@ -850,7 +850,7 @@
             "icon": "custom_components",
             "base_classes": [],
             "display_name": "Custom Component",
-            "documentation": "https://docs.langflow.org/components-custom-components",
+            "documentation": "https://docs.sochflow.com/components-custom-components",
             "custom_fields": {},
             "output_types": [],
             "pinned": false,

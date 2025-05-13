@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 
 class CustomComponent(BaseComponent):
-    """Represents a custom component in Langflow.
+    """Represents a custom component in Sochflow.
 
     Attributes:
         name (Optional[str]): This attribute helps the frontend apply styles to known components.

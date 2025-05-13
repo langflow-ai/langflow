@@ -204,7 +204,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             except KeyError as e:
                 if "content" in str(e):
                     msg = (
-                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
+                        "You should ingest data through Sochflow (or LangChain) to query it in Sochflow. "
                         "Your collection does not contain a field name 'content'."
                     )
                     raise ValueError(msg) from e

@@ -451,20 +451,20 @@ class MCPToolsComponent(Component):
                     self.tools = await self.stdio_client.connect_to_server(command, env)
             elif mode == "SSE" and not self.sse_client.session:
                 try:
-                    self.tools = await self.sse_client.connect_to_server(url, headers)
+                    self.tools = await self.sse_client.connect_to_server_direct(url, headers)
                 except ValueError as e:
                     # URL validation error
                     logger.error(f"SSE URL validation error: {e}")
-                    msg = f"Invalid SSE URL configuration: {e}. Please check your Langflow deployment URL and port."
+                    msg = f"Invalid SSE URL configuration: {e}. Please check your Sochflow deployment URL and port."
                     raise ValueError(msg) from e
                 except ConnectionError as e:
                     # Connection failed after retries
                     logger.error(f"SSE connection error: {e}")
                     msg = (
-                        f"Could not connect to Langflow SSE endpoint: {e}. "
+                        f"Could not connect to Sochflow SSE endpoint: {e}. "
                         "Please verify:\n"
-                        "1. Langflow server is running\n"
-                        "2. The SSE URL matches your Langflow deployment port\n"
+                        "1. Sochflow server is running\n"
+                        "2. The SSE URL matches your Sochflow deployment port\n"
                         "3. There are no network issues preventing the connection"
                     )
                     raise ValueError(msg) from e

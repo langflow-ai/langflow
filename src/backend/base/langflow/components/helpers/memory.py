@@ -11,7 +11,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 class MemoryComponent(Component):
     display_name = "Message History"
-    description = "Retrieves stored chat messages from Langflow tables or an external memory."
+    description = "Retrieves stored chat messages from Sochflow tables or an external memory."
     icon = "message-square-more"
     name = "Memory"
 
@@ -20,7 +20,7 @@ class MemoryComponent(Component):
             name="memory",
             display_name="External Memory",
             input_types=["Memory"],
-            info="Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+            info="Retrieve messages from an external memory. If empty, it will use the Sochflow tables.",
         ),
         DropdownInput(
             name="sender",

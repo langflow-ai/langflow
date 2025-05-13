@@ -10,11 +10,11 @@ class UploadError(Exception):
 
 
 def upload(file_path: str, host: str, flow_id: str):
-    """Upload a file to Langflow and return the file path.
+    """Upload a file to Sochflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
-        host (str): The host URL of Langflow.
+        host (str): The host URL of Sochflow.
         flow_id (UUID): The ID of the flow to which the file belongs.
 
     Returns:
@@ -38,12 +38,12 @@ def upload(file_path: str, host: str, flow_id: str):
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
-    """Upload a file to Langflow and return the file path.
+    """Upload a file to Sochflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
-        host (str): The host URL of Langflow.
-        port (int): The port number of Langflow.
+        host (str): The host URL of Sochflow.
+        port (int): The port number of Sochflow.
         flow_id (UUID): The ID of the flow to which the file belongs.
         components (str): List of component IDs or names that need the file.
         tweaks (dict): A dictionary of tweaks to be applied to the file.
@@ -76,11 +76,11 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
 
 
 def get_flow(url: str, flow_id: str):
-    """Get the details of a flow from Langflow.
+    """Get the details of a flow from Sochflow.
 
     Args:
-        url (str): The host URL of Langflow.
-        port (int): The port number of Langflow.
+        url (str): The host URL of Sochflow.
+        port (int): The port number of Sochflow.
         flow_id (UUID): The ID of the flow to retrieve.
 
     Returns:

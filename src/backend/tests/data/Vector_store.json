@@ -1,6 +1,6 @@
 {
     "name": "Vector Store",
-    "description": "An agent that can query a Vector Store.\nTry asking \"How do I upload examples to Langflow?\"\n\n\n\n",
+    "description": "An agent that can query a Vector Store.\nTry asking \"How do I upload examples to Sochflow?\"\n\n\n\n",
     "data": {
         "nodes": [
             {
@@ -101,7 +101,7 @@
                                 "info": "",
                                 "type": "str",
                                 "list": false,
-                                "value": "Instructions to upload examples to Langflow Community Examples"
+                                "value": "Instructions to upload examples to Sochflow Community Examples"
                             },
                             "name": {
                                 "required": true,

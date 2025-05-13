@@ -47,8 +47,10 @@ COPY ./src /app/src
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci \
-    && npm run build \
+    npm config set fetch-timeout 1200000 \
+    && npm config set fetch-retries 5 \
+    && npm ci \
+    && NODE_OPTIONS="--max-old-space-size=4096" npm run build \
     && cp -r build /app/src/backend/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
@@ -80,11 +82,11 @@ COPY --from=builder --chown=1000 /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-LABEL org.opencontainers.image.title=langflow
-LABEL org.opencontainers.image.authors=['Langflow']
+LABEL org.opencontainers.image.title=sochflow
+LABEL org.opencontainers.image.authors=['Sochflow']
 LABEL org.opencontainers.image.licenses=MIT
-LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
-LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
+LABEL org.opencontainers.image.url=https://github.com/riteshtk/langflow.git
+LABEL org.opencontainers.image.source=https://github.com/riteshtk/langflow.git
 
 USER user
 WORKDIR /app

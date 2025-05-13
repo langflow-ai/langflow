@@ -142,7 +142,7 @@ export default function PublishDropdown() {
               </div>
             </DropdownMenuItem>
           </CustomLink>
-          {ENABLE_WIDGET && (
+          {/* {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
               className="deploy-dropdown-item group"
@@ -152,10 +152,10 @@ export default function PublishDropdown() {
                   name="Columns2"
                   className={`${groupStyle} icon-size mr-2`}
                 />
-                <span>Embed into site</span>
+                <span>Embed into site1</span>
               </div>
             </DropdownMenuItem>
-          )}
+          )} */}
 
           {ENABLE_PUBLISH && (
             <ShadTooltipComponent

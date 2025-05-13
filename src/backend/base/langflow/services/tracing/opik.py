@@ -72,7 +72,7 @@ class OpikTracer(BaseTracer):
             if not self._check_opik_auth(self._client):
                 return False
 
-            # Langflow Trace ID seems to always be random
+            # Sochflow Trace ID seems to always be random
             metadata = {
                 "langflow_trace_id": trace_id,
                 "langflow_trace_name": self.trace_name,

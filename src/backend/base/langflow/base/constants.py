@@ -1,4 +1,4 @@
-"""This module contains constants used in the Langflow base module.
+"""This module contains constants used in the Sochflow base module.
 
 Constants:
 - STREAM_INFO_TEXT: A string representing the information about streaming the response from the model.

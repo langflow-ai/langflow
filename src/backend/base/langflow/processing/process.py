@@ -73,7 +73,7 @@ async def run_graph(
     output_component: str | None = None,
     stream: bool = False,
 ) -> list[RunOutputs]:
-    """Runs the given Langflow Graph with the specified input and returns the outputs.
+    """Runs the given Sochflow Graph with the specified input and returns the outputs.
 
     Args:
         graph (Graph): The graph to be executed.

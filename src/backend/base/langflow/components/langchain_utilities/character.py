@@ -10,7 +10,7 @@ from langflow.utils.util import unescape_string
 class CharacterTextSplitterComponent(LCTextSplitterComponent):
     display_name = "CharacterTextSplitter"
     description = "Split text by number of characters."
-    documentation = "https://docs.langflow.org/components/text-splitters#charactertextsplitter"
+    documentation = "https://docs.sochflow.com/components/text-splitters#charactertextsplitter"
     name = "CharacterTextSplitter"
     icon = "LangChain"
 

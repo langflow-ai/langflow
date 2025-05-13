@@ -11,7 +11,7 @@ class DataFrame(pandas_DataFrame):
     """A pandas DataFrame subclass specialized for handling collections of Data objects.
 
     This class extends pandas.DataFrame to provide seamless integration between
-    Langflow's Data objects and pandas' powerful data manipulation capabilities.
+    Sochflow's Data objects and pandas' powerful data manipulation capabilities.
 
     Args:
         data: Input data in various formats:

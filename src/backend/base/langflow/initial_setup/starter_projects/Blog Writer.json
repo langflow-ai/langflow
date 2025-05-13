@@ -1310,8 +1310,8 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "https://langflow.org/",
-                  "https://docs.langflow.org/"
+                  "https://sochflow.com/",
+                  "https://docs.sochflow.com/"
                 ]
               }
             },

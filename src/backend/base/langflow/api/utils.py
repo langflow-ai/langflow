@@ -116,10 +116,10 @@ async def check_langflow_version(component: StoreComponentCreate) -> None:
 
     langflow_version = await get_lf_version_from_pypi()
     if langflow_version is None:
-        raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
+        raise HTTPException(status_code=500, detail="Unable to verify the latest version of Sochflow")
     if langflow_version != component.last_tested_version:
         logger.warning(
-            f"Your version of Langflow ({component.last_tested_version}) is outdated. "
+            f"Your version of Sochflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
 

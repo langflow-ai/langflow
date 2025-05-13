@@ -82,6 +82,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
+            logger.debug(f"Incoming request: {request.url}")
             response = await call_next(request)
         except Exception as exc:
             if isinstance(exc, PydanticSerializationError):
@@ -118,9 +119,9 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         # Startup message
         if version:
-            logger.debug(f"Starting Langflow v{version}...")
+            logger.debug(f"Starting Sochflow v{version}...")
         else:
-            logger.debug("Starting Langflow...")
+            logger.debug("Starting Sochflow...")
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
@@ -198,7 +199,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
             # Final message
-            logger.debug("Langflow shutdown complete")
+            logger.debug("Sochflow shutdown complete")
 
     return lifespan
 

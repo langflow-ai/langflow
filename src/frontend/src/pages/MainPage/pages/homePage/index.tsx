@@ -167,7 +167,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     <div className="pt-2 text-center text-sm text-secondary-foreground">
                       No saved or custom components. Learn more about{" "}
                       <a
-                        href="https://docs.langflow.org/components-custom-components"
+                        href="https://docs.sochflow.com/components-custom-components"
                         target="_blank"
                         rel="noreferrer"
                         className="underline"

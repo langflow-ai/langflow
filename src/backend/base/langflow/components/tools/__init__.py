@@ -73,5 +73,5 @@ __all__ = [
     "YfinanceComponent",
     "YfinanceToolComponent",
     "NoteTakingToolComponent",
-    "ReminderToolComponent"
+    "ReminderToolComponent",
 ]

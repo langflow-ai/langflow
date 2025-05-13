@@ -13,7 +13,7 @@ from langflow.schema import Data
 class NotionSearch(LCToolComponent):
     display_name: str = "Search "
     description: str = "Searches all pages and databases that have been shared with an integration."
-    documentation: str = "https://docs.langflow.org/integrations/notion/search"
+    documentation: str = "https://docs.sochflow.com/integrations/notion/search"
     icon = "NotionDirectoryLoader"
 
     inputs = [

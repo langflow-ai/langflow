@@ -20,9 +20,9 @@ class MCPStdio(Component):
     tool_names = [str]
     display_name = "MCP Tools (stdio) [DEPRECATED]"
     description = (
-        "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
+        "Connects to an MCP server over stdio and exposes it's tools as Sochflow tools to be used by an Agent."
     )
-    documentation: str = "https://docs.langflow.org/components-custom-components"
+    documentation: str = "https://docs.sochflow.com/components-custom-components"
     icon = "code"
     name = "MCPStdio"
     legacy = True

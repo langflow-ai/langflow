@@ -5,11 +5,17 @@ from contextlib import AsyncExitStack
 from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import UUID
+from datetime import timedelta
 
 import httpx
 from httpx import codes as httpx_codes
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
+import mcp
+from mcp.client.streamable_http import streamablehttp_client
+
+import json
+import base64
 from mcp.client.sse import sse_client
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
@@ -149,7 +155,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return list[schema_type]
 
         if t == "object":
-            # Treat all objects as dict for Langflow compatibility
+            # Treat all objects as dict for Sochflow compatibility
             return dict
 
         # primitive fallback
@@ -364,3 +370,101 @@ class MCPSseClient:
 
         msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
         raise ConnectionError(msg)
+
+    async def connect_to_server_direct(
+        self,
+        url: str | None,
+        headers: dict[str, str] | None,
+        timeout_seconds: int = 60,
+        sse_read_timeout_seconds: int = 300,  # Increased to match working code
+    ):
+        """Connect to the MCP server directly using HTTP client without pre-validation.
+        
+        Args:
+            url: The URL to connect to
+            headers: Optional headers for the connection
+            timeout_seconds: Connection timeout in seconds
+            sse_read_timeout_seconds: SSE read timeout in seconds
+            
+        Returns:
+            List of available tools
+            
+        Raises:
+            ValueError: If connection fails or tools cannot be retrieved
+        """
+        if url is None:
+            raise ValueError("URL cannot be None")
+        self._exit_stack = AsyncExitStack()
+        try:
+            # Connect to the server using HTTP client with proper timeout configuration
+                read_stream, write_stream, get_session_id = await self._exit_stack.enter_async_context(streamablehttp_client(
+                    url,
+                    timeout=timedelta(seconds=timeout_seconds),
+                    sse_read_timeout=timedelta(seconds=sse_read_timeout_seconds)
+                ))
+                try:
+                    # Create a new session for each connection
+                    session = await self.exit_stack.enter_async_context(ClientSession(
+                        read_stream=read_stream,
+                        write_stream=write_stream,
+                        read_timeout_seconds=timedelta(seconds=timeout_seconds)
+                    ))
+                    
+                    # Initialize the connection with timeout
+                    try:
+                        await asyncio.wait_for(session.initialize(), timeout=timeout_seconds)
+                    except asyncio.TimeoutError:
+                        raise ValueError(f"Connection timed out after {timeout_seconds} seconds during initialization")
+                    
+                    # List available tools with timeout
+                    try:
+                        tools_result = await asyncio.wait_for(session.list_tools(), timeout=timeout_seconds)
+                    except asyncio.TimeoutError:
+                        raise ValueError(f"Connection timed out after {timeout_seconds} seconds while listing tools")
+                    
+                    if not tools_result or not tools_result.tools:
+                        raise ValueError("No tools available from the server")
+                    
+                    # Store the session for future use
+                    self.session = session
+                    
+                    # Log available tools
+                    logger.info(f"Available tools: {', '.join([t.name for t in tools_result.tools])}")
+                    
+                    return tools_result.tools
+                except Exception as session_error:
+                    logger.error(f"Session error: {str(session_error)}")
+                    # Ensure session is properly closed on error
+                    try:
+                        if session and hasattr(session, 'close'):
+                            await session.close()
+                        elif session and hasattr(session, 'shutdown'):
+                            await session.shutdown()
+                    except Exception as close_error:
+                        logger.error(f"Error closing session: {str(close_error)}")
+                    finally:
+                        # Clear the session reference
+                        self.session = None
+                    raise ValueError(f"Session error: {str(session_error)}") from session_error
+        except ExceptionGroup as eg:
+            # Handle TaskGroup errors specifically
+            error_msg = "Connection failed. Please verify:\n"
+            error_msg += "1. The server is running and accessible\n"
+            error_msg += "2. The URL is correct and includes the proper protocol (http/https)\n"
+            error_msg += "3. There are no network issues or firewalls blocking the connection\n"
+            error_msg += f"4. Detailed error: {str(eg)}"
+            logger.error(error_msg)
+            await self._exit_stack.aclose()
+            raise ValueError(error_msg) from eg
+        except Exception as e:
+            if "TaskGroup" in str(e):
+                error_msg = "Connection failed. Please verify:\n"
+                error_msg += "1. The server is running and accessible\n"
+                error_msg += "2. The URL is correct and includes the proper protocol (http/https)\n"
+                error_msg += "3. There are no network issues or firewalls blocking the connection\n"
+                error_msg += f"4. Detailed error: {str(e)}"
+            else:
+                error_msg = f"Failed to connect to MCP server: {str(e)}"
+            logger.error(error_msg)
+            await self._exit_stack.aclose()
+            raise ValueError(error_msg) from e

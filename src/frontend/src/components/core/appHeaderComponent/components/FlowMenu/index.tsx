@@ -508,7 +508,7 @@ export const MenuBar = memo((): JSX.Element => {
                 <h2 className="text-base font-semibold">Auto-saving disabled</h2>
                 <p className="text-sm text-muted-foreground">
                   <a
-                    href="https://docs.langflow.org/configuration-auto-save"
+                    href="https://docs.sochflow.com/configuration-auto-save"
                     className="text-primary underline hover:text-primary/80 transition-colors duration-200"
                   >
                     Enable auto-saving

@@ -17,8 +17,8 @@ from langflow.schema.table import EditMode
 
 class AstraDBCQLToolComponent(LCToolComponent):
     display_name: str = "Astra DB CQL"
-    description: str = "Create a tool to get transactional data from DataStax Astra DB CQL Table"
-    documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-cql-tool"
+    description: str = "Create a tool to get transactional data from Sochflow Astra DB CQL Table"
+    documentation: str = "https://docs.sochflow.com/Components/components-tools#astra-db-cql-tool"
     icon: str = "AstraDB"
 
     inputs = [
