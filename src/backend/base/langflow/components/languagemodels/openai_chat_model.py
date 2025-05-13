@@ -1,4 +1,6 @@
 from typing import Any
+import httpx
+import ssl
 
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
@@ -58,6 +60,15 @@ class OpenAIModelComponent(LCModelComponent):
             "Defaults to https://api.openai.com/v1. "
             "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
+        MultilineInput(
+            name="custom_ca_bundle",
+            display_name="Custom CA Bundle for self-signed deployments.",
+            advanced=True,
+            dynamic=True,
+            info="Leave empty unless you're using a self-signed certificate. "
+            "Paste the entire certificate including the '-----BEGIN/END CERTIFICATE-----' lines. "
+            "Not sure? Just leave it blank!"
+        ),
         SecretStrInput(
             name="api_key",
             display_name="OpenAI API Key",
@@ -108,6 +119,13 @@ class OpenAIModelComponent(LCModelComponent):
             "timeout": self.timeout,
             "temperature": self.temperature if self.temperature is not None else 0.1,
         }
+
+        CUSTOM_CA_BUNDLE = self.custom_ca_bundle
+        if CUSTOM_CA_BUNDLE:
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.load_verify_locations(cadata=CUSTOM_CA_BUNDLE)
+            parameters["http_client"] = httpx.Client(verify=ssl_ctx)
+            parameters["http_async_client"] = httpx.AsyncClient(verify=ssl_ctx)
 
         logger.info(f"Model name: {self.model_name}")
         if self.model_name in OPENAI_REASONING_MODEL_NAMES:
