@@ -4,13 +4,13 @@ import os
 import platform
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import UUID
 
 import aiofiles
 import httpx
+from anyio import Path
 from httpx import codes as httpx_codes
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
@@ -271,7 +271,7 @@ class MCPStdioClient:
                     while True:
                         await asyncio.sleep(0.05)
                         await tmp.flush()
-                        current = Path(errlog_path).stat().st_size
+                        current = (await Path(errlog_path).stat()).st_size
                         if current > last_size:
                             async with aiofiles.open(errlog_path, encoding="utf-8") as f:
                                 await f.seek(last_size)
@@ -326,7 +326,7 @@ class MCPStdioClient:
             finally:
                 # Clean up the temp file
                 with contextlib.suppress(FileNotFoundError, PermissionError):
-                    Path(errlog_path).unlink()
+                    await Path(errlog_path).unlink()
 
 
 class MCPSseClient:
