@@ -1,25 +1,22 @@
 from __future__ import annotations
 
-import langwatch
-import json
 import os
 from typing import TYPE_CHECKING, Any, cast
 
+import langwatch
+from langwatch.domain import SpanProcessingExcludeRule
 from loguru import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
 
-from langwatch.domain import SpanProcessingExcludeRule
-
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langwatch.tracer import ContextSpan
-
     from langchain.callbacks.base import BaseCallbackHandler
+    from langwatch.tracer import ContextSpan
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
@@ -35,9 +32,10 @@ langwatch.setup(
             field_name="span_name",
             match_value="GET /health_check",
             match_operation="starts_with",
-        )
+        ),
     ]
 )
+
 
 class LangWatchTracer(BaseTracer):
     flow_id: str
