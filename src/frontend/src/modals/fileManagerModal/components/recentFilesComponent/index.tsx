@@ -31,9 +31,7 @@ export default function RecentFilesComponent({
   });
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
   const [searchQuery, setSearchQuery] = useState("");
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
-    null,
-  );
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
 
   const { mutate: renameFile } = usePostRenameFileV2();
@@ -92,61 +90,40 @@ export default function RecentFilesComponent({
 
   const handleFileSelect = useCallback(
     (filePath: string, index: number) => {
-      setLastSelectedIndex(index);
+      // Standard file selection behavior:
+      // 1. Click: Select only this file
+      // 2. Ctrl/Cmd + Click: Toggle selection for this file, keeping other selections
+      // 3. Shift + Click: Select range from last clicked to current file
 
-      if (isShiftPressed && lastSelectedIndex !== null) {
-        // Determine the range to select
-        const start = Math.min(lastSelectedIndex, index);
-        const end = Math.max(lastSelectedIndex, index);
+      if (isShiftPressed && lastClickedIndex !== null) {
+        // Select range - keep existing selection and add the range
+        const start = Math.min(lastClickedIndex, index);
+        const end = Math.max(lastClickedIndex, index);
 
         // Get all file paths in the range
-        const filesToSelect = sortedSearchResults
+        const rangeFilePaths = sortedSearchResults
           .slice(start, end + 1)
+          .filter((file) => !file.disabled)
           .map((file) => file.path);
 
-        // Check if all files in the range are already selected
-        const allSelected = filesToSelect.every((path) =>
-          selectedFiles.includes(path),
-        );
-
-        if (allSelected) {
-          // If all are selected, unselect the range
-          setSelectedFiles(
-            selectedFiles.filter((path) => !filesToSelect.includes(path)),
-          );
-        } else {
-          // Otherwise, add the range to selection
-          const newSelection = [...selectedFiles];
-          filesToSelect.forEach((path) => {
-            if (!newSelection.includes(path)) {
-              newSelection.push(path);
-            }
-          });
-          setSelectedFiles(newSelection);
-        }
-      } else if (isList) {
-        // In list mode, toggle the selection
-        setSelectedFiles(
-          selectedFiles.includes(filePath)
-            ? selectedFiles.filter((path) => path !== filePath)
-            : [...selectedFiles, filePath],
-        );
+        return setSelectedFiles(rangeFilePaths);
       } else {
-        // In non-list mode without shift, select only this file
-        setSelectedFiles(
-          selectedFiles.includes(filePath) && selectedFiles.length === 1
-            ? []
-            : [filePath],
-        );
+        // Ctrl/Cmd + Click: Toggle selection for this item while keeping others
+        setLastClickedIndex(index);
+
+        if (selectedFiles.includes(filePath)) {
+          setSelectedFiles(selectedFiles.filter((path) => path !== filePath));
+        } else {
+          setSelectedFiles([...selectedFiles, filePath]);
+        }
       }
     },
     [
       selectedFiles,
-      lastSelectedIndex,
+      lastClickedIndex,
       sortedSearchResults,
       isShiftPressed,
       setSelectedFiles,
-      isList,
     ],
   );
 
@@ -180,6 +157,7 @@ export default function RecentFilesComponent({
             handleFileSelect={handleFileSelect}
             selectedFiles={selectedFiles}
             handleRename={handleRename}
+            isShiftPressed={isShiftPressed}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm">

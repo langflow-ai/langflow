@@ -7,6 +7,7 @@ export default function FilesRendererComponent({
   selectedFiles,
   handleRemove,
   handleRename,
+  isShiftPressed,
 }: {
   files: FileType[];
   isSearch?: boolean;
@@ -14,6 +15,7 @@ export default function FilesRendererComponent({
   selectedFiles?: string[];
   handleRemove?: (name: string) => void;
   handleRename?: (id: string, name: string) => void;
+  isShiftPressed?: boolean;
 }) {
   return files.map((file, index) => (
     <FileRendererComponent
@@ -25,6 +27,7 @@ export default function FilesRendererComponent({
       selectedFiles={selectedFiles}
       handleRemove={handleRemove}
       handleRename={handleRename}
+      isShiftPressed={isShiftPressed}
       index={index}
     />
   ));

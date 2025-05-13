@@ -18,6 +18,7 @@ export default function FileRendererComponent({
   handleRemove,
   handleRename,
   index,
+  isShiftPressed,
 }: {
   file: FileType;
   handleFileSelect?: (path: string) => void;
@@ -25,6 +26,7 @@ export default function FileRendererComponent({
   handleRemove?: (path: string) => void;
   handleRename?: (id: string, name: string) => void;
   index: number;
+  isShiftPressed?: boolean;
 }) {
   const type = file.path.split(".").pop() ?? "";
 
@@ -53,7 +55,12 @@ export default function FileRendererComponent({
       side="bottom"
       align="start"
     >
-      <div className={cn(file.disabled ? "cursor-not-allowed" : "")}>
+      <div
+        className={cn(
+          file.disabled ? "cursor-not-allowed" : "",
+          isShiftPressed && "select-none",
+        )}
+      >
         <div
           key={index}
           className={cn(
