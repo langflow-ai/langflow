@@ -303,7 +303,6 @@ export type InputProps = {
   description: string | null;
   endpointName?: string | null;
   maxLength?: number;
-  minLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
   setEndpointName?: (endpointName: string) => void;

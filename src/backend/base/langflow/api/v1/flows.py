@@ -322,10 +322,6 @@ async def update_flow(
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
-        # Specifically handle endpoint_name when it's explicitly set to null or empty string
-        if flow.endpoint_name is None or flow.endpoint_name == "":
-            update_data["endpoint_name"] = None
-
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
