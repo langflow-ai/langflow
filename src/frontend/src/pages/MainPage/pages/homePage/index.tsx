@@ -179,7 +179,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         className="flex h-full w-full flex-col overflow-y-auto"
         data-testid="cards-wrapper"
       >
-        <div className="3xl:container flex h-full w-full flex-col">
+        <div className="flex h-full w-full flex-col 3xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
           <div className="flex flex-1 flex-col justify-start p-4">
             <div className="flex h-full flex-col justify-start">
