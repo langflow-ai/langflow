@@ -1,5 +1,7 @@
 from langchain_openai import OpenAIEmbeddings
 
+import httpx
+import ssl
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
@@ -34,12 +36,23 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             name="model",
             display_name="Model",
             advanced=False,
+            real_time_refresh=True,
+            combobox=True,
             options=OPENAI_EMBEDDING_MODEL_NAMES,
             value="text-embedding-3-small",
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
         SecretStrInput(name="openai_api_key", display_name="OpenAI API Key", value="OPENAI_API_KEY", required=True),
         MessageTextInput(name="openai_api_base", display_name="OpenAI API Base", advanced=True),
+        MultilineInput(
+            name="custom_ca_bundle",
+            display_name="Custom CA Bundle for self-signed deployments.",
+            advanced=True,
+            dynamic=True,
+            info="Leave empty unless you're using a self-signed certificate. "
+            "Paste the entire certificate including the '-----BEGIN/END CERTIFICATE-----' lines. "
+            "Not sure? Just leave it blank!",
+        ),
         MessageTextInput(name="openai_api_type", display_name="OpenAI API Type", advanced=True),
         MessageTextInput(name="openai_api_version", display_name="OpenAI API Version", advanced=True),
         MessageTextInput(
@@ -73,6 +86,11 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        ssl_ctx = None
+        if self.custom_ca_bundle:
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.load_verify_locations(cadata=self.custom_ca_bundle)
+
         return OpenAIEmbeddings(
             client=self.client or None,
             model=self.model,
@@ -80,6 +98,8 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             deployment=self.deployment or None,
             api_version=self.openai_api_version or None,
             base_url=self.openai_api_base or None,
+            http_client=httpx.Client(verify=ssl_ctx) if self.custom_ca_bundle else None,
+            http_async_client=httpx.AsyncClient(verify=ssl_ctx) if self.custom_ca_bundle else None,
             openai_api_type=self.openai_api_type or None,
             openai_proxy=self.openai_proxy or None,
             embedding_ctx_length=self.embedding_ctx_length,
