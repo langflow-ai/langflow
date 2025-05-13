@@ -14,6 +14,7 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
     await page.getByTestId("input-flow-name").click();
+    await page.waitForTimeout(1000);
 
     await page.getByTestId("input-flow-name").fill(randomName);
 
