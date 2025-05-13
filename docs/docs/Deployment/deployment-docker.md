@@ -5,11 +5,26 @@ slug: /deployment-docker
 
 This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
+Three options are available:
+
+* The [Quickstart](#quickstart) option starts a Docker container with default values.
+* The [Docker compose](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
+* The [Package your flow as a docker image](#package-your-flow-as-a-Docker-image) option demonstrates packaging an existing flow with a Dockerfile.
+
+For more information on configuring the Docker image, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image-with-your-own-code).
+
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
+## Quickstart
+
+With Docker installed and running on your system, run this command:
+
+`docker run -p 7860:7860 langflowai/langflow:latest`
+
+Langflow is now accessible at `http://localhost:7860/`.
 ## Clone the repo and build the Langflow Docker container
 
 1. Clone the Langflow repository:
@@ -26,7 +41,7 @@ This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
 Langflow is now accessible at `http://localhost:7860/`.
 
-## Configure Docker services
+### Configure Docker services
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
 
@@ -128,7 +143,7 @@ docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
-To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#deploy-the-langflow-runtime).
+To deploy the image with Helm, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
 
 ## Customize the Langflow Docker image with your own code
 

@@ -10,10 +10,7 @@ import { CustomProductSelector } from "@/customization/components/custom-product
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
-import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
@@ -23,7 +20,6 @@ export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const navigate = useCustomNavigate();
   const [activeState, setActiveState] = useState<"notifications" | null>(null);
-  const lastPath = window.location.pathname.split("/").filter(Boolean).pop();
   const notificationRef = useRef<HTMLButtonElement | null>(null);
   const notificationContentRef = useRef<HTMLDivElement | null>(null);
   useTheme();
@@ -46,19 +42,16 @@ export default function AppHeader(): JSX.Element {
     };
   }, []);
 
-  useResetDismissUpdateAll();
-
-  const flows = useFlowsManagerStore((state) => state.flows);
-  const examples = useFlowsManagerStore((state) => state.examples);
-  const folders = useFolderStore((state) => state.folders);
-
-  const isEmpty = flows?.length !== examples?.length || folders?.length > 1;
+  const getNotificationBadge = () => {
+    const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
+    return notificationCenter
+      ? `${baseClasses} right-[5.1rem] top-[5px]`
+      : "hidden";
+  };
 
   return (
     <div
-      className={`flex h-[44px] w-full items-center justify-between border-b p-6 dark:bg-background ${
-        !isEmpty ? "hidden" : ""
-      }`}
+      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -75,7 +68,7 @@ export default function AppHeader(): JSX.Element {
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : (
-            <LangflowLogo className="h-5 w-6" />
+            <LangflowLogo className="h-6 w-6" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
@@ -93,22 +86,17 @@ export default function AppHeader(): JSX.Element {
 
       {/* Right Section */}
       <div
-        className={`relative left-3 z-30 flex items-center gap-2`}
+        className={`relative left-3 z-30 flex items-center gap-1`}
         data-testid="header_right_section_wrapper"
       >
-        {!ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <Button
-              unstyled
-              className="hidden items-center whitespace-nowrap pr-2 2xl:inline"
-              onClick={() =>
-                window.open("https://github.com/langflow-ai/langflow", "_blank")
-              }
-            >
-              <LangflowCounts />
-            </Button>
-          </>
-        )}
+        <>
+          <Button
+            unstyled
+            className="hidden items-center whitespace-nowrap pr-2 lg:inline"
+          >
+            <LangflowCounts />
+          </Button>
+        </>
         <AlertDropdown
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
@@ -129,19 +117,21 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <span
-                  className={
-                    notificationCenter
-                      ? `absolute right-[5.3rem] top-[10px] h-1 w-1 rounded-full bg-destructive`
-                      : "hidden"
-                  }
-                />
-                <ForwardedIconComponent
-                  name="Bell"
-                  className="side-bar-button-size ml-1 h-4 w-4 text-muted-foreground"
-                  strokeWidth={2}
-                />
-                <span className="hidden whitespace-nowrap">Notifications</span>
+                <div className="hit-area-hover group items-center rounded-md px-2 py-1 text-muted-foreground">
+                  <span className={getNotificationBadge()} />
+                  <ForwardedIconComponent
+                    name="Bell"
+                    className={`side-bar-button-size h-4 w-4 ${
+                      activeState === "notifications"
+                        ? "text-primary"
+                        : "text-muted-foreground group-hover:text-primary"
+                    }`}
+                    strokeWidth={2}
+                  />
+                  <span className="hidden whitespace-nowrap">
+                    Notifications
+                  </span>
+                </div>
               </Button>
             </AlertDropdown>
           </ShadTooltip>
@@ -150,50 +140,7 @@ export default function AppHeader(): JSX.Element {
           orientation="vertical"
           className="my-auto ml-3 h-7 dark:border-zinc-700"
         />
-        {ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <ShadTooltip content="Docs" side="bottom" styleClasses="z-10">
-              <Button
-                variant="ghost"
-                className="flex text-sm font-medium"
-                onClick={() =>
-                  window.open(
-                    "https://docs.datastax.com/en/langflow/index.html",
-                    "_blank",
-                  )
-                }
-              >
-                <ForwardedIconComponent
-                  name="book-open-text"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap 2xl:inline">
-                  Docs
-                </span>
-              </Button>
-            </ShadTooltip>
-            <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
-              <Button
-                data-testid="user-profile-settings"
-                variant="ghost"
-                className="flex text-sm font-medium"
-                onClick={() => navigate("/settings")}
-              >
-                <ForwardedIconComponent
-                  name="Settings"
-                  className="side-bar-button-size h-[18px] w-[18px]"
-                />
-                <span className="hidden whitespace-nowrap 2xl:inline">
-                  Settings
-                </span>
-              </Button>
-            </ShadTooltip>
-            <Separator
-              orientation="vertical"
-              className="my-auto h-7 dark:border-zinc-700"
-            />
-          </>
-        )}
+
         <div className="flex">
           <AccountMenu />
         </div>

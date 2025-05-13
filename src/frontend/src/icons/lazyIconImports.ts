@@ -25,9 +25,17 @@ export const lazyIconsMapping = {
   Athena: () =>
     import("@/icons/athena").then((mod) => ({ default: mod.AthenaIcon })),
   AWS: () => import("@/icons/AWS").then((mod) => ({ default: mod.AWSIcon })),
+  AWSInverted: () =>
+    import("@/icons/AWSInverted").then((mod) => ({
+      default: mod.AWSInvertedIcon,
+    })),
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  BotMessageSquareIcon: () =>
+    import("@/icons/BotMessageSquare").then((mod) => ({
+      default: mod.BotMessageSquareIcon,
+    })),
   BWPython: () =>
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
@@ -99,6 +107,10 @@ export const lazyIconsMapping = {
     import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
   Outlook: () =>
     import("@/icons/outlook").then((mod) => ({ default: mod.OutlookIcon })),
+  Googlecalendar: () =>
+    import("@/icons/googlecalendar").then((mod) => ({
+      default: mod.GooglecalendarIcon,
+    })),
   GradientInfinity: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientInfinity,
@@ -106,6 +118,10 @@ export const lazyIconsMapping = {
   GradientUngroup: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
+    })),
+  GradientSave: () =>
+    import("@/icons/GradientSparkles").then((mod) => ({
+      default: mod.GradientSave,
     })),
   GridHorizontal: () =>
     import("@/icons/GridHorizontal").then((mod) => ({
@@ -139,6 +155,7 @@ export const lazyIconsMapping = {
     import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
   Maritalk: () =>
     import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
+  Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
   Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
   Midjourney: () =>
@@ -242,6 +259,10 @@ export const lazyIconsMapping = {
   ThumbUpCustom: () =>
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbUpIconCustom,
+    })),
+  TwitterX: () =>
+    import("@/icons/Twitter X").then((mod) => ({
+      default: mod.TwitterXIcon,
     })),
   Unstructured: () =>
     import("@/icons/Unstructured").then((mod) => ({
