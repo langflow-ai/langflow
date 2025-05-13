@@ -6,7 +6,16 @@ from langchain_openai import OpenAIEmbeddings
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.io import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    MultilineInput,
+    SecretStrInput,
+)
 
 
 class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
