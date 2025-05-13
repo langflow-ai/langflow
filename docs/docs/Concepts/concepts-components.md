@@ -211,7 +211,7 @@ A component keeps the version number it is initialized to the workspace with. If
 
 ### Review and update components
 
-Langflow notifies you with a pop-up window when a component's workspace version is behind the database version and an update is available.
+When a component's workspace version is behind the database version and an update is available, Langflow notifies you with a dialog window.
 
 1. To review the changes, in the pop-up, click **Review**.
 2. The **Update components** pane appears.
