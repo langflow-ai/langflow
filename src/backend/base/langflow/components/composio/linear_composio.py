@@ -209,7 +209,6 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Label Ids",
             info="List of label IDs",
             show=False,
-            value=[],
         ),
         MessageTextInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_parent_id",
