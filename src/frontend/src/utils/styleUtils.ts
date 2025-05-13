@@ -270,6 +270,7 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
 ];
 
 export const categoryIcons: Record<string, string> = {
@@ -347,6 +348,9 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatVertexAI: "VertexAI",
   ChevronsUpDownIcon: "ChevronsUpDown",
   ClearMessageHistory: "FileClock",
+  CleanlabEvaluator: "Cleanlab",
+  CleanlabRAGEvaluator: "Cleanlab",
+  CleanlabRemediator: "Cleanlab",
   CohereEmbeddings: "Cohere",
   Discord: "FaDiscord",
   ElasticsearchStore: "ElasticsearchStore",

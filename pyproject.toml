@@ -123,6 +123,7 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
     "openai>=1.68.2",
+    "cleanlab-tlm>=1.1.2",
 ]
 
 [dependency-groups]
