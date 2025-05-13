@@ -1,25 +1,43 @@
 from __future__ import annotations
 
+import langwatch
+import json
 import os
 from typing import TYPE_CHECKING, Any, cast
 
-import nanoid
 from loguru import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
 
+from langwatch.domain import SpanProcessingExcludeRule
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
+
+    from langchain.callbacks.base import BaseCallbackHandler
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
+langwatch.setup(
+    span_exporter_exclude_rules=[
+        SpanProcessingExcludeRule(
+            field_name="span_name",
+            match_value="/api/v1/",
+            match_operation="includes",
+        ),
+        SpanProcessingExcludeRule(
+            field_name="span_name",
+            match_value="GET /health_check",
+            match_operation="starts_with",
+        )
+    ]
+)
 
 class LangWatchTracer(BaseTracer):
     flow_id: str
@@ -44,12 +62,12 @@ class LangWatchTracer(BaseTracer):
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
             name_without_id = project_name if name_without_id == "None" else name_without_id
-            self.trace.root_span.update(
-                # nanoid to make the span_id globally unique, which is required for LangWatch for now
-                span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",
-                name=name_without_id,
-                type="workflow",
-            )
+            if self.trace.root_span is not None:
+                self.trace.root_span.update(
+                    name=name_without_id,
+                    type="workflow",
+                    flow_id=self.flow_id,
+                )
         except Exception:  # noqa: BLE001
             logger.debug("Error setting up LangWatch tracer")
             self._ready = False
@@ -96,8 +114,6 @@ class LangWatchTracer(BaseTracer):
         )
 
         span = self.trace.span(
-            # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
-            span_id=f"{trace_id}-{nanoid.generate(size=6)}",
             name=name_without_id,
             type="component",
             parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
@@ -129,6 +145,7 @@ class LangWatchTracer(BaseTracer):
     ) -> None:
         if not self._ready:
             return
+
         self.trace.root_span.end(
             input=self._convert_to_langwatch_types(inputs) if self.trace.root_span.input is None else None,
             output=self._convert_to_langwatch_types(outputs) if self.trace.root_span.output is None else None,
