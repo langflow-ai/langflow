@@ -23,12 +23,13 @@ import { default as ForwardedIconComponent } from "../../common/genericIconCompo
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
 import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "../../ui/command";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
@@ -297,55 +298,53 @@ export default function Dropdown({
 
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
-      <PopoverTrigger asChild>
-        <Button
-          disabled={
-            disabled ||
-            (Object.keys(validOptions).length === 0 &&
-              !combobox &&
-              !dialogInputs?.fields?.data?.node?.template)
-          }
-          variant="primary"
-          size="xs"
-          role="combobox"
-          ref={refButton}
-          aria-expanded={open}
-          data-testid={id}
-          className={cn(
-            editNode
-              ? "dropdown-component-outline input-edit-node"
-              : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
-          )}
+      <Button
+        disabled={
+          disabled ||
+          (Object.keys(validOptions).length === 0 &&
+            !combobox &&
+            !dialogInputs?.fields?.data?.node?.template)
+        }
+        variant="primary"
+        size="xs"
+        role="combobox"
+        ref={refButton}
+        aria-expanded={open}
+        data-testid={id}
+        className={cn(
+          editNode
+            ? "dropdown-component-outline input-edit-node"
+            : "dropdown-component-false-outline py-2",
+          "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
+        )}
+      >
+        <span
+          className="flex w-full items-center gap-2 overflow-hidden"
+          data-testid={`value-dropdown-${id}`}
         >
-          <span
-            className="flex w-full items-center gap-2 overflow-hidden"
-            data-testid={`value-dropdown-${id}`}
-          >
-            {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                RECEIVING_INPUT_VALUE
-              ) : (
-                <>
-                  {value && filteredOptions.includes(value)
-                    ? value
-                    : SELECT_AN_OPTION}{" "}
-                </>
-              )}
-            </span>
-          </span>
-          <ForwardedIconComponent
-            name={disabled ? "Lock" : "ChevronsUpDown"}
-            className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
-              disabled
-                ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                : "hover:text-foreground",
+          {value && <>{renderSelectedIcon()}</>}
+          <span className="truncate">
+            {disabled ? (
+              RECEIVING_INPUT_VALUE
+            ) : (
+              <>
+                {value && filteredOptions.includes(value)
+                  ? value
+                  : SELECT_AN_OPTION}{" "}
+              </>
             )}
-          />
-        </Button>
-      </PopoverTrigger>
+          </span>
+        </span>
+        <ForwardedIconComponent
+          name={disabled ? "Lock" : "ChevronsUpDown"}
+          className={cn(
+            "ml-2 h-4 w-4 shrink-0 text-foreground",
+            disabled
+              ? "text-placeholder-foreground hover:text-placeholder-foreground"
+              : "hover:text-foreground",
+          )}
+        />
+      </Button>
       {helperText && (
         <span className="pt-2 text-xs text-muted-foreground">
           {convertStringToHTML(helperText)}
@@ -372,8 +371,8 @@ export default function Dropdown({
   );
 
   const renderCustomOptionDialog = () => (
-    <CommandGroup className="flex flex-col">
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+    <DropdownMenuGroup className="flex flex-col">
+      <DropdownMenuItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
         <Button
           className="w-full"
           unstyled
@@ -389,8 +388,8 @@ export default function Dropdown({
             {`New ${firstWord}`}
           </div>
         </Button>
-      </CommandItem>
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+      </DropdownMenuItem>
+      <DropdownMenuItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
         <Button
           className="w-full"
           unstyled
@@ -406,7 +405,7 @@ export default function Dropdown({
             Refresh list
           </div>
         </Button>
-      </CommandItem>
+      </DropdownMenuItem>
       <NodeDialog
         open={openDialog}
         dialogInputs={dialogInputs}
@@ -418,12 +417,12 @@ export default function Dropdown({
         name={name!}
         nodeClass={nodeClass!}
       />
-    </CommandGroup>
+    </DropdownMenuGroup>
   );
 
   const renderOptionsList = () => (
-    <CommandList>
-      <CommandGroup defaultChecked={false}>
+    <div>
+      <DropdownMenuGroup defaultChecked={false}>
         {filteredOptions?.length > 0 ? (
           filteredOptions?.map((option, index) => (
             <ShadTooltip
@@ -433,10 +432,9 @@ export default function Dropdown({
               content={formatTooltipContent(option, index)}
             >
               <div>
-                <CommandItem
-                  value={option}
-                  onSelect={(currentValue) => {
-                    onSelect(currentValue);
+                <DropdownMenuItem
+                  onSelect={() => {
+                    onSelect(option);
                     setOpen(false);
                   }}
                   className="items-center"
@@ -514,19 +512,23 @@ export default function Dropdown({
                       )}
                     </div>
                   </div>
-                </CommandItem>
+                </DropdownMenuItem>
               </div>
             </ShadTooltip>
           ))
         ) : (
-          <CommandItem disabled className="text-center text-sm">
+          <DropdownMenuItem disabled className="text-center text-sm">
             No options found
-          </CommandItem>
+          </DropdownMenuItem>
         )}
-      </CommandGroup>
-      <CommandSeparator />
-      {dialogInputs && dialogInputs?.fields && renderCustomOptionDialog()}
-    </CommandList>
+      </DropdownMenuGroup>
+      {dialogInputs && dialogInputs?.fields && (
+        <>
+          <DropdownMenuSeparator />
+          {renderCustomOptionDialog()}
+        </>
+      )}
+    </div>
   );
 
   const renderPopoverContent = () => (
@@ -538,10 +540,10 @@ export default function Dropdown({
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
       }
     >
-      <Command>
+      <div className="w-full">
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
-      </Command>
+      </div>
     </PopoverContentDropdown>
   );
 
@@ -556,28 +558,36 @@ export default function Dropdown({
 
   // Main render
   return (
-    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
-      {children ? (
-        <PopoverAnchor>{children}</PopoverAnchor>
-      ) : refreshOptions || isLoading ? (
-        renderLoadingButton()
-      ) : validOptions.length === 1 &&
-        toggle &&
-        !combobox &&
-        value === validOptions[0] ? (
-        <div className="flex w-full items-center gap-2 truncate">
-          {optionsMetaData?.[0]?.icon && (
-            <ForwardedIconComponent
-              name={optionsMetaData?.[0]?.icon}
-              className="h-4 w-4 flex-shrink-0"
-            />
-          )}
-          <span className="truncate text-sm">{value}</span>
-        </div>
-      ) : (
-        <div className="w-full truncate">{renderTriggerButton()}</div>
-      )}
-      {renderPopoverContent()}
-    </Popover>
+    <DropdownMenu open={open} onOpenChange={children ? () => {} : setOpen}>
+      <DropdownMenuTrigger asChild>
+        {children ? (
+          <PopoverAnchor>{children}</PopoverAnchor>
+        ) : refreshOptions || isLoading ? (
+          renderLoadingButton()
+        ) : validOptions.length === 1 &&
+          toggle &&
+          !combobox &&
+          value === validOptions[0] ? (
+          <div className="flex w-full items-center gap-2 truncate">
+            {optionsMetaData?.[0]?.icon && (
+              <ForwardedIconComponent
+                name={optionsMetaData?.[0]?.icon}
+                className="h-4 w-4 flex-shrink-0"
+              />
+            )}
+            <span className="truncate text-sm">{value}</span>
+          </div>
+        ) : (
+          <div className="w-full truncate">{renderTriggerButton()}</div>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="bottom"
+        align="start"
+        className="w-full min-w-[200px]"
+      >
+        {renderOptionsList()}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
