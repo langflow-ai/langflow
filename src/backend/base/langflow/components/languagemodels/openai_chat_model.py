@@ -1,7 +1,7 @@
-from typing import Any
-import httpx
 import ssl
+from typing import Any
 
+import httpx
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -67,7 +67,7 @@ class OpenAIModelComponent(LCModelComponent):
             dynamic=True,
             info="Leave empty unless you're using a self-signed certificate. "
             "Paste the entire certificate including the '-----BEGIN/END CERTIFICATE-----' lines. "
-            "Not sure? Just leave it blank!"
+            "Not sure? Just leave it blank!",
         ),
         SecretStrInput(
             name="api_key",
