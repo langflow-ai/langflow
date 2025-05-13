@@ -11,11 +11,13 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   description,
   endpointName,
   maxLength = 50,
+  minLength = 1,
   setName,
   setDescription,
   setEndpointName,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
+  const [isMinLength, setIsMinLength] = useState(false);
   const [validEndpointName, setValidEndpointName] = useState(true);
   const [isInvalidName, setIsInvalidName] = useState(false);
 
@@ -26,6 +28,11 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
+    if (value.length < minLength) {
+      setIsMinLength(true);
+    } else {
+      setIsMinLength(false);
+    }
     let invalid = false;
     for (let i = 0; i < invalidNameList!.length; i++) {
       if (value === invalidNameList![i]) {
@@ -35,7 +42,15 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       invalid = false;
     }
     setIsInvalidName(invalid);
-    setName!(value);
+
+    // Only update the name if it's valid (not empty and not invalid)
+    if (value.length >= minLength && !invalid) {
+      setName!(value);
+    } else if (value.length === 0) {
+      // For empty string, update state but keep isMinLength true
+      setName!("");
+      setIsMinLength(true);
+    }
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -43,11 +58,19 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   };
 
   const handleEndpointNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
     // Validate the endpoint name
     // use this regex r'^[a-zA-Z0-9_-]+$'
     const isValid = isEndpointNameValid(event.target.value, maxLength);
     setValidEndpointName(isValid);
-    setEndpointName!(event.target.value);
+
+    // Only update if valid and meets minimum length (if set)
+    if (isValid && value.length >= minLength) {
+      setEndpointName!(value);
+    } else if (value.length === 0) {
+      // Always allow empty endpoint name (it's optional)
+      setEndpointName!("");
+    }
   };
 
   //this function is necessary to select the text when double clicking, this was not working with the onFocus event
@@ -60,6 +83,11 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span className="font-medium">Name{setName ? "" : ":"}</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
+          )}
+          {isMinLength && (
+            <span className="edit-flow-span">
+              Minimum {minLength} character(s) required
+            </span>
           )}
           {isInvalidName && (
             <span className="edit-flow-span">
@@ -77,6 +105,8 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             placeholder="Flow name"
             id="name"
             maxLength={maxLength}
+            minLength={minLength}
+            required={true}
             onDoubleClickCapture={(event) => {
               handleFocus(event);
             }}
@@ -137,6 +167,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             value={endpointName ?? ""}
             placeholder="An alternative name to run the endpoint"
             maxLength={maxLength}
+            minLength={minLength}
             id="endpoint_name"
             onDoubleClickCapture={(event) => {
               handleFocus(event);

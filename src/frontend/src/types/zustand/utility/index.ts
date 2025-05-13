@@ -9,7 +9,6 @@ export type UtilityStoreType = {
   playgroundScrollBehaves: ScrollBehavior;
   setPlaygroundScrollBehaves: (behaves: ScrollBehavior) => void;
   maxFileSizeUpload: number;
-  setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
   flowsPagination: Pagination;
   setFlowsPagination: (pagination: Pagination) => void;
   tags: Tag[];
@@ -20,8 +19,6 @@ export type UtilityStoreType = {
   setWebhookPollingInterval: (webhookPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
-  dismissAll: boolean;
-  setDismissAll: (dismissAll: boolean) => void;
   currentSessionId: string;
   setCurrentSessionId: (sessionId: string) => void;
   setClientId: (clientId: string) => void;

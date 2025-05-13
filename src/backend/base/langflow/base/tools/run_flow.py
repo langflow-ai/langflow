@@ -79,7 +79,9 @@ class RunFlowBaseComponent(Component):
         if isinstance(first_output, Data):
             return first_output
 
-        message_data = first_output.outputs[0].results["message"].data
+        # just adaptive output Message
+        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
+        message_data = message_result.data
         return Data(data=message_data)
 
     async def dataframe_output(self) -> DataFrame:
@@ -90,21 +92,20 @@ class RunFlowBaseComponent(Component):
         if isinstance(first_output, DataFrame):
             return first_output
 
-        message_data = first_output.outputs[0].results["message"].data
+        # just adaptive output Message
+        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
+        message_data = message_result.data
         return DataFrame(data=message_data if isinstance(message_data, list) else [message_data])
 
     async def message_output(self) -> Message:
         """Return the message output."""
         run_outputs = await self.run_flow_with_tweaks()
-        message_result = run_outputs[0].outputs[0].results["message"]
-
+        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
         if isinstance(message_result, Message):
             return message_result
-
         if isinstance(message_result, str):
-            return Message(content=message_result)
-
-        return Message(content=message_result.data["text"])
+            return Message(text=message_result)
+        return Message(text=message_result.data["text"])
 
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name

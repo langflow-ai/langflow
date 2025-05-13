@@ -43,8 +43,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
-
   const updatedAt = currentSavedFlow?.updated_at;
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
@@ -112,19 +110,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
         const isAnExistingFlowId = isAnExistingFlow.id;
 
-        flowToCanvas
-          ? setCurrentFlow(flowToCanvas)
-          : getFlowToAddToCanvas(isAnExistingFlowId);
+        await getFlowToAddToCanvas(isAnExistingFlowId);
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId, flowToCanvas]);
+  }, [id, flows, currentFlowId]);
 
   useEffect(() => {
     setOnFlowPage(true);
 
     return () => {
       setOnFlowPage(false);
+      console.log("unmounting");
       setCurrentFlow(undefined);
     };
   }, [id]);
