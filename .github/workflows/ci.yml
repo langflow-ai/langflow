@@ -46,40 +46,69 @@ concurrency:
 
 jobs:
   check-nightly-status:
-    name: Check Nightly Status
+    name: Check PyPI Version Update
     runs-on: ubuntu-latest
     outputs:
-      should-proceed: ${{ steps.check-workflow.outputs.success }}
+      should-proceed: ${{ steps.check-pypi.outputs.success }}
     steps:
-      - name: Check nightly workflow status
-        id: check-workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const workflow_name = 'nightly_build.yml';
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to beginning of day
+      - name: Check PyPI package update
+        id: check-pypi
+        run: |
+          # Get today's date in ISO format for comparison
+          TODAY=$(date -u +"%Y-%m-%d")
+          echo "Today's date: $TODAY"
 
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: workflow_name,
-              created: `>=${today.toISOString()}`,
-              per_page: 100, // Get more runs to check
-              status: 'completed'
-            });
+          # Query PyPI API for the langflow package
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow-nightly/json)
 
-            if (runs.workflow_runs.length === 0) {
-              console.log('No completed workflow runs found today');
-              return core.setOutput('success', 'true');
-            }
+          # Check HTTP status code first
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Error: PyPI API returned HTTP status $HTTP_STATUS"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-            // Check if any runs today were successful
-            const successfulTodayRuns = runs.workflow_runs.filter(run => run.conclusion === 'success');
-            const hasSuccessfulRunToday = successfulTodayRuns.length > 0;
+          # Check if response is valid JSON before proceeding
+          if ! jq -e . response.json >/dev/null 2>&1; then
+            echo "Error: Invalid JSON response from PyPI API"
+            echo "Response preview:"
+            head -n 10 response.json
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-            console.log(`Found ${runs.workflow_runs.length} completed runs today, ${successfulTodayRuns.length} successful`);
-            core.setOutput('success', hasSuccessfulRunToday.toString());
+          # Extract the latest version
+          LATEST_VERSION=$(jq -r '.info.version // empty' response.json)
+
+          if [ -z "$LATEST_VERSION" ]; then
+            echo "Could not extract latest version"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract the release date of the latest version
+          RELEASE_DATE=$(jq -r --arg ver "$LATEST_VERSION" '.releases[$ver][0].upload_time_iso_8601 // empty' response.json | cut -d'T' -f1)
+
+          if [ -z "$RELEASE_DATE" ]; then
+            echo "Could not extract release date"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Latest version: $LATEST_VERSION"
+          echo "Release date: $RELEASE_DATE"
+
+          # Check if the release date is today
+          if [[ "$RELEASE_DATE" == "$TODAY" ]]; then
+            echo "Package was updated today"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "Package was not updated today"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Clean up
+          rm -f response.json
 
   set-ci-condition:
     needs: check-nightly-status
@@ -133,6 +162,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+
   test-frontend:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Tests
