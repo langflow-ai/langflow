@@ -88,6 +88,7 @@ export default function FileRendererComponent({
                   checked={selectedFiles?.includes(file.path)}
                   onCheckedChange={handleItemClick}
                   disabled={file.disabled}
+                  className="focus-visible:ring-0"
                 />
               </div>
             )}
