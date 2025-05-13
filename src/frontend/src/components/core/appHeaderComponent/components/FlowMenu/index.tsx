@@ -216,8 +216,8 @@ export const MenuBar = memo((): JSX.Element => {
   ]);
 
   useEffect(() => {
-    if (!editingName) {
-      setFlowName(currentFlowName ?? "Untitled Flow");
+    if (currentFlowName && !editingName) {
+      setFlowName(currentFlowName);
     }
   }, [currentFlowName, editingName]);
 
@@ -233,7 +233,7 @@ export const MenuBar = memo((): JSX.Element => {
       : getNumberFromString(currentFlowGradient ?? currentFlowId ?? "")) %
     swatchColors.length;
 
-  return onFlowPage ? (
+  return currentFlowName && onFlowPage ? (
     <div
       className="flex w-full items-center justify-center gap-2"
       data-testid="menu_bar_wrapper"
@@ -303,7 +303,7 @@ export const MenuBar = memo((): JSX.Element => {
                 onKeyDown={handleKeyDown}
                 onFocus={() => {
                   setEditingName(true);
-                  setFlowName(currentFlowName ?? "Untitled Flow");
+                  setFlowName(currentFlowName);
                   const flows = useFlowsManagerStore.getState().flows;
                   setFlowNames(
                     flows
@@ -315,7 +315,6 @@ export const MenuBar = memo((): JSX.Element => {
                 value={flowName}
                 id="input-flow-name"
                 data-testid="input-flow-name"
-                placeholder="Untitled Flow"
               />
               <span
                 ref={measureRef}
@@ -323,7 +322,7 @@ export const MenuBar = memo((): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
-                {flowName || "Untitled Flow"}
+                {flowName}
               </span>
             </div>
           </div>
