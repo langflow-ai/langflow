@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 
 # Langflow components overview
 
-A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
+A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
 
 To add a component to a flow, drag it from the **Component** menu to the **Workspace**.
 
@@ -21,13 +21,13 @@ Each component is unique, but all have a menu bar at the top that looks somethin
 
 Use the component controls to do the following:
 
-- **Code** — Modify the component's Python code and save your changes.
-- **Controls** — Adjust all component parameters.
-- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
+- **Code** — Modify the component's Python code and save your changes.
+- **Controls** — Adjust all component parameters.
+- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
 
-Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To view a component’s output and logs, click the <Icon name="TextSearch" aria-label="Search and filter" /> icon.
+To view a component's output and logs, click the <Icon name="TextSearch" aria-label="Inspect icon" /> icon.
 
 To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
 
@@ -47,15 +47,17 @@ The following table lists the handle colors and their corresponding data types:
 
 | Data type | Handle color | Handle |
 |-----------|--------------|----------|
-| BaseLanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
 | Data | Red | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#dc2626' }} /> |
+| DataFrame | Pink | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#ec4899' }} /> |
 | Document | Lime | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#65a30d' }} /> |
 | Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#10b981' }} /> |
 | LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
+| Memory | Orange | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#f97316' }} /> |
 | Message | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
 | Prompt | Violet | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#7c3aed' }} /> |
 | str | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
 | Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
+| Tool | Cyan | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#06b6d4' }} /> |
 | unknown | Gray | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#9CA3AF' }} /> |
 
 ## Component code
@@ -66,6 +68,7 @@ For example, the [Recursive character text splitter](https://github.com/langflow
 
 <details>
 <summary>Recursive character text splitter code</summary>
+
 ```python
 from typing import Any
 
@@ -148,13 +151,13 @@ When used in a flow, this component:
 
 After a component runs, **Freeze** locks the component's previous output state to prevent it from re-running.
 
-If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze**.
+If you're expecting consistent output from a component and don't need to re-run it, click **Freeze**.
 
 Enabling **Freeze** freezes all components upstream of the selected component.
 
 ## Additional component options
 
-Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
 To modify a component's name or description, double-click in the **Name** or **Description** fields. Component descriptions accept Markdown syntax.
 
@@ -196,10 +199,11 @@ The following keyboard shortcuts are available when a component is selected.
 
 Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components, for example RAG with a vector database, and saving space.
 
-1. Hold **Shift** and drag to select components.
-2. Select **Group**.
+1. Hold **Shift** and drag to select components.
+
 The components merge into a single component.
-3. Double-click the name and description to change them.
+
+3. To modify the name and description of the single grouped component, in the grouped component, click the <Icon name="PencilLine" aria-label="none" /> icon.
 4. Save your grouped component to the sidebar for later use.
 
 ## Component version
@@ -209,16 +213,21 @@ A component's initial state is stored in a database. As soon as you drag a compo
 A component keeps the version number it is initialized to the workspace with. If a component is at version `1.0` when it is dragged to the workspace, it will stay at version `1.0` until you update it.
 
 Langflow notifies you when a component's workspace version is behind the database version and an update is available.
-Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+Click the <Icon name="AlertTriangle" aria-hidden="true" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
 
 ## Components sidebar
 
 Components are listed in the sidebar by component type.
 
-Component **bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
-
-The sidebar includes a component **Search** bar, and includes flags for showing or hiding **Beta** and **Legacy** components.
+**Bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
 
 **Beta** components are still being tested and are not suitable for production workloads.
 
-Legacy components are available for use but are no longer supported.
+**Legacy** components are available for use but are no longer supported. By default, legacy components are hidden in the sidebar.
+
+The sidebar includes a component **Search** bar with options for showing or hiding **Beta** and **Legacy** components.
+To change the sidebar's behavior, click the <Icon name="SlidersHorizontal" aria-hidden="true" />, and then show or hide **Legacy** or **Beta** components.
+
+
+
+
