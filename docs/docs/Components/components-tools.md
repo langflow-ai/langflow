@@ -628,13 +628,13 @@ Deprecated components have been replaced by newer alternatives and should not be
 ### MCP Tools (stdio)
 :::important
 This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP server component](/components-tools#mcp-connection)
+Instead, use the [MCP connection component](/components-tools#mcp-connection)
 :::
 
 
 ### MCP Tools (SSE)
 :::important
 This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP server component](/components-tools#mcp-connection)
+Instead, use the [MCP connection component](/components-tools#mcp-connection)
 :::
 
