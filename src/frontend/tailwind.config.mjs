@@ -33,12 +33,14 @@ const config = {
       center: true,
       screens: {
         "2xl": "1400px",
+        "3xl": "1500px",
       },
     },
     extend: {
       screens: {
         xl: "1200px",
         "2xl": "1400px",
+        "3xl": "1500px",
       },
       keyframes: {
         // Overlay animations

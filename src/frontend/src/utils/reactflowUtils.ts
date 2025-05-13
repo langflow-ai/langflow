@@ -1808,8 +1808,6 @@ export function downloadFlow(
       description: flowDescription,
     };
 
-    console.log(flowData);
-
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
