@@ -309,7 +309,8 @@ class APIRequestComponent(Component):
                     reset_value = type_reset_mapping.get(type(input_field), None)
                     build_config[input_field.name]["value"] = reset_value
                     self.log(f"Reset field {input_field.name} to {reset_value}")
-            build_config = self.parse_curl(field_value, build_config)
+            # Don't try to parse the boolean value as a curl command
+            return build_config
         elif field_name == "method" and not self.use_curl:
             build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
