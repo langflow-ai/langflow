@@ -1,7 +1,6 @@
 ---
 title: Integrate Google BigQuery with Langflow
 slug: /integrations-google-big-query
-description: "A comprehensive guide on setting up and using the BigQuery component in Langflow to execute SQL queries on Google BigQuery."
 ---
 
 import Tabs from '@theme/Tabs';
