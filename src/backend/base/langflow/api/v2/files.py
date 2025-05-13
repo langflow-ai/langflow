@@ -173,7 +173,7 @@ async def delete_files_batch(
     """Delete multiple files by their IDs."""
     try:
         # Fetch all files from the DB
-        stmt = select(UserFile).where(UserFile.id.in_(file_ids), UserFile.user_id == current_user.id)
+        stmt = select(UserFile).where(UserFile.id in file_ids, UserFile.user_id == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
 
@@ -206,7 +206,7 @@ async def download_files_batch(
     """Download multiple files as a zip file by their IDs."""
     try:
         # Fetch all files from the DB
-        stmt = select(UserFile).where(UserFile.id.in_(file_ids), UserFile.user_id == current_user.id)
+        stmt = select(UserFile).where(UserFile.id in file_ids, UserFile.user_id == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
 
