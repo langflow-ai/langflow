@@ -421,13 +421,13 @@ test(
     const download = await downloadPromise;
 
     // Verify the download was initiated
-    expect(download).toBeTruthy();
+    await expect(download).toBeTruthy();
 
     // Check for success message
     const downloadSuccessMessage = await page.getByText(
       /Files? downloaded successfully/,
     );
-    expect(downloadSuccessMessage).toBeTruthy();
+    await expect(downloadSuccessMessage).toBeTruthy();
 
     // Select both files (checkbox on the grid)
 
@@ -453,13 +453,14 @@ test(
     const deleteSuccessMessage = await page.getByText(
       "Files deleted successfully",
     );
-    expect(deleteSuccessMessage).toBeTruthy();
+    await expect(deleteSuccessMessage).toBeTruthy();
+    await page.waitForTimeout(500);
 
     // Verify the deleted files are no longer visible
     const remainingFileCount =
       (await page.getByText(fileNames.py + ".py").count()) +
       (await page.getByText(fileNames.txt + ".txt").count()) +
       (await page.getByText(fileNames.json + ".json").count());
-    expect(remainingFileCount).toBe(1);
+    await expect(remainingFileCount).toBe(1);
   },
 );
