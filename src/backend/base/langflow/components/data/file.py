@@ -4,6 +4,7 @@ from langflow.io import BoolInput, IntInput
 from langflow.schema import Data
 import asyncio
 import os
+from platformdirs import user_cache_dir
 
 
 class FileComponent(BaseFileComponent):
@@ -81,7 +82,7 @@ class FileComponent(BaseFileComponent):
                         from sqlmodel import select
                         db = get_db_service()
                         # Convert absolute path to relative path
-                        cache_root = "/Users/jeffreycarpenter/Library/Caches/langflow"
+                        cache_root = user_cache_dir("langflow", "langflow")
                         relative_path = os.path.relpath(file_path, start=cache_root)
                         async def get_filename():
                             async with db.with_session() as session:
