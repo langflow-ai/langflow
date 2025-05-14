@@ -7,6 +7,6 @@ export const selectGptModel = async (page: Page) => {
 
   for (let i = 0; i < gptModelDropdownCount; i++) {
     await page.getByTestId("dropdown_str_model_name").nth(i).click();
-    await page.getByRole("option").first().click();
+    await page.getByRole("menuitem").first().click();
   }
 };
