@@ -420,8 +420,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "collection_vector_service_options": vectorize_options,
         }
 
-        # Add optional arguments only if environment is "dev"
-        if environment == "dev" and reranker:  # TODO: Remove conditional check soon
+        # Add optional arguments if the reranker is set
+        if reranker:
             # Split the reranker field into a provider a model name
             provider, _ = reranker.split("/")
             base_args["collection_rerank"] = CollectionRerankOptions(
