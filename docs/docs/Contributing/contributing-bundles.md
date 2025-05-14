@@ -94,12 +94,12 @@ For example:
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
 ```
 
-8. To update the bundles sidebar, add the new icon to the `SIDEBAR_BUNDLES` array in ``src > frontend > src > utils> styleUtils.ts`.
+8. To update the bundles sidebar, add the new icon to the `SIDEBAR_BUNDLES` array in ``src > frontend > src > utils > styleUtils.ts`.
 You can view the [SIDEBAR_BUNDLES array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in the Langflow repository.
 For example:
 ```typescript
 { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
-{ display_name: "DarthVader", name: "darthvader", icon: "AssemblyAI" },
+{ display_name: "DarthVader", name: "darthvader", icon: "DarthVaderIcon" },
 { display_name: "DataStax", name: "astra_assistants", icon: "DarthVader" },
 ```
 
