@@ -1143,8 +1143,8 @@ async def flow_tts_websocket(
     try:
         await client_websocket.accept()
 
-        openai_send_q: asyncio.Queue[str] = asyncio.Queue()
-        client_send_q: asyncio.Queue[str] = asyncio.Queue()
+        openai_send_q: asyncio.Queue[dict] = asyncio.Queue()
+        client_send_q: asyncio.Queue[dict] = asyncio.Queue()
 
         log_event = create_event_logger()
 
@@ -1171,13 +1171,13 @@ async def flow_tts_websocket(
         def openai_send(payload):
             log_event(payload, LF_TO_OPENAI)
             logger.trace(f"Sending text {LF_TO_OPENAI}: {payload['type']}")
-            openai_send_q.put_nowait(json.dumps(payload))
+            openai_send_q.put_nowait(payload)
             logger.trace("JSON sent.")
 
         def client_send(payload):
             log_event(payload, LF_TO_CLIENT)
             logger.trace(f"Sending JSON {LF_TO_CLIENT}: {payload['type']}")
-            client_send_q.put_nowait(json.dumps(payload))
+            client_send_q.put_nowait(payload)
             logger.trace("JSON sent.")
 
         async def close():
