@@ -10,7 +10,22 @@ from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.utils.component_utils import set_current_fields
 
-
+ACTION_CONFIG = {
+    "Select Keys": {"is_list": False, "log_msg": "setting filter fields"},
+    "Literal Eval": {"is_list": False, "log_msg": "setting evaluate fields"},
+    "Combine": {"is_list": True, "log_msg": "setting combine fields"},
+    "Filter Values": {"is_list": False, "log_msg": "setting filter values fields"},
+    "Append / Update ": {"is_list": False, "log_msg": "setting Append / Update  fields"},
+    "Remove Keys": {"is_list": False, "log_msg": "setting remove keys fields"},
+    "Rename Keys": {"is_list": False, "log_msg": "setting rename keys fields"},
+}
+OPERATORS = {
+    "equals": lambda a, b: str(a) == str(b),
+    "not equals": lambda a, b: str(a) != str(b),
+    "contains": lambda a, b: str(b) in str(a),
+    "starts with": lambda a, b: str(a).startswith(str(b)),
+    "ends with": lambda a, b: str(a).endswith(str(b)),
+}
 class DataOperationsComponent(Component):
     display_name = "Data Operations"
     description = "Perform various operations on a Data object."
@@ -105,7 +120,7 @@ class DataOperationsComponent(Component):
         # update/ Append data inputs
         DictInput(
             name="append_update_data",
-            display_name="Append / Update ",
+            display_name="Append or Update ",
             info="Data to append or update the existing data with.",
             show=False,
             value={"key": "value"},
@@ -282,15 +297,7 @@ class DataOperationsComponent(Component):
 
     def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
         """Compare values based on the specified operator."""
-        operators = {
-            "equals": lambda a, b: str(a) == str(b),
-            "not equals": lambda a, b: str(a) != str(b),
-            "contains": lambda a, b: str(b) in str(a),
-            "starts with": lambda a, b: str(a).startswith(str(b)),
-            "ends with": lambda a, b: str(a).endswith(str(b)),
-        }
-
-        comparison_func = operators.get(operator)
+        comparison_func = OPERATORS.get(operator)
         if comparison_func:
             return comparison_func(item_value, filter_value)
         return False
@@ -361,20 +368,12 @@ class DataOperationsComponent(Component):
 
         self.operations = field_value
         selected_actions = [action["name"] for action in self.operations]
-        action_config = {
-            "Select Keys": {"is_list": False, "log_msg": "setting filter fields"},
-            "Literal Eval": {"is_list": False, "log_msg": "setting evaluate fields"},
-            "Combine": {"is_list": True, "log_msg": "setting combine fields"},
-            "Filter Values": {"is_list": False, "log_msg": "setting filter values fields"},
-            "Append / Update ": {"is_list": False, "log_msg": "setting Append / Update  fields"},
-            "Remove Keys": {"is_list": False, "log_msg": "setting remove keys fields"},
-            "Rename Keys": {"is_list": False, "log_msg": "setting rename keys fields"},
-        }
+
 
         # Handle single action case
-        if len(selected_actions) == 1 and selected_actions[0] in action_config:
+        if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
             action = selected_actions[0]
-            config = action_config[action]
+            config = ACTION_CONFIG[action]
 
             build_config["data"]["is_list"] = config["is_list"]
             logger.info(config["log_msg"])
