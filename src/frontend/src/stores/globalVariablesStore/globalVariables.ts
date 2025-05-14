@@ -11,5 +11,9 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     setGlobalVariablesEntries: (entries) => {
       set({ globalVariablesEntries: entries });
     },
+    setGlobalVariablesEntities: (entities) => {
+      set({ globalVariablesEntities: entities });
+    },
+    globalVariablesEntities: undefined,
   }),
 );
