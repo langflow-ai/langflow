@@ -1,9 +1,10 @@
 import datetime
-import requests
 import xml.etree.ElementTree as ET
 
+import requests
+
 from langflow.custom import Component
-from langflow.io import MessageTextInput, IntInput, Output
+from langflow.io import IntInput, MessageTextInput, Output
 from langflow.schema import Data, DataFrame
 
 
@@ -125,11 +126,7 @@ class PubMedComponent(Component):
         }
 
     def _extract_pub_date(self, root) -> str:
-        for path in [
-            ".//PubMedPubDate[@PubStatus='pubmed']",
-            ".//ArticleDate",
-            ".//PubDate"
-        ]:
+        for path in [".//PubMedPubDate[@PubStatus='pubmed']", ".//ArticleDate", ".//PubDate"]:
             date_elem = root.find(path)
             if date_elem is not None:
                 year = date_elem.findtext("Year", "0000")
