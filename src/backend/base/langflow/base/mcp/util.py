@@ -101,8 +101,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             ref_name = s["$ref"].split("/")[-1]
             s = defs.get(ref_name)
             if s is None:
-                msg = f"Definition '{ref_name}' not found"
-                raise ValueError(msg)
+                logger.warning(f"Parsing input schema: Definition '{ref_name}' not found")
+                return {"type": "string"}
         return s
 
     def parse_type(s: dict[str, Any] | None) -> Any:
