@@ -1,6 +1,5 @@
 import ast
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langflow.custom import Component
 from langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
@@ -9,6 +8,9 @@ from langflow.logging import logger
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.utils.component_utils import set_current_fields
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 ACTION_CONFIG = {
     "Select Keys": {"is_list": False, "log_msg": "setting filter fields"},
@@ -26,6 +28,8 @@ OPERATORS = {
     "starts with": lambda a, b: str(a).startswith(str(b)),
     "ends with": lambda a, b: str(a).endswith(str(b)),
 }
+
+
 class DataOperationsComponent(Component):
     display_name = "Data Operations"
     description = "Perform various operations on a Data object."
@@ -368,7 +372,6 @@ class DataOperationsComponent(Component):
 
         self.operations = field_value
         selected_actions = [action["name"] for action in self.operations]
-
 
         # Handle single action case
         if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
