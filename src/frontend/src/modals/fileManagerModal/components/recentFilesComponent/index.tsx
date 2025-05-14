@@ -79,12 +79,23 @@ export default function RecentFilesComponent({
       }
     };
 
+    // Reset key states when window loses focus
+    const handleBlur = () => {
+      setIsShiftPressed(false);
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
+    // Clean up event listeners when component unmounts
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+
+      // Reset key state on unmount
+      setIsShiftPressed(false);
     };
   }, []);
 
