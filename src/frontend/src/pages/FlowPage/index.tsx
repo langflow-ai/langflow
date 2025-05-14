@@ -149,7 +149,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const getFlowToAddToCanvas = async (id: string) => {
     const flow = await getFlow({ id: id });
-    console.log(flow);
     setCurrentFlow(flow);
   };
 
