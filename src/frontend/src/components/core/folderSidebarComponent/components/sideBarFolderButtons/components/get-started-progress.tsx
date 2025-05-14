@@ -85,7 +85,7 @@ export const GetStartedProgress: FC<{
     <div className="mt-3 h-[10.8rem] w-full">
       <div className="mb-2 flex items-center justify-between">
         <span
-          className="text-sm font-semibold"
+          className="text-sm font-medium"
           data-testid="get_started_progress_title"
         >
           {percentageGetStarted >= 100 ? (
