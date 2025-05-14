@@ -95,6 +95,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const templateFieldType = targetNode.data.node!.template[field]?.type;
       const inputTypes = targetNode.data.node!.template[field]?.input_types;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
+      const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
 
       if (
         !field &&
@@ -124,7 +125,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (scapedJSONStringfy(id) !== targetHandle) {
+      if (
+        scapedJSONStringfy(id) !== targetHandle ||
+        (targetNode.data.node?.tool_mode && isToolMode)
+      ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
