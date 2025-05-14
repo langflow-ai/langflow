@@ -253,6 +253,10 @@ class DataOperationsComponent(Component):
         if not self.data_is_list():
             return self.data[0] if self.data else Data(data={})
 
+        if len(self.data) == 1:
+            msg = "Combine operation requires multiple data inputs."
+            raise ValueError(msg)
+
         data_dicts = [data.model_dump().get("data", data.model_dump()) for data in self.data]
         combined_data = {}
 
