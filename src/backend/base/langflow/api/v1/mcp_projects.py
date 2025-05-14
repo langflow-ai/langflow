@@ -29,7 +29,7 @@ from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user, get_current_user
 from langflow.services.database.models import Flow, Folder, User
-from langflow.services.deps import get_db_service, get_settings_service, get_storage_service
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.storage.utils import build_content_type_from_extension
 
 logger = logging.getLogger(__name__)
@@ -61,8 +61,7 @@ async def list_project_tools(
     """List all tools in a project that are enabled for MCP."""
     tools: list[MCPSettings] = []
     try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
+        async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
             project = (
                 await session.exec(
@@ -133,8 +132,7 @@ class ProjectMCPServer:
             """Handle listing tools for this specific project."""
             tools = []
             try:
-                db_service = get_db_service()
-                async with db_service.with_session() as session:
+                async with session_scope() as session:
                     # Get flows with mcp_enabled flag set to True and in this project
                     flows = (
                         await session.exec(
@@ -173,7 +171,6 @@ class ProjectMCPServer:
         async def handle_list_resources():
             resources = []
             try:
-                db_service = get_db_service()
                 storage_service = get_storage_service()
                 settings_service = get_settings_service()
 
@@ -183,7 +180,7 @@ class ProjectMCPServer:
 
                 base_url = f"http://{host}:{port}".rstrip("/")
 
-                async with db_service.with_session() as session:
+                async with session_scope() as session:
                     flows = (await session.exec(select(Flow))).all()
 
                     for flow in flows:
@@ -388,8 +385,7 @@ def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
 async def init_mcp_servers():
     """Initialize MCP servers for all projects."""
     try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
+        async with session_scope() as session:
             projects = (await session.exec(select(Folder))).all()
 
             for project in projects:
@@ -419,8 +415,7 @@ async def handle_project_sse(
 ):
     """Handle SSE connections for a specific project."""
     # Verify project exists and user has access
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
+    async with session_scope() as session:
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
@@ -473,8 +468,7 @@ async def handle_project_messages(
 ):
     """Handle POST messages for a project-specific MCP server."""
     # Verify project exists and user has access
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
+    async with session_scope() as session:
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
@@ -514,8 +508,7 @@ async def update_project_mcp_settings(
 ):
     """Update the MCP settings of all flows in a project."""
     try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
+        async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
             project = (
                 await session.exec(
