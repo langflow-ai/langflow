@@ -19,7 +19,7 @@ export default function DeleteConfirmationModal({
   setOpen,
   note = "",
 }: {
-  children: JSX.Element;
+  children?: JSX.Element;
   onConfirm: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   description?: string;
   asChild?: boolean;
@@ -29,31 +29,24 @@ export default function DeleteConfirmationModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild={asChild} tabIndex={-1}>
-        {children}
+      <DialogTrigger asChild={!children ? true : asChild} tabIndex={-1}>
+        {children ?? <></>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center">
-              <span className="pr-2">Delete</span>
               <Trash2
-                className="h-6 w-6 pl-1 text-foreground"
+                className="h-6 w-6 pr-1 text-foreground"
                 strokeWidth={1.5}
               />
+              <span className="pl-2">Delete</span>
             </div>
           </DialogTitle>
         </DialogHeader>
-        <span>
-          Are you sure you want to delete the selected{" "}
-          {description ?? "component"}?<br></br>
-          {note && (
-            <>
-              {note}
-              <br></br>
-            </>
-          )}
-          Note: This action is irreversible.
+        <span className="pb-3 text-sm">
+          This will permanently delete the {description ?? "flow"}
+          {note ? " " + note : ""}.<br></br>This can't be undone.
         </span>
         <DialogFooter>
           <DialogClose asChild>
