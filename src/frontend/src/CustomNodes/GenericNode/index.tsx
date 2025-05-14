@@ -364,7 +364,6 @@ function GenericNode({
   ]);
 
   useEffect(() => {
-    console.log("hiddenOutputs", hiddenOutputs);
     if (hiddenOutputs && hiddenOutputs.length === 0) {
       setShowHiddenOutputs(false);
     }
@@ -374,6 +373,9 @@ function GenericNode({
     () => setShowHiddenOutputs((prev) => !prev),
     []
   );
+
+  const memoizedOnUpdateNode = useCallback(() => handleUpdateCode(true), [handleUpdateCode]);
+  const memoizedSetDismissAll = useCallback(() => addDismissedNodes([data.id]), [addDismissedNodes, data.id]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
@@ -389,7 +391,7 @@ function GenericNode({
           <UpdateComponentModal
             open={openUpdateModal}
             setOpen={setOpenUpdateModal}
-            onUpdateNode={() => handleUpdateCode(true)}
+            onUpdateNode={memoizedOnUpdateNode}
             components={componentUpdate ? [componentUpdate] : []}
           />
         )}
@@ -398,9 +400,9 @@ function GenericNode({
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             showNode={showNode}
-            handleUpdateCode={() => handleUpdateCode()}
+            handleUpdateCode={handleUpdateCode}
             loadingUpdate={loadingUpdate}
-            setDismissAll={() => addDismissedNodes([data.id])}
+            setDismissAll={memoizedSetDismissAll}
           />
         )}
         <div
