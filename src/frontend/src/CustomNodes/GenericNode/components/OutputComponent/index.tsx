@@ -35,6 +35,7 @@ export default function OutputComponent({
   );
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
+  const setEdges = useFlowStore((state) => state.setEdges);
 
   useEffect(() => {
     if (isToolMode) {
@@ -57,6 +58,9 @@ export default function OutputComponent({
   const handleOutputSelection = (output) => {
     // Update the display name in the dropdown
     setSelectedName(output.display_name);
+
+    // Remove any connected edges from this output
+    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId));
 
     // Update the node data to reflect the selected output type
     setNode(nodeId, (node) => {
