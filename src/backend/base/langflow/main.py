@@ -296,8 +296,9 @@ def create_app():
     if settings.mcp_server_enabled:
         from langflow_api.api.v1 import mcp_router
 
-        app.include_router(mcp_router)
+        router.include_router(mcp_router)
 
+    app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
 
