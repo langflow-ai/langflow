@@ -230,6 +230,7 @@ module.exports = {
         "Contributing/contributing-community",
         "Contributing/contributing-components",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-templates",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
