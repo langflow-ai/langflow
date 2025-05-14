@@ -5,8 +5,8 @@ from uuid import UUID, uuid4
 import orjson
 import pytest
 from httpx import AsyncClient
-from langflow_api.api.v2.schemas.flow import FlowListCreate
-from langflow_api.api.v2.schemas.vertex import ResultDataResponse
+from langflow_api.api.v1.schemas.flow import FlowListCreate
+from langflow_api.api.v1.schemas.vertex import ResultDataResponse
 from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps

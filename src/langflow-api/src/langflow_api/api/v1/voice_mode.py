@@ -24,8 +24,8 @@ from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow_api.api.utils import CurrentActiveUser, DbSession
-from langflow_api.api.v2.chat import build_flow_and_stream
-from langflow_api.api.v2.schemas.run import InputValueRequest
+from langflow_api.api.v1.chat import build_flow_and_stream
+from langflow_api.api.v1.schemas.run import InputValueRequest
 from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties

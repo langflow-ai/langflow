@@ -16,7 +16,7 @@ from langflow.services.auth.utils import (
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_variable_service
 
-from langflow_api.api.v2.schemas.api_key import Token
+from langflow_api.api.v1.schemas.api_key import Token
 
 router = APIRouter(tags=["Login"])
 

@@ -47,7 +47,7 @@ from langflow.utils.async_helpers import run_until_complete
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
 
-    from langflow_api.api.v2.schemas.run import InputValueRequest
+    from langflow_api.api.v1.schemas.run import InputValueRequest
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData

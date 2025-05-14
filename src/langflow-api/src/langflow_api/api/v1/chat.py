@@ -36,10 +36,10 @@ from langflow_api.api.utils import (
     parse_exception,
     verify_public_flow_and_get_user,
 )
-from langflow_api.api.v2.schemas.flow import FlowDataRequest, CancelFlowResponse
-from langflow_api.api.v2.schemas.vertex import VertexBuildResponse, VerticesOrderResponse, ResultDataResponse
-from langflow_api.api.v2.schemas.stream import StreamData
-from langflow_api.api.v2.schemas.run import InputValueRequest
+from langflow_api.api.v1.schemas.flow import FlowDataRequest, CancelFlowResponse
+from langflow_api.api.v1.schemas.vertex import VertexBuildResponse, VerticesOrderResponse, ResultDataResponse
+from langflow_api.api.v1.schemas.stream import StreamData
+from langflow_api.api.v1.schemas.run import InputValueRequest
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build

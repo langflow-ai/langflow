@@ -22,8 +22,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router
-from langflow_api.api.v2.mcp_projects import init_mcp_servers
+from langflow_api.api import health_check_router, log_router, router
+from langflow_api.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -294,11 +294,10 @@ def create_app():
         start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
-        from langflow_api.api.v2 import mcp_router
+        from langflow_api.api.v1 import mcp_router
 
-        router.include_router(mcp_router)
+        app.include_router(mcp_router)
 
-    app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
 

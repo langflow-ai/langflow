@@ -10,7 +10,7 @@ from typing_extensions import override
 
 from langflow.services.deps import get_chat_service, get_socket_service
 from langflow.utils.util import remove_ansi_escape_codes
-from langflow_api.api.v2.schemas.chat import ChatResponse, PromptResponse
+from langflow_api.api.v1.schemas.chat import ChatResponse, PromptResponse
 
 if TYPE_CHECKING:
     from langflow.services.socket.service import SocketIOService

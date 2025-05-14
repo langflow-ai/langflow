@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from langflow_api.api.utils import CurrentActiveUser
-from langflow_api.api.v2.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
+from langflow_api.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.utils.validate import validate_code
 

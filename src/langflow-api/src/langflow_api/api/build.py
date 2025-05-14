@@ -20,9 +20,9 @@ from langflow_api.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow_api.api.v2.schemas.flow import FlowDataRequest
-from langflow_api.api.v2.schemas.vertex import VertexBuildResponse, ResultDataResponse
-from langflow_api.api.v2.schemas.run import InputValueRequest
+from langflow_api.api.v1.schemas.flow import FlowDataRequest
+from langflow_api.api.v1.schemas.vertex import VertexBuildResponse, ResultDataResponse
+from langflow_api.api.v1.schemas.run import InputValueRequest
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph

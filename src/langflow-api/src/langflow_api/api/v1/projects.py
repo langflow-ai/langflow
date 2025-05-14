@@ -16,8 +16,8 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow_api.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
-from langflow_api.api.v2.flows import create_flows
-from langflow_api.api.v2.schemas.flow import FlowListCreate
+from langflow_api.api.v1.flows import create_flows
+from langflow_api.api.v1.schemas.flow import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME

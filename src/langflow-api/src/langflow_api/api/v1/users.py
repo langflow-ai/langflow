@@ -8,7 +8,7 @@ from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow_api.api.utils import CurrentActiveUser, DbSession
-from langflow_api.api.v2.schemas.user import UsersResponse
+from langflow_api.api.v1.schemas.user import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     get_current_active_superuser,

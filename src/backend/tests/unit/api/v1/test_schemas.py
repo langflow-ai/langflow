@@ -1,5 +1,5 @@
 import pytest
-from langflow_api.api.v2.schemas.vertex import VertexBuildResponse
+from langflow_api.api.v1.schemas.vertex import VertexBuildResponse
 from langflow.serialization.constants import MAX_ITEMS_LENGTH
 
 expected_keys_vertex_build_response = {
