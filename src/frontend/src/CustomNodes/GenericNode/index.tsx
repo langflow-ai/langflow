@@ -312,6 +312,7 @@ function GenericNode({
           index={outputIndex}
           outputProxy={output.proxy}
           outputs={outputs}
+          outputName={output.name}
           lastOutput={isLastOutputSection}
           data={data}
           type={output.types.join("|")}
