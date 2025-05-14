@@ -107,8 +107,6 @@ An example `.env` file is available in the [project repository](https://github.c
 
 ## Projects
 
-## Projects
-
 The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
 
 ![](/img/my-projects.png)
@@ -118,6 +116,9 @@ The **My Projects** page displays all the flows and components you've created in
 To create a new project, click <Icon name="Plus"aria-hidden="true"/> **Create new project**.
 
 To upload a flow to your project, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
+
+To delete flows from your project, click a flow's checkbox to select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+You can select multiple flows for deletion.
 
 ## File management
 
