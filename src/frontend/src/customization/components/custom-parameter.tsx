@@ -41,7 +41,8 @@ export function CustomParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...inputId, proxy } : inputId),
+        edge.targetHandle ===
+        scapedJSONStringfy(proxy ? { ...inputId, proxy } : inputId),
     ) || isToolMode;
 
   return (

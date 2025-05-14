@@ -17,6 +17,7 @@ import {
 } from "@/CustomNodes/utils/get-handle-id";
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
+import useFlowStore from "@/stores/flowStore";
 import {
   Connection,
   Edge,
@@ -62,7 +63,6 @@ import {
 } from "../types/utils/reactflowUtils";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-import useFlowStore from "@/stores/flowStore";
 const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {
@@ -323,7 +323,7 @@ export function isValidConnection(
   if (source === target) {
     return false;
   }
-  
+
   const nodesArray = nodes || useFlowStore.getState().nodes;
   const edgesArray = edges || useFlowStore.getState().edges;
 
@@ -1587,7 +1587,10 @@ export function expandGroupNode(
       }
     }
   });
-  const filteredNodes = [...useFlowStore.getState().nodes.filter((n) => n.id !== id), ...gNodes];
+  const filteredNodes = [
+    ...useFlowStore.getState().nodes.filter((n) => n.id !== id),
+    ...gNodes,
+  ];
   const filteredEdges = [
     ...flowEdges.filter((e) => e.target !== id && e.source !== id),
     ...gEdges,

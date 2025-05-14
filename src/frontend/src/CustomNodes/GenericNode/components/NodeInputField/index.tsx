@@ -9,6 +9,7 @@ import {
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
 import { useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -24,7 +25,6 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import NodeInputInfo from "../NodeInputInfo";
 import HandleRenderComponent from "../handleRenderComponent";
-import { useShallow } from "zustand/react/shallow";
 
 export default function NodeInputField({
   id,
@@ -45,10 +45,12 @@ export default function NodeInputField({
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const isAuth = useAuthStore((state) => state.isAuthenticated);
-  const { currentFlowId, currentFlowName }= useFlowStore(useShallow((state) => ({
-    currentFlowId: state.currentFlow?.id,
-    currentFlowName: state.currentFlow?.name,
-  })));
+  const { currentFlowId, currentFlowName } = useFlowStore(
+    useShallow((state) => ({
+      currentFlowId: state.currentFlow?.id,
+      currentFlowName: state.currentFlow?.name,
+    })),
+  );
   const myData = useTypesStore((state) => state.data);
   const postTemplateValue = usePostTemplateValue({
     node: data.node!,

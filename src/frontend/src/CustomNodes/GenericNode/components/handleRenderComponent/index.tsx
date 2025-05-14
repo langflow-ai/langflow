@@ -261,9 +261,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const openHandle = filterOpenHandle || draggingOpenHandle;
     const filterPresent = handleDragging || filterType;
 
-    const connectedEdge = useFlowStore.getState().edges.find(
-      (edge) => edge.target === nodeId && edge.targetHandle === myId,
-    );
+    const connectedEdge = useFlowStore
+      .getState()
+      .edges.find(
+        (edge) => edge.target === nodeId && edge.targetHandle === myId,
+      );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
     const connectedColor = outputType ? nodeColorsName[outputType] : "gray";
 

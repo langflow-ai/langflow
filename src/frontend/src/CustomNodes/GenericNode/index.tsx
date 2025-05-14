@@ -29,12 +29,12 @@ import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fiel
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
+import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeStatus from "./components/NodeStatus";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
-import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -371,11 +371,17 @@ function GenericNode({
 
   const handleToggleHiddenOutputs = useCallback(
     () => setShowHiddenOutputs((prev) => !prev),
-    []
+    [],
   );
 
-  const memoizedOnUpdateNode = useCallback(() => handleUpdateCode(true), [handleUpdateCode]);
-  const memoizedSetDismissAll = useCallback(() => addDismissedNodes([data.id]), [addDismissedNodes, data.id]);
+  const memoizedOnUpdateNode = useCallback(
+    () => handleUpdateCode(true),
+    [handleUpdateCode],
+  );
+  const memoizedSetDismissAll = useCallback(
+    () => addDismissedNodes([data.id]),
+    [addDismissedNodes, data.id],
+  );
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
@@ -519,8 +525,7 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {!showHiddenOutputs &&
-                shownOutputs &&
+              {!showHiddenOutputs && shownOutputs && (
                 <MemoizedNodeOutputs
                   outputs={shownOutputs}
                   keyPrefix="shown"
@@ -531,7 +536,7 @@ function GenericNode({
                   isToolMode={isToolMode}
                   showHiddenOutputs={showHiddenOutputs}
                 />
-              }
+              )}
 
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
