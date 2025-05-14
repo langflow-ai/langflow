@@ -1,10 +1,8 @@
-from typing import Any
-
-from pydantic import BaseModel, model_serializer, ConfigDict, Field
-
 from langflow.graph.schema import RunOutputs
-from langflow.schema.schema import InputType, OutputType 
 from langflow.schema.graph import Tweaks
+from langflow.schema.schema import InputType, OutputType
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
+
 
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
@@ -37,6 +35,7 @@ class InputValueRequest(BaseModel):
         extra="forbid",
     )
 
+
 class SimplifiedAPIRequest(BaseModel):
     input_value: str | None = Field(default=None, description="The input value")
     input_type: InputType | None = Field(default="chat", description="The input type")
@@ -47,7 +46,6 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
-
 
 
 class RunResponse(BaseModel):

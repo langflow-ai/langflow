@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 from typing import Any
-from pydantic import BaseModel, Field, field_serializer, model_serializer
+
 from langflow.schema.schema import OutputValue
 from langflow.services.tracing.schema import Log
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 
 class ResultDataResponse(BaseModel):
@@ -18,14 +19,16 @@ class ResultDataResponse(BaseModel):
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
+        from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
         from langflow.serialization.serialization import serialize
-        from langflow.serialization.constants import MAX_TEXT_LENGTH, MAX_ITEMS_LENGTH
+
         return serialize(v, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
+        from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
         from langflow.serialization.serialization import serialize
-        from langflow.serialization.constants import MAX_TEXT_LENGTH, MAX_ITEMS_LENGTH
+
         return {
             "results": self.serialize_results(self.results),
             "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
@@ -36,6 +39,7 @@ class ResultDataResponse(BaseModel):
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
         }
+
 
 class VertexBuildResponse(BaseModel):
     id: str | None = None
@@ -49,12 +53,13 @@ class VertexBuildResponse(BaseModel):
 
     @staticmethod
     def serialize_data(data: ResultDataResponse) -> dict:
+        from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
         from langflow.serialization.serialization import serialize
-        from langflow.serialization.constants import MAX_TEXT_LENGTH, MAX_ITEMS_LENGTH
+
         return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+
 
 class VerticesOrderResponse(BaseModel):
     ids: list[str]
     run_id: str
     vertices_to_run: list[str]
-

@@ -2,9 +2,6 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from loguru import logger
-
-from langflow_api.api.utils import CurrentActiveUser, check_langflow_version
 from langflow.services.auth import utils as auth_utils
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.exceptions import CustomError
@@ -16,6 +13,9 @@ from langflow.services.store.schema import (
     TagResponse,
     UsersLikesResponse,
 )
+from loguru import logger
+
+from langflow_api.api.utils import CurrentActiveUser, check_langflow_version
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 

@@ -5,9 +5,9 @@ from typing import Any
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow_api.api.v1.schemas.component import UpdateCustomComponentRequest
 from langflow.components.agents.agent import AgentComponent
 from langflow.custom.utils import build_custom_component_template
+from langflow_api.api.v1.schemas.component import UpdateCustomComponentRequest
 
 
 async def test_get_version(client: AsyncClient):

@@ -1,4 +1,5 @@
 from enum import Enum
+
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
@@ -9,13 +10,16 @@ class FeatureFlags(BaseSettings):
     class Config:
         env_prefix = "LANGFLOW_FEATURE_"
 
+
 FEATURE_FLAGS = FeatureFlags()
+
 
 class BuildStatus(Enum):
     SUCCESS = "success"
     FAILURE = "failure"
     STARTED = "started"
     IN_PROGRESS = "in_progress"
+
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags

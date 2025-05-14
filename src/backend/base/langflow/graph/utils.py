@@ -22,6 +22,7 @@ from langflow.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
     from langflow_api.api.v1.schemas.vertex import ResultDataResponse
+
     from langflow.graph.vertex.base import Vertex
 
 

@@ -1,11 +1,14 @@
-from pydantic import BaseModel, Field, field_validator
 from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
+
 
 class ChatMessage(BaseModel):
     is_bot: bool = False
     message: str | None | dict = None
     chat_key: str | None = Field(None, serialization_alias="chatKey")
     type: str = "human"
+
 
 class ChatResponse(ChatMessage):
     intermediate_steps: str
@@ -21,10 +24,12 @@ class ChatResponse(ChatMessage):
             raise ValueError(msg)
         return v
 
+
 class PromptResponse(ChatMessage):
     prompt: str
     type: str = "prompt"
     is_bot: bool = True
+
 
 class FileResponse(ChatMessage):
     data: Any = None

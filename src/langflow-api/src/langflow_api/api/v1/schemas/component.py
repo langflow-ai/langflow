@@ -1,13 +1,16 @@
 from pydantic import BaseModel, ConfigDict
 
+
 class CustomComponentRequest(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
     frontend_node: dict | None = None
 
+
 class CustomComponentResponse(BaseModel):
     data: dict
     type: str
+
 
 class UpdateCustomComponentRequest(CustomComponentRequest):
     field: str
@@ -17,4 +20,5 @@ class UpdateCustomComponentRequest(CustomComponentRequest):
 
     def get_template(self):
         from langflow.schema import dotdict
+
         return dotdict(self.template)

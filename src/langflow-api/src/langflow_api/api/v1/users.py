@@ -2,13 +2,6 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
-from sqlmodel.sql.expression import SelectOfScalar
-
-from langflow_api.api.utils import CurrentActiveUser, DbSession
-from langflow_api.api.v1.schemas.user import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     get_current_active_superuser,
@@ -18,6 +11,13 @@ from langflow.services.auth.utils import (
 from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.deps import get_settings_service
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
+from sqlmodel.sql.expression import SelectOfScalar
+
+from langflow_api.api.utils import CurrentActiveUser, DbSession
+from langflow_api.api.v1.schemas.user import UsersResponse
 
 router = APIRouter(tags=["Users"], prefix="/users")
 

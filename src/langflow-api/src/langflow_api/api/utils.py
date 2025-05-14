@@ -8,11 +8,8 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
-from loguru import logger
-from sqlalchemy import delete
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.message import MessageTable
@@ -20,7 +17,9 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
-from langflow.services.auth.utils import get_current_active_user
+from loguru import logger
+from sqlalchemy import delete
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
@@ -351,9 +350,8 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
 
     # Check if the flow is public
     async with session_scope() as session:
-        from sqlmodel import select
-
         from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+        from sqlmodel import select
 
         flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
         if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:

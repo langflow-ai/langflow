@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
 from pathlib import Path
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
@@ -22,4 +22,3 @@ class File(BaseModel):
 class UploadFileResponse(BaseModel):
     flow_id: str = Field(serialization_alias="flowId")
     file_path: Path
-

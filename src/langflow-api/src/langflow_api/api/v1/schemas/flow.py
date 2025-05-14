@@ -1,11 +1,9 @@
 import re
-
-from enum import Enum
-from pydantic import BaseModel, Field, field_serializer, field_validator
-from typing import Any, List, Optional
-from uuid import uuid4, UUID
 from datetime import datetime, timezone
-from uuid import uuid4
+from enum import Enum
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class AccessTypeEnum(str, Enum):
@@ -15,20 +13,20 @@ class AccessTypeEnum(str, Enum):
 
 class FlowBase(BaseModel):
     name: str
-    description: Optional[str] = None
-    icon: Optional[str] = None
-    icon_bg_color: Optional[str] = None
-    gradient: Optional[str] = None
-    data: Optional[dict] = None
-    is_component: Optional[bool] = False
-    updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
-    webhook: Optional[bool] = False
-    endpoint_name: Optional[str] = None
-    tags: Optional[List[str]] = None
-    locked: Optional[bool] = False
-    mcp_enabled: Optional[bool] = False
-    action_name: Optional[str] = None
-    action_description: Optional[str] = None
+    description: str | None = None
+    icon: str | None = None
+    icon_bg_color: str | None = None
+    gradient: str | None = None
+    data: dict | None = None
+    is_component: bool | None = False
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    webhook: bool | None = False
+    endpoint_name: str | None = None
+    tags: list[str] | None = None
+    locked: bool | None = False
+    mcp_enabled: bool | None = False
+    action_name: str | None = None
+    action_description: str | None = None
     access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
 
     @field_validator("endpoint_name")
@@ -91,15 +89,16 @@ class FlowBase(BaseModel):
             return v
         return datetime.fromisoformat(v)
 
+
 class Flow(BaseModel):
     id: UUID = Field(default_factory=uuid4)
-    data: Optional[dict] = None
-    user_id: Optional[UUID] = None
-    icon: Optional[str] = None
-    tags: Optional[list[str]] = Field(default_factory=list)
-    locked: Optional[bool] = False
-    folder_id: Optional[UUID] = None
-    fs_path: Optional[str] = None
+    data: dict | None = None
+    user_id: UUID | None = None
+    icon: str | None = None
+    tags: list[str] | None = Field(default_factory=list)
+    locked: bool | None = False
+    folder_id: UUID | None = None
+    fs_path: str | None = None
 
     class Config:
         orm_mode = True
@@ -115,24 +114,29 @@ class Flow(BaseModel):
         }
         return data  # or Data(data=data) if you have a Data model
 
+
 class FlowCreate(FlowBase):
-    user_id: Optional[str] = None
-    folder_id: Optional[str] = None
-    fs_path: Optional[str] = None
+    user_id: str | None = None
+    folder_id: str | None = None
+    fs_path: str | None = None
+
 
 class FlowRead(FlowBase):
-    id: str 
-    user_id: Optional[str] = None
-    folder_id: Optional[str] = None
-    tags: Optional[List[str]] = Field(None, description="The tags of the flow")
+    id: str
+    user_id: str | None = None
+    folder_id: str | None = None
+    tags: list[str] | None = Field(None, description="The tags of the flow")
+
 
 class FlowListCreate(BaseModel):
     flows: list[FlowCreate]
+
 
 class FlowDataRequest(BaseModel):
     nodes: list[dict]
     edges: list[dict]
     viewport: dict | None = None
+
 
 class CancelFlowResponse(BaseModel):
     success: bool

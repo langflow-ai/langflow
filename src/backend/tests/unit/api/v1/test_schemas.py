@@ -1,6 +1,6 @@
 import pytest
-from langflow_api.api.v1.schemas.vertex import VertexBuildResponse
 from langflow.serialization.constants import MAX_ITEMS_LENGTH
+from langflow_api.api.v1.schemas.vertex import VertexBuildResponse
 
 expected_keys_vertex_build_response = {
     "id",

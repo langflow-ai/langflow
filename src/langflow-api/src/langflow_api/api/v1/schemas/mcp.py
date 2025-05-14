@@ -2,6 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+
 class MCPSettings(BaseModel):
     id: UUID
     mcp_enabled: bool | None = None
@@ -9,4 +10,3 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
-

@@ -19,13 +19,6 @@ import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
-from openai import OpenAI
-from sqlalchemy import select
-from starlette.websockets import WebSocket, WebSocketDisconnect
-
-from langflow_api.api.utils import CurrentActiveUser, DbSession
-from langflow_api.api.v1.chat import build_flow_and_stream
-from langflow_api.api.v1.schemas.run import InputValueRequest
 from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
@@ -38,6 +31,13 @@ from langflow.utils.voice_utils import (
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
+from openai import OpenAI
+from sqlalchemy import select
+from starlette.websockets import WebSocket, WebSocketDisconnect
+
+from langflow_api.api.utils import CurrentActiveUser, DbSession
+from langflow_api.api.v1.chat import build_flow_and_stream
+from langflow_api.api.v1.schemas.run import InputValueRequest
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
