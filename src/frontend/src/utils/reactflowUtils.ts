@@ -61,6 +61,7 @@ import {
 } from "../types/utils/reactflowUtils";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
+import useFlowStore from "@/stores/flowStore";
 const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {
@@ -315,12 +316,16 @@ export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
 
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
-  nodes: AllNodeType[],
-  edges: EdgeType[],
+  nodes?: AllNodeType[],
+  edges?: EdgeType[],
 ): boolean {
   if (source === target) {
     return false;
   }
+  
+  const nodesArray = nodes || useFlowStore.getState().nodes;
+  const edgesArray = edges || useFlowStore.getState().edges;
+
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
   if (
@@ -340,20 +345,20 @@ export function isValidConnection(
         t === targetHandleObject.type,
     )
   ) {
-    let targetNode = nodes.find((node) => node.id === target!)?.data?.node;
+    let targetNode = nodesArray.find((node) => node.id === target!)?.data?.node;
     if (!targetNode) {
-      if (!edges.find((e) => e.targetHandle === targetHandle)) {
+      if (!edgesArray.find((e) => e.targetHandle === targetHandle)) {
         return true;
       }
     } else if (
       targetHandleObject.output_types &&
-      !edges.find((e) => e.targetHandle === targetHandle)
+      !edgesArray.find((e) => e.targetHandle === targetHandle)
     ) {
       return true;
     } else if (
       !targetHandleObject.output_types &&
       ((!targetNode.template[targetHandleObject.fieldName].list &&
-        !edges.find((e) => e.targetHandle === targetHandle)) ||
+        !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
         targetNode.template[targetHandleObject.fieldName].list)
     ) {
       return true;
@@ -1471,8 +1476,6 @@ export function expandGroupNode(
   id: string,
   flow: FlowType,
   template: APITemplateType,
-  nodes: AllNodeType[],
-  edges: EdgeType[],
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
   ) => void,
@@ -1483,7 +1486,7 @@ export function expandGroupNode(
 ) {
   const idsMap = updateIds(flow!.data!);
   updateProxyIdsOnTemplate(template, idsMap);
-  let flowEdges = edges;
+  let flowEdges = useFlowStore.getState().edges;
   updateEdgesIds(flowEdges, idsMap);
   const gNodes: AllNodeType[] = cloneDeep(flow?.data?.nodes!);
   const gEdges = cloneDeep(flow!.data!.edges);
@@ -1583,9 +1586,9 @@ export function expandGroupNode(
       }
     }
   });
-  const filteredNodes = [...nodes.filter((n) => n.id !== id), ...gNodes];
+  const filteredNodes = [...useFlowStore.getState().nodes.filter((n) => n.id !== id), ...gNodes];
   const filteredEdges = [
-    ...edges.filter((e) => e.target !== id && e.source !== id),
+    ...flowEdges.filter((e) => e.target !== id && e.source !== id),
     ...gEdges,
   ];
   setNodes(filteredNodes);

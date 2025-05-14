@@ -20,11 +20,11 @@ import {
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { NodeInputFieldComponentType } from "../../../../types/components";
-import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import NodeInputInfo from "../NodeInputInfo";
 import HandleRenderComponent from "../handleRenderComponent";
+import { useShallow } from "zustand/react/shallow";
 
 export default function NodeInputField({
   id,
@@ -44,10 +44,11 @@ export default function NodeInputField({
   isToolMode = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const nodes = useFlowStore((state) => state.nodes);
-  const edges = useFlowStore((state) => state.edges);
   const isAuth = useAuthStore((state) => state.isAuthenticated);
-  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const { currentFlowId, currentFlowName }= useFlowStore(useShallow((state) => ({
+    currentFlowId: state.currentFlow?.id,
+    currentFlowName: state.currentFlow?.name,
+  })));
   const myData = useTypesStore((state) => state.data);
   const postTemplateValue = usePostTemplateValue({
     node: data.node!,
@@ -56,11 +57,6 @@ export default function NodeInputField({
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);
-  let disabled =
-    edges.some(
-      (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
-    ) || isToolMode;
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -74,9 +70,9 @@ export default function NodeInputField({
 
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
     return {
-      flowId: currentFlow?.id ?? "",
+      flowId: currentFlowId ?? "",
       nodeType: data?.type?.toLowerCase() ?? "",
-      flowName: currentFlow?.name ?? "",
+      flowName: currentFlowName ?? "",
       isAuth,
       variableName: name,
     };
@@ -107,12 +103,10 @@ export default function NodeInputField({
   const Handle = (
     <HandleRenderComponent
       left={true}
-      nodes={nodes}
       tooltipTitle={tooltipTitle}
       proxy={proxy}
       id={id}
       title={title}
-      edges={edges}
       myData={myData}
       colors={colors}
       setFilterEdge={setFilterEdge}
@@ -207,12 +201,12 @@ export default function NodeInputField({
             handleOnNewValue={handleOnNewValue}
             name={name}
             nodeId={data.id}
+            inputId={id}
             templateData={data.node?.template[name]!}
             templateValue={data.node?.template[name].value ?? ""}
             editNode={false}
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
-            disabled={disabled}
             placeholder={
               isToolMode
                 ? DEFAULT_TOOLSET_PLACEHOLDER
@@ -220,6 +214,7 @@ export default function NodeInputField({
             }
             isToolMode={isToolMode}
             nodeInformationMetadata={nodeInformationMetadata}
+            proxy={proxy}
           />
         )}
       </div>
