@@ -119,12 +119,25 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       }
     };
 
+    // Reset key states when window loses focus
+    const handleBlur = () => {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
+    // Clean up event listeners when component unmounts
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+
+      // Reset key states on unmount
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
     };
   }, []);
 
@@ -169,6 +182,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       old.filter((id) => data.flows.some((flow) => flow.id === id)),
     );
   }, [data.flows]);
+
+  // Reset key states when navigating away
+  useEffect(() => {
+    return () => {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+  }, [folderId]);
 
   return (
     <CardsWrapComponent
