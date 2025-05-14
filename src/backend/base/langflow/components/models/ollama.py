@@ -309,6 +309,8 @@ class ChatOllamaComponent(LCModelComponent):
                     show_response = await client.post(show_url, json=payload)
                     show_response.raise_for_status()
                     json_data = show_response.json()
+                    if asyncio.iscoroutine(json_data):
+                        json_data = await json_data
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
                     logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
 
