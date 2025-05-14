@@ -5,7 +5,7 @@ from typing import Any
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.v1.schemas import UpdateCustomComponentRequest
+from langflow_api.api.v2.schemas.component import UpdateCustomComponentRequest
 from langflow.components.agents.agent import AgentComponent
 from langflow.custom.utils import build_custom_component_template
 

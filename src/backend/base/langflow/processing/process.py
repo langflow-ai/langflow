@@ -12,10 +12,10 @@ from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import InputValueRequest
+    from langflow_api.api.v2.schemas.run import InputValueRequest
     from langflow.graph.graph.base import Graph
     from langflow.graph.schema import RunOutputs
-    from langflow.services.event_manager import EventManager
+    from langflow.events.event_manager import EventManager
 
 
 class Result(BaseModel):

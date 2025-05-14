@@ -21,7 +21,7 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDataResponse
+    from langflow_api.api.v2.schemas.vertex import ResultDataResponse
     from langflow.graph.vertex.base import Vertex
 
 

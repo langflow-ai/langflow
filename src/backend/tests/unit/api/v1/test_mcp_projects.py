@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.v1.mcp_projects import (
+from langflow_api.api.v2.mcp_projects import (
     get_project_mcp_server,
     get_project_sse,
     init_mcp_servers,

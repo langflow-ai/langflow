@@ -294,7 +294,7 @@ def create_app():
         start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
-        from langflow.api.v1 import mcp_router
+        from langflow_api.api.v2 import mcp_router
 
         router.include_router(mcp_router)
 

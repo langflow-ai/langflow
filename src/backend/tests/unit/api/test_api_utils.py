@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from langflow.api.utils import get_suggestion_message
+from langflow_api.api.utils import get_suggestion_message
 from langflow.services.database.models.flow.utils import get_outdated_components
 from langflow.utils.version import get_version_info
 
