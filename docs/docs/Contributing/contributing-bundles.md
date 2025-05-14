@@ -13,7 +13,7 @@ This example adds a new bundle named `DarthVader`.
 The path for your new component is `src > backend > base > langflow > components > darth_vader`.
 You can view the [components folder](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/components) in the Langflow repository.
 
-2. Within the newly created ` darth_vader` folder, add the following files:
+2. Within the newly created `darth_vader` folder, add the following files:
 
 * `darth_vader_component.py` — This file contains the backend logic for the new bundle. Create multiple `.py` files for multiple components.
 * `__init__.py` — This file initializes the bundle components. You can use any existing `__init__.py` as an example to see how it should be structured.
@@ -24,14 +24,14 @@ For an example of adding multiple components in a bundle, see the [Notion](https
 ## Add the bundle to the frontend folder
 
 1. Navigate to the frontend directory in the Langflow project to add your bundle's icon.
-The path for your new component icon is `src > frontend > src > icons > darth_vader`
+The path for your new component icon is `src > frontend > src > icons > DarthVader`
 You can view the [icons folder](https://github.com/langflow-ai/langflow/tree/main/src/frontend/src/icons) in the Langflow repository.
-You will create **three** files inside the `icons/darth_vader` folder.
+To add your icon, you will create **three** files inside the `icons/darth_vader` folder.
 
 2. In the `icons/darth_vader` folder, add the raw SVG file of your icon, such as `darth_vader-icon.svg`.
 :::tip
 To convert the SVG file to JSX format, you can use an online tool like SVG to JSX.
-If possible, it's highly recommended to use the original, lighter version of the SVG.
+It's highly recommended to use the original, lighter version of the SVG.
 :::
 3. In the `icons/darth_vader` folder, add the icon as a React component in JSX format, such as `DarthVaderIcon.jsx`.
 4. Update the JSX file to include the correct component name and structure.
@@ -83,7 +83,7 @@ export default DarthVaderIcon;
 
 6. To link your new bundle to the frontend, open `/src/frontend/src/icons/lazyIconImports.ts`.
 You can view the [lazyIconImports.ts](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/icons/lazyIconImports.ts) in the Langflow repository.
-7. Add the name of your icon, which should match the name you used for the `.tsx` file.
+7. Add the name of your icon, which should match the icon name you used in the `.tsx` file.
 For example:
 ```typescript
   CrewAI: () =>
@@ -94,12 +94,13 @@ For example:
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
 ```
 
-8. To update the bundles sidebar, add the new icon to the `SIDEBAR_BUNDLES` array in ``src > frontend > src > utils > styleUtils.ts`.
-You can view the [SIDEBAR_BUNDLES array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in the Langflow repository.
+8. To update the bundles sidebar, add the new icon to the `SIDEBAR_BUNDLES` array in `src > frontend > src > utils > styleUtils.ts`.
+You can view the [SIDEBAR_BUNDLES array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in the Langflow repository.\
+The `name` must point to the folder you created within the `src > backend > base > langflow > components` directory.
 For example:
 ```typescript
 { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
-{ display_name: "DarthVader", name: "darthvader", icon: "DarthVaderIcon" },
+{ display_name: "DarthVader", name: "darth_vader", icon: "DarthVader" },
 { display_name: "DataStax", name: "astra_assistants", icon: "DarthVader" },
 ```
 
@@ -107,17 +108,18 @@ For example:
 
 In your component bundle, associate the icon variable with your new bundle.
 
-In your `darth_vader_component.py` file, in the component class, include the icon that you defined in the frontend, such as `DarthVaderIcon`.
+In your `darth_vader_component.py` file, in the component class, include the icon that you defined in the frontend.
+The `icon` must point to the directory you created for your icons within the `src > frontend > src > icons` directory.
 For example:
 ```
 class DarthVaderAPIComponent(LCToolComponent):
     display_name: str = "Darth Vader Tools"
     description: str = "Use the force to run actions with your agent"
     name = "DarthVaderAPI"
-    icon = "DarthVaderIcon"
+    icon = "DarthVader"
 ```
 
-## Ensure the application builds your component
+## Ensure the application builds your component bundle
 
 1. To rebuild the backend and frontend, run `make install_frontend && make build_frontend && make install_backend && uv run langflow run --port 7860`.
 
