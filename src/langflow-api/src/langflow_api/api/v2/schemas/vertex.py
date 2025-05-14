@@ -53,9 +53,6 @@ class VertexBuildResponse(BaseModel):
         from langflow.serialization.constants import MAX_TEXT_LENGTH, MAX_ITEMS_LENGTH
         return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
-class VerticesBuiltResponse(BaseModel):
-    vertices: list[VertexBuildResponse]
-
 class VerticesOrderResponse(BaseModel):
     ids: list[str]
     run_id: str

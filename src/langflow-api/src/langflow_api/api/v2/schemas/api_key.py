@@ -20,20 +20,10 @@ class ApiKeyRead(ApiKeyBase):
     def mask_api_key(cls, v: str) -> str:
         return f"{v[:8]}{'*' * (len(v) - 8)}"
 
-class ApiKeyResponse(BaseModel):
-    id: str
-    api_key: str
-    name: str
-    created_at: str
-    last_used_at: str
-
 class ApiKeysResponse(BaseModel):
     total_count: int
     user_id: UUID
     api_keys: list[ApiKeyRead]
-
-class CreateApiKeyRequest(BaseModel):
-    name: str
 
 class ApiKeyCreateRequest(BaseModel):
     api_key: str

@@ -120,33 +120,14 @@ class FlowCreate(FlowBase):
     folder_id: Optional[str] = None
     fs_path: Optional[str] = None
 
-
 class FlowRead(FlowBase):
     id: str 
     user_id: Optional[str] = None
     folder_id: Optional[str] = None
     tags: Optional[List[str]] = Field(None, description="The tags of the flow")
 
-
 class FlowListCreate(BaseModel):
     flows: list[FlowCreate]
-
-class FlowListIds(BaseModel):
-    flow_ids: list[str]
-
-class FlowListRead(BaseModel):
-    flows: list[FlowRead]
-
-class FlowListReadWithFolderName(BaseModel):
-    flows: list[FlowRead]
-    folder_name: str
-    description: str
-
-class InitResponse(BaseModel):
-    flow_id: str = Field(serialization_alias="flowId")
-
-class BuiltResponse(BaseModel):
-    built: bool
 
 class FlowDataRequest(BaseModel):
     nodes: list[dict]
