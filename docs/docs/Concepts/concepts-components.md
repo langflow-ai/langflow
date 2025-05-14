@@ -215,10 +215,10 @@ When a component's workspace version is behind the database version and an updat
 
 1. To review the changes, in the dialog, click **Review**.
 The **Update components** pane appears.
-2. This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
+This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
 Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
-3. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
-4. To update individual components, select them in the list, and then click **Update Component**.
+2. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
+3. To update individual components, select them in the list, and then click **Update Component**.
 Your components are updated to the current version.
 If you created a backup flow, it's available in the same project folder as the original flow, with `(backup)` added to its name.
 
