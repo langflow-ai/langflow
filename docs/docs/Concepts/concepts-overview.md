@@ -117,8 +117,8 @@ To create a new project, click <Icon name="Plus"aria-hidden="true"/> **Create ne
 
 To upload a flow to your project, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
 
-To delete flows from your project, click a flow's checkbox to select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
-You can select multiple flows for deletion.
+To delete a flow from your project, click a flow's checkbox to select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+You can delete multiple flows in a single action.
 
 ## File management
 
