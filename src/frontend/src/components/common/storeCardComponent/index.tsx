@@ -266,16 +266,6 @@ export default function StoreCardComponent({
           </div>
         </CardFooter>
       </Card>
-      {/* {openPlayground && (
-        <IOModal
-          key={data.id}
-          cleanOnClose={true}
-          open={openPlayground}
-          setOpen={setOpenPlayground}
-        >
-          <></>
-        </IOModal>
-      )} */}
     </>
   );
 }

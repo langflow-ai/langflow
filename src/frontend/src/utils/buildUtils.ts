@@ -5,6 +5,11 @@ import {
   POLLING_MESSAGES,
 } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import {
+  customBuildUrl,
+  customCancelBuildUrl,
+  customEventsUrl,
+} from "@/customization/utils/custom-buildUtils";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
@@ -268,7 +273,7 @@ export async function buildFlowVertices({
 }: BuildVerticesParams) {
   const inputs = {};
 
-  let buildUrl = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow`;
+  let buildUrl = customBuildUrl(flowId, playgroundPage);
 
   const queryParams = new URLSearchParams();
 
@@ -381,7 +386,7 @@ export async function buildFlowVertices({
 
     const { job_id } = await buildResponse.json();
 
-    const cancelBuildUrl = `${BASE_URL_API}build/${job_id}/cancel`;
+    const cancelBuildUrl = customCancelBuildUrl(job_id);
 
     // Get the buildController from flowStore
     const buildController = new AbortController();
@@ -399,7 +404,7 @@ export async function buildFlowVertices({
     });
     useFlowStore.getState().setBuildController(buildController);
     // Then stream the events
-    const eventsUrl = `${BASE_URL_API}build/${job_id}/events`;
+    const eventsUrl = customEventsUrl(job_id);
     const buildResults: Array<boolean> = [];
     const verticesStartTimeMs: Map<string, number> = new Map();
 

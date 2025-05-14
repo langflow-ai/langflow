@@ -1,3 +1,4 @@
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
 
 /**
@@ -20,11 +21,13 @@ export default function getWidgetCode({
 build/static/js/bundle.min.js">
 </script>`;
 
+  const { protocol, host } = customGetHostProtocol();
+
   return `${source}
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
-    host_url="${window.location.protocol}//${window.location.host}"${
+    host_url="${protocol}//${host}"${
       !isAuth
         ? `
     api_key="..."`

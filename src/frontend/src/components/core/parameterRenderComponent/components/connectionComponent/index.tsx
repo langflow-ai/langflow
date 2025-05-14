@@ -10,7 +10,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
-type ConnectionComponentProps = {
+export type ConnectionComponentProps = {
   tooltip?: string;
   name: string;
   helperText?: string;

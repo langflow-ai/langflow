@@ -1,5 +1,5 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
-import { useGenerateToken } from "@/customization/hooks/use-generate-token";
+import { useGenerateToken } from "@/customization/hooks/use-custom-generate-token";
 import { useEffect, useRef, useState } from "react";
 import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 import { createApiKey } from "../../controllers/API";
