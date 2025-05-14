@@ -17,7 +17,7 @@ ACTION_CONFIG = {
     "Literal Eval": {"is_list": False, "log_msg": "setting evaluate fields"},
     "Combine": {"is_list": True, "log_msg": "setting combine fields"},
     "Filter Values": {"is_list": False, "log_msg": "setting filter values fields"},
-    "Append / Update ": {"is_list": False, "log_msg": "setting Append / Update  fields"},
+    "Append or Update": {"is_list": False, "log_msg": "setting Append or Update fields"},
     "Remove Keys": {"is_list": False, "log_msg": "setting remove keys fields"},
     "Rename Keys": {"is_list": False, "log_msg": "setting rename keys fields"},
 }
@@ -41,7 +41,7 @@ class DataOperationsComponent(Component):
             "data",
             "operations",
             "filter values",
-            "append / update",
+            "Append or Update",
             "remove keys",
             "rename keys",
             "select keys",
@@ -65,7 +65,7 @@ class DataOperationsComponent(Component):
         "Literal Eval": [],
         "Combine": [],
         "Filter Values": ["filter_values", "operations", "operator", "filter_key"],
-        "Append / Update ": ["append_update_data", "operations"],
+        "Append or Update": ["append_update_data", "operations"],
         "Remove Keys": ["remove_keys_input", "operations"],
         "Rename Keys": ["rename_keys_input", "operations"],
     }
@@ -82,7 +82,7 @@ class DataOperationsComponent(Component):
                 {"name": "Literal Eval", "icon": "braces"},
                 {"name": "Combine", "icon": "merge"},
                 {"name": "Filter Values", "icon": "filter"},
-                {"name": "Append / Update ", "icon": "circle-plus"},
+                {"name": "Append or Update", "icon": "circle-plus"},
                 {"name": "Remove Keys", "icon": "eraser"},
                 {"name": "Rename Keys", "icon": "pencil-line"},
             ],
@@ -124,8 +124,8 @@ class DataOperationsComponent(Component):
         # update/ Append data inputs
         DictInput(
             name="append_update_data",
-            display_name="Append or Update ",
-            info="Data to append or update the existing data with.",
+            display_name="Append or Update",
+            info="Data to Append or Updatethe existing data with.",
             show=False,
             value={"key": "value"},
             is_list=True,
@@ -183,25 +183,24 @@ class DataOperationsComponent(Component):
     def select_keys(self, evaluate: bool | None = None) -> Data:
         """Select specific keys from the data dictionary."""
         self.validate_single_data("Select Keys")
-        data_dict = self.get_data_dict()
+        data_dict = self.get_normalized_data()
         filter_criteria: list[str] = self.select_keys_input
 
         # Filter the data
         if len(filter_criteria) == 1 and filter_criteria[0] == "data":
             filtered = data_dict["data"]
         else:
-            if not all(key in data_dict["data"] for key in filter_criteria):
-                msg = f"Select key not found in data. Available keys: {list(data_dict['data'].keys())}"
+            if not all(key in data_dict for key in filter_criteria):
+                msg = f"Select key not found in data. Available keys: {list(data_dict.keys())}"
                 raise ValueError(msg)
-            filtered = {key: value for key, value in data_dict["data"].items() if key in filter_criteria}
+            filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}
 
         # Create a new Data object with the filtered data
         if evaluate:
             filtered = self.recursive_eval(filtered)
 
-        filtered_data = Data(**filtered)
-        self.status = filtered_data
-        return filtered_data
+        # Return a new Data object with the filtered data directly in the data attribute
+        return Data(data=filtered)
 
     def remove_keys(self) -> Data:
         """Remove specified keys from the data dictionary."""
@@ -355,8 +354,8 @@ class DataOperationsComponent(Component):
         return Data(**data_filtered)
 
     def append_update(self) -> Data:
-        """Append / Update  with new key-value pairs."""
-        self.validate_single_data("Append / Update ")
+        """Append or Update with new key-value pairs."""
+        self.validate_single_data("Append or Update")
         data_filtered = self.get_normalized_data()
 
         for key, value in self.append_update_data.items():
@@ -370,8 +369,8 @@ class DataOperationsComponent(Component):
         if field_name != "operations":
             return build_config
 
-        self.operations = field_value
-        selected_actions = [action["name"] for action in self.operations]
+        build_config["operations"]["value"] = field_value
+        selected_actions = [action["name"] for action in field_value]
 
         # Handle single action case
         if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
@@ -420,7 +419,7 @@ class DataOperationsComponent(Component):
             "Literal Eval": self.evaluate_data,
             "Combine": self.combine_data,
             "Filter Values": self.multi_filter_data,
-            "Append / Update ": self.append_update,
+            "Append or Update": self.append_update,
             "Remove Keys": self.remove_keys,
             "Rename Keys": self.rename_keys,
         }

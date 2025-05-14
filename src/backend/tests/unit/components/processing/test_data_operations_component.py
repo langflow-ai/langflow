@@ -29,7 +29,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test the Select Keys operation."""
         component = DataOperationsComponent(
             data=Data(data={"key1": "value1", "key2": "value2", "key3": "value3"}),
-            actions=[{"name": "Select Keys"}],
+            operations=[{"name": "Select Keys"}],
             select_keys_input=["key1", "key2"],
         )
 
@@ -45,7 +45,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test the Remove Keys operation."""
         component = DataOperationsComponent(
             data=Data(data={"key1": "value1", "key2": "value2", "key3": "value3"}),
-            actions=[{"name": "Remove Keys"}],
+            operations=[{"name": "Remove Keys"}],
             remove_keys_input=["key3"],
         )
 
@@ -59,7 +59,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test the Rename Keys operation."""
         component = DataOperationsComponent(
             data=Data(data={"key1": "value1", "key2": "value2"}),
-            actions=[{"name": "Rename Keys"}],
+            operations=[{"name": "Rename Keys"}],
             rename_keys_input={"key1": "new_key1"},
         )
 
@@ -73,7 +73,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test the Literal Eval operation."""
         component = DataOperationsComponent(
             data=Data(data={"list_as_string": "[1, 2, 3]", "dict_as_string": "{'a': 1, 'b': 2}"}),
-            actions=[{"name": "Literal Eval"}],
+            operations=[{"name": "Literal Eval"}],
         )
 
         result = component.as_data()
@@ -90,7 +90,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
 
         component = DataOperationsComponent(
             data=[data1, data2],
-            actions=[{"name": "Combine"}],
+            operations=[{"name": "Combine"}],
         )
 
         result = component.as_data()
@@ -107,7 +107,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
 
         component = DataOperationsComponent(
             data=[data1, data2],
-            actions=[{"name": "Combine"}],
+            operations=[{"name": "Combine"}],
         )
 
         result = component.as_data()
@@ -120,7 +120,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test the Append or Update Data operation."""
         component = DataOperationsComponent(
             data=Data(data={"existing_key": "existing_value"}),
-            actions=[{"name": "Append or Update Data"}],
+            operations=[{"name": "Append or Update"}],
             append_update_data={"new_key": "new_value", "existing_key": "updated_value"},
         )
 
@@ -141,7 +141,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
 
         component = DataOperationsComponent(
             data=Data(data=nested_data),
-            actions=[{"name": "Filter Values"}],
+            operations=[{"name": "Filter Values"}],
             filter_key=["items"],
             filter_values={"name": "Item"},
             operator="contains",
@@ -157,7 +157,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test behavior when no actions are specified."""
         component = DataOperationsComponent(
             data=Data(data={"key1": "value1"}),
-            actions=[],
+            operations=[],
         )
 
         result = component.as_data()
@@ -168,7 +168,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test the get_normalized_data helper method."""
         component = DataOperationsComponent(
             data=Data(data={"key1": "value1"}),
-            actions=[],
+            operations=[],
         )
 
         # Add data under the "data" key
@@ -185,7 +185,7 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         """Test that operations that don't support multiple data objects raise an error."""
         component = DataOperationsComponent(
             data=[Data(data={"key1": "value1"}), Data(data={"key2": "value2"})],
-            actions=[{"name": "Select Keys"}],
+            operations=[{"name": "Select Keys"}],
             select_keys_input=["key1"],
         )
 
