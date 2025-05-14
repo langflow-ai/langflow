@@ -211,18 +211,21 @@ A component keeps the version number it is initialized to the workspace with. If
 
 ### Review and update components
 
-When a component's workspace version is behind the database version and an update is available, the component displays a <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon. 
-
-1. Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
-
+When a component's workspace version is behind the database version and an update is available, the component displays a notification.
 If there are potentially breaking changes in the component updates, Langflow notifies you with an additional dialog.
+Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
 
-2. To review the changes, in the dialog, click **Review**.
+An **Update ready** notification on a component means the component update contains no breaking changes. To update a single component, click **Update**.
+
+An **Update available** notification indicates the component update contains potentially breaking changes.
+
+To review all components with pending updates, click **Review**.
+
+1. To review the changes, in the component or in the dialog, click **Review**.
 The **Update components** pane appears.
 This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
-Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
-3. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
-4. To update individual components, select them in the list, and then click **Update Component**.
+2. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
+3. To update individual components, select them in the list, and then click **Update Component**.
 Your components are updated to the current version.
 If you created a backup flow, it's available in the same project folder as the original flow, with `(backup)` added to its name.
 
