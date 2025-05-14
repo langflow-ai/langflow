@@ -213,15 +213,14 @@ A component keeps the version number it is initialized to the workspace with. If
 
 When a component's workspace version is behind the database version and an update is available, the component displays a notification.
 If there are potentially breaking changes in the component updates, Langflow notifies you with an additional dialog.
+
 Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
 
-An **Update ready** notification on a component means the component update contains no breaking changes. To update a single component, click **Update**.
+An **Update ready** notification on a component indicates the component update contains no breaking changes. To update a single component, click **Update**.
 
 An **Update available** notification indicates the component update contains potentially breaking changes.
 
-To review all components with pending updates, click **Review**.
-
-1. To review the changes, in the component or in the dialog, click **Review**.
+1. To review all components with pending updates, in the component or in the dialog, click **Review**.
 The **Update components** pane appears.
 This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
 2. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
