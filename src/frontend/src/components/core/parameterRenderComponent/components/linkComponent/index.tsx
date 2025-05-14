@@ -11,8 +11,6 @@ export default function LinkComponent({
   id = "",
   text,
   icon,
-  editNode = false,
-  handleOnNewValue,
 }: InputProps<string, LinkComponentType>): JSX.Element {
   function handleOpenLink() {
     if (value) {
