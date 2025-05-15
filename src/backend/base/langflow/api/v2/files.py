@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlmodel import String, cast, select
+from sqlmodel import String, cast, col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -173,7 +173,7 @@ async def delete_files_batch(
     """Delete multiple files by their IDs."""
     try:
         # Fetch all files from the DB
-        stmt = select(UserFile).where(UserFile.id in file_ids, UserFile.user_id == current_user.id)
+        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
 
@@ -206,7 +206,7 @@ async def download_files_batch(
     """Download multiple files as a zip file by their IDs."""
     try:
         # Fetch all files from the DB
-        stmt = select(UserFile).where(UserFile.id in file_ids, UserFile.user_id == current_user.id)
+        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
 

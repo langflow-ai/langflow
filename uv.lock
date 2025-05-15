@@ -5146,7 +5146,7 @@ requires-dist = [
     { name = "elevenlabs", specifier = ">=1.54.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
     { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
-    { name = "fastapi-pagination", specifier = ">=0.12.29,<1.0.0" },
+    { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
     { name = "filelock", specifier = ">=3.15.4,<4.0.0" },
     { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
     { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
