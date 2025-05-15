@@ -28,6 +28,7 @@ class FlowBase(BaseModel):
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    ICON_BG_COLOR_LENGTH = 7  # Constant for icon background color length
 
     @field_validator("endpoint_name")
     @classmethod
@@ -36,7 +37,7 @@ class FlowBase(BaseModel):
             if not isinstance(v, str):
                 msg = "Endpoint name must be a string"
                 raise ValueError(msg)
-            if not re.match(RE_ENDPOINT_NAME, v):
+            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
                 msg = "Endpoint name must contain only letters, numbers, hyphens, and underscores"
                 raise ValueError(msg)
         return v
@@ -50,8 +51,8 @@ class FlowBase(BaseModel):
         if v and not v.startswith("#"):
             msg = "Icon background color must start with #"
             raise ValueError(msg)
-        if v and len(v) != 7:
-            msg = "Icon background color must be 7 characters long"
+        if v and len(v) != cls.ICON_BG_COLOR_LENGTH:
+            msg = f"Icon background color must be {cls.ICON_BG_COLOR_LENGTH} characters long"
             raise ValueError(msg)
         return v
 
@@ -70,7 +71,7 @@ class FlowBase(BaseModel):
             return v
         if not isinstance(v, dict):
             msg = "Flow must be a valid JSON"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if "nodes" not in v:
             msg = "Flow must have nodes"
             raise ValueError(msg)
@@ -113,14 +114,13 @@ class Flow(BaseModel):
 
     def to_data(self):
         serialized = self.model_dump()
-        data = {
+        return {
             "id": serialized.pop("id"),
             "data": serialized.pop("data"),
             "name": serialized.pop("name", None),
             "description": serialized.pop("description", None),
             "updated_at": serialized.pop("updated_at", None),
         }
-        return data  # or Data(data=data) if you have a Data model
 
 
 class FlowCreate(FlowBase):

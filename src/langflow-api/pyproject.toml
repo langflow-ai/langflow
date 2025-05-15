@@ -167,11 +167,16 @@ builtins-allowed-modules = [ "io", "logging", "socket"]
 
 
 [tool.ruff.lint.per-file-ignores]
+"src/langflow_api/api/*" = [
+    "D1",  # Ignore all docstring-related rules for v1 API
+]
 "src/langflow_api/api/v1/*" = [
     "TCH", # FastAPI needs to evaluate types at runtime
+    "D1",  # Ignore all docstring-related rules for v1 API
 ]
 "src/langflow_api/api/v2/*" = [
     "TCH", # FastAPI needs to evaluate types at runtime
+    "D1",  # Ignore all docstring-related rules for v2 API
 ]
 "src/langflow_api/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [
     "S102", # Use of exec

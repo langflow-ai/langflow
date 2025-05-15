@@ -440,7 +440,7 @@ async def handle_project_sse(
     project_token = current_project_ctx.set(project_id)
 
     try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
             try:
                 logger.debug("Starting SSE connection for project %s", project_id)
 
@@ -489,7 +489,7 @@ async def handle_project_messages(
 
     try:
         sse = get_project_sse(project_id)
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except BrokenResourceError as e:
         logger.info("Project MCP Server disconnected for project %s", project_id)
         raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e

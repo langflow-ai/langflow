@@ -343,7 +343,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
     logger.info(msg)
     token = current_user_ctx.set(current_user)
     try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
             try:
                 msg = "Starting SSE connection"
                 logger.debug(msg)
@@ -385,7 +385,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 @router.post("/")
 async def handle_messages(request: Request):
     try:
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except (BrokenResourceError, BrokenPipeError) as e:
         logger.info("MCP Server disconnected")
         raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e
