@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from langflow.services.database.models.file import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.settings.manager import SettingsService
 from langflow.services.storage.service import StorageService
 from sqlmodel import String, cast, col, select
 
@@ -51,8 +52,8 @@ async def upload_user_file(
     file: Annotated[UploadFile, File(...)],
     session: DbSession,
     current_user: CurrentActiveUser,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
     # Get the max allowed file size from settings (in MB)

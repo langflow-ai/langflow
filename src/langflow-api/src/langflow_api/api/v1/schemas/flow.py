@@ -34,20 +34,25 @@ class FlowBase(BaseModel):
     def validate_endpoint_name(cls, v):
         if v is not None:
             if not isinstance(v, str):
-                raise ValueError("Endpoint name must be a string")
-            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-                raise ValueError("Endpoint name must contain only letters, numbers, hyphens, and underscores")
+                msg = "Endpoint name must be a string"
+                raise ValueError(msg)
+            if not re.match(RE_ENDPOINT_NAME, v):
+                msg = "Endpoint name must contain only letters, numbers, hyphens, and underscores"
+                raise ValueError(msg)
         return v
 
     @field_validator("icon_bg_color")
     @classmethod
     def validate_icon_bg_color(cls, v):
         if v is not None and not isinstance(v, str):
-            raise ValueError("Icon background color must be a string")
+            msg = "Icon background color must be a string"
+            raise ValueError(msg)
         if v and not v.startswith("#"):
-            raise ValueError("Icon background color must start with #")
+            msg = "Icon background color must start with #"
+            raise ValueError(msg)
         if v and len(v) != 7:
-            raise ValueError("Icon background color must be 7 characters long")
+            msg = "Icon background color must be 7 characters long"
+            raise ValueError(msg)
         return v
 
     @field_validator("icon")
@@ -64,11 +69,14 @@ class FlowBase(BaseModel):
         if not v:
             return v
         if not isinstance(v, dict):
-            raise ValueError("Flow must be a valid JSON")
+            msg = "Flow must be a valid JSON"
+            raise ValueError(msg)
         if "nodes" not in v:
-            raise ValueError("Flow must have nodes")
+            msg = "Flow must have nodes"
+            raise ValueError(msg)
         if "edges" not in v:
-            raise ValueError("Flow must have edges")
+            msg = "Flow must have edges"
+            raise ValueError(msg)
         return v
 
     @field_serializer("updated_at")
