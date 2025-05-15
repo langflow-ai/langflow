@@ -66,10 +66,10 @@ For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon
 | aws_access_key | SecretString | AWS Access Key for authentication. |
 | aws_secret_key | SecretString | AWS Secret Key for authentication. |
 | aws_session_token | SecretString | The session key for your AWS account.
-| credentials_profile_name | String | Name of the AWS credentials profile to use.. |
+| credentials_profile_name | String | Name of the AWS credentials profile to use. |
 | region_name | String | AWS region name. Default: `us-east-1`. |
-| model_kwargs | Dictionary | Additional keyword arguments for the model.. |
-| endpoint_url | String | Custom endpoint URL for the Bedrock service.. |
+| model_kwargs | Dictionary | Additional keyword arguments for the model. |
+| endpoint_url | String | Custom endpoint URL for the Bedrock service. |
 
 **Outputs**
 
