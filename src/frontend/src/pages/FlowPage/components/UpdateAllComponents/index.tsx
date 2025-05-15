@@ -48,7 +48,8 @@ export default function UpdateAllComponents({}: {}) {
   const componentsToUpdateFiltered = useMemo(
     () =>
       componentsToUpdate.filter(
-        (component) => !dismissedNodes.includes(component.id),
+        (component) =>
+          !dismissedNodes.includes(component.id) && !component.userEdited,
       ),
     [componentsToUpdate, dismissedNodes],
   );
