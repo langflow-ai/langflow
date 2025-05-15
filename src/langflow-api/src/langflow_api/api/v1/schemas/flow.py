@@ -28,7 +28,6 @@ class FlowBase(BaseModel):
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
-    ICON_BG_COLOR_LENGTH = 7  # Constant for icon background color length
 
     @field_validator("endpoint_name")
     @classmethod
@@ -51,8 +50,8 @@ class FlowBase(BaseModel):
         if v and not v.startswith("#"):
             msg = "Icon background color must start with #"
             raise ValueError(msg)
-        if v and len(v) != cls.ICON_BG_COLOR_LENGTH:
-            msg = f"Icon background color must be {cls.ICON_BG_COLOR_LENGTH} characters long"
+        if v and len(v) != 7:  # noqa: PLR2004
+            msg = "Icon background color must be 7 characters long"
             raise ValueError(msg)
         return v
 
