@@ -519,7 +519,7 @@ class APIRequestComponent(Component):
         if self.use_curl and self.curl:
             self._build_config = self.parse_curl(self.curl, dotdict())
 
-        invalid_urls = [url for url in urls if not validators.url(url)]
+        invalid_urls = [url for url in urls if not validators.url(url, simple_host=True)]
         if invalid_urls:
             msg = f"Invalid URLs provided: {invalid_urls}"
             raise ValueError(msg)
