@@ -26,7 +26,7 @@ For an example of adding multiple components in a bundle, see the [Notion](https
 1. Navigate to the frontend directory in the Langflow project to add your bundle's icon.
 The path for your new component icon is `src > frontend > src > icons > DarthVader`
 You can view the [icons folder](https://github.com/langflow-ai/langflow/tree/main/src/frontend/src/icons) in the Langflow repository.
-To add your icon, you will create **three** files inside the `icons/darth_vader` folder.
+To add your icon, create **three** files inside the `icons/darth_vader` folder.
 
 2. In the `icons/darth_vader` folder, add the raw SVG file of your icon, such as `darth_vader-icon.svg`.
 :::tip
