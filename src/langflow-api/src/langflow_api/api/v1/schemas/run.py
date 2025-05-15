@@ -11,8 +11,7 @@ class InputValueRequest(BaseModel):
     type: InputType | None = Field(
         "any",
         description=(
-            "Defines on which components the input value should be applied. "
-            "'any' applies to all input components."
+            "Defines on which components the input value should be applied. 'any' applies to all input components."
         ),
     )
     model_config = ConfigDict(
