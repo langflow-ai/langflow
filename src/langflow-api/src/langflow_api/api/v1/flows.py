@@ -421,7 +421,7 @@ async def upload_file(
     session: DbSession,
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
-    folder_id: str| None = None,
+    folder_id: str | None = None,
 ):
     """Upload flows from a file."""
     contents = await file.read()
