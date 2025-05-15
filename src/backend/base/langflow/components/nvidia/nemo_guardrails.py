@@ -27,8 +27,10 @@ def setup_logging():
     # Enable debug logging
     logging.basicConfig(level=logging.DEBUG)
 
+
 def setup_request_logging():
     """Set up request logging for httpx."""
+
     def log_request(request):
         logging.debug("\n=== Request Details ===")
         logging.debug(f"URL: {request.url}")
@@ -62,8 +64,10 @@ def setup_request_logging():
 
     return httpx.Client(event_hooks={"request": [log_request]})
 
+
 class HTTPDebugContext:
     """Context manager for HTTP debug logging."""
+
     def __init__(self):
         self.original_levels = {}
         self.client = None
@@ -73,7 +77,7 @@ class HTTPDebugContext:
         self.original_levels = {
             "httpx": logging.getLogger("httpx").level,
             "httpcore": logging.getLogger("httpcore").level,
-            "root": logging.getLogger().level
+            "root": logging.getLogger().level,
         }
 
         # Set debug levels
@@ -94,6 +98,7 @@ class HTTPDebugContext:
         if self.client:
             self.client.close()
 
+
 def enable_http_debug_logging():
     """Enable all HTTP debug logging."""
     # Set up HTTP connection debugging
@@ -111,6 +116,7 @@ def enable_http_debug_logging():
     setup_logging()
     setup_request_logging()
 
+
 # Default prompts
 DEFAULT_SELF_CHECK_INPUT_PROMPT = """Instruction: {{ user_input }}
 
@@ -127,18 +133,15 @@ DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT = """You are given a statement.
 
 Check if it is factually consistent with the provided document."""
 
-DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = (
-    """Task: Check if there is unsafe content in the user message in the below conversation...
+DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = """Task: Check if there is unsafe content in the user message in the below conversation...
 <BEGIN CONVERSATION>
 user: {{ user_input }}
 <END CONVERSATION>
 Provide your safety assessment in the following JSON format:
 {"User Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
 Do not include anything other than the output JSON in your response."""
-)
 
-DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = (
-    """Task: Check if there is unsafe content in the agent response in the below conversation...
+DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = """Task: Check if there is unsafe content in the agent response in the below conversation...
 <BEGIN CONVERSATION>
 user: {{ user_input }}
 agent: {{ bot_response }}
@@ -146,13 +149,10 @@ agent: {{ bot_response }}
 Provide your safety assessment in the following JSON format:
 {"Response Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
 Do not include anything other than the output JSON in your response."""
-)
 
 DEFAULT_TOPIC_CONTROL_INPUT_PROMPT = """Ensure that the input stays within the allowed discussion topics."""
 
-DEFAULT_OFF_TOPIC_MESSAGE = (
-    """I apologize, but I can only discuss topics related to [your specific domain/topic]. Is there something else I can help you with?"""
-)
+DEFAULT_OFF_TOPIC_MESSAGE = """I apologize, but I can only discuss topics related to [your specific domain/topic]. Is there something else I can help you with?"""
 
 
 class NVIDIANeMoGuardrailsComponent(LCModelComponent):
@@ -173,9 +173,14 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             name="rails",
             display_name="Rails",
             options=[
-                "self check input", "self check output", "self check hallucination",
-                "content safety input", "content safety output", "topic control",
-                "jailbreak detection heuristics", "jailbreak detection model"
+                "self check input",
+                "self check output",
+                "self check hallucination",
+                "content safety input",
+                "content safety output",
+                "topic control",
+                "jailbreak detection heuristics",
+                "jailbreak detection model",
             ],
             value=["self check input", "self check output"],
         ),
@@ -246,44 +251,44 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             name="self_check_input_prompt",
             display_name="Self Check Input Prompt",
             advanced=True,
-            value=DEFAULT_SELF_CHECK_INPUT_PROMPT
+            value=DEFAULT_SELF_CHECK_INPUT_PROMPT,
         ),
         MultilineInput(
             name="self_check_output_prompt",
             display_name="Self Check Output Prompt",
             advanced=True,
-            value=DEFAULT_SELF_CHECK_OUTPUT_PROMPT
+            value=DEFAULT_SELF_CHECK_OUTPUT_PROMPT,
         ),
         MultilineInput(
             name="self_check_hallucination_prompt",
             display_name="Self Check Hallucination Prompt",
             advanced=True,
-            value=DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT
+            value=DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT,
         ),
         MultilineInput(
             name="content_safety_input_prompt",
             display_name="Content Safety Check Input Prompt",
             advanced=True,
-            value=DEFAULT_CONTENT_SAFETY_INPUT_PROMPT
+            value=DEFAULT_CONTENT_SAFETY_INPUT_PROMPT,
         ),
         MultilineInput(
             name="content_safety_output_prompt",
             display_name="Content Safety Check Output Prompt",
             advanced=True,
-            value=DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT
+            value=DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT,
         ),
         MultilineInput(
             name="topic_control_input_prompt",
             display_name="Topic Control Check Input Prompt",
             advanced=True,
-            value=DEFAULT_TOPIC_CONTROL_INPUT_PROMPT
+            value=DEFAULT_TOPIC_CONTROL_INPUT_PROMPT,
         ),
         MultilineInput(
             name="off_topic_message",
             display_name="Off-Topic Message",
             advanced=True,
             value=DEFAULT_OFF_TOPIC_MESSAGE,
-            info="Message to display when the input is off-topic. Use [your specific domain/topic] as a placeholder for your domain."
+            info="Message to display when the input is off-topic. Use [your specific domain/topic] as a placeholder for your domain.",
         ),
         MultilineInput(
             name="yaml_content",
@@ -320,105 +325,114 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "input": {"flows": []},
                 "output": {"flows": []},
             },
-            "prompts": []
+            "prompts": [],
         }
 
         # Self check rails
         if "self check input" in self.rails:
-            config_dict["models"].append({
-                "type": "self_check_input",
-                "engine": "nim",
-                "model": self.self_check_model_name,
-                "parameters": {
-                    "base_url": self.self_check_model_url,
-                    "api_key": self.self_check_model_api_key,
-                },
-            })
+            config_dict["models"].append(
+                {
+                    "type": "self_check_input",
+                    "engine": "nim",
+                    "model": self.self_check_model_name,
+                    "parameters": {
+                        "base_url": self.self_check_model_url,
+                        "api_key": self.self_check_model_api_key,
+                    },
+                }
+            )
             config_dict["rails"]["input"]["flows"].append("self check input")
-            config_dict["prompts"].append({
-                "task": "self_check_input",
-                "content": self.self_check_input_prompt
-            })
+            config_dict["prompts"].append({"task": "self_check_input", "content": self.self_check_input_prompt})
 
         if "self check output" in self.rails:
-            config_dict["models"].append({
-                "type": "self_check_output",
-                "engine": "nim",
-                "model": self.self_check_model_name,
-                "parameters": {
-                    "base_url": self.self_check_model_url,
-                    "api_key": self.self_check_model_api_key,
-                },
-            })
+            config_dict["models"].append(
+                {
+                    "type": "self_check_output",
+                    "engine": "nim",
+                    "model": self.self_check_model_name,
+                    "parameters": {
+                        "base_url": self.self_check_model_url,
+                        "api_key": self.self_check_model_api_key,
+                    },
+                }
+            )
             config_dict["rails"]["output"]["flows"].append("self check output")
-            config_dict["prompts"].append({
-                "task": "self_check_output",
-                "content": self.self_check_output_prompt
-            })
+            config_dict["prompts"].append({"task": "self_check_output", "content": self.self_check_output_prompt})
 
         if "self check hallucination" in self.rails:
-            config_dict["models"].append({
-                "type": "self_check_hallucination",
-                "engine": "nim",
-                "model": self.self_check_model_name,
-                "parameters": {
-                    "base_url": self.self_check_model_url,
-                    "api_key": self.self_check_model_api_key,
-                },
-            })
+            config_dict["models"].append(
+                {
+                    "type": "self_check_hallucination",
+                    "engine": "nim",
+                    "model": self.self_check_model_name,
+                    "parameters": {
+                        "base_url": self.self_check_model_url,
+                        "api_key": self.self_check_model_api_key,
+                    },
+                }
+            )
             config_dict["rails"]["output"]["flows"].append("self check hallucination")
-            config_dict["prompts"].append({
-                "task": "self_check_hallucination",
-                "content": self.self_check_hallucination_prompt
-            })
+            config_dict["prompts"].append(
+                {"task": "self_check_hallucination", "content": self.self_check_hallucination_prompt}
+            )
 
         # Content safety rails
         if "content safety input" in self.rails or "content safety output" in self.rails:
-            config_dict["models"].append({
-                "type": "content_safety",
-                "engine": "nim",
-                "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
-                "parameters": {
-                    "base_url": self.content_safety_model_url,
-                    "api_key": self.guardrail_model_api_key,
-                    "max_tokens": 256
+            config_dict["models"].append(
+                {
+                    "type": "content_safety",
+                    "engine": "nim",
+                    "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
+                    "parameters": {
+                        "base_url": self.content_safety_model_url,
+                        "api_key": self.guardrail_model_api_key,
+                        "max_tokens": 256,
+                    },
                 }
-            })
+            )
 
         if "content safety input" in self.rails:
             config_dict["rails"]["input"]["flows"].append("content safety check input $model=content_safety")
-            config_dict["prompts"].append({
-                "task": "content_safety_check_input $model=content_safety",
-                "content": self.content_safety_input_prompt,
-                "output_parser": "nemoguard_parse_prompt_safety",
-                "max_tokens": 50
-            })
+            config_dict["prompts"].append(
+                {
+                    "task": "content_safety_check_input $model=content_safety",
+                    "content": self.content_safety_input_prompt,
+                    "output_parser": "nemoguard_parse_prompt_safety",
+                    "max_tokens": 50,
+                }
+            )
 
         if "content safety output" in self.rails:
             config_dict["rails"]["output"]["flows"].append("content safety check output $model=content_safety")
-            config_dict["prompts"].append({
-                "task": "content_safety_check_output $model=content_safety",
-                "content": self.content_safety_output_prompt,
-                "output_parser": "nemoguard_parse_response_safety",
-                "max_tokens": 50
-            })
+            config_dict["prompts"].append(
+                {
+                    "task": "content_safety_check_output $model=content_safety",
+                    "content": self.content_safety_output_prompt,
+                    "output_parser": "nemoguard_parse_response_safety",
+                    "max_tokens": 50,
+                }
+            )
 
         # Topic control rails
         if "topic control" in self.rails:
-            config_dict["models"].append({
-                "type": "topic_control",
-                "engine": "nim",
-                "model": "nvidia/llama-3.1-nemoguard-8b-topic-control",
-                "parameters": {
-                    "base_url": self.topic_control_model_url,
-                    "api_key": self.guardrail_model_api_key,
+            config_dict["models"].append(
+                {
+                    "type": "topic_control",
+                    "engine": "nim",
+                    "model": "nvidia/llama-3.1-nemoguard-8b-topic-control",
+                    "parameters": {
+                        "base_url": self.topic_control_model_url,
+                        "api_key": self.guardrail_model_api_key,
+                    },
                 }
-            })
+            )
             config_dict["rails"]["input"]["flows"].append("topic safety check input $model=topic_control")
-            config_dict["prompts"].append({
-                "task": "topic_safety_check_input $model=topic_control",
-                "content": self.topic_control_input_prompt,
-            })
+            config_dict["prompts"].append(
+                {
+                    "task": "topic_safety_check_input $model=topic_control",
+                    "content": self.topic_control_input_prompt,
+                }
+            )
 
         # Jailbreak detection rails
         if "jailbreak detection heuristics" in self.rails:
@@ -427,7 +441,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         if "jailbreak detection model" in self.rails:
             config_dict["rails"]["config"]["jailbreak_detection"] = {
                 "nim_full_url": self.jailbreak_detection_model_url,
-                "nim_auth_token": self.guardrail_model_api_key
+                "nim_auth_token": self.guardrail_model_api_key,
             }
             config_dict["rails"]["input"]["flows"].append("jailbreak detection model")
 
@@ -461,7 +475,7 @@ define bot refuse to respond
 
             try:
                 config.model_validate(config)
-            except ValueError as e:
+            except ValueError:
                 logging.exception("Validation Error")
 
             guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
@@ -483,14 +497,11 @@ define bot refuse to respond
             "mistral/mistral-large-latest",
             "meta/llama-3.1-8b-instruct",
             "google/gemma-2-9b-it",
-            "google/gemma-2-2b-instruct"
+            "google/gemma-2-2b-instruct",
         }
 
         url = f"{self.self_check_model_url}/models"
-        headers = {
-            "Authorization": f"Bearer {self.self_check_model_api_key}",
-            "Accept": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {self.self_check_model_api_key}", "Accept": "application/json"}
 
         try:
             response = requests.get(url, headers=headers, timeout=10)
@@ -503,7 +514,7 @@ define bot refuse to respond
                 model_id = model["id"]
                 if model_id in known_good_models:
                     suitable_models.append(model_id)
-        except requests.RequestException as e:
+        except requests.RequestException:
             logging.exception("Error getting model names")
             # Let the UI handle the empty list case
             return []
@@ -519,7 +530,10 @@ define bot refuse to respond
                     models = self.get_models()
                     build_config["self_check_model_name"]["options"] = models
                     # Only set a default value if we have models and no current value
-                    if models and (not build_config["self_check_model_name"].get("value") or build_config["self_check_model_name"]["value"] not in models):
+                    if models and (
+                        not build_config["self_check_model_name"].get("value")
+                        or build_config["self_check_model_name"]["value"] not in models
+                    ):
                         build_config["self_check_model_name"]["value"] = models[0]
                 else:
                     # Clear options and value if URL or API key is missing
