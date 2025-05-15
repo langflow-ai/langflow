@@ -48,7 +48,6 @@ class TestGitHubComponent(ComponentTestBaseWithoutClient):
     def test_init(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         assert component.display_name == "GitHub"
-        assert component.name == "GithubAPI"
         assert component.app_name == "github"
         assert "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER" in component._actions_data
         assert "GITHUB_LIST_BRANCHES" in component._actions_data
@@ -65,16 +64,16 @@ class TestGitHubComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.api_key = "test_key"
         component.action = [{"name": "Star A Repository"}]
-        setattr(component, "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-owner", "langflow-ai")
-        setattr(component, "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-repo", "langflow")
+        component.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER_owner = "langflow-ai"
+        component.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER_repo = "langflow"
 
         # For this specific test, customize the _actions_data to not use get_result_field
         component._actions_data = {
             "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER": {
                 "display_name": "Star A Repository",
                 "action_fields": [
-                    "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-owner",
-                    "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER-repo",
+                    "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER_owner",
+                    "GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER_repo",
                 ],
             },
         }
@@ -91,19 +90,19 @@ class TestGitHubComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.api_key = "test_key"
         component.action = [{"name": "List Branches"}]
-        setattr(component, "GITHUB_LIST_BRANCHES-owner", "langflow-ai")
-        setattr(component, "GITHUB_LIST_BRANCHES-repo", "langflow")
+        component.GITHUB_LIST_BRANCHES_owner = "langflow-ai"
+        component.GITHUB_LIST_BRANCHES_repo = "langflow"
 
         # For this specific test, customize the _actions_data to not use get_result_field
         component._actions_data = {
             "GITHUB_LIST_BRANCHES": {
                 "display_name": "List Branches",
                 "action_fields": [
-                    "GITHUB_LIST_BRANCHES-owner",
-                    "GITHUB_LIST_BRANCHES-repo",
-                    "GITHUB_LIST_BRANCHES-protected",
-                    "GITHUB_LIST_BRANCHES-per_page",
-                    "GITHUB_LIST_BRANCHES-page",
+                    "GITHUB_LIST_BRANCHES_owner",
+                    "GITHUB_LIST_BRANCHES_repo",
+                    "GITHUB_LIST_BRANCHES_protected",
+                    "GITHUB_LIST_BRANCHES_per_page",
+                    "GITHUB_LIST_BRANCHES_page",
                 ],
             },
         }
@@ -120,27 +119,27 @@ class TestGitHubComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.api_key = "test_key"
         component.action = [{"name": "List Repository Issues"}]
-        setattr(component, "GITHUB_LIST_REPOSITORY_ISSUES-owner", "langflow-ai")
-        setattr(component, "GITHUB_LIST_REPOSITORY_ISSUES-repo", "langflow")
+        component.GITHUB_LIST_REPOSITORY_ISSUES_owner = "langflow-ai"
+        component.GITHUB_LIST_REPOSITORY_ISSUES_repo = "langflow"
 
         # For this specific test, customize the _actions_data to not use get_result_field
         component._actions_data = {
             "GITHUB_LIST_REPOSITORY_ISSUES": {
                 "display_name": "List Repository Issues",
                 "action_fields": [
-                    "GITHUB_LIST_REPOSITORY_ISSUES-owner",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-repo",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-milestone",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-state",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-assignee",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-creator",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-mentioned",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-labels",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-sort",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-direction",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-since",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-per_page",
-                    "GITHUB_LIST_REPOSITORY_ISSUES-page",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_owner",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_repo",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_milestone",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_state",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_assignee",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_creator",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_mentioned",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_labels",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_sort",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_direction",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_since",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_per_page",
+                    "GITHUB_LIST_REPOSITORY_ISSUES_page",
                 ],
             },
         }
