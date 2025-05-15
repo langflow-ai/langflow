@@ -240,7 +240,7 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| urls | URLs | Enter one or more URLs to crawl recursively, by clicking the '+' button. |
+| urls | URLs | Click the '+' button to enter one or more URLs to crawl recursively. |
 | max_depth | Max Depth | Controls how many 'clicks' away from the initial page the crawler will go. |
 | prevent_outside | Prevent Outside | If enabled, only crawls URLs within the same domain as the root URL. |
 | use_async | Use Async | If enabled, uses asynchronous loading which can be significantly faster but might use more system resources. |

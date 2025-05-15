@@ -50,9 +50,9 @@ Each component accepts inputs on its left side, and sends outputs on its right s
 Hover over the connection ports to see the data types that the component accepts.
 For more on component inputs and outputs, see [Components overview](/concepts-components).
 
-7. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
-8. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
-9. To connect the **OpenAI** model component to the **Chat Output**, click and drag a line from the blue **Text** port to the **Chat Output** component's **Text** port.
+6. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
+7. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
+8. To connect the **OpenAI** model component to the **Chat Output**, click and drag a line from the blue **Text** port to the **Chat Output** component's **Text** port.
 
 Your finished basic prompting flow should look like this:
 
