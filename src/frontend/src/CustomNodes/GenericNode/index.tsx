@@ -118,6 +118,7 @@ function GenericNode({
       state.componentsToUpdate.find((component) => component.id === data.id),
     ),
   );
+
   const {
     outdated: isOutdated,
     breakingChange: hasBreakingChange,
@@ -302,7 +303,7 @@ function GenericNode({
             openAdvancedModal={false}
             onCloseAdvancedModal={() => {}}
             updateNode={() => handleUpdateCode()}
-            isOutdated={isOutdated && dismissAll}
+            isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
           />
