@@ -6,7 +6,7 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.ollama_constants import OLLAMA_TOOL_MODELS_BASE, URL_LIST
+from langflow.base.models.ollama_constants import URL_LIST
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
@@ -325,4 +325,3 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
-
