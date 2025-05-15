@@ -2,6 +2,7 @@ from collections.abc import Generator
 from typing import Any
 
 from langflow.base.io.chat import ChatComponent
+from langflow.helpers.data import _safe_convert
 from langflow.inputs import BoolInput
 from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, MessageTextInput, Output
@@ -176,45 +177,11 @@ class ChatOutput(ChatComponent):
             msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
             raise TypeError(msg)
 
-    def _safe_convert(self, data: Any) -> str:
-        """Safely convert input data to string."""
-        try:
-            if isinstance(data, str):
-                return data
-            if isinstance(data, Message):
-                return data.get_text()
-            if isinstance(data, Data):
-                if data.get_text() is None:
-                    msg = "Empty Data object"
-                    raise ValueError(msg)
-                return data.get_text()
-            if isinstance(data, DataFrame):
-                if self.clean_data:
-                    # Remove empty rows
-                    data = data.dropna(how="all")
-                    # Remove empty lines in each cell
-                    data = data.replace(r"^\s*$", "", regex=True)
-                    # Replace multiple newlines with a single newline
-                    data = data.replace(r"\n+", "\n", regex=True)
-
-                # Replace pipe characters to avoid markdown table issues
-                processed_data = data.replace(r"\|", r"\\|", regex=True)
-
-                processed_data = processed_data.map(
-                    lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
-                )
-
-                return processed_data.to_markdown(index=False)
-            return str(data)
-        except (ValueError, TypeError, AttributeError) as e:
-            msg = f"Error converting data: {e!s}"
-            raise ValueError(msg) from e
-
     def convert_to_string(self) -> str | Generator[Any, None, None]:
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
-            return "\n".join([self._safe_convert(item) for item in self.input_value])
+            return "\n".join([_safe_convert(item) for item in self.input_value])
         if isinstance(self.input_value, Generator):
             return self.input_value
-        return self._safe_convert(self.input_value)
+        return _safe_convert(self.input_value)

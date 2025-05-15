@@ -6,7 +6,7 @@ from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
 
 from langflow.custom.custom_component.component import Component
-from langflow.helpers.data import data_to_text
+from langflow.helpers.data import data_to_text, _safe_convert
 from langflow.inputs.inputs import TableInput
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
@@ -189,6 +189,10 @@ class URLComponent(Component):
         data = self.fetch_content()
         result_string = data_to_text("{text}", data)
         self.status = result_string
+
+        # Clean up the result string
+        result_string = _safe_convert(result_string)
+
         return Message(text=result_string)
 
     def as_dataframe(self) -> DataFrame:
