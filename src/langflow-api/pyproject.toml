@@ -11,7 +11,6 @@ readme = "README.md"
 packages = ["src/langflow_api"]
 
 dependencies = [
-    "langflow-schema>=0.1.0,<0.2.0",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -72,6 +71,7 @@ dependencies = [
     "validators>=0.34.0",
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
+    "pylint>=3.3.4",
     "mcp>=1.6.0",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
@@ -124,17 +124,6 @@ dev = [
     "codeflash>=0.8.4"
 ]
 
-
-# [tool.pytest.ini_options]
-# minversion = "6.0"
-# #addopts = "-ra"
-# testpaths = ["tests", "integration"]
-# console_output_style = "progress"
-# filterwarnings = ["ignore::DeprecationWarning"]
-# log_cli = true
-# markers = ["async_test"]
-# asyncio_mode = "auto"
-# asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
@@ -198,15 +187,6 @@ ignore = [
     "S301", # Use of pickle
 ]
 
-[tool.codeflash]
-# All paths are relative to this pyproject.toml's directory.
-module-root = "."
-tests-root = "../tests/unit"
-test-framework = "pytest"
-formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
-#disable plugins that might interfere with runtime measurement
-pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -214,15 +194,6 @@ build-backend = "hatchling.build"
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
-
-# Optional dependencies for uv
-[project.optional-dependencies]
-deploy = [
-]
-local = [
-]
-all = [
-]
 
 [project.scripts]
 langflow-api = "src.__main__:main"

@@ -327,7 +327,7 @@ async def upload_user_file(
 
 @router.get("")
 @router.get("/", status_code=HTTPStatus.OK)
-async def list_files(
+async def list_user_files(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> list[UserFile]:
@@ -343,7 +343,7 @@ async def list_files(
 
 
 @router.get("/{file_id}")
-async def download_file(
+async def download_user_file(
     file_id: uuid.UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
@@ -395,7 +395,7 @@ async def edit_file_name(
 
 
 @router.delete("/{file_id}")
-async def delete_file(
+async def delete_user_file(
     file_id: uuid.UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
