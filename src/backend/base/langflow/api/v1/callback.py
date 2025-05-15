@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from langflow.services.socket.service import SocketIOService
 
 
-# https://github.com/hwchase17/chat-langchain/blob/master/callback.py
+# https://github.com/tbroadley/ai-safety-conversational-agent/blob/master/callback.py
 class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     """Callback handler for streaming LLM responses."""
 
