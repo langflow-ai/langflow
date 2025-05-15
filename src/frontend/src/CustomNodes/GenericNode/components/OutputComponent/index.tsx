@@ -77,12 +77,14 @@ export default function OutputComponent({
     updateNodeInternals(nodeId);
   };
 
+  const testId = `output-${node?.data?.type.toLowerCase()}-${node?.data?.showNode ? "shownode" : "noshownode"}-${name.toLowerCase()}-right`;
+
   return displayProxy(
     <DropdownMenu>
       <DropdownMenuTrigger asChild disabled={singleOutput}>
         <Button
           unstyled
-          data-testid={`output-${node?.data?.type.toLowerCase()}-${node?.data?.showNode ? "shownode" : "noshownode"}-${name.toLowerCase()}-right`}
+          data-testid={testId}
           className={cn(
             "item-center group flex text-[13px] font-medium",
             singleOutput && "mr-2",
