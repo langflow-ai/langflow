@@ -307,6 +307,8 @@ class Vertex:
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
         elif param_key in self.output_names:
+            #  if the loop is run the param_key item will be set over here
+            # validate the edge
             params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 

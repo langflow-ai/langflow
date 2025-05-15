@@ -1,14 +1,15 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
+import useDetectScroll, {
+  Axis,
+  Direction,
+} from "@smakss/react-scroll-direction";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
@@ -21,6 +22,7 @@ import ChatInput from "../chatInput/chat-input";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
+import { ChatScrollAnchor } from "./chat-scroll-anchor";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -39,8 +41,8 @@ export default function ChatView({
   focusChat,
   closeChat,
   playgroundPage,
+  sidebarOpen,
 }: chatViewProps): JSX.Element {
-  const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -113,17 +115,10 @@ export default function ChatView({
       setChatValueStore(
         chatInputNode.data.node.template["input_value"].value ?? "",
       );
-    } else {
-      isTabHidden ? setChatValueStore("") : null;
     }
 
     setChatHistory(finalChatHistory);
-  }, [flowPool, messages, visibleSession]);
-  useEffect(() => {
-    if (messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-    }
-  }, []);
+  }, [messages, visibleSession]);
 
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -148,13 +143,21 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useFileHandler(currentFlowId);
+  const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
+    setIsDragging,
+    !!playgroundPage,
+  );
 
   const onDrop = (e) => {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
+    e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
       e.dataTransfer.clearData();
@@ -163,17 +166,67 @@ export default function ChatView({
   };
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
-  const soundDetected = useVoiceStore((state) => state.soundDetected);
+  const isVoiceAssistantActive = useVoiceStore(
+    (state) => state.isVoiceAssistantActive,
+  );
+
+  const [customElement, setCustomElement] = useState<HTMLDivElement>();
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      setCustomElement(messagesRef.current);
+    }
+  }, [messagesRef]);
+
+  const { scrollDir } = useDetectScroll({
+    target: customElement,
+    axis: Axis.Y,
+    thr: 0,
+  });
+
+  const [canScroll, setCanScroll] = useState<boolean>(false);
+  const [scrolledUp, setScrolledUp] = useState<boolean>(false);
+
+  const handleScroll = () => {
+    if (!messagesRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 3;
+
+    if (scrollDir === Direction.Up) {
+      setCanScroll(false);
+      setScrolledUp(true);
+    } else {
+      if (atBottom || !scrolledUp) {
+        setCanScroll(true);
+      }
+      setScrolledUp(false);
+    }
+  };
+
+  useEffect(() => {
+    setCanScroll(true);
+  }, [chatHistory?.length]);
 
   return (
     <div
-      className="flex h-full w-full flex-col rounded-md"
+      className={cn(
+        "flex h-full w-full flex-col rounded-md",
+        visibleSession ? "h-[95%]" : "h-full",
+        sidebarOpen &&
+          !isVoiceAssistantActive &&
+          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
+      )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
       onDrop={onDrop}
     >
-      <div ref={messagesRef} className="chat-message-div">
+      <div
+        ref={messagesRef}
+        onScroll={handleScroll}
+        className="chat-message-div"
+      >
         {chatHistory &&
           (isBuilding || chatHistory?.length > 0 ? (
             <>
@@ -187,6 +240,12 @@ export default function ChatView({
                   playgroundPage={playgroundPage}
                 />
               ))}
+              {chatHistory?.length > 0 && (
+                <ChatScrollAnchor
+                  trackVisibility={chatHistory?.[chatHistory.length - 1]}
+                  canScroll={canScroll}
+                />
+              )}
             </>
           ) : (
             <>

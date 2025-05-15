@@ -1,4 +1,5 @@
-import asyncio
+import re
+import shutil
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -11,26 +12,75 @@ from langflow.base.mcp.util import (
     create_tool_func,
 )
 from langflow.custom import Component
-from langflow.inputs import DropdownInput
+from langflow.inputs import DropdownInput, TableInput
 from langflow.inputs.inputs import InputTypes
-from langflow.io import MessageTextInput, Output, TabInput
-from langflow.io.schema import schema_to_langflow_inputs
+from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
+from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema import Message
 
 
+def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
+    """If any key looks nested (contains a dot or “[index]”), rebuild the.
+
+    full nested structure; otherwise return flat as is.
+    """
+    # Quick check: do we have any nested keys?
+    if not any(re.search(r"\.|\[\d+\]", key) for key in flat):
+        return flat
+
+    # Otherwise, unflatten into dicts/lists
+    nested: dict[str, Any] = {}
+    array_re = re.compile(r"^(.+)\[(\d+)\]$")
+
+    for key, val in flat.items():
+        parts = key.split(".")
+        cur = nested
+        for i, part in enumerate(parts):
+            m = array_re.match(part)
+            # Array segment?
+            if m:
+                name, idx = m.group(1), int(m.group(2))
+                lst = cur.setdefault(name, [])
+                # Ensure list is big enough
+                while len(lst) <= idx:
+                    lst.append({})
+                if i == len(parts) - 1:
+                    lst[idx] = val
+                else:
+                    cur = lst[idx]
+            # Normal object key
+            elif i == len(parts) - 1:
+                cur[part] = val
+            else:
+                cur = cur.setdefault(part, {})
+
+    return nested
+
+
 class MCPToolsComponent(Component):
     schema_inputs: list[InputTypes] = []
-    stdio_client = MCPStdioClient()
-    sse_client = MCPSseClient()
+    stdio_client: MCPStdioClient = MCPStdioClient()
+    sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
-    default_keys = ["code", "_type", "mode", "command", "sse_url", "tool_placeholder", "tool_mode", "tool"]
+    default_keys: list[str] = [
+        "code",
+        "_type",
+        "mode",
+        "command",
+        "env",
+        "sse_url",
+        "tool_placeholder",
+        "tool_mode",
+        "tool",
+        "headers_input",
+    ]
 
-    display_name = "MCP Server"
-    description = "Connect to an MCP server and expose tools."
-    icon = "server"
+    display_name = "MCP Connection"
+    description = "Connect to an MCP server to use its tools."
+    icon = "Mcp"
     name = "MCPTools"
 
     inputs = [
@@ -51,12 +101,46 @@ class MCPToolsComponent(Component):
             refresh_button=True,
         ),
         MessageTextInput(
+            name="env",
+            display_name="Env",
+            info="Env vars to include in mcp stdio connection (i.e. DEBUG=true)",
+            value="",
+            is_list=True,
+            show=True,
+            tool_mode=False,
+            advanced=True,
+        ),
+        MultilineInput(
             name="sse_url",
             display_name="MCP SSE URL",
             info="URL for MCP SSE connection",
-            value="http://localhost:7860/api/v1/mcp/sse",
             show=False,
             refresh_button=True,
+            value="MCP_SSE",
+            real_time_refresh=True,
+        ),
+        TableInput(
+            name="headers_input",
+            display_name="Headers",
+            info="Headers to include in the tool",
+            show=False,
+            real_time_refresh=True,
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
+            ],
+            value=[],
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -91,9 +175,49 @@ class MCPToolsComponent(Component):
         if mode == "Stdio" and not command:
             msg = "Command is required for Stdio mode"
             raise ValueError(msg)
+        if mode == "Stdio" and command:
+            self._validate_node_installation(command)
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
+
+    def _validate_node_installation(self, command: str) -> str:
+        """Validate the npx command."""
+        if "npx" in command and not shutil.which("node"):
+            msg = "Node.js is not installed. Please install Node.js to use npx commands."
+            raise ValueError(msg)
+        return command
+
+    def _process_headers(self, headers: Any) -> dict:
+        """Process the headers input into a valid dictionary.
+
+        Args:
+            headers: The headers to process, can be dict, str, or list
+        Returns:
+            Processed dictionary
+        """
+        if headers is None:
+            return {}
+        if isinstance(headers, dict):
+            return headers
+        if isinstance(headers, list):
+            processed_headers = {}
+            try:
+                for item in headers:
+                    if not self._is_valid_key_value_item(item):
+                        continue
+                    key = item["key"]
+                    value = item["value"]
+                    processed_headers[key] = value
+            except (KeyError, TypeError, ValueError) as e:
+                self.log(f"Failed to process headers list: {e}")
+                return {}  # Return empty dictionary instead of None
+            return processed_headers
+        return {}
+
+    def _is_valid_key_value_item(self, item: Any) -> bool:
+        """Check if an item is a valid key-value dictionary."""
+        return isinstance(item, dict) and "key" in item and "value" in item
 
     async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
         """Validate and process schema inputs for a tool."""
@@ -102,7 +226,8 @@ class MCPToolsComponent(Component):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            input_schema = create_input_schema_from_json_schema(tool_obj.inputSchema)
+            flat_schema = flatten_schema(tool_obj.inputSchema)
+            input_schema = create_input_schema_from_json_schema(flat_schema)
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
                 raise ValueError(msg)
@@ -125,24 +250,45 @@ class MCPToolsComponent(Component):
         try:
             if field_name == "mode":
                 self.remove_non_default_keys(build_config)
+                build_config["tool"]["options"] = []
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
+                    build_config["env"]["show"] = True
+                    build_config["headers_input"]["show"] = False
                     build_config["sse_url"]["show"] = False
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
+                    build_config["env"]["show"] = False
                     build_config["sse_url"]["show"] = True
+                    build_config["sse_url"]["value"] = "MCP_SSE"
+                    build_config["headers_input"]["show"] = True
+                    return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
-                    await self.update_tools()
+                    await self.update_tools(
+                        mode=build_config["mode"]["value"],
+                        command=build_config["command"]["value"],
+                        url=build_config["sse_url"]["value"],
+                        env=build_config["env"]["value"],
+                        headers=build_config["headers_input"]["value"],
+                    )
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
                     raise ValueError(msg) from e
+                else:
+                    return build_config
             elif field_name == "tool":
                 if len(self.tools) == 0:
-                    await self.update_tools()
+                    await self.update_tools(
+                        mode=build_config["mode"]["value"],
+                        command=build_config["command"]["value"],
+                        url=build_config["sse_url"]["value"],
+                        env=build_config["env"]["value"],
+                        headers=build_config["headers_input"]["value"],
+                    )
                 if self.tool is None:
                     return build_config
                 tool_obj = None
@@ -176,8 +322,10 @@ class MCPToolsComponent(Component):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                input_schema = schema_to_langflow_inputs(create_input_schema_from_json_schema(tool.inputSchema))
-                inputs[tool.name] = input_schema
+                flat_schema = flatten_schema(tool.inputSchema)
+                input_schema = create_input_schema_from_json_schema(flat_schema)
+                langflow_inputs = schema_to_langflow_inputs(input_schema)
+                inputs[tool.name] = langflow_inputs
             except (AttributeError, ValueError, TypeError, KeyError) as e:
                 msg = f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}"
                 logger.exception(msg)
@@ -205,7 +353,13 @@ class MCPToolsComponent(Component):
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
         if not self.tools:
-            await self.update_tools()
+            await self.update_tools(
+                mode=build_config["mode"]["value"],
+                command=build_config["command"]["value"],
+                url=build_config["sse_url"]["value"],
+                env=build_config["env"]["value"],
+                headers=build_config["headers_input"]["value"],
+            )
 
         if not tool_name:
             return
@@ -245,7 +399,6 @@ class MCPToolsComponent(Component):
                     msg = f"Error processing schema input {schema_input}: {e!s}"
                     logger.exception(msg)
                     continue
-
         except ValueError as e:
             msg = f"Schema validation error for tool {tool_name}: {e!s}"
             logger.exception(msg)
@@ -268,7 +421,11 @@ class MCPToolsComponent(Component):
                     value = getattr(self, arg.name, None)
                     if value:
                         kwargs[arg.name] = value
-                output = await exec_tool.coroutine(**kwargs)
+
+                unflattened_kwargs = maybe_unflatten_dict(kwargs)
+
+                output = await exec_tool.coroutine(**unflattened_kwargs)
+
                 return Message(text=output.content[len(output.content) - 1].text)
             return Message(text="You must select a tool", error=True)
         except Exception as e:
@@ -276,16 +433,60 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-    async def update_tools(self) -> list[StructuredTool]:
+    async def update_tools(
+        self,
+        mode: str | None = None,
+        command: str | None = None,
+        url: str | None = None,
+        env: list[str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> list[StructuredTool]:
         """Connect to the MCP server and update available tools with improved error handling."""
         try:
-            await self._validate_connection_params(self.mode, self.command, self.sse_url)
+            if mode is None:
+                mode = self.mode
+            if command is None:
+                command = self.command
+            if env is None:
+                env = self.env
+            if url is None:
+                url = self.sse_url
+            if headers is None:
+                headers = self.headers_input
+            headers = self._process_headers(headers)
+            await self._validate_connection_params(mode, command, url)
 
-            if self.mode == "Stdio":
+            if mode == "Stdio":
                 if not self.stdio_client.session:
-                    self.tools = await self.stdio_client.connect_to_server(self.command)
-            elif self.mode == "SSE" and not self.sse_client.session:
-                self.tools = await self.sse_client.connect_to_server(self.sse_url, {})
+                    try:
+                        self.tools = await self.stdio_client.connect_to_server(command, env)
+                    except ValueError as e:
+                        msg = f"Error connecting to MCP server: {e}"
+                        logger.exception(msg)
+                        raise ValueError(msg) from e
+            elif mode == "SSE" and not self.sse_client.session:
+                try:
+                    self.tools = await self.sse_client.connect_to_server(url, headers)
+                except ValueError as e:
+                    # URL validation error
+                    logger.error(f"SSE URL validation error: {e}")
+                    msg = f"Invalid SSE URL configuration: {e}. Please check your Langflow deployment URL and port."
+                    raise ValueError(msg) from e
+                except ConnectionError as e:
+                    # Connection failed after retries
+                    logger.error(f"SSE connection error: {e}")
+                    msg = (
+                        f"Could not connect to Langflow SSE endpoint: {e}. "
+                        "Please verify:\n"
+                        "1. Langflow server is running\n"
+                        "2. The SSE URL matches your Langflow deployment port\n"
+                        "3. There are no network issues preventing the connection"
+                    )
+                    raise ValueError(msg) from e
+                except Exception as e:
+                    logger.error(f"Unexpected SSE error: {e}")
+                    msg = f"Unexpected error connecting to SSE endpoint: {e}"
+                    raise ValueError(msg) from e
 
             if not self.tools:
                 logger.warning("No tools returned from server")
@@ -300,8 +501,7 @@ class MCPToolsComponent(Component):
                 try:
                     args_schema = create_input_schema_from_json_schema(tool.inputSchema)
                     if not args_schema:
-                        msg = f"Empty schema for tool '{tool.name}', skipping"
-                        logger.warning(msg)
+                        logger.warning(f"Empty schema for tool '{tool.name}', skipping")
                         continue
 
                     client = self.stdio_client if self.mode == "Stdio" else self.sse_client
@@ -316,25 +516,31 @@ class MCPToolsComponent(Component):
                         func=create_tool_func(tool.name, args_schema, client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
                         tags=[tool.name],
+                        metadata={},
                     )
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
                 except (AttributeError, ValueError, TypeError, KeyError) as e:
-                    msg = f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e!s}"
+                    msg = f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e}"
                     logger.exception(msg)
                     continue
 
             self.tool_names = [tool.name for tool in self.tools if hasattr(tool, "name")]
 
-        except (ValueError, RuntimeError, asyncio.TimeoutError) as e:
-            msg = f"Error updating tools: {e!s}"
-            logger.exception(msg)
+        except ValueError as e:
+            # Re-raise validation errors with clear messages
+            raise ValueError(str(e)) from e
+        except Exception as e:
+            logger.exception("Error updating tools")
+            msg = f"Failed to update tools: {e!s}"
             raise ValueError(msg) from e
         else:
             return tool_list
 
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
-        if not self.tools:
-            return await self.update_tools()
-        return self.tools
+        # if not self.tools:
+        if self.mode == "SSE" and self.sse_url is None:
+            msg = "SSE URL is not set"
+            raise ValueError(msg)
+        return await self.update_tools()

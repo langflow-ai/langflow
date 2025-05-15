@@ -18,23 +18,29 @@ export default function FlowSettingsModal({
   flowData,
   details,
 }: FlowSettingsPropsType): JSX.Element {
+  if (!open) return <></>;
+
   const saveFlow = useSaveFlow();
-  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) =>
+    flowData ? undefined : state.currentFlow,
+  );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
-  useEffect(() => {
-    setName(flow?.name ?? "");
-    setDescription(flow?.description ?? "");
-  }, [flow?.name, flow?.description, open]);
-
   const [name, setName] = useState(flow?.name ?? "");
   const [description, setDescription] = useState(flow?.description ?? "");
   const [endpoint_name, setEndpointName] = useState(flow?.endpoint_name ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+
+  useEffect(() => {
+    setName(flow?.name ?? "");
+    setDescription(flow?.description ?? "");
+    setEndpointName(flow?.endpoint_name ?? "");
+  }, [flow?.name, flow?.description, flow?.endpoint_name, open]);
+
   function handleClick(): void {
     setIsSaving(true);
     if (!flow) return;
@@ -43,6 +49,7 @@ export default function FlowSettingsModal({
     newFlow.description = description;
     newFlow.endpoint_name =
       endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
+
     if (autoSaving) {
       saveFlow(newFlow)
         ?.then(() => {

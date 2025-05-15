@@ -1,3 +1,4 @@
+import { EventDeliveryType } from "@/constants/enums";
 import { Pagination, Tag } from "@/types/utils/types";
 import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
@@ -5,8 +6,6 @@ import { create } from "zustand";
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   clientId: "",
   setClientId: (clientId: string) => set({ clientId }),
-  dismissAll: false,
-  setDismissAll: (dismissAll: boolean) => set({ dismissAll }),
   chatValueStore: "",
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
   selectedItems: [],
@@ -43,4 +42,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   currentSessionId: "",
   setCurrentSessionId: (sessionId: string) =>
     set({ currentSessionId: sessionId }),
+  eventDelivery: EventDeliveryType.POLLING,
+  setEventDelivery: (eventDelivery: EventDeliveryType) =>
+    set({ eventDelivery }),
 }));

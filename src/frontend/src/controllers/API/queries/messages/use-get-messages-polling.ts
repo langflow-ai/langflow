@@ -14,6 +14,7 @@ interface MessagesQueryParams {
   params?: object;
   onSuccess?: (data: MessagesResponse) => void;
   stopPollingOn?: (data: MessagesResponse) => boolean;
+  session_id?: string;
 }
 
 interface MessagesResponse {
@@ -33,20 +34,12 @@ const MessagesPollingManager = {
   activePolls: new Map<string, PollingItem>(),
 
   enqueuePolling(id: string, pollingItem: PollingItem) {
-    if (!this.pollingQueue.has(id)) {
-      this.pollingQueue.set(id, []);
-    }
-    this.pollingQueue.set(
-      id,
-      (this.pollingQueue.get(id) || []).filter(
-        (item) => item.timestamp !== pollingItem.timestamp,
-      ),
-    );
-    this.pollingQueue.get(id)?.push(pollingItem);
+    this.stopAll();
 
-    if (!this.activePolls.has(id)) {
-      this.startNextPolling(id);
-    }
+    this.pollingQueue.clear();
+    this.pollingQueue.set(id, [pollingItem]);
+
+    this.startNextPolling(id);
   },
 
   startNextPolling(id: string) {
@@ -66,12 +59,7 @@ const MessagesPollingManager = {
     if (activePoll) {
       clearInterval(activePoll.interval);
       this.activePolls.delete(id);
-      const queue = this.pollingQueue.get(id) || [];
-      this.pollingQueue.set(
-        id,
-        queue.filter((item) => item.timestamp !== activePoll.timestamp),
-      );
-      this.startNextPolling(id);
+      this.pollingQueue.delete(id);
     }
   },
 
@@ -82,11 +70,7 @@ const MessagesPollingManager = {
   },
 
   removeFromQueue(id: string, timestamp: number) {
-    const queue = this.pollingQueue.get(id) || [];
-    this.pollingQueue.set(
-      id,
-      queue.filter((item) => item.timestamp !== timestamp),
-    );
+    this.pollingQueue.delete(id);
   },
 };
 
@@ -109,6 +93,7 @@ export const useGetMessagesPollingMutation = (
     payload: MessagesQueryParams,
   ): Promise<MessagesResponse> => {
     const requestId = payload.id || "default";
+    const sessionId = payload.session_id;
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");
@@ -118,9 +103,11 @@ export const useGetMessagesPollingMutation = (
       requestInProgressRef.current[requestId] = true;
       const { id, mode, excludedFields, params } = payload;
       const config = {};
+
       if (id) {
         config["params"] = { flow_id: id };
       }
+
       if (params) {
         config["params"] = { ...config["params"], ...params };
       }
@@ -140,6 +127,10 @@ export const useGetMessagesPollingMutation = (
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");
+    }
+
+    if (MessagesPollingManager.activePolls.has(requestId)) {
+      MessagesPollingManager.stopPoll(requestId);
     }
 
     if (
@@ -185,11 +176,15 @@ export const useGetMessagesPollingMutation = (
     return () => {
       if (requestIdRef.current) {
         MessagesPollingManager.stopPoll(requestIdRef.current);
+        MessagesPollingManager.removeFromQueue(
+          requestIdRef.current,
+          Date.now(),
+        );
+        requestIdRef.current = null;
       }
     };
   }, []);
 
-  // Cast the mutation to the correct type
   const mutation = mutate(
     ["useGetMessagesMutation"],
     (payload: MessagesQueryParams) =>

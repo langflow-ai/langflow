@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from langflow.custom import Component
@@ -7,6 +8,7 @@ from langflow.io import (
     MessageTextInput,
     MultilineInput,
     Output,
+    TabInput,
 )
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -19,18 +21,18 @@ class ParserComponent(Component):
         "Enable 'Stringify' to convert input into a readable string instead."
     )
     icon = "braces"
-    beta = True
 
     inputs = [
-        BoolInput(
-            name="stringify",
-            display_name="Stringify",
-            info="Enable to convert input to a string instead of using a template.",
-            value=False,
+        TabInput(
+            name="mode",
+            display_name="Mode",
+            options=["Parser", "Stringify"],
+            value="Parser",
+            info="Convert into raw string instead of using a template.",
             real_time_refresh=True,
         ),
         MultilineInput(
-            name="template",
+            name="pattern",
             display_name="Template",
             info=(
                 "Use variables within curly brackets to extract column values for DataFrames "
@@ -68,9 +70,9 @@ class ParserComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Dynamically hide/show `template` and enforce requirement based on `stringify`."""
-        if field_name == "stringify":
-            build_config["template"]["show"] = not field_value
-            build_config["template"]["required"] = not field_value
+        if field_name == "mode":
+            build_config["pattern"]["show"] = self.mode == "Parser"
+            build_config["pattern"]["required"] = self.mode == "Parser"
             if field_value:
                 clean_data = BoolInput(
                     name="clean_data",
@@ -117,7 +119,7 @@ class ParserComponent(Component):
     def parse_combined_text(self) -> Message:
         """Parse all rows/items into a single text or convert input to string if `stringify` is enabled."""
         # Early return for stringify option
-        if self.stringify:
+        if self.mode == "Stringify":
             return self.convert_to_string()
 
         df, data = self._clean_args()
@@ -125,10 +127,10 @@ class ParserComponent(Component):
         lines = []
         if df is not None:
             for _, row in df.iterrows():
-                formatted_text = self.template.format(**row.to_dict())
+                formatted_text = self.pattern.format(**row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-            formatted_text = self.template.format(text=data.get_text())
+            formatted_text = self.pattern.format(**data.data)
             lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)
@@ -143,10 +145,7 @@ class ParserComponent(Component):
             if isinstance(data, Message):
                 return data.get_text()
             if isinstance(data, Data):
-                if data.get_text() is None:
-                    msg = "Empty Data object"
-                    raise ValueError(msg)
-                return data.get_text()
+                return json.dumps(data.data)
             if isinstance(data, DataFrame):
                 if hasattr(self, "clean_data") and self.clean_data:
                     # Remove empty rows
@@ -169,4 +168,7 @@ class ParserComponent(Component):
         else:
             result = self._safe_convert(self.input_data)
         self.log(f"Converted to string with length: {len(result)}")
-        return Message(text=result)
+
+        message = Message(text=result)
+        self.status = message
+        return message

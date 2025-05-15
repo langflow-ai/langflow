@@ -12,9 +12,7 @@ from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
-from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
@@ -119,7 +117,7 @@ class AgentComponent(ToolCallingAgentComponent):
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
         # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
+        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
 
         return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
@@ -270,16 +268,3 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
-
-    async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
-        tools = component_toolkit(component=self).get_tools(
-            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
-        )
-        if hasattr(self, "tools_metadata"):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        return tools

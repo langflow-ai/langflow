@@ -8,6 +8,14 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.services.base import Service
 
 
+class JobQueueNotFoundError(Exception):
+    """Exception raised when a job queue is not found."""
+
+    def __init__(self, job_id: str) -> None:
+        self.job_id = job_id
+        super().__init__(f"Job queue not found for job_id: {job_id}")
+
+
 class JobQueueService(Service):
     """Asynchronous service for managing job-specific queues and their associated tasks.
 
@@ -57,9 +65,7 @@ class JobQueueService(Service):
         """Initialize the JobQueueService.
 
         Sets up the internal registry for job queues, initializes the cleanup task, and sets the service state
-        to active. The service includes a grace period mechanism for cleanup, where tasks marked for removal
-        (due to cancellation or failure) will persist in the system for CLEANUP_GRACE_PERIOD seconds before
-        being actually removed.
+        to active.
         """
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]] = {}
         self._cleanup_task: asyncio.Task | None = None
@@ -189,18 +195,19 @@ class JobQueueService(Service):
             tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:
                 A tuple containing the job's main queue, its linked event manager, the associated task (if any),
                 and the cleanup timestamp (if any).
-        """
-        if job_id not in self._queues:
-            msg = f"No queue found for job_id {job_id}"
-            logger.error(msg)
-            raise ValueError(msg)
 
+        Raises:
+            JobQueueNotFoundError: If the job_id is not found.
+            RuntimeError: If the service is closed.
+        """
         if self._closed:
-            msg = "Queue service is closed"
-            logger.error(msg)
+            msg = f"Queue service is closed for job_id: {job_id}"
             raise RuntimeError(msg)
 
-        return self._queues[job_id]
+        try:
+            return self._queues[job_id]
+        except KeyError as exc:
+            raise JobQueueNotFoundError(job_id) from exc
 
     async def cleanup_job(self, job_id: str) -> None:
         """Clean up and release resources for a specific job.

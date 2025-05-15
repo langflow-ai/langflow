@@ -1,3 +1,5 @@
+import { DEFAULT_FILE_PICKER_TIMEOUT } from "@/constants/constants";
+
 export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
@@ -64,6 +66,6 @@ export function createFileUpload(props?: {
         cleanup();
         resolve([]);
       }
-    }, 30000);
+    }, DEFAULT_FILE_PICKER_TIMEOUT);
   });
 }
