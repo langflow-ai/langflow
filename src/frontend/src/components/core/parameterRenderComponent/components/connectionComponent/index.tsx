@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
@@ -96,7 +97,7 @@ const ConnectionComponent = ({
   const handleConnectionButtonClick = () => {
     if (selectedItem?.length === 0) return;
 
-    window.open(link, "_blank");
+    customOpenNewTab(link);
 
     startPolling();
   };
