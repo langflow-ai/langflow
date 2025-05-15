@@ -49,14 +49,11 @@ The following table lists the handle colors and their corresponding data types:
 |-----------|--------------|----------|
 | Data | Red | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#dc2626' }} /> |
 | DataFrame | Pink | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#ec4899' }} /> |
-| Document | Lime | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#65a30d' }} /> |
 | Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#10b981' }} /> |
 | LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
 | Memory | Orange | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#f97316' }} /> |
 | Message | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
-| Prompt | Violet | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#7c3aed' }} /> |
-| str | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
-| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
+| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
 | Tool | Cyan | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#06b6d4' }} /> |
 | unknown | Gray | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#9CA3AF' }} /> |
 
