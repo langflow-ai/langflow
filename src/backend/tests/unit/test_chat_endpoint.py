@@ -2,16 +2,13 @@ import asyncio
 import json
 import uuid
 from uuid import UUID
-import pytest_timeout
-
-
 
 import pytest
 from httpx import codes
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
 from loguru import logger
-from unittest.mock import patch
+
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
 
 
@@ -145,14 +142,14 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert isinstance(build_response["job_id"], str)
     assert uuid.UUID(build_response["job_id"])
 
-@pytest.mark.timeout(30) 
+
+@pytest.mark.timeout(30)
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with polling (non-streaming)."""
     # First create the flow
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     logger.debug(f"Created flow with ID: {flow_id}")
-
 
     # Start the build and get job_id
     build_response = await build_flow(client, flow_id, logged_in_headers)
@@ -168,32 +165,29 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.job_id = job_id
             self.headers = headers
             self.status_code = codes.OK
-            #self.max_total_events = 50  # Limit to prevent infinite loops
-            #self.max_empty_polls = 10  # Maximum number of empty polls before giving up
-            #self.poll_timeout = 1.0  # Timeout for each polling request
+            # self.max_total_events = 50  # Limit to prevent infinite loops
+            # self.max_empty_polls = 10  # Maximum number of empty polls before giving up
+            # self.poll_timeout = 1.0  # Timeout for each polling request
             self.max_total_events = 200
             self.max_empty_polls = 40
             self.poll_timeout = 5.0
-            self.retry_delay = 0.5 
+            self.retry_delay = 0.5
 
         async def aiter_lines(self):
             try:
                 empty_polls = 0
                 total_events = 0
                 end_event_found = False
-                vertices_sorted_found = False # Flag to track if vertices_sorted event is found
+                vertices_sorted_found = False  # Flag to track if vertices_sorted event is found
 
-                #while (
-                    #empty_polls < self.max_empty_polls and total_events < self.max_total_events and not (end_event_found and vertices_sorted_found)
-                #):
-                while (
-                    empty_polls < self.max_empty_polls 
-                    and total_events < self.max_total_events
-                ):
+                # while (
+                # empty_polls < self.max_empty_polls and total_events < self.max_total_events and not (end_event_found and vertices_sorted_found)
+                # ):
+                while empty_polls < self.max_empty_polls and total_events < self.max_total_events:
                     try:
                         headers = {**self.headers, "Accept": "application/x-ndjson"}
                         logger.debug(f"Polling attempt {empty_polls + 1}")
-                        
+
                         response = await asyncio.wait_for(
                             self.client.get(
                                 f"api/v1/build/{self.job_id}/events?event_delivery=polling",
@@ -217,7 +211,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                             try:
                                 event_data = json.loads(line)
                                 total_events += 1
-                                
+
                                 if event_data.get("event") == "vertices_sorted":
                                     vertices_sorted_found = True
                                     logger.debug("Found vertices_sorted event")
@@ -245,7 +239,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                     raise TimeoutError("Never received vertices_sorted event")
 
             except Exception as e:
-                logger.error(f"Error in polling: {str(e)}")
+                logger.error(f"Error in polling: {e!s}")
                 raise
 
     polling_response = PollingResponse(client, job_id, logged_in_headers)
