@@ -1396,7 +1396,7 @@
                   {
                     "description": "description of field",
                     "multiple": "False",
-                    "name": "EBITIDA",
+                    "name": "EBITDA",
                     "type": "text"
                   },
                   {
@@ -1609,7 +1609,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "EBITIDA: {EBITIDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
+                "value": "EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
