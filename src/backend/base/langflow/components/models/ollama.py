@@ -26,6 +26,7 @@ class ChatOllamaComponent(LCModelComponent):
     JSON_NAME_KEY = "name"
     JSON_CAPABILITIES_KEY = "capabilities"
     DESIRED_CAPABILITY = "completion"
+    TOOL_CALLING_CAPABILITY = "tools"
 
     inputs = [
         MessageTextInput(
@@ -314,17 +315,14 @@ class ChatOllamaComponent(LCModelComponent):
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
                     logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
 
-                    if self.DESIRED_CAPABILITY in capabilities:
+                    if self.DESIRED_CAPABILITY in capabilities and (
+                        not self.tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
+                    ):
                         model_ids.append(model_name)
 
         except (httpx.RequestError, ValueError) as e:
             msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e
 
-        return (
-            model_ids if not tool_model_enabled else [model for model in model_ids if self.supports_tool_calling(model)]
-        )
+        return model_ids
 
-    def supports_tool_calling(self, model: str) -> bool:
-        """Check if model name is in the base of any models example llama3.3 can have 1b and 2b."""
-        return any(model.startswith(f"{tool_model}") for tool_model in OLLAMA_TOOL_MODELS_BASE)
