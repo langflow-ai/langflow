@@ -108,7 +108,7 @@ jobs:
             echo "base version=${{ inputs.base_version }}"
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             version=${{ inputs.main_version }}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
