@@ -54,7 +54,7 @@ Point **API Request** to an online rules document, tell your agent `You are a fu
 * You need to learn a new software language quickly.
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal`, and start learning.
 
-See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [math agent project](/math-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
+See what problems you can solve with this flow. As your problem becomes more specialized, add more tools. For example, add a Python REPL component to solve math problems that are too challenging for the calculator.
 
 ### Edit a tool's metadata
 
@@ -161,7 +161,7 @@ class TextAnalyzerComponent(Component):
 4. Connect the tool output to the agent's tools input.
 5. Ask the agent, `What tools are you using to answer my questions?`
 Your response will be similar to the following, and will include your custom component.
-```plain
+```text
 I have access to several tools that assist me in answering your questions, including:
 Search API: This allows me to search for recent information or results on the web.
 HTTP Requests: I can make HTTP requests to various URLs to retrieve data or interact with APIs.

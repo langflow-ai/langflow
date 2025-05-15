@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
-import { ENABLE_WIDGET } from "@/customization/feature-flags";
+import { CustomLink } from "@/customization/components/custom-link";
+import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
+import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useAlertStore from "@/stores/alertStore";
@@ -18,13 +20,16 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
+import { useHref } from "react-router-dom";
 
 export default function PublishDropdown() {
-  const domain = window.location.origin;
+  const location = useHref("/");
+  const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
   const flowName = currentFlow?.name;
+  const folderId = currentFlow?.folder_id;
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutateAsync } = usePatchUpdateFlow();
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -113,6 +118,31 @@ export default function PublishDropdown() {
               <span>API access</span>
             </div>
           </DropdownMenuItem>
+          <CustomLink
+            className={cn("flex-1")}
+            to={`/mcp/folder/${folderId}`}
+            target={customMcpOpen()}
+          >
+            <DropdownMenuItem
+              className="deploy-dropdown-item group"
+              onClick={() => {}}
+            >
+              <div
+                className="group-hover:bg-accent"
+                data-testid="mcp-server-item"
+              >
+                <IconComponent
+                  name="Mcp"
+                  className={`${groupStyle} icon-size mr-2 fill-muted-foreground group-hover:fill-foreground`}
+                />
+                <span>MCP Server</span>
+                <IconComponent
+                  name="ExternalLink"
+                  className={`${groupStyle} icon-size ml-auto hidden group-hover:block`}
+                />
+              </div>
+            </DropdownMenuItem>
+          </CustomLink>
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
@@ -127,58 +157,66 @@ export default function PublishDropdown() {
               </div>
             </DropdownMenuItem>
           )}
-          <ShadTooltipComponent
-            styleClasses="truncate"
-            side="left"
-            content={
-              hasIO
-                ? isPublished
-                  ? encodeURI(`${domain}/playground/${flowId}`)
-                  : "Active to share a public version of this Playground"
-                : "Add a Chat Input or Chat Output to access your flow"
-            }
-          >
-            <div
-              className={cn(
-                !hasIO ? "cursor-not-allowed" : "",
-                "flex items-center",
-              )}
-              data-testid="shareable-playground"
+
+          {ENABLE_PUBLISH && (
+            <ShadTooltipComponent
+              styleClasses="truncate"
+              side="left"
+              content={
+                hasIO
+                  ? isPublished
+                    ? encodeURI(`${domain}/playground/${flowId}`)
+                    : "Activate to share a public version of this Playground"
+                  : "Add a Chat Input or Chat Output to access your flow"
+              }
             >
-              <DropdownMenuItem
-                disabled={!hasIO || !isPublished}
-                className="deploy-dropdown-item group flex-1"
-                onClick={() => {
-                  if (hasIO) {
-                    if (isPublished) {
-                      window.open(`${domain}/playground/${flowId}`, "_blank");
-                    }
-                  }
-                }}
+              <div
+                className={cn(
+                  !hasIO ? "cursor-not-allowed" : "",
+                  "flex items-center",
+                )}
+                data-testid="shareable-playground"
               >
-                <div className="group-hover:bg-accent">
-                  <IconComponent
-                    name="Globe"
-                    className={`${groupStyle} icon-size mr-2`}
+                <CustomLink
+                  className={cn(
+                    "flex-1",
+                    !hasIO || !isPublished
+                      ? "pointer-events-none cursor-default"
+                      : "",
+                  )}
+                  to={`/playground/${flowId}`}
+                  target="_blank"
+                >
+                  <DropdownMenuItem
+                    disabled={!hasIO || !isPublished}
+                    className="deploy-dropdown-item group flex-1"
+                    onClick={() => {}}
+                  >
+                    <div className="group-hover:bg-accent">
+                      <IconComponent
+                        name="Globe"
+                        className={`${groupStyle} icon-size mr-2`}
+                      />
+                      <span>Shareable Playground</span>
+                    </div>
+                  </DropdownMenuItem>
+                </CustomLink>
+                <div className={`z-50 mr-2 text-foreground`}>
+                  <Switch
+                    data-testid="publish-switch"
+                    className="scale-[85%]"
+                    checked={isPublished}
+                    disabled={!hasIO}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handlePublishedSwitch(isPublished);
+                    }}
                   />
-                  <span>Shareable Playground</span>
                 </div>
-              </DropdownMenuItem>
-              <div className={`z-50 mr-2 text-foreground`}>
-                <Switch
-                  data-testid="publish-switch"
-                  className="scale-[85%]"
-                  checked={isPublished}
-                  disabled={!hasIO}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePublishedSwitch(isPublished);
-                  }}
-                />
               </div>
-            </div>
-          </ShadTooltipComponent>
+            </ShadTooltipComponent>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>

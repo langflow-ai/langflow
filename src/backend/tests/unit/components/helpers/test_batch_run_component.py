@@ -46,7 +46,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
         # Verify the results
         assert isinstance(result, DataFrame)
-        assert "text_input" in result.columns
+        assert "text" in result.columns
         assert "model_response" in result.columns
         assert "metadata" in result.columns
         assert len(result) == 3
@@ -121,7 +121,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert error_row["metadata"]["processing_status"] == "failed"
         assert "Mock error during batch processing" in error_row["metadata"]["error"]
         # Verify base row structure
-        assert error_row["text_input"] == ""
+        assert error_row["text"] == ""
         assert error_row["model_response"] == ""
         assert error_row["batch_index"] == -1
 
@@ -149,45 +149,66 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         # Verify no metadata
         assert "metadata" not in error_row
         # Verify base row structure
-        assert error_row["text_input"] == ""
+        assert error_row["text"] == ""
         assert error_row["model_response"] == ""
         assert error_row["batch_index"] == -1
 
     def test_create_base_row(self):
         component = BatchRunComponent()
-        row = component._create_base_row(text_input="test_input", model_response="test_response", batch_index=1)
-
-        assert row == {
-            "text_input": "test_input",
-            "model_response": "test_response",
-            "batch_index": 1,
-        }
+        row = component._create_base_row(
+            original_row={"text_input": "test_input"},
+            model_response="test_response",
+            batch_index=1,
+        )
+        assert row["text_input"] == "test_input"
+        assert row["model_response"] == "test_response"
+        assert row["batch_index"] == 1
 
     def test_add_metadata_success(self):
         component = BatchRunComponent(enable_metadata=True)
-        row = component._create_base_row(text_input="test_input", model_response="test_response", batch_index=1)
-        component._add_metadata(row, success=True, system_msg="test_system")
+
+        # Passa text_input dentro do dicionário original_row
+        original_row = {"text_input": "test_input"}
+        row = component._create_base_row(
+            original_row=original_row,
+            model_response="test_response",
+            batch_index=1,
+        )
+
+        component._add_metadata(row, success=True, system_msg="Instructions here")
 
         assert "metadata" in row
         assert row["metadata"]["has_system_message"] is True
-        assert row["metadata"]["processing_status"] == "success"
         assert row["metadata"]["input_length"] == len("test_input")
         assert row["metadata"]["response_length"] == len("test_response")
+        assert row["metadata"]["processing_status"] == "success"
 
     def test_add_metadata_failure(self):
         component = BatchRunComponent(enable_metadata=True)
-        row = component._create_base_row()
-        component._add_metadata(row, success=False, error="test_error")
+
+        # Fornecendo um original_row vazio (poderia conter outras chaves se necessário)
+        row = component._create_base_row(original_row={}, model_response="", batch_index=1)
+
+        # Adiciona metadata simulando falha
+        component._add_metadata(row, success=False, error="Simulated error")
 
         assert "metadata" in row
         assert row["metadata"]["processing_status"] == "failed"
-        assert row["metadata"]["error"] == "test_error"
+        assert row["metadata"]["error"] == "Simulated error"
 
     def test_metadata_disabled(self):
         component = BatchRunComponent(enable_metadata=False)
-        row = component._create_base_row(text_input="test")
-        component._add_metadata(row, success=True)
 
+        # Fornece text_input dentro do dicionário original_row
+        row = component._create_base_row(
+            original_row={"text_input": "test"},
+            model_response="response",
+            batch_index=0,
+        )
+
+        component._add_metadata(row, success=True, system_msg="test")
+
+        # Como o metadata está desabilitado, ele não deve existir
         assert "metadata" not in row
 
     async def test_invalid_column_name(self):
@@ -229,7 +250,9 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         result = await component.run_batch()
 
         assert isinstance(result, DataFrame)
-        assert all(isinstance(text, str) for text in result["text_input"])
-        assert all(str(num) in text for num, text in zip(test_df["text"], result["text_input"], strict=False))
+        assert all(isinstance(text, int) for text in result["text"])
+        assert all(
+            str(num) in response for num, response in zip(test_df["text"], result["model_response"], strict=False)
+        )
         result_dicts = result.to_dict("records")
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)

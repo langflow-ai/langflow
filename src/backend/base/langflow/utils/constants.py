@@ -66,7 +66,10 @@ DIRECT_TYPES = [
     "slider",
     "tab",
     "sortableList",
+    "auth",
     "connect",
+    "query",
+    "tools",
 ]
 
 

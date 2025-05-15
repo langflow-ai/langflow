@@ -64,6 +64,9 @@ A component inherits from a base `Component` class that defines its interface an
 
 For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
+<details>
+<summary>Recursive character text splitter code</summary>
+
 ```python
 from typing import Any
 
@@ -125,6 +128,8 @@ class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
         )
 
 ```
+
+</details>
 
 Components include definitions for inputs and outputs, which are represented in the UI with color-coded ports.
 
@@ -204,8 +209,24 @@ A component's initial state is stored in a database. As soon as you drag a compo
 
 A component keeps the version number it is initialized to the workspace with. If a component is at version `1.0` when it is dragged to the workspace, it will stay at version `1.0` until you update it.
 
-Langflow notifies you when a component's workspace version is behind the database version and an update is available.
-Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+### Review and update components
+
+When a component's workspace version is behind the database version and an update is available, the component displays a notification.
+If there are potentially breaking changes in the component updates, Langflow notifies you with an additional dialog.
+
+Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
+
+An **Update ready** notification on a component indicates the component update contains no breaking changes. To update a single component, click **Update**.
+
+An **Update available** notification indicates the component update contains potentially breaking changes.
+
+1. To review all components with pending updates, in the component or in the dialog, click **Review**.
+The **Update components** pane appears.
+This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
+2. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
+3. To update individual components, select them in the list, and then click **Update Component**.
+Your components are updated to the current version.
+If you created a backup flow, it's available in the same project folder as the original flow, with `(backup)` added to its name.
 
 ## Components sidebar
 
@@ -217,4 +238,4 @@ The sidebar includes a component **Search** bar, and includes flags for showing 
 
 **Beta** components are still being tested and are not suitable for production workloads.
 
-**Legacy** components are available to use but no longer supported.
+Legacy components are available for use but are no longer supported.
