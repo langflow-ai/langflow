@@ -47,7 +47,7 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=Data(data={"text": "Hello World"}), output_type="Message")
         result = component.convert_to_message()
         assert isinstance(result, Message)
-        assert result.data.get("text") == '{"text": "Hello World"}'
+        assert result.text == "Hello World"
 
     def test_data_to_data(self, component_class):
         """Test converting Data to Data."""
@@ -67,51 +67,30 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
     # DataFrame to other types
     def test_dataframe_to_message(self, component_class):
         """Test converting DataFrame to Message."""
-        df = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
-        component = component_class(input_data=DataFrame(data=df), output_type="Message")
+        df_data = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
+        component = component_class(input_data=DataFrame(data=df_data), output_type="Message")
         result = component.convert_to_message()
         assert isinstance(result, Message)
         assert result.text == "| col1   | col2   |\n|:-------|:-------|\n| Hello  | World  |"
 
     def test_dataframe_to_data(self, component_class):
         """Test converting DataFrame to Data."""
-        test_df = pd.DataFrame({"col1": ["Hello"]})
-        component = component_class(input_data=DataFrame(data=test_df), output_type="Data")
+        df_data = pd.DataFrame({"col1": ["Hello"]})
+        component = component_class(input_data=DataFrame(data=df_data), output_type="Data")
         result = component.convert_to_data()
         assert isinstance(result, Data)
         assert isinstance(result.data, dict)
 
     def test_dataframe_to_dataframe(self, component_class):
         """Test converting DataFrame to DataFrame."""
-        df = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
-        component = component_class(input_data=DataFrame(data=df), output_type="DataFrame")
+        df_data = pd.DataFrame({"col1": ["Hello"], "col2": ["World"]})
+        component = component_class(input_data=DataFrame(data=df_data), output_type="DataFrame")
         result = component.convert_to_dataframe()
         assert isinstance(result, DataFrame)
         assert "col1" in result.columns
         assert "col2" in result.columns
         assert result.iloc[0]["col1"] == "Hello"
         assert result.iloc[0]["col2"] == "World"
-
-    # Additional helper tests
-    def test_safe_convert(self, component_class):
-        """Test the _safe_convert method."""
-        component = component_class(input_data=Message(text="Hello"), output_type="Message")
-
-        # Test with Message
-        result = component._safe_convert(Message(text="Hello"))
-        assert result == "Hello"
-
-        # Test with Data
-        result = component._safe_convert(Data(data={"text": "Hello"}))
-        assert result == '{"text": "Hello"}'
-
-        # Test with DataFrame
-        test_df = pd.DataFrame({"col1": ["Hello"]})
-        result = component._safe_convert(DataFrame(data=test_df))
-        result = component._safe_convert(test_df)
-        result = component._safe_convert(DataFrame(test_df))
-        assert "| col1   |" in result
-        assert "| Hello  |" in result
 
     def test_update_outputs(self, component_class):
         """Test the update_outputs method."""

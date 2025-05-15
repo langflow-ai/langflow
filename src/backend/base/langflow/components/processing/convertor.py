@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from langflow.base.processing.type_conversion import (
@@ -16,11 +15,6 @@ class TypeConverterComponent(Component):
     display_name = "Type Convert"
     description = "Convert between different types (Message, Data, DataFrame)"
     icon = "repeat"
-
-    # Class-level conversion dispatchers
-    _message_converters = get_message_converter()
-    _data_converters = get_data_converter()
-    _dataframe_converters = get_dataframe_converter()
 
     inputs = [
         HandleInput(
@@ -66,69 +60,14 @@ class TypeConverterComponent(Component):
 
         return frontend_node
 
-    def _safe_convert(self, data: Any) -> str:
-        """Safely convert input data to string."""
-        try:
-            if isinstance(data, str):
-                return data
-            if isinstance(data, Message):
-                return data.get_text()
-            if isinstance(data, Data):
-                return json.dumps(data.data)
-            if isinstance(data, DataFrame):
-                # Remove empty rows
-                data = data.dropna(how="all")
-                # Remove empty lines in each cell
-                data = data.replace(r"^\s*$", "", regex=True)
-                # Replace multiple newlines with a single newline
-                data = data.replace(r"\n+", "\n", regex=True)
-                return data.to_markdown(index=False)
-            return str(data)
-        except (ValueError, TypeError, AttributeError) as e:
-            msg = f"Error converting data: {e!s}"
-            raise ValueError(msg) from e
-
     def convert_to_message(self) -> Message:
-        """Convert input data to string with proper error handling."""
-        result = ""
-        if isinstance(self.input_data, list):
-            result = "\n".join([self._safe_convert(item) for item in self.input_data])
-        else:
-            result = self._safe_convert(self.input_data)
-        self.log(f"Converted to string with length: {len(result)}")
-        message = Message(text=result)
-        self.status = message
-        return message
+        """Convert input to Message type."""
+        return get_message_converter(self.input_data)
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
-        input_data = self.input_data
-
-        converter = self._data_converters.get(type(input_data))
-        if converter:
-            try:
-                return converter(input_data)
-            except (ValueError, TypeError, AttributeError) as e:
-                self.log(f"Error converting to Data: {e!s}")
-                return Data(data={"text": str(input_data)})
-
-        # Default fallback
-        return Data(data={"value": str(input_data)})
+        return get_data_converter(self.input_data)
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
-        input_data = self.input_data
-        converter = self._dataframe_converters.get(type(input_data))
-        if converter:
-            try:
-                return converter(input_data)
-            except (ValueError, TypeError, AttributeError) as e:
-                self.log(f"Error converting to DataFrame: {e!s}")
-                import pandas as pd
-
-                return DataFrame(pd.DataFrame({"value": [str(input_data)]}))
-
-        # Default fallback
-        import pandas as pd
-
-        return DataFrame(pd.DataFrame({"value": [str(input_data)]}))
+        return get_dataframe_converter(self.input_data)
