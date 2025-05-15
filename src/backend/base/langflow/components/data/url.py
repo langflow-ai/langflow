@@ -181,7 +181,10 @@ class URLComponent(Component):
             # Create httpx client with increased header limits
             client_settings = {"follow_redirects": True, "timeout": self.timeout}
             limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
-            transport = httpx.HTTPTransport(http1=True)
+            transport = httpx.HTTPTransport()
+
+            # If there's only one URL, we'll make sure to propagate any errors
+            single_url = len(urls) == 1
 
             for processed_url in urls:
                 msg = f"Loading documents from {processed_url}"
@@ -212,11 +215,15 @@ class URLComponent(Component):
                             except httpx.HTTPError as e:
                                 msg = f"Error loading PDF from {processed_url}: {e}"
                                 logger.exception(msg)
+                                if single_url:
+                                    raise  # Re-raise the exception if it's the only URL
                                 continue
                 except httpx.HTTPError as e:
-                    # If HEAD request fails, continue with normal processing
+                    # If HEAD request fails, continue with normal processing unless it's the only URL
                     msg = f"Error checking content type for {processed_url}: {e}"
                     logger.warning(msg)
+                    if single_url and "application/pdf" in getattr(e.response, "headers", {}).get("Content-Type", ""):
+                        raise  # Re-raise if it's the only URL and it's a PDF
                     # Fall through to regular processing
 
                 # Configure RecursiveUrlLoader with httpx-compatible settings
@@ -230,6 +237,7 @@ class URLComponent(Component):
                     max_depth=self.max_depth,
                     prevent_outside=self.prevent_outside,
                     use_async=self.use_async,
+                    continue_on_failure=not single_url,
                     extractor=extractor,
                     timeout=self.timeout,
                     headers=headers_dict,
@@ -240,6 +248,9 @@ class URLComponent(Component):
                     if not docs:
                         msg = f"No documents found for {processed_url}"
                         logger.warning(msg)
+                        if single_url:
+                            message = f"No documents found for {processed_url}"
+                            raise ValueError(message)
                     else:
                         msg = f"Found {len(docs)} documents from {processed_url}"
                         logger.info(msg)
@@ -247,18 +258,24 @@ class URLComponent(Component):
                 except (httpx.HTTPError, httpx.RequestError) as e:
                     msg = f"Error loading documents from {processed_url}: {e}"
                     logger.exception(msg)
+                    if single_url:
+                        raise  # Re-raise the exception if it's the only URL
                 except UnicodeDecodeError as e:
                     msg = f"Error decoding content from {processed_url}: {e}"
                     logger.error(msg)
+                    if single_url:
+                        raise  # Re-raise the exception if it's the only URL
                 except Exception as e:
                     msg = f"Unexpected error loading documents from {processed_url}: {e}"
                     logger.exception(msg)
+                    if single_url:
+                        raise  # Re-raise the exception if it's the only URL
 
             data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
             self.status = data
 
         except Exception as e:
-            msg = f"Error loading documents: {e!s}"
+            msg = f"Error loading documents: {e.message!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
 
