@@ -3,6 +3,7 @@ import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
+import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -15,7 +16,6 @@ import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import EmptyFolder from "../emptyFolder";
-import McpServerTab from "./components/McpServerTab";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
@@ -119,12 +119,25 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       }
     };
 
+    // Reset key states when window loses focus
+    const handleBlur = () => {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
+    // Clean up event listeners when component unmounts
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+
+      // Reset key states on unmount
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
     };
   }, []);
 
@@ -170,6 +183,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     );
   }, [data.flows]);
 
+  // Reset key states when navigating away
+  useEffect(() => {
+    return () => {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+  }, [folderId]);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
@@ -211,7 +232,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "mcp" ? (
-                    <McpServerTab folderName={folderName} />
+                    <CustomMcpServerTab folderName={folderName} />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (
