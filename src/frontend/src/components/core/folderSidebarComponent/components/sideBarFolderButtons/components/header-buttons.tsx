@@ -64,7 +64,7 @@ export const HeaderButtons = ({
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div className="flex-1 text-sm font-semibold">Projects</div>
+        <div className="flex-1 text-sm font-medium">Projects</div>
         <div className="flex items-center gap-1">
           <UploadFolderButton
             onClick={handleUploadFlowsToFolder}

@@ -287,6 +287,10 @@ class APIRequestComponent(Component):
             # if we remove field value from validation, this gets validated every time
             build_config = self._update_curl_mode(build_config, use_curl=field_value)
 
+            # If curl is not used, we don't need to reset the fields
+            if not self.use_curl:
+                return build_config
+
             # Fields that should not be reset
             preserve_fields = {"timeout", "follow_redirects", "save_to_file", "include_httpx_metadata", "use_curl"}
 
@@ -336,7 +340,7 @@ class APIRequestComponent(Component):
                 elif field_name in {"body", "headers"}:
                     field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
                 else:
-                    field_config["advanced"] = use_curl
+                    field_config["advanced"] = use_curl or field_config.get("advanced")
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
 
@@ -373,8 +377,6 @@ class APIRequestComponent(Component):
                 elif field_name in body_fields:
                     field_config["advanced"] = method not in {"POST", "PUT", "PATCH"}
                 elif field_name in always_advanced_fields:
-                    field_config["advanced"] = True
-                else:
                     field_config["advanced"] = True
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
