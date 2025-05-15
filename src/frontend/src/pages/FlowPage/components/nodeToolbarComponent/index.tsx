@@ -254,7 +254,7 @@ const NodeToolbarComponent = memo(
       setNoticeData({
         title: `${data.id} docs is not available at the moment.`,
       });
-    }, [data.id, data.node?.documentation, openInNewTab]);
+    }, [data.id, data.node?.documentation]);
 
     useShortcuts({
       showOverrideModal,
