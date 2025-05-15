@@ -1,5 +1,4 @@
 from .aiml import AIMLModelComponent
-from .amazon_bedrock import AmazonBedrockComponent
 from .anthropic import AnthropicModelComponent
 from .azure_openai import AzureChatOpenAIComponent
 from .baidu_qianfan_chat import QianfanChatEndpointComponent
@@ -20,11 +19,11 @@ from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
+from .watsonx import WatsonxAIComponent
 from .xai import XAIModelComponent
 
 __all__ = [
     "AIMLModelComponent",
-    "AmazonBedrockComponent",
     "AnthropicModelComponent",
     "AzureChatOpenAIComponent",
     "ChatOllamaComponent",
@@ -45,5 +44,6 @@ __all__ = [
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
     "SambaNovaComponent",
+    "WatsonxAIComponent",
     "XAIModelComponent",
 ]

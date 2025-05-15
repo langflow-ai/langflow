@@ -307,6 +307,8 @@ class Vertex:
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
         elif param_key in self.output_names:
+            #  if the loop is run the param_key item will be set over here
+            # validate the edge
             params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 
@@ -702,6 +704,16 @@ class Vertex:
         event_manager: EventManager | None = None,
         **kwargs,
     ) -> Any:
+        # Add lazy loading check at the beginning
+        # Check if we need to fully load this component first
+        from langflow.interface.components import ensure_component_loaded
+        from langflow.services.deps import get_settings_service
+
+        if get_settings_service().settings.lazy_load_components:
+            component_name = self.id.split("-")[0]
+            await ensure_component_loaded(self.vertex_type, component_name, get_settings_service())
+
+        # Continue with the original implementation
         async with self._lock:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None

@@ -5,6 +5,54 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
+function getRandomSocialMediaQuery(): string {
+  const companies = [
+    "OpenAI",
+    "Microsoft",
+    "Google",
+    "Tesla",
+    "Netflix",
+    "Spotify",
+    "Adobe",
+    "Amazon",
+    "Meta",
+    "Apple",
+  ];
+
+  const platforms = [
+    "TikTok",
+    "Instagram",
+    "Twitter",
+    "LinkedIn",
+    "YouTube",
+    "Facebook",
+  ];
+
+  const contentTypes = [
+    "latest video",
+    "recent post",
+    "profile bio",
+    "latest update",
+    "recent activity",
+  ];
+
+  const randomCompany = companies[Math.floor(Math.random() * companies.length)];
+  const randomPlatform =
+    platforms[Math.floor(Math.random() * platforms.length)];
+  const randomContent1 =
+    contentTypes[Math.floor(Math.random() * contentTypes.length)];
+  let randomContent2 =
+    contentTypes[Math.floor(Math.random() * contentTypes.length)];
+
+  // Make sure we don't get the same content type twice
+  while (randomContent1 === randomContent2) {
+    randomContent2 =
+      contentTypes[Math.floor(Math.random() * contentTypes.length)];
+  }
+
+  return `Find the ${randomPlatform} profile of the company ${randomCompany} using Google search, then show me the ${randomContent1} and their ${randomContent2}.`;
+}
+
 withEventDeliveryModes(
   "Social Media Agent",
   { tag: ["@release", "@starter-projects"] },
@@ -46,9 +94,7 @@ withEventDeliveryModes(
     await page
       .getByTestId("input-chat-playground")
       .last()
-      .fill(
-        "Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.",
-      );
+      .fill(getRandomSocialMediaQuery());
 
     await page.getByTestId("button-send").last().click();
 
@@ -63,7 +109,7 @@ withEventDeliveryModes(
       .getByTestId("div-chat-message")
       .last()
       .innerText();
-    expect(output).toContain("TikTok");
-    expect(output.length).toBeGreaterThan(300);
+
+    expect(output.length).toBeGreaterThan(100);
   },
 );

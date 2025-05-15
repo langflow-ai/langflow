@@ -7,23 +7,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Tza35",
+            "id": "ChatInput-Enwwh",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "NovitaModel-NPPoo",
-            "inputTypes": ["Message"],
+            "id": "NovitaModel-20MWu",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Tza35{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Tza35œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-NPPoo{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-NPPooœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Enwwh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Enwwhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-20MWu{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Tza35",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Tza35œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "NovitaModel-NPPoo",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-NPPooœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Enwwh",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Enwwhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "NovitaModel-20MWu",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-20MWuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -31,23 +35,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-lo2oI",
+            "id": "Prompt-YubZ1",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "NovitaModel-NPPoo",
-            "inputTypes": ["Message"],
+            "id": "NovitaModel-20MWu",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-lo2oI{œdataTypeœ:œPromptœ,œidœ:œPrompt-lo2oIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-NPPoo{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-NPPooœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-YubZ1{œdataTypeœ:œPromptœ,œidœ:œPrompt-YubZ1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-20MWu{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-20MWuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-lo2oI",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-lo2oIœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "NovitaModel-NPPoo",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-NPPooœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-YubZ1",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-YubZ1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "NovitaModel-20MWu",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-20MWuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,31 +63,39 @@
         "data": {
           "sourceHandle": {
             "dataType": "NovitaModel",
-            "id": "NovitaModel-NPPoo",
+            "id": "NovitaModel-20MWu",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-G6tol",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "id": "ChatOutput-N3tYJ",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-NovitaModel-NPPoo{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-NPPooœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-G6tol{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-G6tolœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-NovitaModel-20MWu{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-20MWuœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-N3tYJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N3tYJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "NovitaModel-NPPoo",
-        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-NPPooœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-G6tol",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-G6tolœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "NovitaModel-20MWu",
+        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-20MWuœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-N3tYJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N3tYJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-Tza35",
+          "id": "ChatInput-Enwwh",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -114,7 +130,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -127,7 +145,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -148,7 +168,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -256,7 +278,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -273,7 +298,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -294,7 +321,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -333,7 +362,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -355,7 +386,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Tza35",
+        "id": "ChatInput-Enwwh",
         "measured": {
           "height": 66,
           "width": 192
@@ -369,20 +400,25 @@
       },
       {
         "data": {
-          "id": "Prompt-lo2oI",
+          "id": "Prompt-YubZ1",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
               "template": []
             },
-            "description": "",
+            "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": ["template", "tool_placeholder"],
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -404,7 +440,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -453,7 +491,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -475,9 +515,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-lo2oI",
+        "id": "Prompt-YubZ1",
         "measured": {
-          "height": 203,
+          "height": 278,
           "width": 320
         },
         "position": {
@@ -489,9 +529,12 @@
       },
       {
         "data": {
-          "id": "NovitaModel-NPPoo",
+          "id": "NovitaModel-20MWu",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -529,7 +572,9 @@
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -541,7 +586,9 @@
                 "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -554,8 +601,8 @@
                 "display_name": "Novita API Key",
                 "dynamic": false,
                 "info": "The Novita API Key to use for Novita AI models.",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [],
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -564,7 +611,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "NOVITA_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -590,7 +637,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -725,7 +774,9 @@
                 "display_name": "Output Parser",
                 "dynamic": false,
                 "info": "The parser to use to parse the output of the model",
-                "input_types": ["OutputParser"],
+                "input_types": [
+                  "OutputParser"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "output_parser",
@@ -779,7 +830,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -830,23 +883,25 @@
           "type": "NovitaModel"
         },
         "dragging": false,
-        "id": "NovitaModel-NPPoo",
+        "id": "NovitaModel-20MWu",
         "measured": {
-          "height": 671,
+          "height": 632,
           "width": 320
         },
         "position": {
           "x": 840.6904825863304,
           "y": 28.607467331181716
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-G6tol",
+          "id": "ChatOutput-N3tYJ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -881,7 +936,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -894,7 +951,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -915,7 +974,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -972,7 +1033,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -993,7 +1056,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1017,7 +1084,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1034,7 +1104,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1055,7 +1127,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1094,7 +1168,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1116,7 +1192,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-G6tol",
+        "id": "ChatOutput-N3tYJ",
         "measured": {
           "height": 66,
           "width": 192
@@ -1130,7 +1206,7 @@
       },
       {
         "data": {
-          "id": "note-u4rse",
+          "id": "note-MFDQt",
           "node": {
             "description": "# Diet analysis\n\nAnalyze and score dietary health with a [NovitaAI](https://novita.ai/docs/guides/introduction) LLM. \n\n## Prerequisites\n\n* A [NovitaAI API Key](https://novita.ai/settings/key-management)\n\n## Quickstart\n\n1. Add your **NovitaAI API Key** to the **Novita AI** agent.\n2. In the **Chat input** component, enter your diet for the day.\n3. The **Novita AI** analyzes your diet with the **Prompt**, and outputs its analysis to **Chat output**.\n4. Try different models with the **Model Name** menu.\n\n",
             "display_name": "",
@@ -1141,7 +1217,7 @@
         },
         "dragging": false,
         "height": 636,
-        "id": "note-u4rse",
+        "id": "note-MFDQt",
         "measured": {
           "height": 636,
           "width": 325
@@ -1157,16 +1233,19 @@
       }
     ],
     "viewport": {
-      "x": 188.5810308950804,
-      "y": 326.70291895230537,
-      "zoom": 0.7310399087047124
+      "x": 93.52021572674903,
+      "y": 210.3952364478577,
+      "zoom": 0.8640597928279287
     }
   },
   "description": "Enter your daily food intake (food/grams) to receive dietary advice!",
   "endpoint_name": null,
-  "id": "9bee0aca-0816-4afe-a4a5-64088e40dd74",
+  "id": "5616e60d-d21f-4465-83c4-d8d120e075d8",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Diet Analysis",
-  "tags": ["chatbots", "content-generation"]
+  "tags": [
+    "chatbots",
+    "content-generation"
+  ]
 }

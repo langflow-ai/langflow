@@ -10,6 +10,9 @@ export function StrRenderComponent({
   name,
   display_name,
   placeholder,
+  nodeId,
+  nodeClass,
+  handleNodeClass,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
   const { handleOnNewValue, id, isToolMode, nodeInformationMetadata } =
@@ -66,10 +69,17 @@ export function StrRenderComponent({
       <DropdownComponent
         {...baseInputProps}
         dialogInputs={templateData.dialog_inputs}
-        options={templateData.options}
+        options={templateData.options ?? []}
+        nodeId={nodeId}
+        nodeClass={nodeClass}
+        handleNodeClass={handleNodeClass}
         optionsMetaData={templateData.options_metadata}
         combobox={templateData.combobox}
         name={templateData?.name!}
+        toggle={templateData.toggle}
+        toggleValue={templateData.toggle_value}
+        toggleDisable={templateData.toggle_disable}
+        hasRefreshButton={templateData.refresh_button}
       />
     );
   }

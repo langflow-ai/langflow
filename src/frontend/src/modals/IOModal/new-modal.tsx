@@ -8,6 +8,7 @@ import {
 } from "@/controllers/API/queries/messages";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
@@ -67,18 +68,15 @@ export default function IOModal({
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
-  setPlaygroundPage(!!playgroundPage);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
   const flowName = useFlowStore((state) => state.currentFlow?.name);
-  const PlaygroundTitle =
-    playgroundPage && ENABLE_PUBLISH && flowName ? flowName : "Playground";
+  const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -144,6 +142,10 @@ export default function IOModal({
     ),
   );
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
+  const setCurrentSessionId = useUtilityStore(
+    (state) => state.setCurrentSessionId,
+  );
+
   const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
       mode: "union",
@@ -154,11 +156,7 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
-  const config = useGetConfig();
-
-  function shouldStreamEvents() {
-    return config.data?.event_delivery === EventDeliveryType.STREAMING;
-  }
+  const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
 
   const sendMessage = useCallback(
     async ({
@@ -177,7 +175,7 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
-          stream: shouldStreamEvents(),
+          eventDelivery: eventDeliveryConfig,
         }).catch((err) => {
           console.error(err);
         });
@@ -213,8 +211,10 @@ export default function IOModal({
       setSessionId(
         `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
       );
+      setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
+      setCurrentSessionId(visibleSession);
       if (selectedViewField?.type === "Session") {
         setSelectedViewField({
           id: visibleSession,
@@ -260,7 +260,7 @@ export default function IOModal({
 
   const LangflowButtonClick = () => {
     track("LangflowButtonClick");
-    window.open(LangflowButtonRedirectTarget(), "_blank");
+    customOpenNewTab(LangflowButtonRedirectTarget());
   };
 
   useEffect(() => {

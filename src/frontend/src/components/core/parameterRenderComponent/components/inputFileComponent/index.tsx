@@ -44,12 +44,12 @@ export default function InputFileComponent({
 
   function checkFileType(fileName: string): boolean {
     if (fileTypes === undefined) return true;
-    for (let index = 0; index < fileTypes.length; index++) {
-      if (fileName.endsWith(fileTypes[index])) {
-        return true;
-      }
-    }
-    return false;
+
+    // Extract the file extension
+    const fileExtension = fileName.split(".").pop();
+
+    // Check if the extracted extension is in the list of accepted file types
+    return fileTypes.includes(fileExtension || "");
   }
 
   const { mutateAsync, isPending } = usePostUploadFile();
@@ -143,7 +143,9 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
-  const { data: files } = useGetFilesV2();
+  const { data: files } = useGetFilesV2({
+    enabled: !!ENABLE_FILE_MANAGEMENT,
+  });
 
   const selectedFiles = (
     isList
@@ -200,7 +202,7 @@ export default function InputFileComponent({
           {ENABLE_FILE_MANAGEMENT && !tempFile ? (
             files && (
               <div className="relative flex w-full flex-col gap-2">
-                <div className="flex flex-col">
+                <div className="nopan nowheel flex max-h-44 flex-col overflow-y-auto">
                   <FilesRendererComponent
                     files={files.filter((file) =>
                       selectedFiles.includes(file.path),
@@ -244,27 +246,32 @@ export default function InputFileComponent({
                   isList={isList}
                 >
                   {(selectedFiles.length === 0 || isList) && (
-                    <Button
-                      disabled={isDisabled}
-                      variant={selectedFiles.length !== 0 ? "ghost" : "default"}
-                      size={selectedFiles.length !== 0 ? "iconMd" : "default"}
-                      className={cn(
-                        selectedFiles.length !== 0 &&
-                          "hit-area-icon absolute -top-8 right-0",
-                        "font-semibold",
-                      )}
-                      data-testid="button_open_file_management"
-                    >
-                      {selectedFiles.length !== 0 ? (
-                        <ForwardedIconComponent
-                          name="Plus"
-                          className="icon-size"
-                          strokeWidth={ICON_STROKE_WIDTH}
-                        />
-                      ) : (
-                        <div>Select file{isList ? "s" : ""}</div>
-                      )}
-                    </Button>
+                    <div data-testid="input-file-component" className="w-full">
+                      <Button
+                        disabled={isDisabled}
+                        variant={
+                          selectedFiles.length !== 0 ? "ghost" : "default"
+                        }
+                        size={selectedFiles.length !== 0 ? "iconMd" : "default"}
+                        className={cn(
+                          selectedFiles.length !== 0
+                            ? "hit-area-icon absolute -top-8 right-0"
+                            : "w-full",
+                          "font-semibold",
+                        )}
+                        data-testid="button_open_file_management"
+                      >
+                        {selectedFiles.length !== 0 ? (
+                          <ForwardedIconComponent
+                            name="Plus"
+                            className="icon-size"
+                            strokeWidth={ICON_STROKE_WIDTH}
+                          />
+                        ) : (
+                          <div>Select file{isList ? "s" : ""}</div>
+                        )}
+                      </Button>
+                    </div>
                   )}
                 </FileManagerModal>
               </div>

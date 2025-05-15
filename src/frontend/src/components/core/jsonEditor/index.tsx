@@ -1,6 +1,4 @@
 import { jsonquery } from "@jsonquerylang/jsonquery";
-import { edit } from "ace-builds";
-import { Check } from "lucide-react";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   Content,
@@ -9,8 +7,6 @@ import {
 } from "vanilla-jsoneditor";
 import useAlertStore from "../../../stores/alertStore";
 import { cn } from "../../../utils/utils";
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
 
 interface JsonEditorProps {
   data?: Content;
@@ -371,7 +367,7 @@ const JsonEditor = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {allowFilter && (
+      {/* {allowFilter && (
         <div className="mb-2 flex shrink-0 gap-2">
           <Input
             placeholder="Enter path (e.g. users[0].name) or JSONQuery (e.g. .users | filter(.age > 25))"
@@ -406,9 +402,9 @@ const JsonEditor = ({
             Clear
           </Button>
         </div>
-      )}
-      <div className="relative min-h-0 flex-1">
-        <div ref={containerRef} className={cn("absolute inset-0", className)} />
+      )} */}
+      <div className="relative h-full min-h-0 flex-1">
+        <div ref={containerRef} className={cn("!h-full w-full", className)} />
       </div>
     </div>
   );

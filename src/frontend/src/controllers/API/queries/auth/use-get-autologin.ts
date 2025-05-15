@@ -31,6 +31,7 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const isLoginPage = location.pathname.includes("login");
   const navigate = useCustomNavigate();
   const { mutateAsync: mutationLogout } = useLogout();
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -67,8 +68,13 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   };
 
   const handleAutoLoginError = async () => {
-    const manualLoginNotAuthenticated = !isAuthenticated && !IS_AUTO_LOGIN;
-    const autoLoginNotAuthenticated = !isAuthenticated && IS_AUTO_LOGIN;
+    const manualLoginNotAuthenticated =
+      (!isAuthenticated && !IS_AUTO_LOGIN) ||
+      (!isAuthenticated && autoLogin !== undefined && !autoLogin);
+
+    const autoLoginNotAuthenticated =
+      (!isAuthenticated && IS_AUTO_LOGIN) ||
+      (!isAuthenticated && autoLogin !== undefined && autoLogin);
 
     if (manualLoginNotAuthenticated) {
       await mutationLogout();

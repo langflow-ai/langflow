@@ -11,11 +11,11 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -31,6 +31,7 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
+from langflow.utils.compression import compress_response
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -190,7 +191,7 @@ async def read_flows(
         get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.
         **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**
 
-        folder_id (UUID, optional): The folder ID. Defaults to None.
+        folder_id (UUID, optional): The project ID. Defaults to None.
         params (Params): Pagination parameters.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
         header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
@@ -211,7 +212,7 @@ async def read_flows(
         if not starter_folder and not default_folder:
             raise HTTPException(
                 status_code=404,
-                detail="Starter folder and default folder not found. Please create a folder and add flows to it.",
+                detail="Starter project and default project not found. Please create a project and add flows to it.",
             )
 
         if not folder_id:
@@ -238,11 +239,15 @@ async def read_flows(
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
-                return [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-            return flows
+                # Convert to FlowHeader objects and compress the response
+                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                return compress_response(flow_headers)
+
+            # Compress the full flows response
+            return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
-        return await paginate(session, stmt, params=params)
+        return await apaginate(session, stmt, params=params)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -316,6 +321,10 @@ async def update_flow(
             raise HTTPException(status_code=404, detail="Flow not found")
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+
+        # Specifically handle endpoint_name when it's explicitly set to null or empty string
+        if flow.endpoint_name is None or flow.endpoint_name == "":
+            update_data["endpoint_name"] = None
 
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
@@ -517,6 +526,9 @@ async def download_multiple_file(
     return flows_without_api_keys[0]
 
 
+all_starter_folder_flows_response: Response | None = None
+
+
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 async def read_basic_examples(
     *,
@@ -531,6 +543,10 @@ async def read_basic_examples(
         list[FlowRead]: A list of basic example flows.
     """
     try:
+        global all_starter_folder_flows_response  # noqa: PLW0603
+
+        if all_starter_folder_flows_response:
+            return all_starter_folder_flows_response
         # Get the starter folder
         starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
 
@@ -538,7 +554,13 @@ async def read_basic_examples(
             return []
 
         # Get all flows in the starter folder
-        return (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+        all_starter_folder_flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+
+        flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
+        all_starter_folder_flows_response = compress_response(flow_reads)
+
+        # Return compressed response using our utility function
+        return all_starter_folder_flows_response  # noqa: TRY300
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -47,6 +47,12 @@ def _get_arize_phoenix_tracer():
     return ArizePhoenixTracer
 
 
+def _get_opik_tracer():
+    from langflow.services.tracing.opik import OpikTracer
+
+    return OpikTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -176,6 +182,17 @@ class TracingService(Service):
             trace_id=trace_context.run_id,
         )
 
+    def _initialize_opik_tracer(self, trace_context: TraceContext) -> None:
+        opik_tracer = _get_opik_tracer()
+        trace_context.tracers["opik"] = opik_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -201,6 +218,7 @@ class TracingService(Service):
             self._initialize_langwatch_tracer(trace_context)
             self._initialize_langfuse_tracer(trace_context)
             self._initialize_arize_phoenix_tracer(trace_context)
+            self._initialize_opik_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")
 
@@ -229,7 +247,7 @@ class TracingService(Service):
                         metadata=outputs,
                     )
                 except Exception:  # noqa: BLE001
-                    logger.exception("Error ending all traces")
+                    logger.error("Error ending all traces")
 
     async def end_tracers(self, outputs: dict, error: Exception | None = None) -> None:
         """End the trace for a graph run.

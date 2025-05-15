@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeAll(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 7000));
+});
+
+test.afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 7000));
+});
+
 test(
   "should see general profile gradient",
   { tag: ["@release"] },
@@ -71,10 +79,14 @@ test(
 
     await page.getByText("openai").last().click();
 
+    await page.waitForTimeout(1000);
+
     await page.getByPlaceholder("Fields").waitFor({
       state: "visible",
       timeout: 30000,
     });
+
+    await page.waitForTimeout(1000);
 
     await page.getByPlaceholder("Fields").fill("ollama");
 

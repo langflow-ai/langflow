@@ -1,16 +1,15 @@
-import { Button } from "@/components/ui/button";
-import Loading from "@/components/ui/loading";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { useEffect, useRef } from "react";
+import { useVoiceStore } from "@/stores/voiceStore";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  CHAT_INPUT_PLACEHOLDER,
-  CHAT_INPUT_PLACEHOLDER_SEND,
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
@@ -19,12 +18,12 @@ import {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";
-import FilePreview from "../fileComponent/components/file-preview";
-import ButtonSendWrapper from "./components/button-send-wrapper";
-import TextAreaWrapper from "./components/text-area-wrapper";
-import UploadFileButton from "./components/upload-file-button";
+import InputWrapper from "./components/input-wrapper";
+import NoInputView from "./components/no-input";
+import { VoiceAssistant } from "./components/voice-assistant/voice-assistant";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+
 export default function ChatInput({
   sendMessage,
   inputRef,
@@ -42,6 +41,22 @@ export default function ChatInput({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
 
+  const [showAudioInput, setShowAudioInput] = useState(false);
+
+  const setIsVoiceAssistantActive = useVoiceStore(
+    (state) => state.setIsVoiceAssistantActive,
+  );
+
+  const newSessionCloseVoiceAssistant = useVoiceStore(
+    (state) => state.newSessionCloseVoiceAssistant,
+  );
+
+  useEffect(() => {
+    if (showAudioInput) {
+      setIsVoiceAssistantActive(true);
+    }
+  }, [showAudioInput]);
+
   useFocusOnUnlock(isBuilding, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
@@ -50,7 +65,7 @@ export default function ChatInput({
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
-    if (playgroundPage) {
+    if (playgroundPage && !ENABLE_IMAGE_ON_PLAYGROUND) {
       return;
     }
 
@@ -164,8 +179,6 @@ export default function ChatInput({
     );
   };
 
-  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
-
   const handleButtonClick = () => {
     fileInputRef.current!.click();
   };
@@ -177,99 +190,56 @@ export default function ChatInput({
 
   if (noInput) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
-          {!isBuilding ? (
-            <Button
-              data-testid="button-send"
-              className="font-semibold"
-              onClick={() => {
-                sendMessage({
-                  repeat: 1,
-                });
-              }}
-            >
-              Run Flow
-            </Button>
-          ) : (
-            <Button
-              onClick={stopBuilding}
-              data-testid="button-stop"
-              unstyled
-              className="form-modal-send-button cursor-pointer bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input"
-            >
-              <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
-                Stop
-                <Loading className="h-[16px] w-[16px]" />
-              </div>
-            </Button>
-          )}
-
-          <p className="text-muted-foreground">
-            Add a{" "}
-            <a
-              className="underline underline-offset-4"
-              target="_blank"
-              href="https://docs.langflow.org/components-io#chat-input"
-            >
-              Chat Input
-            </a>{" "}
-            component to your flow to send messages.
-          </p>
-        </div>
-      </div>
+      <NoInputView
+        isBuilding={isBuilding}
+        sendMessage={sendMessage}
+        stopBuilding={stopBuilding}
+      />
     );
   }
 
   return (
-    <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary">
-        <TextAreaWrapper
-          isBuilding={isBuilding}
-          checkSendingOk={checkSendingOk}
-          send={send}
-          noInput={noInput}
-          chatValue={chatValue}
-          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
-          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
-          inputRef={inputRef}
-          files={files}
-          isDragging={isDragging}
-        />
-        <div className={classNameFilePreview}>
-          {files.map((file) => (
-            <FilePreview
-              error={file.error}
-              file={file.file}
-              loading={file.loading}
-              key={file.id}
-              onDelete={() => {
-                handleDeleteFile(file);
-              }}
-            />
-          ))}
-        </div>
-        <div className="flex w-full items-end justify-between">
-          {!playgroundPage && (
-            <div className={isBuilding ? "cursor-not-allowed" : ""}>
-              <UploadFileButton
-                isBuilding={isBuilding}
-                fileInputRef={fileInputRef}
-                handleFileChange={handleFileChange}
-                handleButtonClick={handleButtonClick}
-              />
-            </div>
-          )}
-          <div className={playgroundPage ? "ml-auto" : ""}>
-            <ButtonSendWrapper
-              send={send}
-              noInput={noInput}
-              chatValue={chatValue}
-              files={files}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    <AnimatePresence mode="wait">
+      {showAudioInput && !newSessionCloseVoiceAssistant ? (
+        <motion.div
+          key="voice-assistant"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <VoiceAssistant
+            flowId={currentFlowId}
+            setShowAudioInput={setShowAudioInput}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="input-wrapper"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <InputWrapper
+            isBuilding={isBuilding}
+            checkSendingOk={checkSendingOk}
+            send={send}
+            noInput={noInput}
+            chatValue={chatValue}
+            inputRef={inputRef}
+            files={files}
+            isDragging={isDragging}
+            handleDeleteFile={handleDeleteFile}
+            fileInputRef={fileInputRef}
+            handleFileChange={handleFileChange}
+            handleButtonClick={handleButtonClick}
+            setShowAudioInput={setShowAudioInput}
+            currentFlowId={currentFlowId}
+            playgroundPage={playgroundPage}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

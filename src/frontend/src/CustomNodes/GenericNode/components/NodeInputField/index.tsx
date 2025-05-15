@@ -68,6 +68,10 @@ export default function NodeInputField({
     name,
   });
 
+  const hasRefreshButton = useMemo(() => {
+    return data.node?.template[name]?.refresh_button;
+  }, [data.node?.template, name]);
+
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
     return {
       flowId: currentFlow?.id ?? "",
@@ -78,7 +82,13 @@ export default function NodeInputField({
     };
   }, [data?.node?.id, isAuth, name]);
 
-  useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
+  useFetchDataOnMount(
+    data.node!,
+    data.id,
+    handleNodeClass,
+    name,
+    postTemplateValue,
+  );
 
   useEffect(() => {
     if (optionalHandle && optionalHandle.length === 0) {
@@ -89,7 +99,8 @@ export default function NodeInputField({
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
-    !isToolMode;
+    !isToolMode &&
+    !hasRefreshButton;
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
@@ -147,6 +158,7 @@ export default function NodeInputField({
                       title,
                       nodeId: data.id,
                       isFlexView,
+                      required,
                     })}
                   </span>
                 }
@@ -160,13 +172,13 @@ export default function NodeInputField({
                         title,
                         nodeId: data.id,
                         isFlexView,
+                        required,
                       })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={"text-status-red"}>{required ? "*" : ""}</span>
             <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>

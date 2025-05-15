@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -14,6 +15,10 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("alter metadata");
+
+    await addLegacyComponents(page);
+
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="processingAlter Metadata"]', {
       timeout: 3000,
@@ -50,8 +55,7 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.getByTestId("edit_dict_nesteddict_edit_metadata").last().click();
     await page.getByTitle("Switch to tree mode (current mode: text)").click();

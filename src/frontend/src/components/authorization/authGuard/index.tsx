@@ -18,8 +18,7 @@ export const ProtectedRoute = ({ children }) => {
   const shouldRedirect =
     !isAuthenticated &&
     autoLogin !== undefined &&
-    !autoLogin &&
-    !isAutoLoginEnv;
+    (!autoLogin || !isAutoLoginEnv);
 
   useEffect(() => {
     const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;

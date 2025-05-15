@@ -32,6 +32,7 @@ function getMimeType(extension: string): string {
 }
 
 export async function uploadFile(page: Page, fileName: string) {
+  await page.getByTestId("fit_view").click();
   const fileManagement = await page
     .getByTestId("button_open_file_management")
     ?.isVisible();

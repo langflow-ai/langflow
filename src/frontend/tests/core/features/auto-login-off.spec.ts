@@ -206,14 +206,13 @@ test(
 
     expect(
       (
-        await page.waitForSelector(
-          "text=Begin with a template, or start from scratch.",
-          {
-            timeout: 30000,
-          },
-        )
+        await page.waitForSelector("text=Welcome to LangFlow", {
+          timeout: 30000,
+        })
       ).isVisible(),
     );
+
+    await page.waitForTimeout(2000);
 
     await awaitBootstrapTest(page, { skipGoto: true });
 

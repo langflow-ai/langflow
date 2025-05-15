@@ -135,6 +135,10 @@ def mock_tracers():
             "langflow.services.tracing.service._get_arize_phoenix_tracer",
             return_value=MockTracer,
         ),
+        patch(
+            "langflow.services.tracing.service._get_opik_tracer",
+            return_value=MockTracer,
+        ),
     ):
         yield
 
@@ -294,7 +298,7 @@ async def test_get_langchain_callbacks(tracing_service):
         assert tracer.get_langchain_callback_called
 
     # Verify returned callbacks list length
-    assert len(callbacks) == 4  # Four tracers
+    assert len(callbacks) == 5  # Five tracers
 
     # Cleanup
     await tracing_service.end_tracers({})

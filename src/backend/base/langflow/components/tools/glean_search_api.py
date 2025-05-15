@@ -101,7 +101,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     display_name: str = "Glean Search API"
     description: str = "Search using Glean's API."
     documentation: str = "https://docs.langflow.org/Components/components-tools#glean-search-api"
-    icon: str = "GleanSearch"
+    icon: str = "Glean"
 
     outputs = [
         Output(display_name="Data", name="data", method="run_model"),
@@ -109,13 +109,9 @@ class GleanSearchAPIComponent(LCToolComponent):
     ]
 
     inputs = [
-        StrInput(
-            name="glean_api_url",
-            display_name="Glean API URL",
-            required=True,
-        ),
+        StrInput(name="glean_api_url", display_name="Glean API URL", required=True),
         SecretStrInput(name="glean_access_token", display_name="Glean Access Token", required=True),
-        MultilineInput(name="query", display_name="Query", required=True),
+        MultilineInput(name="query", display_name="Query", required=True, tool_mode=True),
         IntInput(name="page_size", display_name="Page Size", value=10),
         NestedDictInput(name="request_options", display_name="Request Options", required=False),
     ]

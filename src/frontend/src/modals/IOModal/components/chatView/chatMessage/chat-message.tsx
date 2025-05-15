@@ -2,14 +2,9 @@ import { ProfileIcon } from "@/components/core/appHeaderComponent/components/Pro
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_PUBLISH,
-} from "@/customization/feature-flags";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { useUtilityStore } from "@/stores/utilityStore";
-import { ChatMessageType } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Robot from "../../../../../assets/robot.png";
@@ -18,7 +13,6 @@ import IconComponent, {
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
 import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
-import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -54,18 +48,13 @@ export default function ChatMessage({
   const [showError, setShowError] = useState(false);
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
+  const isAudioMessage = chat.category === "audio";
+
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
     chatMessageRef.current = chatMessage;
   }, [chat, isBuilding]);
-
-  const playgroundScrollBehaves = useUtilityStore(
-    (state) => state.playgroundScrollBehaves,
-  );
-  const setPlaygroundScrollBehaves = useUtilityStore(
-    (state) => state.setPlaygroundScrollBehaves,
-  );
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -120,22 +109,6 @@ export default function ChatMessage({
       eventSource.current?.close();
     };
   }, []);
-
-  const isTabHidden = useTabVisibility();
-
-  useEffect(() => {
-    const element = document.getElementById("last-chat-message");
-    if (element && isTabHidden) {
-      if (playgroundScrollBehaves === "instant") {
-        element.scrollIntoView({ behavior: playgroundScrollBehaves });
-        setPlaygroundScrollBehaves("smooth");
-      } else {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: playgroundScrollBehaves });
-        }, 200);
-      }
-    }
-  }, [lastMessage, chat]);
 
   useEffect(() => {
     if (chat.category === "error") {
@@ -282,7 +255,7 @@ export default function ChatMessage({
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
                 ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
-                  <ProfileIcon />
+                  <CustomProfileIcon />
                 ) : playgroundPage ? (
                   <ForwardedIconComponent name="User" />
                 ) : (
@@ -295,7 +268,7 @@ export default function ChatMessage({
             <div>
               <div
                 className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-[14px] font-semibold",
+                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
                 )}
                 style={
                   chat.properties?.text_color
@@ -306,9 +279,19 @@ export default function ChatMessage({
                   "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                 }
               >
-                {chat.sender_name}
+                <span className="flex items-center gap-2">
+                  {chat.sender_name}
+                  {isAudioMessage && (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
+                      <ForwardedIconComponent
+                        name="mic"
+                        className="h-3 w-3 text-muted-foreground"
+                      />
+                    </div>
+                  )}
+                </span>
                 {chat.properties?.source && !playgroundPage && (
-                  <div className="text-[13px] font-normal text-muted-foreground">
+                  <div className="text-mmd font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
                 )}
@@ -319,7 +302,6 @@ export default function ChatMessage({
                 playgroundPage={playgroundPage}
                 contentBlocks={chat.content_blocks}
                 isLoading={
-                  chatMessage === "" &&
                   chat.properties?.state === "partial" &&
                   isBuilding &&
                   lastMessage
@@ -367,7 +349,7 @@ export default function ChatMessage({
                             className="h-8 w-8 animate-pulse"
                           />
                         ) : (
-                          <div className="w-full">
+                          <div className="min-h-8 w-full">
                             {editMessage ? (
                               <EditMessageField
                                 key={`edit-message-${chat.id}`}
@@ -379,6 +361,7 @@ export default function ChatMessage({
                               />
                             ) : (
                               <MarkdownField
+                                isAudioMessage={isAudioMessage}
                                 chat={chat}
                                 isEmpty={isEmpty}
                                 chatMessage={chatMessage}
@@ -407,9 +390,10 @@ export default function ChatMessage({
                   ) : (
                     <>
                       <div
-                        className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
-                          isEmpty ? "text-muted-foreground" : "text-primary"
-                        }`}
+                        className={cn(
+                          "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
+                          isEmpty ? "text-muted-foreground" : "text-primary",
+                        )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
@@ -441,6 +425,7 @@ export default function ChatMessage({
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}
+                  isAudioMessage={isAudioMessage}
                 />
               </div>
             </div>

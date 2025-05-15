@@ -1,5 +1,9 @@
 from typing import Any
 
+from loguru import logger
+from requests.exceptions import ConnectionError  # noqa: A004
+from urllib3.exceptions import MaxRetryError, NameResolutionError
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -19,6 +23,12 @@ class NVIDIAModelComponent(LCModelComponent):
     except ImportError as e:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
+    except (ConnectionError, MaxRetryError, NameResolutionError):
+        logger.warning(
+            "Failed to connect to NVIDIA API. Model list may be unavailable."
+            " Please check your internet connection and API credentials."
+        )
+        all_models = []
 
     inputs = [
         *LCModelComponent._base_inputs,
@@ -36,7 +46,7 @@ class NVIDIAModelComponent(LCModelComponent):
             value=None,
             options=[model.id for model in all_models],
             combobox=True,
-            real_time_refresh=True,
+            refresh_button=True,
         ),
         BoolInput(
             name="detailed_thinking",
@@ -58,7 +68,6 @@ class NVIDIAModelComponent(LCModelComponent):
             display_name="NVIDIA Base URL",
             value="https://integrate.api.nvidia.com/v1",
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
-            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -66,7 +75,6 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The NVIDIA API Key.",
             advanced=False,
             value="NVIDIA_API_KEY",
-            real_time_refresh=True,
         ),
         SliderInput(
             name="temperature",

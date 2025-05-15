@@ -1,8 +1,22 @@
+/**
+ * In Honor of Otávio Anovazzi (@anovazzi1)
+ *
+ * This file contains the highest number of commits by Otávio in the entire Langflow project,
+ * reflecting his unmatched dedication, expertise, and innovative spirit. Each line of code
+ * is a testament to his relentless pursuit of excellence and his significant impact on this
+ * project's evolution.
+
+ * His commitment to selflessly helping others embodies the true meaning of open source,
+ * and his legacy lives on in each one of his 2771 contributions, inspiring us to build exceptional
+ * software for all.
+ */
+
 import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import {
   Connection,
   Edge,
@@ -81,6 +95,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const templateFieldType = targetNode.data.node!.template[field]?.type;
       const inputTypes = targetNode.data.node!.template[field]?.input_types;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
+      const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
 
       if (
         !field &&
@@ -110,17 +125,22 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (scapedJSONStringfy(id) !== targetHandle) {
+      if (
+        scapedJSONStringfy(id) !== targetHandle ||
+        (targetNode.data.node?.tool_mode && isToolMode)
+      ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
     if (sourceHandle) {
       const parsedSourceHandle = scapeJSONParse(sourceHandle);
       const name = parsedSourceHandle.name;
+
       if (sourceNode.type == "genericNode") {
         const output = sourceNode.data.node!.outputs?.find(
           (output) => output.name === name,
         );
+
         if (output) {
           const outputTypes =
             output!.types.length === 1 ? output!.types : [output!.selected!];
@@ -131,6 +151,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
+
           if (scapedJSONStringfy(id) !== sourceHandle) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
           }
@@ -151,20 +172,16 @@ export function filterHiddenFieldsEdges(
   targetNode: AllNodeType,
 ) {
   if (targetNode) {
-    const nodeInputType = edge.data?.targetHandle?.inputTypes;
+    const targetHandle = edge.data?.targetHandle;
+    if (!targetHandle) return newEdges;
+
+    const fieldName = targetHandle.fieldName;
     const nodeTemplates = targetNode.data.node!.template;
 
-    Object.keys(nodeTemplates).forEach((key) => {
-      if (!nodeTemplates[key]?.input_types) return;
-      if (
-        nodeTemplates[key]?.input_types?.some((type) =>
-          nodeInputType?.includes(type),
-        ) &&
-        !nodeTemplates[key].show
-      ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
-      }
-    });
+    // Only check the specific field the edge is connected to
+    if (nodeTemplates[fieldName]?.show === false) {
+      newEdges = newEdges.filter((e) => e.id !== edge.id);
+    }
   }
   return newEdges;
 }
@@ -1698,17 +1715,49 @@ export function templatesGenerator(data: APIObjectType) {
 
 export function extractFieldsFromComponenents(data: APIObjectType) {
   const fields = new Set<string>();
+
+  // Check if data exists
+  if (!data) {
+    console.warn("[Types] Data is undefined in extractFieldsFromComponenents");
+    return fields;
+  }
+
   Object.keys(data).forEach((key) => {
+    // Check if data[key] exists
+    if (!data[key]) {
+      console.warn(
+        `[Types] data["${key}"] is undefined in extractFieldsFromComponenents`,
+      );
+      return;
+    }
+
     Object.keys(data[key]).forEach((kind) => {
+      // Check if data[key][kind] exists
+      if (!data[key][kind]) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"] is undefined in extractFieldsFromComponenents`,
+        );
+        return;
+      }
+
+      // Check if template exists
+      if (!data[key][kind].template) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"].template is undefined in extractFieldsFromComponenents`,
+        );
+        return;
+      }
+
       Object.keys(data[key][kind].template).forEach((field) => {
         if (
-          data[key][kind].template[field].display_name &&
-          data[key][kind].template[field].show
+          data[key][kind].template[field]?.display_name &&
+          data[key][kind].template[field]?.show
         )
           fields.add(data[key][kind].template[field].display_name!);
       });
     });
   });
+
   return fields;
 }
 /**
@@ -1748,7 +1797,7 @@ function sortJsonStructure<T>(obj: T): T {
  * @param flowName - The name to use for the flow
  * @param flowDescription - Optional description for the flow
  */
-export function downloadFlow(
+export async function downloadFlow(
   flow: FlowType,
   flowName: string,
   flowDescription?: string,
@@ -1764,17 +1813,10 @@ export function downloadFlow(
       description: flowDescription,
     };
 
-    console.log(flowData);
-
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
-    const dataUri = `data:text/json;chatset=utf-8,${encodeURIComponent(sortedJsonString)}`;
-    const downloadLink = document.createElement("a");
-    downloadLink.href = dataUri;
-    downloadLink.download = `${flowName || flow.name}.json`;
-
-    downloadLink.click();
+    customDownloadFlow(flow, sortedJsonString, flowName);
   } catch (error) {
     console.error("Error downloading flow:", error);
   }
@@ -1804,6 +1846,7 @@ export const createNewFlow = (
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
     tags: flow?.tags ?? [],
+    mcp_enabled: true,
   };
 };
 

@@ -53,10 +53,12 @@ export default function DragFilesComponent({
         const filesIds = await uploadFile({
           files: droppedFiles,
         });
-        onUpload(filesIds);
-        setSuccessData({
-          title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
-        });
+        if (filesIds.length > 0) {
+          onUpload(filesIds);
+          setSuccessData({
+            title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+          });
+        }
       } catch (error: any) {
         setErrorData({
           title: "Error uploading file",
@@ -69,10 +71,12 @@ export default function DragFilesComponent({
   const handleClick = async () => {
     try {
       const filesIds = await uploadFile({});
-      onUpload(filesIds);
-      setSuccessData({
-        title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
-      });
+      if (filesIds.length > 0) {
+        onUpload(filesIds);
+        setSuccessData({
+          title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+        });
+      }
     } catch (error: any) {
       setErrorData({
         title: "Error uploading file",

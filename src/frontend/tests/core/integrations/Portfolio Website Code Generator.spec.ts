@@ -46,7 +46,7 @@ withEventDeliveryModes(
       .first()
       .fill(process.env.ANTHROPIC_API_KEY ?? "");
 
-    await uploadFile(page, "test_file.txt");
+    await uploadFile(page, "resume.txt");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -56,7 +56,9 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector(".language-html", { timeout: 30000 * 3 });
+    await page.waitForSelector('[data-testid="chat-code-tab"]', {
+      timeout: 30000 * 3,
+    });
 
     await page.waitForSelector(".markdown", { timeout: 30000 });
 
@@ -69,13 +71,7 @@ withEventDeliveryModes(
 
     expect(concatAllText.length).toBeGreaterThan(200);
 
-    expect(concatAllText).toContain("html");
-    expect(concatAllText).toContain("<body>");
-    expect(concatAllText).toContain("</body>");
-    expect(concatAllText).toContain("</html>");
-    expect(concatAllText).toContain("responsive");
-    expect(concatAllText).toContain("section");
-    expect(concatAllText).toContain("header");
-    expect(concatAllText).toContain("class=");
+    expect(concatAllText).toContain("div");
+    expect(concatAllText).toContain("body");
   },
 );

@@ -80,14 +80,16 @@ export function ContentBlockDisplay({
         >
           <div className="flex items-center gap-2 align-baseline">
             {headerIcon && (
-              <ForwardedIconComponent
-                name={headerIcon}
-                className={cn(
-                  "h-4 w-4",
-                  state !== "partial" && "text-status-green",
-                )}
-                strokeWidth={1.5}
-              />
+              <span data-testid="header-icon">
+                <ForwardedIconComponent
+                  name={headerIcon}
+                  className={cn(
+                    "h-4 w-4",
+                    state !== "partial" && "text-status-green",
+                  )}
+                  strokeWidth={1.5}
+                />
+              </span>
             )}
             <div className="relative h-6 overflow-hidden">
               <motion.div
@@ -99,7 +101,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
                 >
                   {headerTitle}
                 </Markdown>
@@ -167,7 +169,7 @@ export function ContentBlockDisplay({
                         className="overflow-hidden pl-4 pt-[16px] font-medium"
                       >
                         <Markdown
-                          className="text-[14px] font-semibold text-foreground"
+                          className="text-sm font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
                           linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}
