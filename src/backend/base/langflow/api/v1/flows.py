@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -322,6 +322,10 @@ async def update_flow(
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
+        # Specifically handle endpoint_name when it's explicitly set to null or empty string
+        if flow.endpoint_name is None or flow.endpoint_name == "":
+            update_data["endpoint_name"] = None
+
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
@@ -522,6 +526,9 @@ async def download_multiple_file(
     return flows_without_api_keys[0]
 
 
+all_starter_folder_flows_response: Response | None = None
+
+
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 async def read_basic_examples(
     *,
@@ -536,17 +543,24 @@ async def read_basic_examples(
         list[FlowRead]: A list of basic example flows.
     """
     try:
-        # Get the starter project
+        global all_starter_folder_flows_response  # noqa: PLW0603
+
+        if all_starter_folder_flows_response:
+            return all_starter_folder_flows_response
+        # Get the starter folder
         starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
 
         if not starter_folder:
             return []
 
-        # Get all flows in the starter project
-        flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+        # Get all flows in the starter folder
+        all_starter_folder_flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
+
+        flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
+        all_starter_folder_flows_response = compress_response(flow_reads)
 
         # Return compressed response using our utility function
-        return compress_response(flows)
+        return all_starter_folder_flows_response  # noqa: TRY300
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
