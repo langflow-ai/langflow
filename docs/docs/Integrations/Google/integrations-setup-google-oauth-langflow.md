@@ -1,8 +1,6 @@
 ---
 title: Integrate Google OAuth with Langflow
 slug: /integrations-setup-google-oauth-langflow
-
-description: "A comprehensive guide on creating a Google OAuth app, obtaining tokens, and integrating them with Langflow's Google components."
 ---
 
 import TOCInline from '@theme/TOCInline';

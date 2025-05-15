@@ -5,7 +5,6 @@ import { CustomProfileIcon } from "@/customization/components/custom-profile-ico
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Robot from "../../../../../assets/robot.png";
@@ -14,7 +13,6 @@ import IconComponent, {
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
 import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
-import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -57,13 +55,6 @@ export default function ChatMessage({
     setChatMessage(chatMessageString);
     chatMessageRef.current = chatMessage;
   }, [chat, isBuilding]);
-
-  const playgroundScrollBehaves = useUtilityStore(
-    (state) => state.playgroundScrollBehaves,
-  );
-  const setPlaygroundScrollBehaves = useUtilityStore(
-    (state) => state.setPlaygroundScrollBehaves,
-  );
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -118,22 +109,6 @@ export default function ChatMessage({
       eventSource.current?.close();
     };
   }, []);
-
-  const isTabHidden = useTabVisibility();
-
-  useEffect(() => {
-    const element = document.getElementById("last-chat-message");
-    if (element && isTabHidden) {
-      if (playgroundScrollBehaves === "instant") {
-        element.scrollIntoView({ behavior: playgroundScrollBehaves });
-        setPlaygroundScrollBehaves("smooth");
-      } else {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: playgroundScrollBehaves });
-        }, 200);
-      }
-    }
-  }, [lastMessage, chat]);
 
   useEffect(() => {
     if (chat.category === "error") {
@@ -280,7 +255,7 @@ export default function ChatMessage({
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
                 ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
-                  <ProfileIcon />
+                  <CustomProfileIcon />
                 ) : playgroundPage ? (
                   <ForwardedIconComponent name="User" />
                 ) : (
@@ -374,7 +349,7 @@ export default function ChatMessage({
                             className="h-8 w-8 animate-pulse"
                           />
                         ) : (
-                          <div className="w-full">
+                          <div className="min-h-8 w-full">
                             {editMessage ? (
                               <EditMessageField
                                 key={`edit-message-${chat.id}`}

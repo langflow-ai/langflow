@@ -1,4 +1,5 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useFlowStore from "@/stores/flowStore";
 import { GetCodeType } from "@/types/tweaks";
 
@@ -23,10 +24,11 @@ export function getCurlRunCode({
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
   // show the endpoint name in the curl command if it exists
+
+  const { protocol, host } = customGetHostProtocol();
+
   return `curl -X POST \\
-    "${window.location.protocol}//${window.location.host}/api/v1/run/${
-      endpointName || flowId
-    }?stream=false" \\
+    "${protocol}//${host}/api/v1/run/${endpointName || flowId}?stream=false" \\
     -H 'Content-Type: application/json'\\${
       !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
     }
@@ -54,7 +56,8 @@ export function getCurlWebhookCode({
   endpointName,
   format = "multiline",
 }: GetCodeType & { format?: "multiline" | "singleline" }) {
-  const baseUrl = `${window.location.protocol}//${window.location.host}/api/v1/webhook/${endpointName || flowId}`;
+  const { protocol, host } = customGetHostProtocol();
+  const baseUrl = `${protocol}//${host}/api/v1/webhook/${endpointName || flowId}`;
   const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
 
   if (format === "singleline") {
@@ -82,6 +85,7 @@ export function getNewCurlCode({
   output_type,
   tweaksObject,
   activeTweaks,
+  endpointName,
 }: {
   flowId: string;
   isAuthenticated: boolean;
@@ -90,10 +94,10 @@ export function getNewCurlCode({
   output_type: string;
   tweaksObject: any;
   activeTweaks: boolean;
+  endpointName: string;
 }): string {
-  const host = window.location.host;
-  const protocol = window.location.protocol;
-  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+  const { protocol, host } = customGetHostProtocol();
+  const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";

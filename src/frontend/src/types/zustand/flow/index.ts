@@ -52,7 +52,19 @@ export type FlowPoolType = {
   [key: string]: Array<VertexBuildTypeAPI>;
 };
 
+export type ComponentsToUpdateType = {
+  id: string;
+  icon?: string;
+  display_name: string;
+  outdated: boolean;
+  breakingChange: boolean;
+  userEdited: boolean;
+};
+
 export type FlowStoreType = {
+  dismissedNodes: string[];
+  addDismissedNodes: (dismissedNodes: string[]) => void;
+  removeDismissedNodes: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;
@@ -61,9 +73,11 @@ export type FlowStoreType = {
   }) => void;
   fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
-  componentsToUpdate: string[];
+  componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
-    update: string[] | ((oldState: string[]) => string[]),
+    update:
+      | ComponentsToUpdateType[]
+      | ((oldState: ComponentsToUpdateType[]) => ComponentsToUpdateType[]),
   ) => void;
   updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
   onFlowPage: boolean;
