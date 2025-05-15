@@ -16,6 +16,7 @@ import {
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import {
   Connection,
   Edge,
@@ -94,6 +95,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const templateFieldType = targetNode.data.node!.template[field]?.type;
       const inputTypes = targetNode.data.node!.template[field]?.input_types;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
+      const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
 
       if (
         !field &&
@@ -123,7 +125,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (scapedJSONStringfy(id) !== targetHandle) {
+      if (
+        scapedJSONStringfy(id) !== targetHandle ||
+        (targetNode.data.node?.tool_mode && isToolMode)
+      ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
@@ -1792,7 +1797,7 @@ function sortJsonStructure<T>(obj: T): T {
  * @param flowName - The name to use for the flow
  * @param flowDescription - Optional description for the flow
  */
-export function downloadFlow(
+export async function downloadFlow(
   flow: FlowType,
   flowName: string,
   flowDescription?: string,
@@ -1811,12 +1816,7 @@ export function downloadFlow(
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
-    const dataUri = `data:text/json;chatset=utf-8,${encodeURIComponent(sortedJsonString)}`;
-    const downloadLink = document.createElement("a");
-    downloadLink.href = dataUri;
-    downloadLink.download = `${flowName || flow.name}.json`;
-
-    downloadLink.click();
+    customDownloadFlow(flow, sortedJsonString, flowName);
   } catch (error) {
     console.error("Error downloading flow:", error);
   }
