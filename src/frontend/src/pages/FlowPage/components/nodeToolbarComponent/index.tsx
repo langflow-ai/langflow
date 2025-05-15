@@ -606,7 +606,9 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      style={hasBreakingChange ? "text-warning" : ""}
+                      style={
+                        hasBreakingChange ? "text-accent-amber-foreground" : ""
+                      }
                       value={isUserEdited ? "Restore" : "Update"}
                       icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
