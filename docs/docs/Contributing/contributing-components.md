@@ -44,7 +44,8 @@ class DataFrameProcessor(Component):
    * `display_name`: A user-friendly name shown in the UI.
    * `description`: A brief description of what your component does.
    * `documentation`: Link to detailed documentation.
-   * `icon`: An emoji or icon identifier for visual representation. For more information, see [Contributing bundles](/contributing-bundles#add-the-bundle-to-the-frontend-folder).
+   * `icon`: An emoji or icon identifier for visual representation.
+{/*For more information, see [Contributing bundles](/contributing-bundles#add-the-bundle-to-the-frontend-folder).*/}
    * `priority`: Optional integer to control display order (lower numbers appear first).
    * `name`: Optional internal identifier (defaults to class name).
 
