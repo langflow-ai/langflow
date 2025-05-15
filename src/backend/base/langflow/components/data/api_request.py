@@ -410,11 +410,7 @@ class APIRequestComponent(Component):
         if isinstance(headers, dict):
             return headers
         if isinstance(headers, list):
-            return {
-                item["key"]: item["value"]
-                for item in headers
-                if self._is_valid_key_value_item(item)
-            }
+            return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
         return {}
 
     async def make_requests(self) -> Data:
