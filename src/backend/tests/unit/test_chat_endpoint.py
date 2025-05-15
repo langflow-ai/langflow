@@ -164,9 +164,9 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.job_id = job_id
             self.headers = headers
             self.status_code = codes.OK
-            #self.max_total_events = 50  # Limit to prevent infinite loops
-            #self.max_empty_polls = 10  # Maximum number of empty polls before giving up
-            #self.poll_timeout = 1.0  # Timeout for each polling request
+            # self.max_total_events = 50  # Limit to prevent infinite loops
+            # self.max_empty_polls = 10  # Maximum number of empty polls before giving up
+            # self.poll_timeout = 1.0  # Timeout for each polling request
             self.max_total_events = 400
             self.max_empty_polls = 80
             self.poll_timeout = 10.0
@@ -202,8 +202,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                 vertices_sorted_found = False
 
                 # Fix 1: Remove duplicate declaration and fix indentation
-                while (empty_polls < self.max_empty_polls and
-                    total_events < self.max_total_events):
+                while empty_polls < self.max_empty_polls and total_events < self.max_total_events:
                     try:
                         headers = {**self.headers, "Accept": "application/x-ndjson"}
                         logger.debug(f"Polling attempt {empty_polls + 1}")
