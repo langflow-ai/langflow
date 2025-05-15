@@ -478,6 +478,15 @@ define bot refuse to respond
             except ValueError:
                 logging.exception("Validation Error")
 
+            if "self check input" in self.rails and not self.self_check_model_url:
+                raise ValueError("self_check_model_url must be set when self check rails are enabled")
+            if "topic control" in self.rails and not self.topic_control_model_url:
+                raise ValueError("topic_control_model_url must be set when topic control rails are enabled")
+            if "content safety input" in self.rails and not self.content_safety_model_url:
+                raise ValueError("content_safety_model_url must be set when content safety rails are enabled")
+            if "jailbreak detection model" in self.rails and not self.jailbreak_detection_model_url:
+                raise ValueError("jailbreak_detection_model_url must be set when jailbreak detection rails are enabled")
+
             guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
 
             if self.guardrails_verbose:
