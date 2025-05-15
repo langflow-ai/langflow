@@ -259,6 +259,19 @@ class Settings(BaseSettings):
             return "direct"
         return value
 
+    # NeMo model training URL
+    nemo_data_store_url: str = "http://localhost:9001"
+    """Base api url for NeMo Data Store."""
+
+    nemo_entity_store_url: str = "http://localhost:9002"
+    """Base api url for NeMo Entity Store."""
+
+    nemo_customizer_url: str = "http:/localhost:9003"
+    """Base api url for NeMo Customizer."""
+
+    nemo_evaluator_url: str = "http://localhost:9005"
+    """Base api url for NeMo Evaluator."""
+
     @field_validator("dev")
     @classmethod
     def set_dev(cls, value):
