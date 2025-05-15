@@ -4,48 +4,88 @@ slug: /contributing-components
 ---
 
 
-New components are added as objects of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/custom/custom_component/custom_component.py) class.
+New components are added as objects of the [Component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class.
 
 Dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L148) file.
 
 ## Contribute an example component to Langflow
 
-Anyone can contribute an example component. For example, if you created a new data processor called **DataFrameProcessor**, follow these steps to contribute it to Langflow.
+Anyone can contribute an example component. For example, to create a new **Data** component called **DataFrame processor**, follow these steps to contribute it to Langflow.
 
-1. Write your processor as an object of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/custom/custom_component/custom_component.py) class. You'll create a new class, `DataFrameProcessor`, that will inherit from `CustomComponent` and override the base class's methods.
+1. Create a Python file called `dataframe_processor.py`.
+2. Write your processor as an object of the [Component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class. You'll create a new class, `DataFrameProcessor`, that will inherit from `Component` and override the base class's methods.
 
-2. Define attributes to provide information about your custom component:
-   * `display_name`: A user-friendly name shown in the UI
-   * `description`: A brief description of what your component does
-   * `documentation`: Link to detailed documentation
-   * `icon`: An emoji or icon identifier for visual representation
-   * `priority`: Optional integer to control display order (lower numbers appear first)
-   * `name`: Optional internal identifier (defaults to class name)
+```python
+from typing import Any, Dict, Optional
+import pandas as pd
+from langflow.custom import Component
 
-    For more information, see [Create custom Python components](/components-custom-components).
+class DataFrameProcessor(Component):
+    """A component that processes pandas DataFrames with various operations."""
+```
 
-3. Implement the `build_config` method to define the configuration options for your custom component. This method should return a dictionary of field configurations.
+2. Define class attributes to provide information about your custom component:
+```python
+from typing import Any, Dict, Optional
+import pandas as pd
+from langflow.custom import Component
 
-4. Implement the `build` method to define the logic for taking input parameters specified in the `build_config` method and returning the desired output. This method can be synchronous or asynchronous.
-   ```python
-   def build(self, *args, **kwargs) -> Any:
-       # Synchronous implementation
-       return result
+class DataFrameProcessor(Component):
+    """A component that processes pandas DataFrames with various operations."""
 
-   async def build(self, *args, **kwargs) -> Any:
-       # Asynchronous implementation
-       return await result
-   ```
+    display_name: str = "DataFrame Processor"
+    description: str = "Process and transform pandas DataFrames with various operations like filtering, sorting, and aggregation."
+    documentation: str = "https://docs.langflow.org/components-dataframe-processor"
+    icon: DataframeIcon
+    priority: int = 100
+    name: str = "dataframe_processor"
+```
 
-5. Add the code to the [/components/data](https://github.com/langflow-ai/langflow/tree/dev/src/backend/base/langflow/components/data) folder.
+   * `display_name`: A user-friendly name shown in the UI.
+   * `description`: A brief description of what your component does.
+   * `documentation`: Link to detailed documentation.
+   * `icon`: An emoji or icon identifier for visual representation. For more information, see [Contributing bundles](/contributing-bundles#add-the-bundle-to-the-frontend-folder).
+   * `priority`: Optional integer to control display order (lower numbers appear first).
+   * `name`: Optional internal identifier (defaults to class name).
 
-6. Add the dependency to [/data/__init__.py](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/components/data/__init__.py) as `from .DataFrameProcessor import DataFrameProcessor`.
+3. Define the component's interface by specifying its inputs, outputs, and the method that will process them. The method name must match the `method` field in your outputs list, as this is how Langflow knows which method to call to generate each output.
+This example creates a minimal custom component skeleton.
+For more information on creating your custom component, see [Create custom Python components](/components-custom-components).
+```python
+from typing import Any, Dict, Optional
+import pandas as pd
+from langflow.custom import Component
 
-7. Add any new dependencies to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L148) file.
+class DataFrameProcessor(Component):
+    """A component that processes pandas DataFrames with various operations."""
 
-8. Submit documentation for your component. For this example, you'd submit documentation to the [data components page](https://github.com/langflow-ai/langflow/blob/main/docs/docs/Components/components-data.md).
+    display_name: str = "DataFrame Processor"
+    description: str = "Process and transform pandas DataFrames with various operations like filtering, sorting, and aggregation."
+    documentation: str = "https://docs.langflow.org/components-dataframe-processor"
+    icon: DataframeIcon
+    priority: int = 100
+    name: str = "dataframe_processor"
 
-9. Submit your changes as a pull request. The Langflow team will have a look, suggest changes, and add your component to Langflow.
+    # input and output lists
+    inputs = []
+    outputs = []
+
+    # method
+    def some_output_method(self):
+        return ...
+```
+
+4. Save the `dataframe_processor.py` to the `src > backend > base > langflow > components` directory.
+This example adds a **Data** component, so add it to the `/data` directory.
+
+5. Add the component dependency to `src > backend > base > langflow > components > data > __init__.py` as `from .DataFrameProcessor import DataFrameProcessor`.
+You can view the [/data/__init__.py](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/components/data/__init__.py) in the Langflow repository.
+
+6. Add any new dependencies to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L20) file.
+
+7. Submit documentation for your component. For this example component, you would submit documentation to the [Data components page](https://github.com/langflow-ai/langflow/blob/main/docs/docs/Components/components-data.md).
+
+8. Submit your changes as a pull request. The Langflow team will review, suggest changes, and add your component to Langflow.
 
 ## Best practices for modifying components
 
