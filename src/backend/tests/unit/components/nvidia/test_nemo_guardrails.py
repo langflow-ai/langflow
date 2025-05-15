@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from langflow.base.models.model import LCModelComponent
+
+import pytest
 from langflow.components.nvidia.nemo_guardrails import NVIDIANeMoGuardrailsComponent
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
@@ -40,13 +40,13 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     def test_generate_rails_config(self, component_class, default_kwargs):
         """Test YAML configuration generation with different rail combinations"""
         component = component_class(**default_kwargs)
-        
+
         # Test with default rails
         config = component.generate_rails_config()
         assert "models" in config
         assert "rails" in config
         assert "self check input" in config
-        
+
         # Test with custom YAML content
         custom_yaml = "models: []\nrails: {}\n"
         component.yaml_content = custom_yaml
@@ -58,13 +58,13 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     def test_build_model(self, mock_runnable_rails, mock_rails_config, component_class, default_kwargs):
         """Test model building with different configurations"""
         component = component_class(**default_kwargs)
-        
+
         # Test with default configuration
         mock_instance = MagicMock()
         mock_runnable_rails.return_value = mock_instance
         model = component.build_model()
         assert model is not None
-        
+
         # Test with verbose logging
         component.guardrails_verbose = True
         model = component.build_model()
@@ -74,18 +74,15 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     def test_get_models(self, mock_get, component_class, default_kwargs):
         """Test retrieval of available models from NVIDIA API"""
         component = component_class(**default_kwargs)
-        
+
         # Mock successful API response
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "data": [
-                {"id": "openai/gpt-3.5-turbo-instruct"},
-                {"id": "anthropic/claude-3-opus-20240229"}
-            ]
+            "data": [{"id": "openai/gpt-3.5-turbo-instruct"}, {"id": "anthropic/claude-3-opus-20240229"}]
         }
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
-        
+
         models = component.get_models()
         assert len(models) > 0
         assert "openai/gpt-3.5-turbo-instruct" in models
@@ -93,10 +90,8 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     def test_update_build_config(self, component_class, default_kwargs):
         """Test updating build configuration with model list"""
         component = component_class(**default_kwargs)
-        build_config = {
-            "self_check_model_name": {"options": [], "value": ""}
-        }
-        
+        build_config = {"self_check_model_name": {"options": [], "value": ""}}
+
         with patch.object(component, "get_models", return_value=["model1", "model2"]):
             updated_config = component.update_build_config(build_config, "test_key", "self_check_model_api_key")
             assert len(updated_config["self_check_model_name"]["options"]) == 2
@@ -104,12 +99,12 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     def test_error_handling(self, component_class, default_kwargs):
         """Test error handling in various scenarios"""
         component = component_class(**default_kwargs)
-        
+
         # Test invalid YAML content
         component.yaml_content = "invalid: yaml: content:"
         with pytest.raises(ValueError):
             component.build_model()
-        
+
         # Test missing API key
         component.self_check_model_api_key = None
         # Should return an empty list, not raise
@@ -118,27 +113,33 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     def test_required_urls_for_rails(self, component_class, default_kwargs):
         """Test that required URLs are set when corresponding rails are enabled."""
         component = component_class(**default_kwargs)
-        
+
         # Test self check rails
         component.rails = ["self check input"]
         component.self_check_model_url = ""
         with pytest.raises(ValueError, match="self_check_model_url must be set when self check rails are enabled"):
             component.build_model()
-        
+
         # Test topic control rails
         component.rails = ["topic control"]
         component.topic_control_model_url = ""
-        with pytest.raises(ValueError, match="topic_control_model_url must be set when topic control rails are enabled"):
+        with pytest.raises(
+            ValueError, match="topic_control_model_url must be set when topic control rails are enabled"
+        ):
             component.build_model()
-        
+
         # Test content safety rails
         component.rails = ["content safety input"]
         component.content_safety_model_url = ""
-        with pytest.raises(ValueError, match="content_safety_model_url must be set when content safety rails are enabled"):
+        with pytest.raises(
+            ValueError, match="content_safety_model_url must be set when content safety rails are enabled"
+        ):
             component.build_model()
-        
+
         # Test jailbreak detection rails
         component.rails = ["jailbreak detection model"]
         component.jailbreak_detection_model_url = ""
-        with pytest.raises(ValueError, match="jailbreak_detection_model_url must be set when jailbreak detection rails are enabled"):
-            component.build_model() 
+        with pytest.raises(
+            ValueError, match="jailbreak_detection_model_url must be set when jailbreak detection rails are enabled"
+        ):
+            component.build_model()
