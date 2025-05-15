@@ -34,6 +34,7 @@ export default function OutputComponent({
     isToolMode ? "Toolset" : outputs?.[0].display_name,
   );
   const setNode = useFlowStore((state) => state.setNode);
+  const node = useFlowStore((state) => state.getNode(nodeId));
   const updateNodeInternals = useUpdateNodeInternals();
   const setEdges = useFlowStore((state) => state.setEdges);
 
@@ -81,6 +82,7 @@ export default function OutputComponent({
       <DropdownMenuTrigger asChild disabled={singleOutput}>
         <Button
           unstyled
+          data-testid={`output-${node?.data?.type.toLowerCase()}-${node?.data?.showNode ? "shownode" : "noshownode"}-${name.toLowerCase()}-right`}
           className={cn(
             "item-center group flex text-[13px] font-medium",
             singleOutput && "mr-2",
