@@ -351,98 +351,94 @@ export default function NodeStatus({
     return `button_disconnected_${display_name.toLowerCase()}`;
   };
 
-  return showNode ? (
-    <>
-      <div className="flex shrink-0 items-center gap-2">
-        {(showNodeStatus || nodeAuth) && (
-          <div className="flex items-center gap-2 self-center">
-            {showNodeStatus && (
-              <ShadTooltip
-                styleClasses={cn(
-                  "border rounded-xl",
-                  conditionSuccess
-                    ? "border-accent-emerald-foreground bg-success-background"
-                    : "border-destructive bg-error-background",
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {(showNodeStatus || nodeAuth) && (
+        <div className="flex items-center gap-2 self-center">
+          {showNodeStatus && (
+            <ShadTooltip
+              styleClasses={cn(
+                "border rounded-xl",
+                conditionSuccess
+                  ? "border-accent-emerald-foreground bg-success-background"
+                  : "border-destructive bg-error-background",
+              )}
+              content={
+                <BuildStatusDisplay
+                  buildStatus={buildStatus}
+                  validationStatus={validationStatus}
+                  validationString={validationString}
+                  lastRunTime={lastRunTime}
+                />
+              }
+              side="bottom"
+            >
+              <div className="cursor-help">
+                {conditionSuccess && validationStatus?.data?.duration ? (
+                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/10">
+                    <span>
+                      {normalizeTimeString(validationStatus?.data?.duration)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center self-center">
+                    {iconStatus}
+                  </div>
                 )}
-                content={
-                  <BuildStatusDisplay
-                    buildStatus={buildStatus}
-                    validationStatus={validationStatus}
-                    validationString={validationString}
-                    lastRunTime={lastRunTime}
-                  />
-                }
-                side="bottom"
-              >
-                <div className="cursor-help">
-                  {conditionSuccess && validationStatus?.data?.duration ? (
-                    <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/10">
-                      <span>
-                        {normalizeTimeString(validationStatus?.data?.duration)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center self-center">
-                      {iconStatus}
-                    </div>
-                  )}
-                </div>
-              </ShadTooltip>
-            )}
+              </div>
+            </ShadTooltip>
+          )}
 
-            {nodeAuth && (
-              <ShadTooltip content={nodeAuth.auth_tooltip || "Connect"}>
-                <div>
-                  {showNode && (
-                    <Button
-                      unstyled
-                      disabled={
-                        connectionLink === "" || connectionLink === "error"
+          {nodeAuth && showNode && (
+            <ShadTooltip content={nodeAuth.auth_tooltip || "Connect"}>
+              <div>
+                <Button
+                  unstyled
+                  disabled={connectionLink === "" || connectionLink === "error"}
+                  className={getConnectionButtonClasses(
+                    connectionLink,
+                    isAuthenticated,
+                    isPolling,
+                  )}
+                  onClick={handleClickConnect}
+                  data-testid={getDataTestId()}
+                >
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <IconComponent
+                      name={
+                        isPolling
+                          ? "Loader2"
+                          : isAuthenticated
+                            ? "Link"
+                            : "AlertTriangle"
                       }
-                      className={getConnectionButtonClasses(
+                      className={getConnectionIconClasses(
                         connectionLink,
                         isAuthenticated,
                         isPolling,
                       )}
-                      onClick={handleClickConnect}
-                      data-testid={getDataTestId()}
-                    >
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <IconComponent
-                          name={
-                            isPolling
-                              ? "Loader2"
-                              : isAuthenticated
-                                ? "Link"
-                                : "AlertTriangle"
-                          }
-                          className={getConnectionIconClasses(
-                            connectionLink,
-                            isAuthenticated,
-                            isPolling,
-                          )}
-                          strokeWidth={ICON_STROKE_WIDTH}
-                        />
-                      </div>
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <IconComponent
-                          name={"Unlink"}
-                          className={cn(
-                            "h-2.5 w-2.5 text-accent-amber-foreground opacity-0 transition-opacity",
-                            isAuthenticated && !isPolling
-                              ? "group-hover:opacity-100"
-                              : "",
-                          )}
-                          strokeWidth={ICON_STROKE_WIDTH}
-                        />
-                      </div>
-                    </Button>
-                  )}
-                </div>
-              </ShadTooltip>
-            )}
-          </div>
-        )}
+                      strokeWidth={ICON_STROKE_WIDTH}
+                    />
+                  </div>
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <IconComponent
+                      name={"Unlink"}
+                      className={cn(
+                        "h-2.5 w-2.5 text-accent-amber-foreground opacity-0 transition-opacity",
+                        isAuthenticated && !isPolling
+                          ? "group-hover:opacity-100"
+                          : "",
+                      )}
+                      strokeWidth={ICON_STROKE_WIDTH}
+                    />
+                  </div>
+                </Button>
+              </div>
+            </ShadTooltip>
+          )}
+        </div>
+      )}
+      {showNode && (
         <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}
@@ -462,9 +458,7 @@ export default function NodeStatus({
             </Button>
           </div>
         </ShadTooltip>
-      </div>
-    </>
-  ) : (
-    <></>
+      )}
+    </div>
   );
 }
