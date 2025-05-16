@@ -2,7 +2,6 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { VertexBuildTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 import { useEffect, useState } from "react";
 
@@ -95,21 +94,21 @@ export default function NodeName({
         )}
       >
         <div className="flex cursor-grab items-center gap-2">
-          <span className={cn("max-w-44 cursor-grab truncate text-sm")}>
+          <span className={cn("cursor-grab truncate text-sm")}>
             {display_name}
           </span>
         </div>
       </div>
-      <div className="shrink-0">
-        {beta && (
+      {beta && (
+        <div className="shrink-0">
           <div className="border-accent-purple-foreground flex h-4 w-4 items-center justify-center rounded-sm border p-0.5">
             <ForwardedIconComponent
               name="FlaskConical"
               className="text-accent-purple-foreground"
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
