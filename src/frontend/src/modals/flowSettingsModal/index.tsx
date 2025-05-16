@@ -1,16 +1,5 @@
 import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
-import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
-import { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
-import IconComponent from "../../components/common/genericIconComponent";
-import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
-import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
-import { FlowType } from "../../types/flow";
-import { isEndpointNameValid } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
