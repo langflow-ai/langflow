@@ -27,7 +27,7 @@ from langflow.io import (
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_settings_service
-from langflow.utils.component_utils import set_current_fields
+from langflow.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
 
 # Get settings using the service
 
@@ -42,15 +42,12 @@ MODE_FIELDS = {
     "URL": [
         "url_input",
         "method",
-        "query_params",
-        "body",
-        "headers",
     ],
     "cURL": ["curl_input"],
 }
 
 # Fields that should always be visible
-DEFAULT_FIELDS = ["mode", "follow_redirects", "timeout", "save_to_file", "include_httpx_metadata", "method"]
+DEFAULT_FIELDS = ["mode"]
 
 
 class APIRequestComponent(Component):
@@ -76,6 +73,7 @@ class APIRequestComponent(Component):
             ),
             real_time_refresh=True,
             tool_mode=True,
+            advanced=True,
             show=False,
         ),
         DropdownInput(
@@ -179,7 +177,7 @@ class APIRequestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="make_requests"),
+        Output(display_name="API Response", name="data", method="make_api_requests"),
     ]
 
     def _parse_json_value(self, value: Any) -> Any:
@@ -242,7 +240,11 @@ class APIRequestComponent(Component):
             parsed = parse_context(curl)
 
             # Update basic configuration
-            build_config["url_input"]["value"] = parsed.url
+            url = parsed.url
+            # Normalize URL before setting it
+            if not url.startswith(("http://", "https://")):
+                url = f"https://{url}"
+            build_config["url_input"]["value"] = url
             build_config["method"]["value"] = parsed.method.upper()
 
             # Process headers
@@ -368,16 +370,7 @@ class APIRequestComponent(Component):
                 metadata.update({"headers": headers})
 
             return Data(data=metadata)
-        except httpx.TimeoutException:
-            return Data(
-                data={
-                    "source": url,
-                    "headers": headers,
-                    "status_code": 408,
-                    "error": "Request timed out",
-                },
-            )
-        except Exception as exc:
+        except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:
             self.log(f"Error making request to {url}")
             return Data(
                 data={
@@ -413,10 +406,10 @@ class APIRequestComponent(Component):
             return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
         return {}
 
-    async def make_requests(self) -> Data:
+    async def make_api_requests(self) -> Data:
         """Make HTTP request with optimized parameter handling."""
         method = self.method
-        url = self.url_input.strip()
+        url = self.url_input.strip() if isinstance(self.url_input, str) else ""
         headers = self.headers or {}
         body = self.body or {}
         timeout = self.timeout
@@ -424,12 +417,21 @@ class APIRequestComponent(Component):
         save_to_file = self.save_to_file
         include_httpx_metadata = self.include_httpx_metadata
 
-        if self.mode == "cURL" and self.curl_input:
-            self._build_config = self.parse_curl(self.curl_input, dotdict())
+        # if self.mode == "cURL" and self.curl_input:
+        #     self._build_config = self.parse_curl(self.curl_input, dotdict())
+        #     # After parsing curl, get the normalized URL
+        #     url = self._build_config["url_input"]["value"]
 
         # Normalize URL before validation
-        url = self._normalize_url(url)
+        if not url or not isinstance(url, str):
+            msg = "URL cannot be empty"
+            raise ValueError(msg)
 
+        # Add https:// if no protocol is specified
+        if not url.startswith(("http://", "https://")):
+            url = f"https://{url}"
+
+        # Validate URL
         if not validators.url(url):
             msg = f"Invalid URL provided: {url}"
             raise ValueError(msg)
@@ -466,11 +468,19 @@ class APIRequestComponent(Component):
             return build_config
 
         # print(f"Current mode: {field_value}")
+        if field_value == "cURL":
+            set_field_display(build_config, "curl_input", value=True)
+            build_config = self.parse_curl(self.curl_input, build_config)
+        else:
+            set_field_display(build_config, "curl_input", value=False)
+
         return set_current_fields(
             build_config=build_config,
             action_fields=MODE_FIELDS,
             selected_action=field_value,
             default_fields=DEFAULT_FIELDS,
+            func=set_field_advanced,
+            default_value=True,
         )
 
     async def _response_info(
