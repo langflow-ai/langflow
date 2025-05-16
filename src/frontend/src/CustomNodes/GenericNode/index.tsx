@@ -552,7 +552,7 @@ function GenericNode({
             )}
             {renderNodeStatus()}
           </div>
-          {showNode && hasDescription && (
+          {showNode && (hasDescription || editNameDescription) && (
             <div className="px-4 pb-3">{renderDescription()}</div>
           )}
         </div>
