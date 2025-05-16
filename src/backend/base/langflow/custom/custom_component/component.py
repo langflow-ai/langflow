@@ -172,6 +172,9 @@ class Component(CustomComponent):
         Returns:
             str | None: The ID of the source vertex if an incoming edge is found, None otherwise
         """
+        if self._vertex is None:
+            msg = "Vertex not found. Please build the graph first."
+            raise ValueError(msg)
         return self._vertex.get_incoming_edge_by_target_param(target_param)
 
     @property
