@@ -47,6 +47,9 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Weaviate requires the index name to be capitalized. Use: {self.index_name.capitalize()}"
             raise ValueError(msg)
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

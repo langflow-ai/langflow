@@ -38,8 +38,7 @@ test(
       .fill("test2 test2 test2 test2");
 
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
     const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();

@@ -11,6 +11,15 @@ type MarkdownFieldProps = {
   isEmpty: boolean;
   chatMessage: string;
   editedFlag: React.ReactNode;
+  isAudioMessage?: boolean;
+};
+
+// Function to replace <think> tags with a placeholder before markdown processing
+const preprocessChatMessage = (text: string): string => {
+  // Replace <think> tags with `<span class="think-tag">think:</span>`
+  return text
+    .replace(/<think>/g, "`<think>`")
+    .replace(/<\/think>/g, "`</think>`");
 };
 
 export const MarkdownField = ({
@@ -18,7 +27,11 @@ export const MarkdownField = ({
   isEmpty,
   chatMessage,
   editedFlag,
+  isAudioMessage,
 }: MarkdownFieldProps) => {
+  // Process the chat message to handle <think> tags
+  const processedChatMessage = preprocessChatMessage(chatMessage);
+
   return (
     <div className="w-full items-baseline gap-2">
       <Markdown
@@ -26,7 +39,7 @@ export const MarkdownField = ({
         linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
-          "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
+          "markdown prose flex w-fit max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
         )}
         components={{
@@ -42,6 +55,15 @@ export const MarkdownField = ({
           pre({ node, ...props }) {
             return <>{props.children}</>;
           },
+          table: ({ node, ...props }) => {
+            return (
+              <div className="max-w-full overflow-hidden rounded-md border bg-muted">
+                <div className="max-h-[600px] w-full overflow-auto p-4">
+                  <table className="!my-0 w-full">{props.children}</table>
+                </div>
+              </div>
+            );
+          },
           code: ({ node, inline, className, children, ...props }) => {
             let content = children as string;
             if (
@@ -55,6 +77,11 @@ export const MarkdownField = ({
               if (content.length) {
                 if (content[0] === "▍") {
                   return <span className="form-modal-markdown-span"></span>;
+                }
+
+                // Specifically handle <think> tags that were wrapped in backticks
+                if (content === "<think>" || content === "</think>") {
+                  return <span>{content}</span>;
                 }
               }
 
@@ -74,7 +101,9 @@ export const MarkdownField = ({
           },
         }}
       >
-        {isEmpty && !chat.stream_url ? EMPTY_OUTPUT_SEND_MESSAGE : chatMessage}
+        {isEmpty && !chat.stream_url
+          ? EMPTY_OUTPUT_SEND_MESSAGE
+          : processedChatMessage}
       </Markdown>
       {editedFlag}
     </div>

@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable --extra nv-ingest
+    uv sync --frozen --no-install-project --no-editable --extra nv-ingest --extra postgresql
 
 COPY ./src /app/src
 
@@ -58,7 +58,7 @@ COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable --extra nv-ingest
+    uv sync --frozen --no-editable --extra nv-ingest --extra postgresql
 
 ################################
 # RUNTIME
@@ -68,7 +68,14 @@ FROM python:3.12.3-slim AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y curl git \
+    && apt-get install -y \
+        curl \
+        git \
+        # Add PostgreSQL client libraries
+        libpq5 \
+        gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
@@ -92,6 +99,7 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+ENV LANGFLOW_EVENT_DELIVERY=polling
 
 USER 1000
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]

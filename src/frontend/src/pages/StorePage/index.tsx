@@ -42,7 +42,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
-import InputSearchComponent from "../MainPage/oldComponents/myCollectionComponent/components/inputSearchComponent";
+import InputSearchComponent from "../MainPage/components/inputSearchComponent";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -148,7 +148,10 @@ export default function StorePage(): JSX.Element {
           setLoading(false);
           setErrorData({
             title: COMPONENTS_ERROR_ALERT,
-            list: [err["response"]["data"]["detail"]],
+            list: [
+              err?.response?.data?.detail ??
+                "There was an error fetching the components",
+            ],
           });
         }
       });

@@ -68,6 +68,9 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> UpstashVectorStore:
         use_upstash_embedding = self.embedding is None
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

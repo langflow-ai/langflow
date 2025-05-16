@@ -42,7 +42,7 @@ test(
 
     await page.getByText("Edit Prompt", { exact: true }).click();
 
-    await page.getByTestId("edit-prompt-sanitized").click();
+    await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page
       .getByTestId("modal-promptarea_prompt_template")
@@ -52,18 +52,19 @@ test(
 
     let promptSanitizedText = await page
       .getByTestId("edit-prompt-sanitized")
+      .last()
       .textContent();
 
     expect(promptSanitizedText).toBe("THIS IS A TEST");
 
-    await page.getByTestId("edit-prompt-sanitized").click();
+    await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page.keyboard.press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
 
     await page.getByText("Edit Prompt", { exact: true }).click();
 
-    await page.getByTestId("edit-prompt-sanitized").click();
+    await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page
       .getByTestId("modal-promptarea_prompt_template")
@@ -73,6 +74,7 @@ test(
 
     promptSanitizedText = await page
       .getByTestId("edit-prompt-sanitized")
+      .last()
       .textContent();
 
     expect(promptSanitizedText).toBe("THIS IS A TEST 2");

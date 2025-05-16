@@ -2,6 +2,10 @@ export const switchCaseModalSize = (size: string) => {
   let minWidth: string;
   let height: string;
   switch (size) {
+    case "notice":
+      minWidth = "min-w-[400px] max-w-[400px]";
+      height = "";
+      break;
     case "x-small":
       minWidth = "min-w-[20vw]";
       height = "";
@@ -14,16 +18,28 @@ export const switchCaseModalSize = (size: string) => {
       minWidth = "min-w-[40vw]";
       height = "";
       break;
+    case "small-update":
+      minWidth = "min-w-[480px] max-w-[480px]";
+      height = "";
+      break;
     case "small":
       minWidth = "min-w-[40vw]";
       height = "h-[40vh]";
+      break;
+    case "small-query":
+      minWidth = "min-w-[35vw]";
+      height = "h-fit";
+      break;
+    case "medium-small-tall":
+      minWidth = "min-w-[50vw]";
+      height = "h-[70vh]";
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
       height = "";
       break;
     case "medium":
-      minWidth = "min-w-[60vw]";
+      minWidth = "min-w-[60vw] max-w-[720px]";
       height = "h-[60vh]";
       break;
     case "medium-tall":
@@ -70,6 +86,11 @@ export const switchCaseModalSize = (size: string) => {
     case "x-large":
       minWidth = "min-w-[95vw]";
       height = "h-[95vh]";
+      break;
+
+    case "retangular":
+      minWidth = "!min-w-[900px]";
+      height = "min-h-[232px]";
       break;
 
     default:

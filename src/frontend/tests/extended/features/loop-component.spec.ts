@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -8,6 +9,8 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -77,20 +80,15 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
-    const secondParseDataOutput = await page
+    await page
       .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(2);
+      .nth(1)
+      .click();
 
     const loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first();
-
-    // Connecting the second parse data to the loop item to test the wrong loop message
-
-    await secondParseDataOutput.hover();
-    await page.mouse.down();
-    await loopItemInput.hover();
-    await page.mouse.up();
+      .first()
+      .click();
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
@@ -111,63 +109,65 @@ test(
 
     // Loop Item -> Update Data
 
-    const loopItemHandle = await page
+    await page
       .getByTestId("handle-loopcomponent-shownode-item-right")
-      .first();
-    const updateDataInput = await page
+      .first()
+      .click();
+    await page
       .getByTestId("handle-updatedata-shownode-data-left")
-      .first();
-
-    await loopItemHandle.hover();
-    await page.mouse.down();
-    await updateDataInput.hover();
-    await page.mouse.up();
+      .first()
+      .click();
 
     // URL -> Loop Data
-    const urlOutput = await page
-      .getByTestId("handle-url-shownode-data-right")
-      .first();
-    const loopInput = await page
+    await page
+      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .first()
+      .click();
+    await page
       .getByTestId("handle-loopcomponent-shownode-data-left")
-      .first();
-
-    await urlOutput.hover();
-    await page.mouse.down();
-    await loopInput.hover();
-    await page.mouse.up();
+      .first()
+      .click();
 
     // Loop Done -> Parse Data
-    const loopDoneHandle = await page
+    await page
       .getByTestId("handle-loopcomponent-shownode-done-right")
-      .first();
-    const parseDataInput = await page
+      .first()
+      .click();
+    await page
       .getByTestId("handle-parsedata-shownode-data-left")
-      .first();
+      .first()
+      .click();
 
-    await loopDoneHandle.hover();
-    await page.mouse.down();
-    await parseDataInput.hover();
-    await page.mouse.up();
+    // Parse Data -> Chat Output
+    await page
+      .getByTestId("handle-parsedata-shownode-message-right")
+      .first()
+      .click();
+
+    await page
+      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .first()
+      .click();
+
+    await zoomOut(page, 4);
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 100000,
+    });
+
     await page.getByTestId("more-options-modal").click();
 
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="expand-button-modal"]', {
+      timeout: 100000,
+    });
+
     await page.getByTestId("expand-button-modal").click();
-
-    // Parse Data -> Chat Output
-    const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-message-right")
-      .first();
-
-    const chatOutputInput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
-      .first();
-
-    await parseDataOutput.hover();
-    await page.mouse.down();
-    await chatOutputInput.hover();
-    await page.mouse.up();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
@@ -177,7 +177,7 @@ test(
       .fill("https://en.wikipedia.org/wiki/Artificial_intelligence");
     await page
       .getByTestId("inputlist_str_urls_1")
-      .fill("https://en.wikipedia.org/wiki/Artificial_intelligence");
+      .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
     await page.getByTestId("div-generic-node").nth(2).click();
     await page.getByTestId("int_int_number_of_fields").fill("1");
@@ -204,14 +204,15 @@ test(
     await page.getByText("Delete").first().click();
 
     // Update Data -> Loop Item (left side)
-    const updateDataOutput = await page
-      .getByTestId("handle-updatedata-shownode-data-right")
-      .first();
 
-    await updateDataOutput.hover();
-    await page.mouse.down();
-    await loopItemInput.hover();
-    await page.mouse.up();
+    await page
+      .getByTestId("handle-updatedata-shownode-data-right")
+      .first()
+      .click();
+    await page
+      .getByTestId("handle-loopcomponent-shownode-item-left")
+      .first()
+      .click();
 
     // Build and run
     await page.getByTestId("button_run_chat output").click();

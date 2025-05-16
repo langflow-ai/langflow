@@ -2,9 +2,13 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
+import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import ToolsComponent from "./components/ToolsComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -15,10 +19,12 @@ import KeypairListComponent from "./components/keypairListComponent";
 import LinkComponent from "./components/linkComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
+import QueryComponent from "./components/queryComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
+import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
-import { InputProps } from "./types";
+import { InputProps, NodeInfoType } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -32,6 +38,7 @@ export function ParameterRenderComponent({
   disabled,
   placeholder,
   isToolMode,
+  nodeInformationMetadata,
 }: {
   handleOnNewValue:
     | handleOnNewValueType
@@ -46,6 +53,7 @@ export function ParameterRenderComponent({
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  nodeInformationMetadata?: NodeInfoType;
 }) {
   const id = (
     templateData.type +
@@ -63,10 +71,13 @@ export function ParameterRenderComponent({
       disabled,
       nodeClass,
       handleNodeClass,
+      nodeId,
+      helperText: templateData?.helper_text,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
-      nodeId,
+      nodeInformationMetadata,
+      hasRefreshButton: templateData.refresh_button,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
@@ -99,6 +110,9 @@ export function ParameterRenderComponent({
       return (
         <StrRenderComponent
           {...baseInputProps}
+          nodeId={nodeId}
+          nodeClass={nodeClass}
+          handleNodeClass={handleNodeClass}
           templateData={templateData}
           name={name}
           display_name={templateData.display_name ?? ""}
@@ -133,7 +147,7 @@ export function ParameterRenderComponent({
         );
       case "link":
         return (
-          <LinkComponent
+          <CustomLinkComponent
             {...baseInputProps}
             icon={templateData.icon}
             text={templateData.text}
@@ -161,6 +175,9 @@ export function ParameterRenderComponent({
           <InputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
+            file_path={templateData.file_path}
+            isList={templateData.list ?? false}
+            tempFile={templateData.temp_file ?? false}
             id={`inputfile_${id}`}
           />
         );
@@ -188,6 +205,16 @@ export function ParameterRenderComponent({
             table_icon={templateData?.table_icon}
           />
         );
+      case "tools":
+        return (
+          <ToolsComponent
+            {...baseInputProps}
+            description={templateData.info || "Add or edit data"}
+            title={nodeClass?.display_name ?? "Tools"}
+            icon={nodeClass?.icon ?? ""}
+            template={nodeClass?.template}
+          />
+        );
       case "slider":
         return (
           <SliderComponent
@@ -202,6 +229,55 @@ export function ParameterRenderComponent({
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
             id={`slider_${id}`}
+          />
+        );
+      case "sortableList":
+        return (
+          <SortableListComponent
+            {...baseInputProps}
+            helperText={templateData?.helper_text}
+            helperMetadata={templateData?.helper_text_metadata}
+            options={templateData?.options}
+            searchCategory={templateData?.search_category}
+            limit={templateData?.limit}
+          />
+        );
+      case "connect":
+        const link =
+          templateData?.options?.find(
+            (option: any) => option?.name === templateValue,
+          )?.link || "";
+
+        return (
+          <CustomConnectionComponent
+            {...baseInputProps}
+            name={name}
+            nodeId={nodeId}
+            nodeClass={nodeClass}
+            helperText={templateData?.helper_text}
+            helperMetadata={templateData?.helper_text_metadata}
+            options={templateData?.options}
+            searchCategory={templateData?.search_category}
+            buttonMetadata={templateData?.button_metadata}
+            connectionLink={link as string}
+          />
+        );
+      case "tab":
+        return (
+          <TabComponent
+            {...baseInputProps}
+            options={templateData?.options || []}
+            id={`tab_${id}`}
+          />
+        );
+      case "query":
+        return (
+          <QueryComponent
+            {...baseInputProps}
+            display_name={templateData.display_name ?? ""}
+            info={templateData.info ?? ""}
+            separator={templateData.separator}
+            id={`query_${id}`}
           />
         );
       default:

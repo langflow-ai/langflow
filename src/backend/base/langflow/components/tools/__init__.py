@@ -13,7 +13,7 @@ from .google_search_api import GoogleSearchAPIComponent
 from .google_search_api_core import GoogleSearchAPICore
 from .google_serper_api import GoogleSerperAPIComponent
 from .google_serper_api_core import GoogleSerperAPICore
-from .mcp_stdio import MCPStdio
+from .mcp_component import MCPToolsComponent
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .python_repl_core import PythonREPLComponent
@@ -22,8 +22,9 @@ from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
-from .tavily import TavilySearchComponent
-from .tavily_search import TavilySearchToolComponent
+from .tavily_extract import TavilyExtractComponent
+from .tavily_search import TavilySearchComponent
+from .tavily_search_tool import TavilySearchToolComponent
 from .wikidata import WikidataComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia import WikipediaComponent
@@ -51,7 +52,7 @@ __all__ = [
     "GoogleSearchAPICore",
     "GoogleSerperAPIComponent",
     "GoogleSerperAPICore",
-    "MCPStdio",
+    "MCPToolsComponent",
     "PythonCodeStructuredTool",
     "PythonREPLComponent",
     "PythonREPLToolComponent",
@@ -60,6 +61,7 @@ __all__ = [
     "SearchComponent",
     "SerpAPIComponent",
     "SerpComponent",
+    "TavilyExtractComponent",
     "TavilySearchComponent",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",

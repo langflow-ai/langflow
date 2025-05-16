@@ -1,7 +1,7 @@
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import HandleInput, NestedDictInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 
 
 class AlterMetadataComponent(Component):
@@ -9,6 +9,7 @@ class AlterMetadataComponent(Component):
     description = "Adds/Removes Metadata Dictionary on inputs"
     icon = "merge"
     name = "AlterMetadata"
+    legacy = True
 
     inputs = [
         HandleInput(
@@ -47,6 +48,12 @@ class AlterMetadataComponent(Component):
             display_name="Data",
             info="List of Input objects each with added Metadata",
             method="process_output",
+        ),
+        Output(
+            display_name="DataFrame",
+            name="dataframe",
+            info="Data objects as a DataFrame, with metadata as columns",
+            method="as_dataframe",
         ),
     ]
 
@@ -88,3 +95,13 @@ class AlterMetadataComponent(Component):
         # Set the status for tracking/debugging purposes
         self.status = data_objects
         return data_objects
+
+    def as_dataframe(self) -> DataFrame:
+        """Convert the processed data objects into a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame where each row corresponds to a Data object,
+                    with metadata fields as columns.
+        """
+        data_list = self.process_output()
+        return DataFrame(data_list)

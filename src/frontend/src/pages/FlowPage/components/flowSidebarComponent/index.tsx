@@ -5,10 +5,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
-import { checkChatInput } from "@/utils/reactflowUtils";
+import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
@@ -18,11 +18,11 @@ import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
@@ -35,41 +35,31 @@ import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
 import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
+import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
+import { UniqueInputsComponents } from "./types";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
 
 interface FlowSidebarComponentProps {
-  showLegacy: boolean;
-  setShowLegacy: (value: boolean) => void;
+  isLoading?: boolean;
+  showLegacy?: boolean;
+  setShowLegacy?: (value: boolean) => void;
 }
 
-export function FlowSidebarComponent({ isLoading }: { isLoading?: boolean }) {
-  const { data, templates } = useTypesStore(
-    useCallback(
-      (state) => ({
-        data: state.data,
-        templates: state.templates,
-      }),
-      [],
-    ),
-  );
+export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+  const data = useTypesStore((state) => state.data);
 
-  const { getFilterEdge, setFilterEdge, filterType, nodes } = useFlowStore(
-    useCallback(
-      (state) => ({
-        getFilterEdge: state.getFilterEdge,
-        setFilterEdge: state.setFilterEdge,
-        filterType: state.filterType,
-        nodes: state.nodes,
-      }),
-      [],
-    ),
+  const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
+    useShallow((state) => ({
+      getFilterEdge: state.getFilterEdge,
+      setFilterEdge: state.setFilterEdge,
+      filterType: state.filterType,
+    })),
   );
 
   const hasStore = useStoreStore((state) => state.hasStore);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { setOpen } = useSidebar();
   const addComponent = useAddComponent();
 
@@ -84,8 +74,6 @@ export function FlowSidebarComponent({ isLoading }: { isLoading?: boolean }) {
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
 
   const customComponent = useMemo(() => {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
@@ -347,7 +335,6 @@ export function FlowSidebarComponent({ isLoading }: { isLoading?: boolean }) {
                   setOpenCategories={setOpenCategories}
                   search={search}
                   nodeColors={nodeColors}
-                  chatInputAdded={chatInputAdded}
                   onDragStart={onDragStart}
                   sensitiveSort={sensitiveSort}
                 />
@@ -359,7 +346,6 @@ export function FlowSidebarComponent({ isLoading }: { isLoading?: boolean }) {
                     sortedCategories={sortedCategories}
                     dataFilter={dataFilter}
                     nodeColors={nodeColors}
-                    chatInputAdded={chatInputAdded}
                     onDragStart={onDragStart}
                     sensitiveSort={sensitiveSort}
                     openCategories={openCategories}

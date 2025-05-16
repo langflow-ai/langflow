@@ -5,6 +5,8 @@ import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn, isTimeStampString } from "@/utils/utils";
 import { CustomCellRendererProps } from "ag-grid-react";
+import { uniqueId } from "lodash";
+import ToggleShadComponent from "../../../toggleShadComponent";
 
 interface CustomCellRender extends CustomCellRendererProps {
   formatter?: "json" | "text" | "boolean" | "number" | "undefined" | "null";
@@ -81,7 +83,18 @@ export default function TableAutoCellRender({
           value === true
             ? true
             : false;
-        return (
+        return !!colDef?.onCellValueChanged ||
+          !!api.getGridOption("onCellValueChanged") ? (
+          <ToggleShadComponent
+            value={value}
+            handleOnNewValue={(data) => {
+              setValue?.(data.value);
+            }}
+            editNode={true}
+            id={"toggle" + colDef?.colId + uniqueId()}
+            disabled={false}
+          />
+        ) : (
           <Badge
             variant={value ? "successStatic" : "errorStatic"}
             size="sq"

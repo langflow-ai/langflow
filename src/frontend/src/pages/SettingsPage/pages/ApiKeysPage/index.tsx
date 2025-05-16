@@ -18,7 +18,6 @@ import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
 import { getColumnDefs } from "./helpers/column-defs";
 
 export default function ApiKeysPage() {
-  const [loadingKeys, setLoadingKeys] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);

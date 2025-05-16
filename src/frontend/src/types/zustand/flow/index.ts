@@ -7,7 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus } from "../../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
@@ -52,7 +52,19 @@ export type FlowPoolType = {
   [key: string]: Array<VertexBuildTypeAPI>;
 };
 
+export type ComponentsToUpdateType = {
+  id: string;
+  icon?: string;
+  display_name: string;
+  outdated: boolean;
+  breakingChange: boolean;
+  userEdited: boolean;
+};
+
 export type FlowStoreType = {
+  dismissedNodes: string[];
+  addDismissedNodes: (dismissedNodes: string[]) => void;
+  removeDismissedNodes: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;
@@ -61,9 +73,11 @@ export type FlowStoreType = {
   }) => void;
   fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
-  componentsToUpdate: string[];
+  componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
-    update: string[] | ((oldState: string[]) => string[]),
+    update:
+      | ComponentsToUpdateType[]
+      | ((oldState: ComponentsToUpdateType[]) => ComponentsToUpdateType[]),
   ) => void;
   updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
   onFlowPage: boolean;
@@ -95,6 +109,7 @@ export type FlowStoreType = {
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
+  resetFlowState: () => void;
   reactFlowInstance: ReactFlowInstance<AllNodeType, EdgeType> | null;
   setReactFlowInstance: (
     newState: ReactFlowInstance<AllNodeType, EdgeType>,
@@ -139,6 +154,8 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
+  playgroundPage: boolean;
+  setPlaygroundPage: (playgroundPage: boolean) => void;
   buildFlow: ({
     startNodeId,
     stopNodeId,
@@ -146,7 +163,7 @@ export type FlowStoreType = {
     files,
     silent,
     session,
-    stream,
+    eventDelivery,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -154,7 +171,7 @@ export type FlowStoreType = {
     files?: string[];
     silent?: boolean;
     session?: string;
-    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (

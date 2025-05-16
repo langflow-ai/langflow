@@ -164,7 +164,7 @@ export const FLOW_NOT_BUILT_DESCRIPTION =
  * The base text for subtitle of Text Dialog
  * @constant
  */
-export const TEXT_DIALOG_SUBTITLE = "Edit text content.";
+export const TEXT_DIALOG_TITLE = "Edit text content";
 
 /**
  * The base text for subtitle of Import Dialog
@@ -551,7 +551,8 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
-export const DEFAULT_FOLDER = "My Projects";
+export const DEFAULT_FOLDER = "Starter Project";
+export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
 
 /**
  * Header text for admin page
@@ -569,6 +570,8 @@ export const ADMIN_HEADER_DESCRIPTION =
   "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
 
 export const BASE_URL_API = custom.BASE_URL_API || "/api/v1/";
+
+export const BASE_URL_API_V2 = custom.BASE_URL_API_V2 || "/api/v2/";
 
 /**
  * URLs excluded from error retries.
@@ -652,11 +655,17 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "table",
   "link",
   "slider",
+  "tab",
+  "sortableList",
+  "connect",
+  "auth",
+  "query",
+  "tools",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
 
-export const priorityFields = new Set(["code", "template"]);
+export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
@@ -760,7 +769,9 @@ export const BROKEN_EDGES_WARNING =
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
-export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
+export const IS_MAC =
+  typeof navigator !== "undefined" &&
+  navigator.userAgent.toUpperCase().includes("MAC");
 
 export const defaultShortcuts = [
   {
@@ -870,11 +881,6 @@ export const defaultShortcuts = [
   },
   {
     display_name: "Freeze",
-    name: "Freeze",
-    shortcut: "mod+f",
-  },
-  {
-    display_name: "Freeze Path",
     name: "Freeze Path",
     shortcut: "mod+shift+f",
   },
@@ -953,8 +959,8 @@ export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
-  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
-  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
+  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) -
+  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
@@ -966,6 +972,7 @@ export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
 export const DRAG_EVENTS_CUSTOM_TYPESS = {
   genericnode: "genericNode",
   notenode: "noteNode",
+  "text/plain": "text/plain",
 };
 
 export const NOTE_NODE_MIN_WIDTH = 324;
@@ -998,7 +1005,11 @@ export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 export const GRADIENT_CLASS =
   "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
 
+export const GRADIENT_CLASS_DISABLED =
+  "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
+
 export const RECEIVING_INPUT_VALUE = "Receiving input";
+export const SELECT_AN_OPTION = "Select an option";
 
 export const ICON_STROKE_WIDTH = 1.5;
 
@@ -1006,9 +1017,67 @@ export const DEFAULT_PLACEHOLDER = "Type something...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
 
+export const SAVE_API_KEY_ALERT = "API key saved successfully";
+export const PLAYGROUND_BUTTON_NAME = "Playground";
 export const POLLING_MESSAGES = {
   ENDPOINT_NOT_AVAILABLE: "Endpoint not available",
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
-export const POLLING_INTERVAL = 100; // milliseconds between polling attempts
+export const BUILD_POLLING_INTERVAL = 25;
+
+export const IS_AUTO_LOGIN =
+  !process?.env?.LANGFLOW_AUTO_LOGIN ||
+  String(process?.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
+
+export const AUTO_LOGIN_RETRY_DELAY = 2000;
+export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;
+
+export const ALL_LANGUAGES = [
+  { value: "en-US", name: "English (US)" },
+  { value: "en-GB", name: "English (UK)" },
+  { value: "it-IT", name: "Italian" },
+  { value: "fr-FR", name: "French" },
+  { value: "es-ES", name: "Spanish" },
+  { value: "de-DE", name: "German" },
+  { value: "ja-JP", name: "Japanese" },
+  { value: "pt-BR", name: "Portuguese (Brazil)" },
+  { value: "zh-CN", name: "Chinese (Simplified)" },
+  { value: "ru-RU", name: "Russian" },
+  { value: "ar-SA", name: "Arabic" },
+  { value: "hi-IN", name: "Hindi" },
+];
+
+export const DEBOUNCE_FIELD_LIST = [
+  "SecretStrInput",
+  "MessageTextInput",
+  "TextInput",
+  "MultilineInput",
+  "SecretStrInput",
+  "IntInput",
+  "FloatInput",
+  "SliderInput",
+];
+
+export const OPENAI_VOICES = [
+  { name: "alloy", value: "alloy" },
+  { name: "ash", value: "ash" },
+  { name: "ballad", value: "ballad" },
+  { name: "coral", value: "coral" },
+  { name: "echo", value: "echo" },
+  { name: "sage", value: "sage" },
+  { name: "shimmer", value: "shimmer" },
+  { name: "verse", value: "verse" },
+];
+
+export const DEFAULT_POLLING_INTERVAL = 5000;
+export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
+export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
+export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
+export const TWITTER_URL = "https://x.com/langflow_ai";
+export const DOCS_URL = "https://docs.langflow.org";
+export const DATASTAX_DOCS_URL =
+  "https://docs.datastax.com/en/langflow/index.html";
+
+export const UUID_PARSING_ERROR = "uuid_parsing";

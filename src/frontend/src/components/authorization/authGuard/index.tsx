@@ -1,4 +1,5 @@
 import {
+  IS_AUTO_LOGIN,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV,
 } from "@/constants/constants";
@@ -11,6 +12,13 @@ export const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { mutate: mutateRefresh } = useRefreshAccessToken();
   const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isAutoLoginEnv = IS_AUTO_LOGIN;
+  const testMockAutoLogin = sessionStorage.getItem("testMockAutoLogin");
+
+  const shouldRedirect =
+    !isAuthenticated &&
+    autoLogin !== undefined &&
+    (!autoLogin || !isAutoLoginEnv);
 
   useEffect(() => {
     const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
@@ -30,7 +38,8 @@ export const ProtectedRoute = ({ children }) => {
       return () => clearInterval(intervalId);
     }
   }, [isAuthenticated]);
-  if (!isAuthenticated && autoLogin !== undefined && !autoLogin) {
+
+  if (shouldRedirect || testMockAutoLogin) {
     const currentPath = window.location.pathname;
     const isHomePath = currentPath === "/" || currentPath === "/flows";
     const isLoginPage = location.pathname.includes("login");

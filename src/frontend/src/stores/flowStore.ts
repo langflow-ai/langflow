@@ -1,13 +1,11 @@
-import {
-  BROKEN_EDGES_WARNING,
-  componentsToIgnoreUpdate,
-} from "@/constants/constants";
+import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
   track,
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
@@ -23,7 +21,7 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
@@ -33,7 +31,11 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
+import {
+  ComponentsToUpdateType,
+  FlowStoreType,
+  VertexLayerElementType,
+} from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
@@ -58,6 +60,10 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  playgroundPage: false,
+  setPlaygroundPage: (playgroundPage) => {
+    set({ playgroundPage });
+  },
   positionDictionary: {},
   setPositionDictionary: (positionDictionary) => {
     set({ positionDictionary });
@@ -84,24 +90,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ componentsToUpdate: newChange });
   },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes: string[] = [];
+    let outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    for (let i = 0; i < nodes.length; i++) {
-      let node = nodes[i];
+    nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const currentCode = templates[node.data?.type]?.template?.code?.value;
-        const thisNodesCode = node.data?.node!.template?.code?.value;
-        if (
-          currentCode &&
-          thisNodesCode &&
-          currentCode !== thisNodesCode &&
-          !node.data?.node?.edited &&
-          !componentsToIgnoreUpdate.includes(node.data?.type)
-        ) {
-          outdatedNodes.push(node.id);
-        }
+        const codeValidity = checkCodeValidity(node.data, templates);
+        if (codeValidity && codeValidity.outdated)
+          outdatedNodes.push({
+            id: node.id,
+            icon: node.data.node?.icon,
+            display_name: node.data.node?.display_name,
+            outdated: codeValidity.outdated,
+            breakingChange: codeValidity.breakingChange,
+            userEdited: codeValidity.userEdited,
+          });
       }
-    }
+    });
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
@@ -219,6 +223,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    set({
+      dismissedNodes: JSON.parse(
+        localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
+      ) as string[],
+    });
     unselectAllNodesEdges(nodes, edges);
     set({
       nodes,
@@ -448,7 +457,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Add the new node to the list of nodes in state
       newNodes = newNodes
         .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
+        .concat({ ...newNode, selected: true });
     });
     get().setNodes(newNodes);
 
@@ -595,6 +604,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent,
     session,
     stream = true,
+    eventDelivery = EventDeliveryType.STREAMING,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -603,7 +613,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent?: boolean;
     session?: string;
     stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => {
+    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
@@ -827,7 +839,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
-      stream,
+      playgroundPage,
+      eventDelivery,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
@@ -963,6 +976,47 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   currentBuildingNodeId: undefined,
   setCurrentBuildingNodeId: (nodeIds) => {
     set({ currentBuildingNodeId: nodeIds });
+  },
+  resetFlowState: () => {
+    set({
+      nodes: [],
+      edges: [],
+      flowState: undefined,
+      hasIO: false,
+      inputs: [],
+      outputs: [],
+      flowPool: {},
+      currentFlow: undefined,
+      reactFlowInstance: null,
+      lastCopiedSelection: null,
+      verticesBuild: null,
+      flowBuildStatus: {},
+      isBuilding: false,
+      isPending: true,
+      positionDictionary: {},
+      componentsToUpdate: [],
+    });
+  },
+  dismissedNodes: [],
+  addDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodes, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
+  },
+  removeDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = get().dismissedNodes.filter(
+      (node) => !dismissedNodes.includes(node),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
   },
 }));
 

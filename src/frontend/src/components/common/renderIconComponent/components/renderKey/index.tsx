@@ -32,7 +32,7 @@ export default function RenderKey({
           className={cn(tableRender ? "h-4 w-4" : "h-3 w-3")}
         />
       ) : (
-        <span>{value.toUpperCase()}</span>
+        <span>{value?.toUpperCase()}</span>
       )}
     </div>
   );

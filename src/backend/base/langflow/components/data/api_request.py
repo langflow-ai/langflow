@@ -27,7 +27,11 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.dotdict import dotdict
+from langflow.services.deps import get_settings_service
+
+# Get settings using the service
 
 
 class APIRequestComponent(Component):
@@ -98,11 +102,12 @@ class APIRequestComponent(Component):
             value=[],
             input_types=["Data"],
             advanced=True,
+            real_time_refresh=True,
         ),
         TableInput(
             name="headers",
             display_name="Headers",
-            info="The headers to send with the request as a dictionary.",
+            info="The headers to send with the request",
             table_schema=[
                 {
                     "name": "key",
@@ -117,14 +122,15 @@ class APIRequestComponent(Component):
                     "description": "Header value",
                 },
             ],
-            value=[],
+            value=[{"key": "User-Agent", "value": get_settings_service().settings.user_agent}],
             advanced=True,
             input_types=["Data"],
+            real_time_refresh=True,
         ),
         IntInput(
             name="timeout",
             display_name="Timeout",
-            value=5,
+            value=30,
             info="The timeout to use for the request.",
             advanced=True,
         ),
@@ -156,6 +162,7 @@ class APIRequestComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="make_requests"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def _parse_json_value(self, value: Any) -> Any:
@@ -276,8 +283,13 @@ class APIRequestComponent(Component):
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "use_curl":
+        if field_name == "use_curl" and field_value:
+            # if we remove field value from validation, this gets validated every time
             build_config = self._update_curl_mode(build_config, use_curl=field_value)
+
+            # If curl is not used, we don't need to reset the fields
+            if not self.use_curl:
+                return build_config
 
             # Fields that should not be reset
             preserve_fields = {"timeout", "follow_redirects", "save_to_file", "include_httpx_metadata", "use_curl"}
@@ -301,9 +313,13 @@ class APIRequestComponent(Component):
                     reset_value = type_reset_mapping.get(type(input_field), None)
                     build_config[input_field.name]["value"] = reset_value
                     self.log(f"Reset field {input_field.name} to {reset_value}")
-        elif field_name == "method" and not self.use_curl:
+            # Don't try to parse the boolean value as a curl command
+            return build_config
+        if field_name == "method" and not self.use_curl:
             build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
+            # Not reachable, because we don't have a way to update
+            # the curl field, self.use_curl is set after the build_config is created
             build_config = self.parse_curl(field_value, build_config)
         return build_config
 
@@ -321,10 +337,10 @@ class APIRequestComponent(Component):
                 elif field_name == "curl":
                     field_config["advanced"] = not use_curl
                     field_config["real_time_refresh"] = use_curl
-                elif field_name in ["body", "headers"]:
+                elif field_name in {"body", "headers"}:
                     field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
                 else:
-                    field_config["advanced"] = use_curl
+                    field_config["advanced"] = use_curl or field_config.get("advanced")
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
 
@@ -359,10 +375,8 @@ class APIRequestComponent(Component):
                 if field_name in common_fields:
                     field_config["advanced"] = False
                 elif field_name in body_fields:
-                    field_config["advanced"] = method not in ["POST", "PUT", "PATCH"]
+                    field_config["advanced"] = method not in {"POST", "PUT", "PATCH"}
                 elif field_name in always_advanced_fields:
-                    field_config["advanced"] = True
-                else:
                     field_config["advanced"] = True
             else:
                 self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
@@ -389,6 +403,7 @@ class APIRequestComponent(Component):
 
         # Process body using the new helper method
         processed_body = self._process_body(body)
+        redirection_history = []
 
         try:
             response = await client.request(
@@ -640,3 +655,12 @@ class APIRequestComponent(Component):
                 return {}  # Return empty dictionary instead of None
             return processed_headers
         return {}
+
+    async def as_dataframe(self) -> DataFrame:
+        """Convert the API response data into a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the API response data.
+        """
+        data = await self.make_requests()
+        return DataFrame(data)
