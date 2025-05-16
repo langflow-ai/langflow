@@ -129,16 +129,16 @@ def set_current_fields(
         default_value = False
     if selected_action in action_fields:
         for field in action_fields[selected_action]:
-            build_config = func(build_config=build_config, field=field, value=not default_value)
+            build_config = func(build_config, field, not default_value)
         for key, value in action_fields.items():
             if key != selected_action:
                 for field in value:
-                    build_config = func(build_config=build_config, field=field, value=default_value)
+                    build_config = func(build_config, field, default_value)
     if selected_action is None:
         for value in action_fields.values():
             for field in value:
-                build_config = func(build_config=build_config, field=field, value=default_value)
+                build_config = func(build_config, field, default_value)
     if default_fields is not None:
         for field in default_fields:
-            build_config = func(build_config=build_config, field=field, value=not default_value)
+            build_config = func(build_config, field, not default_value)
     return build_config
