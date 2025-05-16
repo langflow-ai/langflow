@@ -26,6 +26,11 @@ export type BaseInputProps<valueType = any> = {
   nodeId?: string;
   nodeInformationMetadata?: NodeInfoType;
   hasRefreshButton?: boolean;
+  helperMetadata?: any;
+  options?: any[];
+  searchCategory?: string[];
+  buttonMetadata?: { variant?: string; icon?: string };
+  connectionLink?: string;
 };
 
 // Generic type for composing input props
