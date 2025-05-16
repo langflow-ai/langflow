@@ -522,7 +522,7 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap p-4 leading-5",
+            "grid text-wrap px-4 py-3 leading-5",
             showNode ? "border-b" : "relative",
             hasDescription && "gap-3",
           )}
@@ -532,7 +532,7 @@ function GenericNode({
             className={
               !showNode
                 ? ""
-                : "generic-node-div-title justify-between rounded-t-lg"
+                : "flex flex-1 items-center justify-between gap-2 overflow-hidden rounded-t-lg"
             }
           >
             <div
