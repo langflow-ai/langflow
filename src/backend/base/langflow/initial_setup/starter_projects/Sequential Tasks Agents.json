@@ -440,6 +440,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "watsonxAI",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -1062,6 +1063,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "watsonxAI",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -2506,6 +2508,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "watsonxAI",
                   "Custom"
                 ],
                 "placeholder": "",
