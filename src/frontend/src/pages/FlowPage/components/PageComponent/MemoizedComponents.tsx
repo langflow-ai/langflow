@@ -38,7 +38,6 @@ export const MemoizedCanvasControls = memo(
             shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
           }
         }}
-        iconClasses="text-primary"
         testId="add_note"
       />
     </CanvasControls>

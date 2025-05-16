@@ -39,7 +39,7 @@ export const CustomControlButton = ({
   return (
     <ControlButton
       data-testid={testId}
-      className="!h-8 !w-8 rounded !p-0"
+      className="group !h-8 !w-8 rounded !p-0"
       onClick={onClick}
       disabled={disabled}
       title={testId?.replace(/_/g, " ")}
@@ -49,7 +49,10 @@ export const CustomControlButton = ({
           <IconComponent
             name={iconName}
             aria-hidden="true"
-            className={cn("scale-150 text-muted-foreground", iconClasses)}
+            className={cn(
+              "scale-150 text-muted-foreground group-hover:text-primary",
+              iconClasses,
+            )}
           />
         </div>
       </ShadTooltip>
@@ -109,8 +112,8 @@ const CanvasControls = ({ children }) => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls !m-2 flex !flex-row gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
-      position="bottom-left"
+      className="react-flow__controls !m-2 flex !flex-col gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+      position="bottom-right"
     >
       {/* Zoom In */}
       <CustomControlButton
@@ -135,6 +138,7 @@ const CanvasControls = ({ children }) => {
         onClick={fitView}
         testId="fit_view"
       />
+      {children}
       {/* Lock/Unlock */}
       <CustomControlButton
         iconName={isInteractive ? "LockOpen" : "Lock"}
@@ -146,7 +150,6 @@ const CanvasControls = ({ children }) => {
         }
         testId="lock_unlock"
       />
-      {children}
     </Panel>
   );
 };
