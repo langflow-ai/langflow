@@ -2,6 +2,7 @@ import { memo, useMemo, useRef, useState } from "react";
 
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
 import { Button } from "@/components/ui/button";
 import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
@@ -83,7 +84,7 @@ export const MenuBar = memo((): JSX.Element => {
 
   return onFlowPage ? (
     <div
-      className="flex w-full items-center justify-center gap-2"
+      className="relative flex w-full items-center justify-center gap-2"
       data-testid="menu_bar_wrapper"
     >
       <div
@@ -144,11 +145,6 @@ export const MenuBar = memo((): JSX.Element => {
             !openSettings && "sm:group-hover:opacity-100",
           )}
         />
-
-        <FlowSettingsModal
-          open={openSettings}
-          setOpen={setOpenSettings}
-        ></FlowSettingsModal>
       </div>
       <div className={"hidden shrink-0 items-center sm:flex"}>
         {!autoSaving && (
@@ -186,6 +182,21 @@ export const MenuBar = memo((): JSX.Element => {
             </div>
           </ShadTooltip>
         )}
+      </div>
+      <div
+        className={cn(
+          "z-5 absolute left-1/2 top-[38px] flex h-fit w-96 -translate-x-1/2 overflow-hidden pb-2",
+        )}
+      >
+        <div
+          className={cn(
+            "flex w-96 -translate-y-full flex-col gap-4 rounded-xl border bg-background p-4 opacity-0 transition-all duration-300",
+            openSettings && "translate-y-2 opacity-100",
+          )}
+        >
+          <span className="text-sm font-semibold">Flow Details</span>
+          <FlowSettingsComponent close={() => setOpenSettings(false)} />
+        </div>
       </div>
     </div>
   ) : (
