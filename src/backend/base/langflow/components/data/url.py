@@ -6,7 +6,7 @@ from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
 
 from langflow.custom.custom_component.component import Component
-from langflow.helpers.data import safe_convert, data_to_text
+from langflow.helpers.data import data_to_text, safe_convert
 from langflow.inputs.inputs import TableInput
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
