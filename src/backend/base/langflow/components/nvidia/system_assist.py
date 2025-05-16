@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 from gassist.rise import register_rise_client, send_rise_command
 
@@ -50,21 +49,8 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
     ]
 
     async def sys_assist_prompt(self) -> Message:
-        # Add timing debug logs with print()
-        start_time = time.time()
-        print(f"[DEBUG] Starting sys_assist_prompt at {start_time}")
-        
-        # Wrap the blocking send_rise_command call in a thread to avoid blocking the event loop.
         self.maybe_register_rise_client()
-        print(f"[DEBUG] After register_rise_client: {time.time() - start_time:.4f}s")
-        
+
         response = await asyncio.to_thread(send_rise_command, self.prompt)
-        print(f"[DEBUG] After send_rise_command: {time.time() - start_time:.4f}s")
-        
-        if response is not None:
-            result = Message(text=response["completed_response"])
-        else:
-            result = Message(text=None)
-            
-        print(f"[DEBUG] Completed sys_assist_prompt in {time.time() - start_time:.4f}s")
-        return result
+
+        return Message(text=response["completed_response"]) if response is not None else Message(text=None)
