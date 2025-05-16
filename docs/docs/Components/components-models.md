@@ -21,7 +21,7 @@ This example has the OpenAI model in a chatbot flow. For more information, see t
 
 ![](/img/starter-flow-basic-prompting.png)
 
-## AI/ML API
+## AIML
 
 This component creates a ChatOpenAI model instance using the AIML API.
 
@@ -40,7 +40,6 @@ For more information, see [AIML documentation](https://docs.aimlapi.com/).
 | aiml_api_base | String | The base URL of the AIML API. Defaults to `https://api.aimlapi.com`. |
 | api_key | SecretString | The AIML API Key to use for the model. |
 | temperature | Float | Controls randomness in the output. Default: `0.1`. |
-| seed | Integer | Controls reproducibility of the job. |
 
 **Outputs**
 
@@ -66,10 +65,11 @@ For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon
 | model_id | String | The ID of the Amazon Bedrock model to use. Options include various models. |
 | aws_access_key | SecretString | AWS Access Key for authentication. |
 | aws_secret_key | SecretString | AWS Secret Key for authentication. |
-| credentials_profile_name | String | Name of the AWS credentials profile to use (advanced). |
+| aws_session_token | SecretString | The session key for your AWS account.
+| credentials_profile_name | String | Name of the AWS credentials profile to use. |
 | region_name | String | AWS region name. Default: `us-east-1`. |
-| model_kwargs | Dictionary | Additional keyword arguments for the model (advanced). |
-| endpoint_url | String | Custom endpoint URL for the Bedrock service (advanced). |
+| model_kwargs | Dictionary | Additional keyword arguments for the model. |
+| endpoint_url | String | Custom endpoint URL for the Bedrock service. |
 
 **Outputs**
 

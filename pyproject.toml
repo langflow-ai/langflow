@@ -124,6 +124,7 @@ dependencies = [
     "opik>=1.6.3",
     "openai>=1.68.2",
     "gassist>=0.0.1",
+    "twelvelabs>=0.4.7",
 ]
 
 [dependency-groups]

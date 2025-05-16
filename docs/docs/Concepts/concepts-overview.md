@@ -107,8 +107,6 @@ An example `.env` file is available in the [project repository](https://github.c
 
 ## Projects
 
-## Projects
-
 The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
 
 ![](/img/my-projects.png)

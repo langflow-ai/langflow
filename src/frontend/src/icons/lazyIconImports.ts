@@ -1,3 +1,5 @@
+import { TwelveLabsIcon } from "./TwelveLabs";
+
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
   "AI/ML": () =>
@@ -257,6 +259,10 @@ export const lazyIconsMapping = {
   ThumbUpCustom: () =>
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbUpIconCustom,
+    })),
+  TwelveLabs: () =>
+    import("@/icons/TwelveLabs").then((mod) => ({
+      default: mod.TwelveLabsIcon,
     })),
   TwitterX: () =>
     import("@/icons/Twitter X").then((mod) => ({
