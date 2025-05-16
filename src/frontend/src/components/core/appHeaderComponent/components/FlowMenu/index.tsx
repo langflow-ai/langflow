@@ -16,7 +16,6 @@ import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-fo
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
-import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";

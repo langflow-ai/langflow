@@ -6,7 +6,6 @@ export default function FlowSettingsModal({
   open,
   setOpen,
   flowData,
-  details,
 }: FlowSettingsPropsType): JSX.Element {
   if (!open) return <></>;
   return (
@@ -22,7 +21,6 @@ export default function FlowSettingsModal({
       <BaseModal.Content>
         <FlowSettingsComponent
           flowData={flowData}
-          details={details}
           close={() => setOpen(false)}
         />
       </BaseModal.Content>

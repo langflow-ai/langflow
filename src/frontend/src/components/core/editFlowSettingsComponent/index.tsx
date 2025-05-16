@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useState } from "react";
 import { InputProps } from "../../../types/components";
-import { cn, isEndpointNameValid } from "../../../utils/utils";
+import { cn } from "../../../utils/utils";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
@@ -9,12 +9,10 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   name,
   invalidNameList = [],
   description,
-  endpointName,
   maxLength = 50,
   minLength = 1,
   setName,
   setDescription,
-  setEndpointName,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
   const [isMinLength, setIsMinLength] = useState(false);
