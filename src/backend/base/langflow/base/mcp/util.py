@@ -4,13 +4,13 @@ import os
 import platform
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import UUID
 
 import aiofiles
 import httpx
+from anyio import Path
 from httpx import codes as httpx_codes
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
@@ -101,8 +101,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             ref_name = s["$ref"].split("/")[-1]
             s = defs.get(ref_name)
             if s is None:
-                msg = f"Definition '{ref_name}' not found"
-                raise ValueError(msg)
+                logger.warning(f"Parsing input schema: Definition '{ref_name}' not found")
+                return {"type": "string"}
         return s
 
     def parse_type(s: dict[str, Any] | None) -> Any:
@@ -271,7 +271,7 @@ class MCPStdioClient:
                     while True:
                         await asyncio.sleep(0.05)
                         await tmp.flush()
-                        current = Path(errlog_path).stat().st_size
+                        current = (await Path(errlog_path).stat()).st_size
                         if current > last_size:
                             async with aiofiles.open(errlog_path, encoding="utf-8") as f:
                                 await f.seek(last_size)
@@ -326,7 +326,7 @@ class MCPStdioClient:
             finally:
                 # Clean up the temp file
                 with contextlib.suppress(FileNotFoundError, PermissionError):
-                    Path(errlog_path).unlink()
+                    await Path(errlog_path).unlink()
 
 
 class MCPSseClient:

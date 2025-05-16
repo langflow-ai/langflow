@@ -158,7 +158,7 @@ async def build_flow(
     """Build and process a flow, returning a job ID for event polling.
 
     This endpoint requires authentication through the CurrentActiveUser dependency.
-    For public flows that don't require authentication, use the /build_public_tmp/{flow_id}/flow endpoint.
+    For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.
 
     Args:
         flow_id: UUID of the flow to build
