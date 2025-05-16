@@ -1177,11 +1177,7 @@
   }
 
   .button-run-bg {
-    @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
-  }
-
-  .play-button-icon {
-    @apply h-4 w-4 transition-all group-hover/node:opacity-100;
+    @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
   }
 
   .show-node-icon {
