@@ -74,7 +74,7 @@ export default function NodeName({
   };
 
   return editNameDescription ? (
-    <div className="m-[1px] w-full">
+    <div className="w-full">
       <Input
         onBlur={handleBlur}
         value={nodeName}
@@ -86,7 +86,7 @@ export default function NodeName({
       />
     </div>
   ) : (
-    <div className="group flex flex-1 items-center gap-2 overflow-hidden">
+    <div className="group my-px flex flex-1 items-center gap-2 overflow-hidden">
       <div
         data-testid={"title-" + display_name}
         className={cn(
