@@ -165,7 +165,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.status_code = codes.OK
             self.max_total_events = 200  # Limit to prevent infinite loops
             self.max_empty_polls = 200  # Maximum number of empty polls before giving up
-            self.poll_timeout =5.0  # Timeout for each polling request
+            self.poll_timeout = 5.0  # Timeout for each polling request
 
         async def aiter_lines(self):
             try:
