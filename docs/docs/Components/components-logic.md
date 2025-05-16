@@ -143,6 +143,10 @@ This component listens for a notification and retrieves its associated state.
 
 ## Loop
 
+:::tip
+For another **Loop** component example, see the **Research Translation Loop** template.
+:::
+
 This component iterates over a list of [Data](/concepts-objects#data-object) objects, outputting one item at a time and aggregating results from loop inputs.
 
 In this example, the **Loop** component iterates over a CSV file through the **Item** port until there are no rows left to process. Then, the **Loop** component performs the actions connected to the **Done** port, which in this case is loading the structured data into **Chroma DB**.
