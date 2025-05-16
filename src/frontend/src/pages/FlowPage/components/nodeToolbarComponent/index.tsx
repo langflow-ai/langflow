@@ -7,6 +7,7 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
 import { useUpdateNodeInternals } from "@xyflow/react";
@@ -34,7 +35,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
+import { cn, getNodeLength } from "../../../../utils/utils";
 import { ToolbarButton } from "./components/toolbar-button";
 import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
@@ -249,12 +250,12 @@ const NodeToolbarComponent = memo(
 
     const openDocs = useCallback(() => {
       if (data.node?.documentation) {
-        return openInNewTab(data.node.documentation);
+        return customOpenNewTab(data.node.documentation);
       }
       setNoticeData({
         title: `${data.id} docs is not available at the moment.`,
       });
-    }, [data.id, data.node?.documentation, openInNewTab]);
+    }, [data.id, data.node?.documentation]);
 
     useShortcuts({
       showOverrideModal,
@@ -606,7 +607,9 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      style={hasBreakingChange ? "text-warning" : ""}
+                      style={
+                        hasBreakingChange ? "text-accent-amber-foreground" : ""
+                      }
                       value={isUserEdited ? "Restore" : "Update"}
                       icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"

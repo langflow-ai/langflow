@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFil
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -247,7 +247,7 @@ async def read_flows(
             return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
-        return await paginate(session, stmt, params=params)
+        return await apaginate(session, stmt, params=params)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -321,6 +321,10 @@ async def update_flow(
             raise HTTPException(status_code=404, detail="Flow not found")
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+
+        # Specifically handle endpoint_name when it's explicitly set to null or empty string
+        if flow.endpoint_name is None or flow.endpoint_name == "":
+            update_data["endpoint_name"] = None
 
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
