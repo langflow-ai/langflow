@@ -321,9 +321,6 @@
   .generic-node-div {
     @apply flex flex-col justify-center bg-background transition-all;
   }
-  .generic-node-div-title {
-    @apply flex flex-1 items-center gap-2 overflow-hidden;
-  }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
   }
