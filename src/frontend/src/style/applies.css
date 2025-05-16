@@ -561,12 +561,6 @@
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
 
-  .header-menu-bar-display-2 {
-    @apply flex cursor-pointer items-center gap-2;
-  }
-  .header-menu-flow-name-2 {
-    @apply flex-1;
-  }
   .header-menu-flow-name {
     @apply flex-1 truncate;
   }
@@ -1289,7 +1283,7 @@
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
   }
 
-  .no-focus-visible{
+  .no-focus-visible {
     @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
     --tw-ring-offset-width: none !important;
     --tw-ring-shadow: none !important;
