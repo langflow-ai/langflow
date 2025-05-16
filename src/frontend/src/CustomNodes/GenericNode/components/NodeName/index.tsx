@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
@@ -101,12 +102,14 @@ export default function NodeName({
       </div>
       {beta && (
         <div className="shrink-0">
-          <div className="border-accent-purple-foreground flex h-4 w-4 items-center justify-center rounded-sm border p-0.5">
-            <ForwardedIconComponent
-              name="FlaskConical"
-              className="text-accent-purple-foreground"
-            />
-          </div>
+          <ShadTooltip content="Beta component">
+            <div className="border-accent-purple-foreground flex h-4 w-4 items-center justify-center rounded-sm border p-0.5">
+              <ForwardedIconComponent
+                name="FlaskConical"
+                className="text-accent-purple-foreground"
+              />
+            </div>
+          </ShadTooltip>
         </div>
       )}
     </div>
