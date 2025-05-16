@@ -1,11 +1,13 @@
 import asyncio
-
-from gassist.rise import register_rise_client, send_rise_command
+import contextlib
 
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Message
 from langflow.services.cache.utils import CacheMiss
+
+with contextlib.suppress(ImportError):
+    from gassist.rise import register_rise_client, send_rise_command
 
 
 class NvidiaSystemAssistComponent(ComponentWithCache):
@@ -14,6 +16,7 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
         "Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. "
         "The user may query GPU specifications, state, and ask the NV-API to perform "
         "several GPU-editing acations. The prompt must be human-readable language."
+        "(Windows only)"
     )
     documentation = "https://docs.langflow.org/components-custom-components"
     icon = "NVIDIA"
@@ -30,8 +33,11 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
         try:
             register_rise_client()
             self._shared_component_cache.set(key="rise_initialized", value=True)
+        except NameError as e:
+            msg = "NVIDIA System-Assist is Windows only and not supported on this platform"
+            raise ValueError(msg) from e
         except Exception as e:
-            msg = f"An error occurred initializing rise client: {e}"
+            msg = f"An error occurred initializing NVIDIA System-Assist: {e}"
             raise ValueError(msg) from e
 
     inputs = [
