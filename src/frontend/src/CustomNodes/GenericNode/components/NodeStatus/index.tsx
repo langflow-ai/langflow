@@ -278,7 +278,7 @@ export default function NodeStatus({
 
   const iconClasses = cn(
     "h-3.5 w-3.5 transition-all group-hover/node:opacity-100",
-    isHovered ? "text-foreground" : "text-placeholder-foreground",
+    isHovered ? "text-foreground" : "text-muted-foreground",
     BuildStatus.BUILDING === buildStatus &&
       (isHovered ? "text-status-red" : "animate-spin"),
   );
@@ -374,7 +374,7 @@ export default function NodeStatus({
             >
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
-                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/10">
+                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald">
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
