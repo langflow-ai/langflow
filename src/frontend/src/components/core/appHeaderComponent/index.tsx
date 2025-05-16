@@ -45,7 +45,7 @@ export default function AppHeader(): JSX.Element {
   const getNotificationBadge = () => {
     const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
     return notificationCenter
-      ? `${baseClasses} right-[5.1rem] top-[5px]`
+      ? `${baseClasses} right-[0.3rem] top-[5px]`
       : "hidden";
   };
 
@@ -80,13 +80,13 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="w-full flex-1 truncate lg:absolute lg:left-1/2 lg:-translate-x-1/2">
+      <div className="absolute left-1/2 w-full flex-1 -translate-x-1/2">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
       <div
-        className={`relative left-3 z-30 flex items-center gap-1`}
+        className={`relative left-3 z-30 flex items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
         <>
@@ -117,7 +117,7 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <div className="hit-area-hover group items-center rounded-md px-2 py-1 text-muted-foreground">
+                <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"
@@ -138,7 +138,7 @@ export default function AppHeader(): JSX.Element {
         </AlertDropdown>
         <Separator
           orientation="vertical"
-          className="my-auto ml-3 h-7 dark:border-zinc-700"
+          className="my-auto h-7 dark:border-zinc-700"
         />
 
         <div className="flex">

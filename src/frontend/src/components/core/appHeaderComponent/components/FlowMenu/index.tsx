@@ -87,7 +87,7 @@ export const MenuBar = memo((): JSX.Element => {
       data-testid="menu_bar_wrapper"
     >
       <div
-        className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex"
+        className="header-menu-bar hidden max-w-40 justify-end truncate md:flex xl:max-w-full"
         data-testid="menu_flow_bar"
         id="menu_flow_bar_navigation"
       >
@@ -122,7 +122,7 @@ export const MenuBar = memo((): JSX.Element => {
       </div>
 
       <div
-        className="group relative -mr-6 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
+        className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
         data-testid="menu_bar_display"
         onClick={() => {
           setOpenSettings(true);
@@ -130,7 +130,7 @@ export const MenuBar = memo((): JSX.Element => {
       >
         <span
           ref={measureRef}
-          className="w-fit whitespace-pre text-sm font-semibold"
+          className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm"
           aria-hidden="true"
           data-testid="flow_name"
         >
@@ -140,8 +140,8 @@ export const MenuBar = memo((): JSX.Element => {
         <IconComponent
           name="pencil"
           className={cn(
-            "h-5 w-3.5 group-hover:opacity-100",
-            !openSettings && "opacity-0",
+            "h-5 w-3.5 opacity-0",
+            !openSettings && "sm:group-hover:opacity-100",
           )}
         />
 
