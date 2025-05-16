@@ -80,7 +80,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     <>
       <Label>
         <div className="edit-flow-arrangement">
-          <span className="font-medium">Name{setName ? "" : ":"}</span>{" "}
+          <span className="text-mmd font-medium">Name{setName ? "" : ":"}</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
           )}
@@ -120,8 +120,8 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       </Label>
       <Label>
         <div className="edit-flow-arrangement mt-3">
-          <span className="font-medium">
-            Description{setDescription ? " (optional)" : ":"}
+          <span className="text-mmd font-medium">
+            Description{setDescription ? "" : ":"}
           </span>
         </div>
         {setDescription ? (
@@ -151,7 +151,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       {setEndpointName && (
         <Label>
           <div className="edit-flow-arrangement mt-3">
-            <span className="font-medium">Endpoint Name</span>
+            <span className="text-mmd font-medium">Endpoint Name</span>
             {!validEndpointName && (
               <span className="edit-flow-span">
                 Invalid endpoint name. Use only letters, numbers, hyphens, and
