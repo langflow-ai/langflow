@@ -37,7 +37,6 @@ class ParseDataFrameComponent(Component):
         Output(
             display_name="Text",
             name="text",
-            info="All rows combined into a single text, each row formatted by the template and separated by `sep`.",
             method="parse_data",
         ),
     ]
