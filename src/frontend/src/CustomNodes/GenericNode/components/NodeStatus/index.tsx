@@ -275,7 +275,7 @@ export default function NodeStatus({
       : "Play";
 
   const iconClasses = cn(
-    "play-button-icon",
+    "h-3.5 w-3.5 transition-all group-hover/node:opacity-100",
     isHovered ? "text-foreground" : "text-placeholder-foreground",
     BuildStatus.BUILDING === buildStatus &&
       (isHovered ? "text-status-red" : "animate-spin"),
@@ -307,7 +307,7 @@ export default function NodeStatus({
     isPolling: boolean,
   ): string => {
     return cn(
-      "nodrag button-run-bg hit-area-icon group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
+      "nodrag button-run-bg group relative h-5 w-5 rounded-sm border border-accent-amber-foreground transition-colors hover:bg-accent-amber",
       connectionLink === "error"
         ? "border-destructive text-destructive"
         : isAuthenticated && !isPolling
@@ -350,7 +350,7 @@ export default function NodeStatus({
 
   return showNode ? (
     <>
-      <div className="flex flex-shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
             styleClasses={cn(
@@ -371,8 +371,7 @@ export default function NodeStatus({
           >
             <div className="cursor-help">
               {conditionSuccess && validationStatus?.data?.duration ? (
-                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-xxs font-bold text-accent-emerald-foreground">
-                  <Check className="h-4 w-4 items-center self-center" />
+                <div className="flex gap-1 rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/10">
                   <span>
                     {normalizeTimeString(validationStatus?.data?.duration)}
                   </span>
@@ -437,22 +436,20 @@ export default function NodeStatus({
         <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}
-            className="button-run-bg hit-area-icon"
+            className="button-run-bg"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={handleClickRun}
           >
-            {showNode && (
-              <Button unstyled className="nodrag group">
-                <div data-testid={`button_run_` + display_name.toLowerCase()}>
-                  <IconComponent
-                    name={iconName}
-                    className={iconClasses}
-                    strokeWidth={ICON_STROKE_WIDTH}
-                  />
-                </div>
-              </Button>
-            )}
+            <Button unstyled className="nodrag group">
+              <div data-testid={`button_run_` + display_name.toLowerCase()}>
+                <IconComponent
+                  name={iconName}
+                  className={iconClasses}
+                  strokeWidth={ICON_STROKE_WIDTH}
+                />
+              </div>
+            </Button>
           </div>
         </ShadTooltip>
       </div>
