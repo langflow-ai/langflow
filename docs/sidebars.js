@@ -55,7 +55,6 @@ module.exports = {
         "Components/components-embedding-models",
         "Components/components-helpers",
         "Components/components-io",
-        "Components/components-loaders",
         "Components/components-logic",
         "Components/components-memories",
         "Components/components-models",

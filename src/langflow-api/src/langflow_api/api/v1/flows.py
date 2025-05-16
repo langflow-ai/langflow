@@ -15,7 +15,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFil
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlmodel import apaginate
+
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
@@ -253,7 +254,7 @@ async def read_flows(
             return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
-        return await paginate(session, stmt, params=params)
+        return await apaginate(session, stmt, params=params)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

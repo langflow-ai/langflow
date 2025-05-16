@@ -3,7 +3,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlmodel import paginate
+from fastapi_pagination.ext.sqlmodel import apaginate
+
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
@@ -14,8 +15,6 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
-from sqlalchemy import delete
-from sqlmodel import col, select
 
 from langflow_api.api.utils import DbSession, custom_params
 
@@ -171,6 +170,6 @@ async def get_transactions(
             .where(TransactionTable.flow_id == flow_id)
             .order_by(col(TransactionTable.timestamp))
         )
-        return await paginate(session, stmt, params=params, transformer=transform_transaction_table)
+        return await apaginate(session, stmt, params=params, transformer=transform_transaction_table)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

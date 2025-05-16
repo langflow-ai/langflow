@@ -1154,7 +1154,7 @@
         "data": {
           "id": "note-1vbDd",
           "node": {
-            "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the OpenAI model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **OpenAI** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Data to Message** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
+            "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the OpenAI model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **OpenAI** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Parser** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1396,7 +1396,7 @@
                   {
                     "description": "description of field",
                     "multiple": "False",
-                    "name": "EBITIDA",
+                    "name": "EBITDA",
                     "type": "text"
                   },
                   {
@@ -1609,7 +1609,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "EBITIDA: {EBITIDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
+                "value": "EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
