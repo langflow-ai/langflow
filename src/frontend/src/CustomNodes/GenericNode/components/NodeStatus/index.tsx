@@ -384,15 +384,6 @@ export default function NodeStatus({
               )}
             </div>
           </ShadTooltip>
-
-          {data.node?.beta && showNode && (
-            <Badge
-              size="sq"
-              className="pointer-events-none mr-1 flex h-[22px] w-10 justify-center rounded-[8px] bg-accent-pink text-accent-pink-foreground"
-            >
-              <span className="text-xxs">Beta</span>
-            </Badge>
-          )}
         </div>
         {nodeAuth && (
           <ShadTooltip content={nodeAuth.auth_tooltip || "Connect"}>
