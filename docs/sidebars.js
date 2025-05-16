@@ -25,6 +25,7 @@ module.exports = {
         'Sample-Flows/blog-writer',
         'Sample-Flows/document-qa',
         'Sample-Flows/memory-chatbot',
+        'Sample-Flows/financial-report-parser',
         'Sample-Flows/sequential-agent',
         'Sample-Flows/travel-planning-agent',
       ],
