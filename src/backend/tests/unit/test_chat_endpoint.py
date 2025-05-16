@@ -98,11 +98,11 @@ async def check_messages(flow_id):
 @pytest.mark.benchmark
 async def test_build_flow_invalid_job_id(client, logged_in_headers):
     """Test getting events for an invalid job ID."""
-    invalid_job_id = str(uuid.uuid4())
+    # Use a static UUID instead of generating one
+    invalid_job_id = "00000000-0000-0000-0000-000000000000"
     response = await get_build_events(client, invalid_job_id, logged_in_headers)
     assert response.status_code == codes.NOT_FOUND
     assert "Job not found" in response.json()["detail"]
-
 
 @pytest.mark.benchmark
 async def test_build_flow_invalid_flow_id(client, logged_in_headers):
@@ -352,12 +352,13 @@ async def test_cancel_build_success(client, json_memory_chatbot_no_llm, logged_i
 @pytest.mark.benchmark
 async def test_cancel_nonexistent_build(client, logged_in_headers):
     """Test cancelling a non-existent flow build."""
-    url = "api/v1/build/00000000-0000-0000-0000-000000000000/cancel"
-
+    # Use a static UUID instead of generating one
+    nonexistent_id = "00000000-0000-0000-0000-000000000000"
+    url = f"api/v1/build/{nonexistent_id}/cancel"
+    # Make single request without extra processing
     response = await client.post(url, headers=logged_in_headers)
-
+    # Simple assertions
     assert response.status_code == codes.NOT_FOUND
-    # Updated assertion to match exact error message
     assert "Job not found" in response.json()["detail"]
 
 
