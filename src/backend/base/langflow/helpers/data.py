@@ -165,9 +165,7 @@ def _safe_convert(self, data: Any) -> str:
             # Replace pipe characters to avoid markdown table issues
             processed_data = data.replace(r"\|", r"\\|", regex=True)
 
-            processed_data = processed_data.map(
-                lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
-            )
+            processed_data = processed_data.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
 
             return processed_data.to_markdown(index=False)
         return str(data)
