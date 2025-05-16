@@ -142,7 +142,7 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     return "\n".join(formated_messages)
 
 
-def _safe_convert(self, data: Any) -> str:
+def safe_convert(self, data: Any) -> str:
     """Safely convert input data to string."""
     try:
         if isinstance(data, str):

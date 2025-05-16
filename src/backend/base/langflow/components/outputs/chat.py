@@ -2,7 +2,7 @@ from collections.abc import Generator
 from typing import Any
 
 from langflow.base.io.chat import ChatComponent
-from langflow.helpers.data import _safe_convert
+from langflow.helpers.data import safe_convert
 from langflow.inputs import BoolInput
 from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, MessageTextInput, Output
@@ -181,7 +181,7 @@ class ChatOutput(ChatComponent):
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
-            return "\n".join([_safe_convert(item) for item in self.input_value])
+            return "\n".join([safe_convert(item) for item in self.input_value])
         if isinstance(self.input_value, Generator):
             return self.input_value
-        return _safe_convert(self.input_value)
+        return safe_convert(self.input_value)
