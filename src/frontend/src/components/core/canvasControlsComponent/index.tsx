@@ -113,7 +113,7 @@ const CanvasControls = ({ children }) => {
     <Panel
       data-testid="canvas_controls"
       className="react-flow__controls !m-2 flex !flex-col gap-1.5 rounded-md border border-border bg-background fill-foreground stroke-foreground p-0.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
-      position="bottom-right"
+      position="bottom-left"
     >
       {/* Zoom In */}
       <CustomControlButton

@@ -2,14 +2,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import FlowLogsModal from "@/modals/flowLogsModal";
 import { Panel } from "@xyflow/react";
-import { CustomControlButton } from "../canvasControlsComponent";
 
 const LogCanvasControls = () => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls !m-2 !shadow-none"
-      position="bottom-left"
+      className="react-flow__controls !m-2 rounded-md"
+      position="bottom-right"
     >
       <FlowLogsModal>
         <Button
