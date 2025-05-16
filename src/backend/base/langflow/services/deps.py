@@ -15,11 +15,9 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
-    from langflow.services.state.service import StateService
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
@@ -69,17 +67,6 @@ def get_tracing_service() -> TracingService:
     from langflow.services.tracing.factory import TracingServiceFactory
 
     return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())
-
-
-def get_state_service() -> StateService:
-    """Retrieves the StateService instance from the service manager.
-
-    Returns:
-        The StateService instance.
-    """
-    from langflow_execution.service.state.factory import StateServiceFactory
-
-    return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
 
 
 def get_socket_service() -> SocketIOService:

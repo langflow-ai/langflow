@@ -18,6 +18,7 @@ maintainers = [
 ]
 
 dependencies = [
+    "langflow-execution==0.1.0",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
