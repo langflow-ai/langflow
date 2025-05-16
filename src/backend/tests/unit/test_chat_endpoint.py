@@ -15,6 +15,7 @@ from tests.unit.build_utils import build_flow, consume_and_assert_stream, create
 # Constants
 TIMEOUT_MESSAGE = "Test exceeded timeout limit"
 
+
 @pytest.mark.benchmark
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with the new two-step process."""
@@ -166,10 +167,10 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.headers = headers
             self.status_code = codes.OK
             self.max_total_events = 100  # Reduced from 200
-            self.max_empty_polls = 20    # Reduced from 30
-            self.poll_timeout = 5.0      # Reduced from 10.0
-            self.poll_interval = 0.2     # Added shorter poll interval
-            self.end_event_found = False # Initialize as instance variable
+            self.max_empty_polls = 20  # Reduced from 30
+            self.poll_timeout = 5.0  # Reduced from 10.0
+            self.poll_interval = 0.2  # Added shorter poll interval
+            self.end_event_found = False  # Initialize as instance variable
 
         async def aiter_lines(self):
             empty_polls = 0
@@ -177,13 +178,13 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             logger.debug(f"Starting event polling for job_id: {self.job_id}")
             # Use the client from the fixture instead of creating a new one
             session = self.client
-            while (empty_polls < self.max_empty_polls and
-                   total_events < self.max_total_events and
-                   not self.end_event_found): # Use self.end_event_found
+            while (
+                empty_polls < self.max_empty_polls and total_events < self.max_total_events and not self.end_event_found
+            ):  # Use self.end_event_found
                 try:
                     headers = {**self.headers, "Accept": "application/x-ndjson"}
                     response = await asyncio.wait_for(
-                        session.get( # Use the fixture client
+                        session.get(  # Use the fixture client
                             f"api/v1/build/{self.job_id}/events?event_delivery=polling",
                             headers=headers,
                         ),
@@ -205,7 +206,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                             continue
                         total_events += 1
                         if '"event":"end"' in line or '"event": "end"' in line:
-                            self.end_event_found = True # Use self.end_event_found
+                            self.end_event_found = True  # Use self.end_event_found
                             logger.debug("End event found")
                         try:
                             json.loads(line)  # Validate JSON
@@ -221,18 +222,17 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                     logger.error(f"Polling error: {e!s}")
                     raise
 
-
     # Pass the client to PollingResponse
     polling_response = PollingResponse(client, job_id, logged_in_headers)
 
     try:
         await asyncio.wait_for(
             consume_and_assert_stream(polling_response, job_id),
-            timeout=30.0  # Reduced timeout
+            timeout=30.0,  # Reduced timeout
         )
         # Check using polling_response.end_event_found after consuming the stream
         if not polling_response.end_event_found:
-             logger.warning("Polling finished without finding end event")
+            logger.warning("Polling finished without finding end event")
 
     except asyncio.TimeoutError as e:
         logger.error("Test timeout - checking final state...")
@@ -241,7 +241,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             debug_response = await client.get(
                 f"api/v1/build/{job_id}/events?event_delivery=polling",
                 headers={**logged_in_headers, "Accept": "application/x-ndjson"},
-                timeout=5.0
+                timeout=5.0,
             )
             logger.debug(f"Final state - status: {debug_response.status_code}")
             logger.debug(f"Final state - content: {debug_response.text[:500]}")
