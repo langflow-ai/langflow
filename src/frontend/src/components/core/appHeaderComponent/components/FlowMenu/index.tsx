@@ -133,9 +133,6 @@ export const MenuBar = memo((): JSX.Element => {
             <div
               className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
               data-testid="menu_bar_display"
-              onClick={() => {
-                setOpenSettings((old) => !old);
-              }}
             >
               <span
                 ref={measureRef}
