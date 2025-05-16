@@ -1,13 +1,10 @@
 import re
-import tempfile
-from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
 
-from langflow.base.data.utils import parse_pdf_to_text
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs.inputs import TableInput
@@ -136,37 +133,6 @@ class URLComponent(Component):
 
         return url
 
-    def _process_pdf_content(self, url, content):
-        """Process PDF content from a URL response."""
-        # Save the PDF content to a temporary file
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
-            temp_file.write(content)
-            temp_path = temp_file.name
-
-        try:
-            # Extract text from the PDF using pypdf
-            extracted_text = parse_pdf_to_text(temp_path)
-
-            # Create a document with PDF content
-            doc = type(
-                "obj",
-                (object,),
-                {
-                    "page_content": extracted_text,
-                    "metadata": {"source": url, "content_type": "application/pdf", "title": url.split("/")[-1]},
-                },
-            )
-            msg = f"Successfully parsed PDF document from {url}"
-            logger.info(msg)
-        except Exception as pdf_err:
-            msg = f"Error parsing PDF content from {url}: {pdf_err}"
-            logger.warning(msg)
-            raise ValueError(msg) from pdf_err
-
-        # Clean up the temporary file
-        Path(temp_path).unlink(missing_ok=True)
-        return doc
-
     def fetch_content(self) -> list[Data]:
         """Load documents from the URLs."""
         all_docs = []
@@ -178,11 +144,6 @@ class URLComponent(Component):
             if not urls:
                 raise ValueError(no_urls_msg)
 
-            # Create httpx client with increased header limits
-            client_settings = {"follow_redirects": True, "timeout": self.timeout}
-            limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
-            transport = httpx.HTTPTransport()
-
             # If there's only one URL, we'll make sure to propagate any errors
             single_url = len(urls) == 1
 
@@ -192,39 +153,6 @@ class URLComponent(Component):
 
                 # Create headers dictionary
                 headers_dict = {header["key"]: header["value"] for header in self.headers}
-
-                # First make a HEAD request to check content type
-                try:
-                    with httpx.Client(limits=limits, transport=transport, **client_settings) as client:
-                        head_response = client.head(processed_url, headers=headers_dict)
-                        head_response.raise_for_status()
-                        content_type = head_response.headers.get("Content-Type", "").lower()
-
-                        # If it's a PDF, handle it specially
-                        if "application/pdf" in content_type:
-                            try:
-                                # Get the full content with a regular GET request
-                                response = client.get(processed_url, headers=headers_dict)
-                                response.raise_for_status()
-
-                                # Process the PDF content
-                                doc = self._process_pdf_content(processed_url, response.content)
-                                all_docs.append(doc)
-                                continue
-
-                            except httpx.HTTPError as e:
-                                msg = f"Error loading PDF from {processed_url}: {e}"
-                                logger.exception(msg)
-                                if single_url:
-                                    raise  # Re-raise the exception if it's the only URL
-                                continue
-                except httpx.HTTPError as e:
-                    # If HEAD request fails, continue with normal processing unless it's the only URL
-                    msg = f"Error checking content type for {processed_url}: {e}"
-                    logger.warning(msg)
-                    if single_url and "application/pdf" in getattr(e.response, "headers", {}).get("Content-Type", ""):
-                        raise  # Re-raise if it's the only URL and it's a PDF
-                    # Fall through to regular processing
 
                 # Configure RecursiveUrlLoader with httpx-compatible settings
                 extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
