@@ -15,10 +15,9 @@ They may perform some processing or type checking, like converting raw HTML data
 
 The **URL** data component loads content from a list of URLs.
 
-In the component's **URLs** field, enter a comma-separated list of URLs you want to load. Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs with a component.
+In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
 
-To output a `Data` type, in the **Output Format** dropdown, select **Raw HTML**.
-To output a `Message` type, in the **Output Format** dropdown, select **Text**. This option applies postprocessing with the `data_to_text` helper function.
+Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs from a component.
 
 In this example of a document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for a vector database to ingest.
 
@@ -99,6 +98,7 @@ This component recursively loads files from a directory, with options for file t
 | Output | Type       | Description                         |
 | ------ | ---------- | ----------------------------------- |
 | data   | List[Data] | The loaded file data from the directory. |
+| dataframe | DataFrame | The loaded file data in tabular DataFrame format. |
 
 </details>
 
@@ -195,7 +195,9 @@ This component executes SQL queries on a specified database.
 
 ## URL
 
-This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.
+This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text or raw HTML.
+
+In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
 
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.
@@ -238,17 +240,20 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| urls | URLs | Enter one or more URLs. URLs are automatically validated and cleaned. |
-| format | Output Format | The output format. Use **Text** to extract text from the HTML, **Raw HTML** for the raw HTML content, or **JSON** to extract JSON from the HTML. |
-| separator | Separator | The separator to use between multiple outputs. Default for **Text** is `\n\n`. Default for **Raw HTML** is `\n<!-- Separator -->\n`. |
-| clean_extra_whitespace | Clean Extra Whitespace | Whether to clean excessive blank lines in the text output. Only applies to `Text` format. |
+| urls | URLs | Click the '+' button to enter one or more URLs to crawl recursively. |
+| max_depth | Max Depth | Controls how many 'clicks' away from the initial page the crawler will go. |
+| prevent_outside | Prevent Outside | If enabled, only crawls URLs within the same domain as the root URL. |
+| use_async | Use Async | If enabled, uses asynchronous loading which can be significantly faster but might use more system resources. |
+| format | Output Format | Output Format. Use `Text` to extract the text from the HTML or `HTML` for the raw HTML content. |
+| timeout | Timeout | Timeout for the request in seconds. |
+| headers | Headers | The headers to send with the request. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | A list of [Data](/concepts-objects) objects containing fetched content and metadata. |
-| text | Text | The fetched content as formatted text, with applied separators and cleaning. |
+| text | Message | The fetched content as formatted text. |
 | dataframe | DataFrame | The content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
 
 </details>
