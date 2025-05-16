@@ -78,7 +78,7 @@ export default function NodeDescription({
       <MemoizedMarkdown
         linkTarget="_blank"
         className={cn(
-          "markdown prose flex w-full flex-col text-mmd leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          "markdown prose flex w-full flex-col text-xs leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
           mdClassName,
         )}
       >
@@ -184,7 +184,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-mmd text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-grab text-xs text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}
