@@ -99,7 +99,7 @@ jobs:
         working-directory: src/backend/base
         run: |
           # If the main tag already exists, we need to retrieve the base version from the main tag codebase.
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           echo "base_tag=$version" >> $GITHUB_OUTPUT
           echo "base_tag=$version"
 

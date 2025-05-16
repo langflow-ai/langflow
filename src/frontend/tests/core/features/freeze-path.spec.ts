@@ -98,13 +98,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForSelector('[data-testid="freeze-path-button"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("freeze-path-button").click();
+    await page.getByText("Freeze").first().click();
 
     await page.waitForTimeout(2000);
 

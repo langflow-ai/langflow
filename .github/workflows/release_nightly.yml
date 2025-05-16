@@ -80,8 +80,8 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -224,6 +224,17 @@ jobs:
       release_type: nightly-main
       main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
+
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for Langflow
+    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: nightly-main-all
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit
+
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint

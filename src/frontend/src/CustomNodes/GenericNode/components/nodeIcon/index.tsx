@@ -1,11 +1,7 @@
 import { useTypesStore } from "@/stores/typesStore";
-import {
-  BG_NOISE,
-  nodeColors,
-  nodeIconsLucide,
-  toolModeGradient,
-} from "@/utils/styleUtils";
+import { iconExists, nodeColors } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
+import { useEffect, useState } from "react";
 
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
@@ -17,16 +13,21 @@ export function NodeIcon({
   dataType,
   showNode,
   isGroup,
-  hasToolMode,
 }: {
   icon?: string;
   dataType: string;
   showNode: boolean;
   isGroup?: boolean;
-  hasToolMode: boolean;
 }) {
   const types = useTypesStore((state) => state.types);
-  const name = nodeIconsLucide[dataType] ? dataType : types[dataType];
+  const [name, setName] = useState(types[dataType]);
+
+  useEffect(() => {
+    iconExists(dataType).then((exists) => {
+      setName(exists ? dataType : types[dataType]);
+    });
+  }, [dataType, types]);
+
   const isEmoji = emojiRegex().test(icon ?? "");
   const iconColor = nodeColors[types[dataType]];
   const iconName = icon || (isGroup ? "group_components" : name);
@@ -38,8 +39,6 @@ export function NodeIcon({
     isLucideIcon ? "lucide-icon" : "integration-icon",
   );
 
-  const bgToolMode = BG_NOISE + "," + toolModeGradient;
-
   const renderIcon = () => {
     if (icon && isEmoji) {
       return <span className="text-lg">{icon}</span>;
@@ -49,13 +48,10 @@ export function NodeIcon({
       return (
         <div
           className={cn(
-            hasToolMode ? "text-white" : "text-foreground",
+            "text-foreground",
             !showNode && "flex min-h-8 min-w-8 items-center justify-center",
             "bg-lucide-icon",
           )}
-          style={{
-            backgroundImage: hasToolMode ? bgToolMode : "",
-          }}
         >
           <IconComponent
             strokeWidth={ICON_STROKE_WIDTH}

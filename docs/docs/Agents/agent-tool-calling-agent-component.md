@@ -10,7 +10,7 @@ The `AgentComponent` is a component for easily creating an AI agent capable of a
 The component contains all of the elements you'll need for creating an agent. Instead of managing LLM models and providers, pick your model and enter your API key. Instead of connecting a **Prompt** component, enter instructions in the component's **Agent Instruction** fields.
 
 
-![Tool calling agentcomponent](/img/tool-calling-agent-component.png)
+![Tool calling agent component](/img/tool-calling-agent-component.png)
 
 Learn how to build a flow starting with the **Tool calling agent** component, and see how it can help you solve problems.
 
@@ -19,7 +19,7 @@ Learn how to build a flow starting with the **Tool calling agent** component, an
 - [An OpenAI API key](https://platform.openai.com/)
 - [A Search API key](https://www.searchapi.io/)
 
-## Create a problem-solving agent with AgentComponent
+## Create a problem-solving agent with the Agent component
 
 Create a problem-solving agent in Langflow, starting with the **Tool calling agent**.
 
@@ -54,21 +54,21 @@ Point **API Request** to an online rules document, tell your agent `You are a fu
 * You need to learn a new software language quickly.
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal`, and start learning.
 
-See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [math agent tutorial project](/tutorials-math-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
+See what problems you can solve with this flow. As your problem becomes more specialized, add more tools. For example, add a Python REPL component to solve math problems that are too challenging for the calculator.
 
 ### Edit a tool's metadata
 
-To edit a tool's metadata, click the **Edit Tools** button in the tool to modify its `name` or `description` metadata. These fields help connected agents understand how to use the tool, without having to modify the agent's prompt instructions.
+To edit a tool's metadata, click the **Edit Tools** button in the tool to modify its `name`, `description`, or `enabled` metadata. These fields help connected agents understand how to use the tool, without having to modify the agent's prompt instructions.
 
 For example, the [URL](/components-data#url) component has three tools available when **Tool Mode** is enabled.
 
-| Tool Name | Description |
-|-----------|-------------|
-| `URL-fetch_content` | Use this tool to fetch and retrieve raw content from a URL, including HTML and other structured data. The full response content is returned. |
-| `URL-fetch_content_text` | Use this tool to fetch and extract clean, readable text content from a webpage. Only plain text content is returned. |
-| `URL-as_dataframe` | Use this tool to fetch structured data from a URL and convert it into a tabular format. Data is returned in a structured DataFrame table format. |
+| Tool Name | Description | Enabled |
+|-----------|-------------|---------|
+| `URL-fetch_content` | Use this tool to fetch and retrieve raw content from a URL, including HTML and other structured data. The full response content is returned. | true |
+| `URL-fetch_content_text` | Use this tool to fetch and extract clean, readable text content from a webpage. Only plain text content is returned. | true |
+| `URL-as_dataframe` | Use this tool to fetch structured data from a URL and convert it into a tabular format. Data is returned in a structured DataFrame table format. | true |
 
-A connected agent will have a clear idea of each tool's capabilities based on the `name` and `description` metadata. If you think the agent is using a tool incorrectly, edit a tool's metadata to help it understand the tool better.
+A connected agent will have a clear idea of each tool's capabilities based on the `name` and `description` metadata. The `enabled` boolean controls the tool's availability to the agent. If you think an agent is using a tool incorrectly, edit a tool's metadata to help the agent better understand the tool.
 
 Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.
 
@@ -161,7 +161,7 @@ class TextAnalyzerComponent(Component):
 4. Connect the tool output to the agent's tools input.
 5. Ask the agent, `What tools are you using to answer my questions?`
 Your response will be similar to the following, and will include your custom component.
-```plain
+```text
 I have access to several tools that assist me in answering your questions, including:
 Search API: This allows me to search for recent information or results on the web.
 HTTP Requests: I can make HTTP requests to various URLs to retrieve data or interact with APIs.

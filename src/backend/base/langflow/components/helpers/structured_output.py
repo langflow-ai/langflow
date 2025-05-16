@@ -1,6 +1,5 @@
-from typing import TYPE_CHECKING, cast
-
 from pydantic import BaseModel, Field, create_model
+from trustcall import create_extractor
 
 from langflow.base.models.chat_result import get_chat_result
 from langflow.custom import Component
@@ -16,9 +15,6 @@ from langflow.io import (
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
-
-if TYPE_CHECKING:
-    from langflow.field_typing.constants import LanguageModel
 
 
 class StructuredOutputComponent(Component):
@@ -96,19 +92,9 @@ class StructuredOutputComponent(Component):
                     "display_name": "Type",
                     "type": "str",
                     "edit_mode": EditMode.INLINE,
-                    "description": (
-                        "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
-                    ),
-                    "options": ["str", "int", "float", "bool", "list", "dict"],
+                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
-                },
-                {
-                    "name": "multiple",
-                    "display_name": "Multiple",
-                    "type": "boolean",
-                    "description": "Set to True if this output field should be a list of the specified type.",
-                    "default": "False",
-                    "edit_mode": EditMode.INLINE,
                 },
             ],
             value=[
@@ -124,7 +110,7 @@ class StructuredOutputComponent(Component):
             name="multiple",
             advanced=True,
             display_name="Generate Multiple",
-            info="[Deplrecated] Always set to True",
+            info="[Deprecated] Always set to True",
             value=True,
         ),
     ]
@@ -156,12 +142,12 @@ class StructuredOutputComponent(Component):
 
         output_model = create_model(
             schema_name,
+            __doc__=f"A list of {schema_name}.",
             objects=(list[output_model_], Field(description=f"A list of {schema_name}.")),  # type: ignore[valid-type]
         )
 
         try:
-            llm_with_structured_output = cast("LanguageModel", self.llm).with_structured_output(schema=output_model)  # type: ignore[valid-type, attr-defined]
-
+            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
             raise TypeError(msg) from exc
@@ -178,14 +164,17 @@ class StructuredOutputComponent(Component):
         )
         if isinstance(result, BaseModel):
             result = result.model_dump()
-        if "objects" in result:
+        if responses := result.get("responses"):
+            result = responses[0].model_dump()
+        if result and "objects" in result:
             return result["objects"]
+
         return result
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
 
-        return Data(results=output)
+        return Data(text_key="results", data={"results": output})
 
     def as_dataframe(self) -> DataFrame:
         output = self.build_structured_output_base()

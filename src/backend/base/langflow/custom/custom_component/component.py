@@ -18,7 +18,6 @@ from pydantic import BaseModel, ValidationError
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
-    TOOL_TABLE_SCHEMA,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
@@ -33,7 +32,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
-from langflow.schema.table import FieldParserType, TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -306,9 +304,10 @@ class Component(CustomComponent):
             if module is None:
                 msg = "Could not find module for class"
                 raise ValueError(msg)
+
             class_code = inspect.getsource(module)
             self._code = class_code
-        except OSError as e:
+        except (OSError, TypeError) as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
             raise ValueError(msg) from e
 
@@ -719,6 +718,7 @@ class Component(CustomComponent):
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
+            # It is a dict of attributes that are not inputs or outputs all the raw data it should have the loop input.
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
@@ -1123,7 +1123,11 @@ class Component(CustomComponent):
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
-        return old_tags != new_tags
+        # First check length - if different lengths, they can't be equal
+        if len(old_tags) != len(new_tags):
+            return True
+        # Use set comparison for O(n) average case complexity, earlier the old_tags.sort() != new_tags.sort() was used
+        return set(old_tags) != set(new_tags)
 
     def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
         """Filter tools based on their status in metadata.
@@ -1136,7 +1140,7 @@ class Component(CustomComponent):
             list[Tool]: Filtered list of tools.
         """
         # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None
+        metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
         if isinstance(metadata, pd.DataFrame):
             metadata_dict = metadata.to_dict(orient="records")
 
@@ -1159,19 +1163,26 @@ class Component(CustomComponent):
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
         return [tool for tool in tools if tool_status.get(tool.name, True)]
 
+    def _build_tool_data(self, tool: Tool) -> dict:
+        if tool.metadata is None:
+            tool.metadata = {}
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
+            "status": True,  # Initialize all tools with status True
+            "display_name": tool.metadata.get("display_name", tool.name),
+            "display_description": tool.metadata.get("display_description", tool.description),
+            "readonly": tool.metadata.get("readonly", False),
+            "args": tool.args,
+            # "args_schema": tool.args_schema,
+        }
+
     async def _build_tools_metadata_input(self):
         tools = await self._get_tools()
         # Always use the latest tool data
-        tool_data = [
-            {
-                "name": tool.name,
-                "description": tool.description,
-                "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
-                "status": True,  # Initialize all tools with status True
-            }
-            for tool in tools
-        ]
-
+        tool_data = [self._build_tool_data(tool) for tool in tools]
+        # print(tool_data)
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
             new_tags = self._extract_tools_tags(tool_data)
@@ -1197,35 +1208,16 @@ class Component(CustomComponent):
             self.tools_metadata = tool_data
 
         try:
-            from langflow.io import TableInput
+            from langflow.io import ToolsInput
         except ImportError as e:
-            msg = "Failed to import TableInput from langflow.io"
+            msg = "Failed to import ToolsInput from langflow.io"
             raise ImportError(msg) from e
 
-        return TableInput(
+        return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Edit tools",
-            real_time_refresh=True,
-            table_schema=TOOL_TABLE_SCHEMA,
+            display_name="Actions",
+            info=TOOLS_METADATA_INFO,
             value=tool_data,
-            table_icon="Hammer",
-            trigger_icon="Hammer",
-            trigger_text="",
-            table_options=TableOptions(
-                block_add=True,
-                block_delete=True,
-                block_edit=True,  # Allow editing for status toggle
-                block_sort=True,
-                block_filter=True,
-                block_hide=True,
-                block_select=True,
-                hide_options=True,
-                field_parsers={
-                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
-                    "commands": FieldParserType.COMMANDS,
-                },
-                description=TOOLS_METADATA_INFO,
-            ),
         )
 
     def get_project_name(self):
@@ -1319,7 +1311,7 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
+            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
             category = category or data_dict.get("category", None)

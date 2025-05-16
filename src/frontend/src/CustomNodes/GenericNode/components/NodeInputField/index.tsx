@@ -82,7 +82,13 @@ export default function NodeInputField({
     };
   }, [data?.node?.id, isAuth, name]);
 
-  useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
+  useFetchDataOnMount(
+    data.node!,
+    data.id,
+    handleNodeClass,
+    name,
+    postTemplateValue,
+  );
 
   useEffect(() => {
     if (optionalHandle && optionalHandle.length === 0) {
@@ -152,6 +158,7 @@ export default function NodeInputField({
                       title,
                       nodeId: data.id,
                       isFlexView,
+                      required,
                     })}
                   </span>
                 }
@@ -165,13 +172,13 @@ export default function NodeInputField({
                         title,
                         nodeId: data.id,
                         isFlexView,
+                        required,
                       })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={"text-status-red"}>{required ? "*" : ""}</span>
             <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
