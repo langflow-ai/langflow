@@ -386,7 +386,6 @@ class DataOperationsComponent(Component):
                 selected_action=action,
                 default_fields=self.default_keys,
                 func=set_field_display,
-                default_value=True
             )
 
         # Handle no operations case
@@ -398,7 +397,6 @@ class DataOperationsComponent(Component):
                 selected_action=None,
                 default_fields=self.default_keys,
                 func=set_field_display,
-                default_value=True
             )
 
         return build_config
