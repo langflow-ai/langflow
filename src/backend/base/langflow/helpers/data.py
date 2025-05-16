@@ -1,8 +1,9 @@
 from collections import defaultdict
+from typing import Any
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
 
