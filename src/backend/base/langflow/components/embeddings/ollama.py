@@ -53,8 +53,8 @@ class OllamaEmbeddingsComponent(LCModelComponent):
             raise ValueError(msg) from e
         return output
 
-    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(field_value):
+    async def update_build_config(self, build_config: dict, _field_value: Any, field_name: str | None = None):
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(self.base_url):
             # Check if any URL in the list is valid
             valid_url = ""
             for url in URL_LIST:
