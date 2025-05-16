@@ -17,7 +17,7 @@ For more information, see the [NVIDIA G-assist project repository](https://githu
 
 * Windows operating system
 * NVIDIA GPU
-* `gassist.rise` package installed (included with Langflow)
+* `gassist.rise` package installed. This package is already installed with Langflow.
 
 ## Use the System-Assist component in a flow
 1. Create a flow with a **Chat input** component, a **System-Assist** component, and a **Chat output** component.
