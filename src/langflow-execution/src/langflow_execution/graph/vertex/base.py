@@ -8,8 +8,6 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
@@ -23,6 +21,7 @@ from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_l
 from langflow.services.deps import get_storage_service
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async
+from loguru import logger
 
 if TYPE_CHECKING:
     from uuid import UUID

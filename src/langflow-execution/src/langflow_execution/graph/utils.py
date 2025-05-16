@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pandas as pd
-from loguru import logger
-
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -19,6 +17,7 @@ from langflow.services.database.models.vertex_builds.crud import log_vertex_buil
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDataResponse

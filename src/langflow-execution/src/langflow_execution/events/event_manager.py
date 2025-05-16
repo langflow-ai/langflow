@@ -8,10 +8,9 @@ from functools import partial
 from typing import TYPE_CHECKING, Literal
 
 from fastapi.encoders import jsonable_encoder
+from langflow.schema.playground_events import create_event_by_type
 from loguru import logger
 from typing_extensions import Protocol
-
-from langflow.schema.playground_events import create_event_by_type
 
 if TYPE_CHECKING:
     import asyncio

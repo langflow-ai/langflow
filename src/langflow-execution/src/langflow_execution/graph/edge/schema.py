@@ -1,9 +1,8 @@
 from typing import Any
 
+from langflow.helpers.base_model import BaseModel
 from pydantic import ConfigDict, Field, field_validator
 from typing_extensions import TypedDict
-
-from langflow.helpers.base_model import BaseModel
 
 
 class SourceHandleDict(TypedDict, total=False):

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from langflow.graph.schema import CHAT_COMPONENTS
 from langflow.utils.lazy_load import LazyLoadDictBase
 
+from langflow_execution.graph.schema import CHAT_COMPONENTS
+
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
-    from langflow.graph.vertex.vertex_types import CustomComponentVertex
+    from langflow_execution.graph.vertex.base import Vertex
+    from langflow_execution.graph.vertex.vertex_types import CustomComponentVertex
 
 
 class Finish:
@@ -19,7 +20,7 @@ class Finish:
 
 
 def _import_vertex_types():
-    from langflow.graph.vertex import vertex_types
+    from langflow_execution.graph.vertex import vertex_types
 
     return vertex_types
 
