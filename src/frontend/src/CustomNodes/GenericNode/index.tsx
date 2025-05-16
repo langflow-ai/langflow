@@ -24,14 +24,12 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
-import NodeStatus from "./components/NodeStatus";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
@@ -401,7 +399,6 @@ function GenericNode({
     return (
       <MemoizedNodeIcon
         dataType={data.type}
-        showNode={showNode}
         icon={data.node?.icon}
         isGroup={!!data.node?.flow}
       />
@@ -415,8 +412,6 @@ function GenericNode({
         nodeId={data.id}
         selected={selected}
         showNode={showNode}
-        validationStatus={validationStatus}
-        isOutdated={isOutdated}
         beta={data.node?.beta || false}
         editNameDescription={editNameDescription}
         toggleEditNameDescription={toggleEditNameDescription}
@@ -428,8 +423,6 @@ function GenericNode({
     data.id,
     selected,
     showNode,
-    validationStatus,
-    isOutdated,
     data.node?.beta,
     editNameDescription,
     toggleEditNameDescription,
@@ -543,11 +536,11 @@ function GenericNode({
             }
           >
             <div
-              className={"generic-node-title-arrangement"}
+              className="flex-max-width items-center truncate"
               data-testid="generic-node-title-arrangement"
             >
               {renderNodeIcon()}
-              <div className="generic-node-tooltip-div truncate">
+              <div className="ml-3 flex w-full truncate">
                 {renderNodeName()}
               </div>
             </div>
