@@ -78,7 +78,8 @@ export default function NodeDescription({
       <MemoizedMarkdown
         linkTarget="_blank"
         className={cn(
-          "markdown prose flex w-full flex-col text-xs leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          stickyNote ? "text-mmd" : "text-xs",
           mdClassName,
         )}
       >
@@ -153,7 +154,7 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel w-full text-mmd focus:border-primary focus:ring-0",
+              "nowheel w-full text-xs focus:border-primary focus:ring-0",
               stickyNote ? "p-0" : "px-2 py-0.5",
               inputClassName,
             )}
@@ -184,7 +185,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-xs text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}
