@@ -348,6 +348,7 @@ async def test_cancel_build_success(client, json_memory_chatbot_no_llm, logged_i
         # Restore the original function to avoid affecting other tests
         monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
 
+
 @pytest.mark.benchmark
 async def test_cancel_nonexistent_build(client, logged_in_headers):
     """Test cancelling a non-existent flow build."""
@@ -358,6 +359,7 @@ async def test_cancel_nonexistent_build(client, logged_in_headers):
     assert response.status_code == codes.NOT_FOUND
     # Updated assertion to match exact error message
     assert "Job not found" in response.json()["detail"]
+
 
 @pytest.mark.benchmark
 async def test_cancel_build_failure(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
