@@ -21,10 +21,19 @@ For more information, see the [NVIDIA G-assist project repository](https://githu
 * NVIDIA GPU
 * `gassist.rise` package installed (included with Langflow)
 
+## Use the system assistant component in a flow
+
+To use the system assistant component in a flow, do the following steps.
+
+1. Create a flow with a **Chat input** component, a **System assist** component, and a **Chat output** component.
+2. Connect the **Chat input** to the system assist component's **Prompt** input, and connect the output of the system assist component to the **Chat output** component.
+3. Open the **Playground**, and then ask "What is my current GPU temperature?".
+The system assist component queries your GPU, and the response appears in the Playground.
+
 ### Inputs
 
 The NVIDIA System-Assist component accepts a single input:
-- `prompt`: A human-readable prompt that will be processed by NVIDIA System-Assist. The prompt should describe the desired GPU operation or query in natural language.
+- `prompt`: A human-readable prompt processed by NVIDIA System-Assist.
 
 ### Outputs
 
