@@ -71,9 +71,9 @@ export default function FlowSettingsComponent({
     if (flows) {
       const tempNameList: string[] = [];
       flows.forEach((flow: FlowType) => {
-        tempNameList.push(flow.name);
+        tempNameList.push(flow?.name ?? "");
       });
-      setNameList(tempNameList.filter((name) => name !== flow!.name));
+      setNameList(tempNameList.filter((name) => name !== (flow?.name ?? "")));
     }
   }, [flows]);
 
