@@ -138,10 +138,10 @@ const InspectButton = memo(
           className={cn(
             "icon-size",
             isToolMode
-              ? displayOutputPreview && !unknownOutput
+              ? displayOutputPreview && !unknownOutput && !disabled
                 ? "text-background hover:text-secondary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-80"
-              : displayOutputPreview && !unknownOutput
+              : displayOutputPreview && !unknownOutput && !disabled
                 ? "text-foreground hover:text-primary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-60",
             errorOutput ? "text-destructive" : "",
