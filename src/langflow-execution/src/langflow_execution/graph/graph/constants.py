@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from langflow_execution.graph.schema import CHAT_COMPONENTS
 from langflow.utils.lazy_load import LazyLoadDictBase
+
+from langflow_execution.graph.schema import CHAT_COMPONENTS
 
 if TYPE_CHECKING:
     from langflow_execution.graph.vertex.base import Vertex

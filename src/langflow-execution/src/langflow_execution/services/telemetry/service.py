@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
+from langflow.utils.version import get_version_info
 from loguru import logger
 
 from langflow_execution.services.service import Service
@@ -18,13 +19,11 @@ from langflow_execution.services.telemetry.schema import (
     ShutdownPayload,
     VersionPayload,
 )
-from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from pydantic import BaseModel
-
     # TODO: Split Settings into separate set of execution-specific configs
     from langflow.services.settings.service import SettingsService
+    from pydantic import BaseModel
 
 
 class TelemetryService(Service):

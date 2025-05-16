@@ -1,11 +1,10 @@
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_serializer, model_validator
-
 from langflow.schema.schema import OutputValue, StreamURL
 from langflow.serialization import serialize
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
+from pydantic import BaseModel, Field, field_serializer, model_validator
 
 
 class ResultData(BaseModel):

@@ -1,5 +1,7 @@
-from typing import Protocol, Any, Dict, Awaitable, Annotated, Depends
-from fastapi import Request, BackgroundTasks, Depends
+from typing import Annotated, Depends, Protocol
+
+from fastapi import BackgroundTasks, Depends, Request
+
 
 class FlowRunner(Protocol):
     async def run(
@@ -10,8 +12,7 @@ class FlowRunner(Protocol):
         input_request: "SimplifiedAPIRequest | None" = None,
         stream: bool = False,
         api_key_user: Annotated["UserRead", Depends("api_key_security")],
-    ):
-        ...
+    ): ...
 
     async def webhook_run(
         self,
@@ -19,5 +20,4 @@ class FlowRunner(Protocol):
         user: "User",
         request: Request,
         background_tasks: BackgroundTasks,
-    ) -> dict:
-        ...
+    ) -> dict: ...

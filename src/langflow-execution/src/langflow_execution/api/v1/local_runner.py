@@ -1,9 +1,10 @@
-from fastapi import Request, BackgroundTasks, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
-from typing import Annotated
 import asyncio
-import time
 import logging
+import time
+from typing import Annotated
+
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 
 # Add your actual imports for these as needed
 # from your_module import (
@@ -13,6 +14,7 @@ import logging
 # )
 
 logger = logging.getLogger(__name__)
+
 
 class DefaultFlowRunner:
     async def simplified_run_flow(
@@ -144,6 +146,4 @@ class DefaultFlowRunner:
     ) -> dict:
         # Example implementation
         data = await request.json()
-        return {
-            "webhook_output": f"Processed webhook for flow {flow} and user {user} with data {data}"
-        }
+        return {"webhook_output": f"Processed webhook for flow {flow} and user {user} with data {data}"}

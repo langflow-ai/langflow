@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
-from loguru import logger
-
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from langflow.graph.vertex.base import Vertex
@@ -21,6 +19,7 @@ from langflow.serialization import serialize
 from langflow.template.field.base import UNDEFINED, Output
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import CycleEdge

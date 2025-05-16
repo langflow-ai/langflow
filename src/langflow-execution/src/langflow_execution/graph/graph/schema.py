@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from typing_extensions import NotRequired, TypedDict
 
-
 if TYPE_CHECKING:
+    from langflow.schema.log import LoggableType
+
     from langflow_execution.graph.edge.schema import EdgeData
-    from langflow_execution.graph.vertex.schema import NodeData
     from langflow_execution.graph.schema import ResultData
     from langflow_execution.graph.vertex.base import Vertex
-    from langflow.schema.log import LoggableType
+    from langflow_execution.graph.vertex.schema import NodeData
 
 
 class ViewPort(TypedDict):

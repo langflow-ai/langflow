@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+
 from .local_runner import DefaultFlowRunner
 from .protocol import FlowRunner
-from typing import Annotated
 
 router = APIRouter()
 
+
 def get_runner() -> FlowRunner:
     return DefaultFlowRunner()
+
 
 @router.post("/run")
 async def run_endpoint(
