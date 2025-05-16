@@ -51,7 +51,7 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
+      className={`z-10 flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
