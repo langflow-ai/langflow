@@ -156,7 +156,7 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert uuid.UUID(build_response["job_id"])
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(60) # Set a timeout for the test
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with polling (non-streaming)."""
