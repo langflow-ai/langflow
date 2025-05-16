@@ -1,5 +1,5 @@
 ---
-title:  Integrate NVIDIA System Assist with Langflow
+title: Integrate NVIDIA System Assist with Langflow
 slug: /integrations-nvidia-system-assist
 ---
 
@@ -23,14 +23,11 @@ For more information, see the [NVIDIA G-assist project repository](https://githu
 
 ### Inputs
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| prompt | System-Assist Prompt | A human-readable prompt that will be processed by NVIDIA System-Assist. The prompt should describe the desired GPU operation or query in natural language. |
+The NVIDIA System-Assist component accepts a single input:
+- `prompt`: A human-readable prompt that will be processed by NVIDIA System-Assist. The prompt should describe the desired GPU operation or query in natural language.
 
 ### Outputs
 
 The NVIDIA System-Assist component outputs a [Message](/concepts-objects#message-object) object that contains:
 - `text`: The response from NVIDIA System-Assist containing the completed operation result.
 - The NVIDIA System-Assist message response is wrapped in a Langflow [Message](/concepts-objects#message-object) object.
-
-
