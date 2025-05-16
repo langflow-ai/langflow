@@ -92,10 +92,11 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
 
         # Use a for loop for better debugging
         found = []
-        for data, q_dict in json_data:
+        json_data = [(data["text"], q_dict) for data, q_dict in json_data]
+        for text, q_dict in json_data:
             expected_text = f"==> {q_dict['q']}"
-            assert expected_text in data["text"], (
-                f"Found {found} until now, but expected '{expected_text}' not found in '{data['text']}',"
+            assert expected_text in text, (
+                f"Found {found} until now, but expected '{expected_text}' not found in '{text}',"
                 f"and the json_data is {json_data}"
             )
             found.append(expected_text)
