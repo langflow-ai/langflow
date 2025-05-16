@@ -1,0 +1,29 @@
+[project]
+name = "langflow-schema"
+version = "0.1.0"
+description = "Shared Pydantic models for Langflow microservices"
+requires-python = ">=3.10,<3.14"
+license = "MIT"
+readme = "README.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langflow_schema"]
+
+dependencies = [
+    "pydantic~=2.10.1",
+    "pydantic-settings>=2.2.0,<3.0.0",
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+follow_imports = "skip"
+disable_error_code = ["type-var"]
+namespace_packages = true
+mypy_path = "langflow_schema"
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+exclude = ["src/alembic/versions"]
+line-length = 120
+

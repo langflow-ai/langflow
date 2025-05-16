@@ -197,9 +197,9 @@ fix_codespell: ## run codespell to fix spelling errors
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml --write
 
-format_backend: ## backend code formatters
-	@uv run ruff check . --fix
-	@uv run ruff format . --config pyproject.toml
+format_backend:
+	@uv run ruff format . --config pyproject.toml --exclude src/langflow-api
+	@uv run ruff format src/langflow-api --config src/langflow-api/pyproject.toml
 
 format_frontend: ## frontend code formatters
 	@cd src/frontend && npm run format
@@ -209,8 +209,11 @@ format: format_backend format_frontend ## run code formatters
 unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes
 
-lint: install_backend ## run linters
+lint: install_backend
 	@uv run mypy --namespace-packages -p "langflow"
+	@uv run mypy --namespace-packages -p "langflow-api"
+	@uv run ruff check .
+	@uv run ruff check src/langflow-api
 
 install_frontendci:
 	@cd src/frontend && npm ci > /dev/null 2>&1

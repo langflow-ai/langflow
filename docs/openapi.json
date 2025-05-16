@@ -6465,9 +6465,9 @@
           "feature_flags": {
             "$ref": "#/components/schemas/FeatureFlags"
           },
-          "serialization_max_items_lenght": {
+          "serialization_max_items_length": {
             "type": "integer",
-            "title": "Serialization Max Items Lenght",
+            "title": "Serialization Max Items Length",
             "default": 100
           },
           "serialization_max_text_length": {
