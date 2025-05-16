@@ -18,7 +18,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
   const [isMinLength, setIsMinLength] = useState(false);
-  const [validEndpointName, setValidEndpointName] = useState(true);
   const [isInvalidName, setIsInvalidName] = useState(false);
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -55,22 +54,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setDescription!(event.target.value);
-  };
-
-  const handleEndpointNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { value } = event.target;
-    // Validate the endpoint name
-    // use this regex r'^[a-zA-Z0-9_-]+$'
-    const isValid = isEndpointNameValid(event.target.value, maxLength);
-    setValidEndpointName(isValid);
-
-    // Only update if valid and meets minimum length (if set)
-    if (isValid && value.length >= minLength) {
-      setEndpointName!(value);
-    } else if (value.length === 0) {
-      // Always allow empty endpoint name (it's optional)
-      setEndpointName!("");
-    }
   };
 
   //this function is necessary to select the text when double clicking, this was not working with the onFocus event
@@ -148,33 +131,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           </div>
         )}
       </Label>
-      {setEndpointName && (
-        <Label>
-          <div className="edit-flow-arrangement mt-3">
-            <span className="text-mmd font-medium">Endpoint Name</span>
-            {!validEndpointName && (
-              <span className="edit-flow-span">
-                Invalid endpoint name. Use only letters, numbers, hyphens, and
-                underscores ({maxLength} characters max).
-              </span>
-            )}
-          </div>
-          <Input
-            className="nopan nodelete nodrag noflow mt-2 font-normal"
-            onChange={handleEndpointNameChange}
-            type="text"
-            name="endpoint_name"
-            value={endpointName ?? ""}
-            placeholder="An alternative name to run the endpoint"
-            maxLength={maxLength}
-            minLength={minLength}
-            id="endpoint_name"
-            onDoubleClickCapture={(event) => {
-              handleFocus(event);
-            }}
-          />
-        </Label>
-      )}
     </>
   );
 };
