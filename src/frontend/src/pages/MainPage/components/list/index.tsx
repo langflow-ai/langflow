@@ -218,7 +218,6 @@ const ListComponent = ({
         open={openSettings}
         setOpen={setOpenSettings}
         flowData={flowData}
-        details
       />
     </>
   );

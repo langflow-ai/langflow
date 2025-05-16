@@ -62,6 +62,7 @@ import UpdateAllComponents from "../UpdateAllComponents";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
+  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -597,6 +598,7 @@ export default function Page({
             <MemoizedBackground />
             {!view && (
               <>
+                <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
                   setIsAddingNote={setIsAddingNote}
                   position={position.current}
