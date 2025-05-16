@@ -522,16 +522,14 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap px-4 py-3 leading-5",
+            "grid text-wrap leading-5",
             showNode ? "border-b" : "relative",
-            hasDescription && "gap-3",
           )}
         >
           <div
             data-testid={"div-generic-node"}
             className={cn(
-              "flex flex-1 overflow-hidden",
-              showNode && "items-center justify-between gap-2 rounded-t-lg",
+              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
             )}
           >
             <div
@@ -554,7 +552,9 @@ function GenericNode({
             )}
             {renderNodeStatus()}
           </div>
-          {showNode && <div>{renderDescription()}</div>}
+          {showNode && hasDescription && (
+            <div className="px-4 pb-3">{renderDescription()}</div>
+          )}
         </div>
         {showNode && (
           <div className="nopan nodelete nodrag noflow relative cursor-auto">

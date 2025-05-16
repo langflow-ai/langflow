@@ -1177,7 +1177,7 @@
   }
 
   .button-run-bg {
-    @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
+    @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm bg-transparent hover:bg-muted;
   }
 
   .show-node-icon {

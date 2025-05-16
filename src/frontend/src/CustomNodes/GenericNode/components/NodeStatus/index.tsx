@@ -252,7 +252,6 @@ export default function NodeStatus({
     }
   }, [buildStatus, isBuilding]);
 
-  const divRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
@@ -441,13 +440,12 @@ export default function NodeStatus({
       {showNode && (
         <ShadTooltip content={getTooltipContent()}>
           <div
-            ref={divRef}
-            className="button-run-bg -ml-0.5"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={handleClickRun}
+            className="-m-0.5"
           >
-            <Button unstyled className="nodrag group">
+            <Button unstyled className="nodrag button-run-bg group">
               <div data-testid={`button_run_` + display_name.toLowerCase()}>
                 <IconComponent
                   name={iconName}
