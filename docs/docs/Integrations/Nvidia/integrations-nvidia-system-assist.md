@@ -7,11 +7,9 @@ slug: /integrations-nvidia-system-assist
 This component is only available for Langflow users with NVIDIA GPUs on Windows systems.
 :::
 
-The **NVIDIA System-Assist** component is a custom Langflow component that enables interaction with NVIDIA GPU drivers through natural language prompts. This component leverages NVIDIA's Rise client to communicate with the GPU system and perform various operations.
+The **NVIDIA System-Assist** component enables interaction with NVIDIA GPU drivers through natural language prompts.
 
-The component allows users to check their GPU state and interact with the NVIDIA GPU Driver using natural language. For example, prompt system assist with "What is my current GPU temperature?" or "Show me the available GPU memory" to get information, then tell system assist to modify your GPU settings.
-
-The component automatically initializes the NVIDIA Rise client on first use. You can interact with the component by providing natural language prompts that describe the desired GPU operation or query.
+For example, prompt System-Assist with `"What is my current GPU temperature?"` or `"Show me the available GPU memory"` to get information, and then tell System-Assist to modify your GPU settings.
 
 For more information, see the [NVIDIA G-assist project repository](https://github.com/NVIDIA/g-assist).
 
