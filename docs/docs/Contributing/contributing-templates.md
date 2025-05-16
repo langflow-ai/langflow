@@ -3,7 +3,7 @@ title: Contribute templates
 slug: /contributing-templates
 ---
 
-Follow these best practices to submit a template to Langflow.
+Follow these best practices when submitting a template to Langflow.
 
 For template formatting examples, see the Langflow repository's [starter_projects](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/initial_setup/starter_projects) folder.
 
