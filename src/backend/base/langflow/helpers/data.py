@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from typing import Any
 
@@ -142,34 +143,42 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     return "\n".join(formated_messages)
 
 
-def safe_convert(self, data: Any) -> str:
+def clean_string(s):
+    # Remove empty lines
+    s = re.sub(r"^\s*$", "", s, flags=re.MULTILINE)
+    # Replace multiple newlines with a single newline
+    return re.sub(r"\n{3,}", "\n\n", s)
+
+
+def safe_convert(data: Any, *, clean_data: bool = False) -> str:
     """Safely convert input data to string."""
     try:
         if isinstance(data, str):
-            return data
+            unclean_str = data
         if isinstance(data, Message):
-            return data.get_text()
+            unclean_str = data.get_text()
         if isinstance(data, Data):
             if data.get_text() is None:
                 msg = "Empty Data object"
                 raise ValueError(msg)
-            return data.get_text()
+            unclean_str = data.get_text()
         if isinstance(data, DataFrame):
-            if self.clean_data:
+            if clean_data:
                 # Remove empty rows
                 data = data.dropna(how="all")
-                # Remove empty lines in each cell
-                data = data.replace(r"^\s*$", "", regex=True)
-                # Replace multiple newlines with a single newline
-                data = data.replace(r"\n+", "\n", regex=True)
 
             # Replace pipe characters to avoid markdown table issues
-            processed_data = data.replace(r"\|", r"\\|", regex=True)
+            unclean_data = data.replace(r"\|", r"\\|", regex=True)
 
-            processed_data = processed_data.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
+            unclean_data = unclean_data.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
+            unclean_str = unclean_data.to_markdown(index=False)
 
-            return processed_data.to_markdown(index=False)
-        return str(data)
+        # Convert and return the string
+        clean_str = str(unclean_str)
+        if not clean_data:
+            return clean_str
+
+        return clean_string(clean_str)
     except (ValueError, TypeError, AttributeError) as e:
         msg = f"Error converting data: {e!s}"
         raise ValueError(msg) from e
