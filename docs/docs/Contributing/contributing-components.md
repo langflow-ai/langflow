@@ -128,7 +128,7 @@ Include tests for your changes using `ComponentTestBase` classes. For more infor
 
 ### Documentation
 
-When documenting changes in pull requests, clearly explain what changed, such as display name updates or new fields, why it changed (for example, clarity improvements or bug fixes), and the impact on existing users (whether no action is needed or if migration steps are required).
+When documenting changes in pull requests, clearly explain *what* changed, such as display name updates or new fields, *why* it changed, such as improvements or bug fixes, and the *impact* on existing users.
 
 For example:
 
@@ -170,7 +170,6 @@ Otherwise, create a new component and move the old component to `legacy`.
 2. Add tests.
 Create tests using one of the `ComponentTestBase` classes.
 For more information, see [Contribute component tests](/contributing-component-tests).
-3. Mark deprecated elements.
-Flag outdated fields and outputs as `deprecated`.
+3. Flag outdated fields and outputs as `deprecated` and keep them in the same location to ensure backward compatibility.
 4. Document your changes.
 Include migration instructions if breaking changes occur.
