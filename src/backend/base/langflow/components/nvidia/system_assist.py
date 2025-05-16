@@ -22,8 +22,6 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
     icon = "NVIDIA"
     rise_initialized = False
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def maybe_register_rise_client(self):
         rise_initialized = self._shared_component_cache.get("rise_initialized")
