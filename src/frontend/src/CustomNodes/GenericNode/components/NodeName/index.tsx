@@ -82,7 +82,7 @@ export default function NodeName({
         onChange={onChange}
         data-testid={`input-title-${display_name}`}
         onKeyDown={handleKeyDown}
-        className="px-2 py-0.5"
+        className="px-2 py-0"
       />
     </div>
   ) : (
