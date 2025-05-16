@@ -11,6 +11,7 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import ExportModal from "@/modals/exportModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -42,6 +43,7 @@ const ListComponent = ({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { folderId } = useParams();
   const [openSettings, setOpenSettings] = useState(false);
+  const [openExportModal, setOpenExportModal] = useState(false);
   const isComponent = flowData.is_component ?? false;
 
   const { getIcon } = useGetTemplateStyle(flowData);
@@ -193,6 +195,7 @@ const ListComponent = ({
               <DropdownComponent
                 flowData={flowData}
                 setOpenDelete={setOpenDelete}
+                setOpenExportModal={setOpenExportModal}
                 handleEdit={() => {
                   setOpenSettings(true);
                 }}
@@ -204,7 +207,6 @@ const ListComponent = ({
           </DropdownMenu>
         </div>
       </Card>
-
       {openDelete && (
         <DeleteConfirmationModal
           open={openDelete}
@@ -214,6 +216,11 @@ const ListComponent = ({
           note={!flowData.is_component ? "and its message history" : ""}
         />
       )}
+      <ExportModal
+        open={openExportModal}
+        setOpen={setOpenExportModal}
+        flowData={flowData}
+      />
       <FlowSettingsModal
         open={openSettings}
         setOpen={setOpenSettings}
