@@ -3,13 +3,12 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
 import { createApiKey } from "@/controllers/API";
-import { api } from "@/controllers/API/api";
 import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
-import { PROXY_TARGET } from "@/customization/config-constants";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
@@ -62,9 +61,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiHost = api.defaults.baseURL || window.location.origin;
-
-  const apiUrl = `${apiHost}/api/v1/mcp/project/${projectId}/sse`;
+  const apiUrl = customGetMCPUrl(projectId);
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
