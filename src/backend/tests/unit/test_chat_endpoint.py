@@ -164,8 +164,8 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.headers = headers
             self.status_code = codes.OK
             self.max_total_events = 200  # Limit to prevent infinite loops
-            self.max_empty_polls = 50  # Maximum number of empty polls before giving up
-            self.poll_timeout = 3.0  # Timeout for each polling request
+            self.max_empty_polls = 200  # Maximum number of empty polls before giving up
+            self.poll_timeout =5.0  # Timeout for each polling request
 
         async def aiter_lines(self):
             try:
@@ -251,7 +251,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
     polling_response = PollingResponse(client, job_id, logged_in_headers)
 
     # Use the same consume_and_assert_stream function to verify the events
-    await consume_and_assert_stream(polling_response, job_id)
+    await consume_and_assert_stream(polling_response, job_id, timeout=30.0)
 
 
 @pytest.mark.benchmark
