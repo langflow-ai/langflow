@@ -104,6 +104,7 @@ async def test_build_flow_invalid_job_id(client, logged_in_headers):
     assert response.status_code == codes.NOT_FOUND
     assert "Job not found" in response.json()["detail"]
 
+
 @pytest.mark.benchmark
 async def test_build_flow_invalid_flow_id(client, logged_in_headers):
     """Test starting a build with an invalid flow ID."""
