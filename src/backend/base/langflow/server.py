@@ -25,7 +25,7 @@ class LangflowUvicornWorker(UvicornWorker):
 
     def handle_exit(self, sig, frame):
         if not self._has_exited:
-            print("👋 See you next time!")
+            print("👋 See you next time!")  # noqa: T201
             self._has_exited = True
         super().handle_exit(sig, frame)
 
