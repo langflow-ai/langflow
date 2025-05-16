@@ -324,15 +324,6 @@
   .generic-node-div-title {
     @apply flex flex-1 items-center gap-2 overflow-hidden;
   }
-  .generic-node-title-arrangement {
-    @apply flex-max-width items-center truncate;
-  }
-  .generic-node-icon {
-    @apply h-12 w-12 rounded;
-  }
-  .generic-node-tooltip-div {
-    @apply ml-2 flex w-full truncate;
-  }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
   }
@@ -1196,18 +1187,6 @@
     @apply h-4 w-4 transition-all group-hover/node:opacity-100;
   }
 
-  .lucide-icon {
-    @apply h-5 w-5;
-  }
-
-  .bg-lucide-icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-md bg-muted p-[6px];
-  }
-
-  .integration-icon {
-    @apply h-8 w-8 rounded-md;
-  }
-
   .show-node-icon {
     @apply absolute inset-x-6;
   }
@@ -1289,7 +1268,7 @@
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
   }
 
-  .no-focus-visible{
+  .no-focus-visible {
     @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
     --tw-ring-offset-width: none !important;
     --tw-ring-shadow: none !important;
