@@ -153,7 +153,8 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel h-full w-full p-0 text-mmd focus:border-primary focus:ring-0",
+              "nowheel w-full text-mmd focus:border-primary focus:ring-0",
+              stickyNote ? "p-0" : "px-2 py-0.5",
               inputClassName,
             )}
             autoFocus
