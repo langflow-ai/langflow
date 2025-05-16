@@ -142,6 +142,7 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert isinstance(build_response["job_id"], str)
     assert uuid.UUID(build_response["job_id"])
 
+
 @pytest.mark.timeout(60)
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -207,7 +208,6 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                         if not line.strip():
                             continue
                         logger.debug(f"Event received: {line}")
-
 
                         line_count += 1
                         total_events += 1
