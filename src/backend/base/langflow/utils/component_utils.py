@@ -56,7 +56,6 @@ def set_field_display(build_config: dotdict, field: str, is_visible: bool | None
     """Set whether a field should be displayed in the UI."""
     if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
         build_config[field]["show"] = is_visible
-    return build_config
 
 
 def set_multiple_field_display(
@@ -118,20 +117,27 @@ def set_current_fields(
     default_fields: list[str] = DEFAULT_FIELDS,
 ) -> dotdict:
     """Set the current fields for a selected action."""
-    # action_fields = {action1: [field1, field2], action2: [field3, field4]}
-    # we need to show action of one field and disable the rest
-    if selected_action in action_fields:
-        for field in action_fields[selected_action]:
-            build_config = set_field_display(build_config=build_config, field=field, is_visible=True)
-        for key, value in action_fields.items():
-            if key != selected_action:
-                for field in value:
-                    build_config = set_field_display(build_config=build_config, field=field, is_visible=False)
+    # Update fields visibility based on selected action
+    update_fields_display(build_config, action_fields, selected_action, True)
+
+    # If no action is selected, disable the visibility of all action fields
     if selected_action is None:
-        for value in action_fields.values():
-            for field in value:
-                build_config = set_field_display(build_config=build_config, field=field, is_visible=False)
-    if default_fields is not None:
-        for field in default_fields:
-            build_config = set_field_display(build_config=build_config, field=field, is_visible=True)
+        update_fields_display(build_config, action_fields, selected_action, False)
+
+    # Always set default fields to be visible
+    for field in default_fields:
+        set_field_display(build_config, field, True)
+
     return build_config
+
+
+def update_fields_display(
+    build_config: dotdict, action_fields: dict[str, list[str]], selected_action: str | None, is_visible: bool
+) -> None:
+    for action, fields in action_fields.items():
+        if action == selected_action:
+            visibility = is_visible
+        else:
+            visibility = not is_visible
+        for field in fields:
+            set_field_display(build_config, field, visibility)
