@@ -546,7 +546,7 @@
     @apply flex justify-between;
   }
   .edit-flow-span {
-    @apply ml-10 animate-pulse text-status-red;
+    @apply ml-10 animate-pulse text-mmd text-status-red;
   }
 
   .float-component-pointer {
