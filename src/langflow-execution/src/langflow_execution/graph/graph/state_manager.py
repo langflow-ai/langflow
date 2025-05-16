@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from loguru import logger
 
+# TODO: Split Settings into separate set of execution-specific configs
 from langflow.services.deps import get_settings_service
-from langflow_execution.service.state.service import StateService
+from langflow_execution.service.state.service import InMemoryStateService
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -11,13 +11,7 @@ if TYPE_CHECKING:
 
 class GraphStateManager:
     def __init__(self) -> None:
-        try:
-            self.state_service: StateService = StateService(get_settings_service())
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error getting state service. Defaulting to InMemoryStateService")
-            from langflow_execution.service.state.service import InMemoryStateService
-
-            self.state_service = InMemoryStateService(get_settings_service())
+        self.state_service = InMemoryStateService(get_settings_service())
 
     def append_state(self, key, new_state, run_id: str) -> None:
         self.state_service.append_state(key, new_state, run_id)

@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import asyncio
-
 from loguru import logger
 
 from langflow_execution.events.event_manager import EventManager, create_default_event_manager
-from langflow_execution.service.service import Service
+from langflow_execution.services.service import Service
 
 
 class JobQueueNotFoundError(Exception):

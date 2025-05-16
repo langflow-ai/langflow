@@ -4,9 +4,10 @@ from threading import Lock
 
 from loguru import logger
 
-from langflow_execution.service.service import Service
+from langflow_execution.services.service import Service
 
 # TODO: Split Settings into separate set of execution-specific configs
+# TODO: FRAZ - likelihood of circular imports
 from langflow.services.settings.service import SettingsService 
 
 
