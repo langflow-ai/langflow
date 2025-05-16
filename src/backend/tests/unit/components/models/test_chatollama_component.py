@@ -46,7 +46,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component_class doesn't have version-specific files."""
         return []
 
-
     @pytest.mark.asyncio
     @patch("langflow.components.models.ollama.httpx.AsyncClient.post")
     @patch("langflow.components.models.ollama.httpx.AsyncClient.get")
@@ -57,7 +56,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_get_response = AsyncMock()
         mock_get_response.raise_for_status.return_value = None
         mock_get_response.json.return_value = {
-            component_class.JSON_MODELS_KEY: [{component_class.JSON_NAME_KEY: "model1"}, {component_class.JSON_NAME_KEY: "model2"}]
+            component_class.JSON_MODELS_KEY: [
+                {component_class.JSON_NAME_KEY: "model1"},
+                {component_class.JSON_NAME_KEY: "model2"},
+            ]
         }
         mock_get.return_value = mock_get_response
 
@@ -68,7 +70,12 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_post_response = AsyncMock()
         mock_post_response.raise_for_status.return_value = None
         mock_post_response.json.side_effect = [
-            {component_class.JSON_CAPABILITIES_KEY: [component_class.DESIRED_CAPABILITY, component_class.TOOL_CALLING_CAPABILITY]},
+            {
+                component_class.JSON_CAPABILITIES_KEY: [
+                    component_class.DESIRED_CAPABILITY,
+                    component_class.TOOL_CALLING_CAPABILITY,
+                ]
+            },
             {component_class.JSON_CAPABILITIES_KEY: [component_class.DESIRED_CAPABILITY]},
         ]
         mock_post.return_value = mock_post_response
@@ -102,7 +109,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_get.call_count == 1
         assert mock_post.call_count == 2
 
-
     @pytest.mark.asyncio
     @patch("langflow.components.models.ollama.httpx.AsyncClient.get")
     async def test_get_models_failure(self, mock_get, component_class):
@@ -115,8 +121,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Could not get model names from Ollama."):
             await component_class.get_models(base_url_value, tool_model_enabled=False)
 
-
-    async def test_update_build_config_mirostat_disabled(self,component_class):
+    async def test_update_build_config_mirostat_disabled(self, component_class):
         build_config = {
             "mirostat_eta": {"advanced": False, "value": 0.1},
             "mirostat_tau": {"advanced": False, "value": 5},
@@ -131,8 +136,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["mirostat_eta"]["value"] is None
         assert updated_config["mirostat_tau"]["value"] is None
 
-
-    async def test_update_build_config_mirostat_enabled(self,component_class):
+    async def test_update_build_config_mirostat_enabled(self, component_class):
         build_config = {
             "mirostat_eta": {"advanced": False, "value": None},
             "mirostat_tau": {"advanced": False, "value": None},
@@ -147,9 +151,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["mirostat_eta"]["value"] == 0.2
         assert updated_config["mirostat_tau"]["value"] == 10
 
-
     @patch("httpx.AsyncClient.get")
-    async def test_update_build_config_model_name(self,mock_get, component_class):
+    async def test_update_build_config_model_name(self, mock_get, component_class):
         # Mock the response for the HTTP GET request
         mock_response = MagicMock()
         mock_response.json.return_value = {"models": [{"name": "model1"}, {"name": "model2"}]}
@@ -166,8 +169,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="No valid Ollama URL found"):
             await component_class.update_build_config(build_config, field_value, field_name)
 
-
-    async def test_update_build_config_keep_alive(self,component_class):
+    async def test_update_build_config_keep_alive(self, component_class):
         build_config = {"keep_alive": {"value": None, "advanced": False}}
         field_value = "Keep"
         field_name = "keep_alive_flag"
@@ -181,12 +183,11 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["keep_alive"]["value"] == "0"
         assert updated_config["keep_alive"]["advanced"] is True
 
-
     @patch(
         "langchain_community.chat_models.ChatOllama",
         return_value=ChatOllama(base_url="http://localhost:11434", model="llama3.1"),
     )
-    def test_build_model(self,_mock_chat_ollama, component_class):  # noqa: PT019
+    def test_build_model(self, _mock_chat_ollama, component_class):  # noqa: PT019
         component_class.base_url = "http://localhost:11434"
         component_class.model_name = "llama3.1"
         component_class.mirostat = "Mirostat 2.0"
