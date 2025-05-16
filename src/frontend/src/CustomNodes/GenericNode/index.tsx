@@ -529,30 +529,29 @@ function GenericNode({
         >
           <div
             data-testid={"div-generic-node"}
-            className={
-              !showNode
-                ? ""
-                : "flex flex-1 items-center justify-between gap-2 overflow-hidden rounded-t-lg"
-            }
+            className={cn(
+              "flex flex-1 overflow-hidden",
+              showNode && "items-center justify-between gap-2 rounded-t-lg",
+            )}
           >
             <div
-              className="flex-max-width items-center truncate"
+              className="flex-max-width items-center overflow-hidden"
               data-testid="generic-node-title-arrangement"
             >
               {renderNodeIcon()}
-              <div className="ml-3 flex w-full truncate">
+              <div className="ml-3 flex flex-1 overflow-hidden">
                 {renderNodeName()}
               </div>
             </div>
-            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
-              {!showNode && (
-                <>
+            {!showNode && (
+              <>
+                <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
                   {renderInputParameters()}
                   {shownOutputs.length > 0 &&
                     renderOutputs(shownOutputs, "render-outputs")}
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
             {renderNodeStatus()}
           </div>
           {showNode && <div>{renderDescription()}</div>}
