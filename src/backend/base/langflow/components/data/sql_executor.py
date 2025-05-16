@@ -5,7 +5,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import BoolInput, MessageTextInput, Output
-from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
@@ -43,20 +42,19 @@ class SQLComponent(ComponentWithCache):
     inputs = [
         MessageTextInput(name="database_url", display_name="Database URL", required=True),
         MessageTextInput(name="query", display_name="SQL Query", tool_mode=True, required=True),
-        BoolInput(name="include_columns", display_name="Include Columns", value=True, tool_mode=True),
+        BoolInput(name="include_columns", display_name="Include Columns", value=True, tool_mode=True, advanced=True),
         BoolInput(
             name="add_error",
             display_name="Add Error",
             value=False,
             tool_mode=True,
             info="If True, the error will be added to the result",
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Message", name="text", method="build_component"),
-        Output(display_name="Data", name="data", method="build_data"),
-        Output(display_name="DataFrame", name="dataframe", method="build_dataframe"),
+        Output(display_name="Query Results", name="sql_query_results", method="sql_query_results"),
     ]
 
     def build_component(
@@ -92,14 +90,8 @@ class SQLComponent(ComponentWithCache):
             self.log(msg)
             raise ValueError(msg) from e
 
-    def build_dataframe(self) -> DataFrame:
+    def sql_query_results(self) -> DataFrame:
         result = self.__execute_query()
         df_result = DataFrame(result)
         self.status = df_result
         return df_result
-
-    def build_data(self) -> Data:
-        result = self.__execute_query()
-        data_result = Data(data={"result": result})
-        self.status = data_result
-        return data_result
