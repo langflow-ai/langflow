@@ -110,6 +110,7 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  outputs?: any;
 };
 
 export type NodeInputFieldComponentType = {
@@ -145,6 +146,7 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  outputs?: any;
 };
 
 export type DisclosureComponentType = {

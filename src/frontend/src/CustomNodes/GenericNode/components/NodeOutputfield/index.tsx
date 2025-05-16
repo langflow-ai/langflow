@@ -38,6 +38,8 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 
+const STROKE_WIDTH = 2;
+
 // Memoize IconComponent instances
 const EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
@@ -52,54 +54,6 @@ const EyeIcon = memo(
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
-
-// Memoize Button components
-const HideShowButton = memo(
-  ({
-    disabled,
-    onClick,
-    hidden,
-    isToolMode,
-    title,
-  }: {
-    disabled: boolean;
-    onClick: () => void;
-    hidden: boolean;
-    isToolMode: boolean;
-    title: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      unstyled
-      onClick={onClick}
-      data-testid={`input-inspection-${title.toLowerCase()}`}
-    >
-      <ShadTooltip
-        content={
-          disabled
-            ? "Connected outputs can't be hidden."
-            : hidden
-              ? "Show output"
-              : "Hide output"
-        }
-      >
-        <div>
-          <EyeIcon
-            hidden={hidden}
-            className={cn(
-              "icon-size",
-              disabled
-                ? "text-placeholder-foreground opacity-60"
-                : isToolMode
-                  ? "text-background hover:text-secondary-hover"
-                  : "text-placeholder-foreground hover:text-primary-hover",
-            )}
-          />
-        </div>
-      </ShadTooltip>
-    </Button>
-  ),
-);
 
 const InspectButton = memo(
   forwardRef(
@@ -134,16 +88,16 @@ const InspectButton = memo(
       >
         <IconComponent
           name="TextSearchIcon"
-          strokeWidth={ICON_STROKE_WIDTH}
+          strokeWidth={STROKE_WIDTH}
           className={cn(
-            "icon-size",
+            "icon-size h-4.5 w-4.5 text-placeholder-foreground hover:text-foreground",
             isToolMode
               ? displayOutputPreview && !unknownOutput
                 ? "text-background hover:text-secondary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+                : "cursor-not-allowed"
               : displayOutputPreview && !unknownOutput
                 ? "text-foreground hover:text-primary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-60",
+                : "cursor-not-allowed",
             errorOutput ? "text-destructive" : "",
           )}
         />
@@ -166,6 +120,7 @@ function NodeOutputField({
   index,
   type,
   outputName,
+  outputs,
   outputProxy,
   lastOutput,
   colorName,
@@ -312,12 +267,17 @@ function NodeOutputField({
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
   const LoopHandle = useMemo(() => {
-    if (data.node?.outputs![index].allows_loop) {
+    if (data.node?.outputs![index].allows_loop && title !== "done") {
+      const currentSelectedOutput =
+        data.node?.outputs![index].selected ??
+        data.node?.outputs![index].types[0] ??
+        title;
+
       return (
         <HandleRenderComponent
           left={true}
           nodes={nodes}
-          tooltipTitle={tooltipTitle}
+          tooltipTitle={currentSelectedOutput}
           id={id}
           title={title}
           edges={edges}
@@ -328,30 +288,40 @@ function NodeOutputField({
           showNode={showNode}
           testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
           colorName={colorName}
+          selected={selected}
         />
       );
     }
   }, [
     nodes,
-    tooltipTitle,
     id,
     title,
     edges,
     data.id,
+    data.node?.outputs,
+    index,
     myData,
     colors,
     setFilterEdge,
     showNode,
     data?.type,
     colorName,
+    selected,
   ]);
 
-  const Handle = useMemo(
-    () => (
+  const Handle = useMemo(() => {
+    const currentSelectedOutput =
+      data.node?.outputs![index].selected ??
+      data.node?.outputs![index].types[0] ??
+      tooltipTitle;
+
+    console.log("title", title, data?.type);
+
+    return (
       <HandleRenderComponent
         left={false}
         nodes={nodes}
-        tooltipTitle={tooltipTitle}
+        tooltipTitle={currentSelectedOutput}
         id={id}
         title={title}
         edges={edges}
@@ -362,23 +332,26 @@ function NodeOutputField({
         showNode={showNode}
         testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
         colorName={colorName}
+        selected={selected}
       />
-    ),
-    [
-      nodes,
-      tooltipTitle,
-      id,
-      title,
-      edges,
-      data.id,
-      myData,
-      colors,
-      setFilterEdge,
-      showNode,
-      data?.type,
-      colorName,
-    ],
-  );
+    );
+  }, [
+    nodes,
+    id,
+    title,
+    tooltipTitle,
+    edges,
+    data.id,
+    data.node?.outputs,
+    index,
+    myData,
+    colors,
+    setFilterEdge,
+    showNode,
+    data?.type,
+    colorName,
+    selected,
+  ]);
 
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
@@ -398,18 +371,11 @@ function NodeOutputField({
       {LoopHandle}
       <div className="flex w-full items-center justify-end truncate text-sm">
         <div className="flex flex-1">
-          {data.node?.outputs![index].allows_loop && (
+          {data.node?.outputs![index].allows_loop && title !== "done" && (
             <Badge variant="pinkStatic" size="xq" className="mr-2 px-1">
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
           )}
-          <HideShowButton
-            disabled={disabledOutput}
-            onClick={() => handleUpdateOutputHide()}
-            hidden={!!hidden}
-            isToolMode={isToolMode}
-            title={title}
-          />
         </div>
 
         {data.node?.frozen && (
@@ -418,9 +384,10 @@ function NodeOutputField({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
+              outputs={outputs}
               proxy={outputProxy}
               idx={index}
               types={type?.split("|") ?? []}

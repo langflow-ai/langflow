@@ -104,11 +104,11 @@ export default function PublishDropdown() {
           className="min-w-[300px] max-w-[400px]"
         >
           <DropdownMenuItem
-            className="deploy-dropdown-item group"
+            className="group rounded-none"
             onClick={() => setOpenApiModal(true)}
           >
             <div
-              className="group-hover:bg-accent"
+              className="flex w-full items-center"
               data-testid="api-access-item"
             >
               <IconComponent
@@ -123,12 +123,9 @@ export default function PublishDropdown() {
             to={`/mcp/folder/${folderId}`}
             target={customMcpOpen()}
           >
-            <DropdownMenuItem
-              className="deploy-dropdown-item group"
-              onClick={() => {}}
-            >
+            <DropdownMenuItem className="group" onClick={() => {}}>
               <div
-                className="group-hover:bg-accent"
+                className="flex w-full items-center"
                 data-testid="mcp-server-item"
               >
                 <IconComponent
@@ -146,9 +143,9 @@ export default function PublishDropdown() {
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
-              className="deploy-dropdown-item group"
+              className="group"
             >
-              <div className="group-hover:bg-accent">
+              <div className="flex w-full items-center">
                 <IconComponent
                   name="Columns2"
                   className={`${groupStyle} icon-size mr-2`}
@@ -189,10 +186,10 @@ export default function PublishDropdown() {
                 >
                   <DropdownMenuItem
                     disabled={!hasIO || !isPublished}
-                    className="deploy-dropdown-item group flex-1"
+                    className="group flex-1"
                     onClick={() => {}}
                   >
-                    <div className="group-hover:bg-accent">
+                    <div className="flex w-full items-center">
                       <IconComponent
                         name="Globe"
                         className={`${groupStyle} icon-size mr-2`}

@@ -89,8 +89,6 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByTestId("expand-button-modal").click();
-
     await page.getByTestId("fit_view").click();
 
     let outdatedComponents = await page
@@ -114,35 +112,44 @@ test(
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 2);
 
-    //connection 1
-    await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
-      .nth(0)
-      .click();
-    await page
-      .getByTestId("handle-splittext-shownode-data or dataframe-left")
-      .click();
+    const selectOutput = async (inputId: string, outputId: string) => {
+      // Get the input handle element
+      const inputHandle = await page.getByTestId(inputId);
 
-    //connection 2
-    await page
-      .getByTestId("handle-textinput-shownode-message-right")
-      .nth(0)
-      .click();
-    await page.getByTestId("handle-splittext-shownode-separator-left").click();
+      // If input handle is visible, click it directly
+      if (await inputHandle.isVisible()) {
+        await inputHandle.nth(0).click();
+        await page.getByTestId(outputId).click();
+      } else {
+        // Otherwise find and click the corresponding output handle
+        const outputSelector = inputId.replace("handle", "output");
+        const outputHandle = await page.getByTestId(outputSelector);
 
-    //connection 3
-    await page
-      .getByTestId("handle-splittext-shownode-chunks-right")
-      .nth(0)
-      .click();
-    await page.getByTestId("handle-parsedata-shownode-data-left").click();
+        // Click both handles to establish connection
+        await outputHandle.click();
+        await page.getByTestId(outputId).click();
+      }
+    };
 
-    //connection 4
-    await page
-      .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(0)
-      .click();
-    await page.getByTestId("handle-chatoutput-shownode-text-left").click();
+    await selectOutput(
+      "handle-urlcomponent-shownode-data-right",
+      "handle-splittext-shownode-data or dataframe-left",
+    );
+
+    await selectOutput(
+      "handle-textinput-shownode-message-right",
+      "handle-splittext-shownode-separator-left",
+    );
+
+    await selectOutput(
+      "handle-splittext-shownode-chunks-right",
+      "handle-parsedata-shownode-data-left",
+    );
+
+    await selectOutput(
+      "handle-parsedata-shownode-message-right",
+      "handle-chatoutput-shownode-text-left",
+    );
 
     await page
       .getByTestId("textarea_str_input_value")

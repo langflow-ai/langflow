@@ -1,7 +1,12 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { nodeColorsName } from "@/utils/styleUtils";
-import { Connection, Handle, Position } from "@xyflow/react";
+import {
+  Connection,
+  Handle,
+  Position,
+  useUpdateNodeInternals,
+} from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -32,6 +37,7 @@ const HandleContent = memo(function HandleContent({
   showNode,
   left,
   nodeId,
+  selected = false,
 }: {
   isNullHandle: boolean;
   handleColor: string;
@@ -43,6 +49,7 @@ const HandleContent = memo(function HandleContent({
   showNode: boolean;
   left: boolean;
   nodeId: string;
+  selected?: boolean;
 }) {
   // Restore animation effect
   useEffect(() => {
@@ -135,6 +142,7 @@ const HandleContent = memo(function HandleContent({
       accentForegroundColorName,
       isHovered,
       openHandle,
+      nodeId,
     ],
   );
 
@@ -164,6 +172,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  selected = false,
 }: {
   left: boolean;
   nodes: any;
@@ -179,9 +188,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  selected?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const {
     setHandleDragging,
@@ -290,6 +301,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         ? "secondary-foreground"
         : "datatype-" + firstUniqueColor;
 
+    // Use directly the color associated with the output type
     const handleColor = isNullHandle
       ? dark
         ? "hsl(var(--accent-gray))"
@@ -328,7 +340,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       sameNode: sameDraggingNode || sameFilterNode,
       ownHandle: ownDraggingHandle || ownFilterHandle,
       accentForegroundColorName,
-      openHandle,
+      openHandle: openHandle,
       filterOpenHandle,
       filterPresent,
       currentFilter,
@@ -348,6 +360,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colors,
     colorName,
     tooltipTitle,
+    id,
   ]);
 
   const handleMouseDown = useCallback(
@@ -399,6 +412,14 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     (connection: any) => isValidConnection(connection, nodes, edges),
     [nodes, edges],
   );
+
+  // Before returning, ensure myId is updated when output type changes
+  useEffect(() => {
+    // Force handle to update when color changes
+    if (colorName && colorName.length > 0) {
+      updateNodeInternals(nodeId);
+    }
+  }, [colorName, nodeId]);
 
   return (
     <div>
@@ -452,6 +473,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
             showNode={showNode}
             left={left}
             nodeId={nodeId}
+            selected={selected ?? false}
           />
         </Handle>
       </ShadTooltip>
