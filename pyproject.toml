@@ -266,7 +266,11 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
+exclude = [
+    "src/backend/base/langflow/alembic/*",
+    "src/frontend/tests/assets/*", 
+    "src/langflow-api/*" # Separate linting for API package
+]
 line-length = 120
 
 [tool.ruff.lint]

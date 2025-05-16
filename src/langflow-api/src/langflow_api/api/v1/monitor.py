@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
@@ -15,6 +14,8 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
+from sqlalchemy import delete, select
+from sqlmodel import col
 
 from langflow_api.api.utils import DbSession, custom_params
 
