@@ -44,6 +44,9 @@
 
     --accent-pink: 326, 78%, 95%; /* hsl(326, 78%, 95%) */
     --accent-pink-foreground: 333 71% 51%; /* hsl(333, 71%, 51%) */
+
+    --accent-purple-foreground: 271 81% 56%;
+
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
@@ -231,6 +234,7 @@
     --accent-indigo-foreground: 234 89% 74%; /* hsl(234, 89%, 74%) */
     --accent-pink: 336, 69%, 30%; /* hsl(336, 69%, 30%) */
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
+    --accent-purple-foreground: 270, 95%, 75%;
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
     --jse-theme-color: hsl(240, 4%, 16%) !important;

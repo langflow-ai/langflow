@@ -102,10 +102,10 @@ export default function NodeName({
       </div>
       <div className="shrink-0">
         {beta && (
-          <div className="flex h-4 w-4 items-center justify-center rounded-sm border border-datatype-purple-foreground p-0.5">
+          <div className="border-accent-purple-foreground flex h-4 w-4 items-center justify-center rounded-sm border p-0.5">
             <ForwardedIconComponent
               name="FlaskConical"
-              className="text-datatype-purple-foreground"
+              className="text-accent-purple-foreground"
             />
           </div>
         )}
