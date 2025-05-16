@@ -181,7 +181,7 @@ langflow-base = { workspace = true }
 langflow-api = { workspace = true }
 
 [tool.uv.workspace]
-members = ["src/backend/base", "src/langflow-api"]
+members = [".", "src/backend/base", "src/langflow-api"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
