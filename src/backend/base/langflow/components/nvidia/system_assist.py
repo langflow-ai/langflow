@@ -6,9 +6,6 @@ from langflow.io import MessageTextInput, Output
 from langflow.schema import Message
 from langflow.services.cache.utils import CacheMiss
 
-with contextlib.suppress(ImportError):
-    from gassist.rise import register_rise_client, send_rise_command
-
 
 class NvidiaSystemAssistComponent(ComponentWithCache):
     display_name = "NVIDIA System-Assist"
@@ -52,6 +49,9 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
     ]
 
     async def sys_assist_prompt(self) -> Message:
+        with contextlib.suppress(ImportError):
+            from gassist.rise import send_rise_command
+
         self.maybe_register_rise_client()
 
         response = await asyncio.to_thread(send_rise_command, self.prompt)
