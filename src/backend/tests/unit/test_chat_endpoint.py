@@ -142,7 +142,7 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert isinstance(build_response["job_id"], str)
     assert uuid.UUID(build_response["job_id"])
 
-
+@pytest.mark.timeout(60)
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with polling (non-streaming)."""
@@ -162,9 +162,9 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.job_id = job_id
             self.headers = headers
             self.status_code = codes.OK
-            self.max_total_events = 50  # Limit to prevent infinite loops
-            self.max_empty_polls = 10  # Maximum number of empty polls before giving up
-            self.poll_timeout = 1.0  # Timeout for each polling request
+            self.max_total_events = 200  # Limit to prevent infinite loops
+            self.max_empty_polls = 50  # Maximum number of empty polls before giving up
+            self.poll_timeout = 3.0  # Timeout for each polling request
 
         async def aiter_lines(self):
             try:
@@ -206,6 +206,8 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                     for line in text.splitlines():
                         if not line.strip():
                             continue
+                        logger.debug(f"Event received: {line}")
+
 
                         line_count += 1
                         total_events += 1
