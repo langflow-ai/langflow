@@ -77,7 +77,7 @@ def get_state_service() -> StateService:
     Returns:
         The StateService instance.
     """
-    from langflow.services.state.factory import StateServiceFactory
+    from langflow_execution.service.state.factory import StateServiceFactory
 
     return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
 
