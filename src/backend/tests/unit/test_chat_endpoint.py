@@ -113,11 +113,7 @@ async def test_build_flow_invalid_flow_id(client, logged_in_headers):
     """Test starting a build with an invalid flow ID."""
     invalid_flow_id = uuid.uuid4()
     try:
-        response = await client.post(
-            f"api/v1/build/{invalid_flow_id}/flow",
-            json={},
-            headers=logged_in_headers
-        )
+        response = await client.post(f"api/v1/build/{invalid_flow_id}/flow", json={}, headers=logged_in_headers)
         assert response.status_code == codes.NOT_FOUND
         assert "Flow with id" in response.json()["detail"]
         assert str(invalid_flow_id) in response.json()["detail"]
@@ -125,6 +121,7 @@ async def test_build_flow_invalid_flow_id(client, logged_in_headers):
         pytest.fail(f"HTTP request failed: {e!s}")
     except AssertionError as e:
         pytest.fail(f"Assertion failed: {e!s}")
+
 
 @pytest.mark.benchmark
 async def test_build_flow_start_only(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -157,7 +154,7 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert uuid.UUID(build_response["job_id"])
 
 
-@pytest.mark.timeout(60) # Set a timeout for the test
+@pytest.mark.timeout(60)  # Set a timeout for the test
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with polling (non-streaming)."""
@@ -336,10 +333,7 @@ async def test_cancel_nonexistent_build(client, logged_in_headers):
     """Test cancelling a non-existent flow build."""
     invalid_job_id = str(uuid.uuid4())
     try:
-        response = await client.post(
-            f"api/v1/build/{invalid_job_id}/cancel",
-            headers=logged_in_headers
-        )
+        response = await client.post(f"api/v1/build/{invalid_job_id}/cancel", headers=logged_in_headers)
         assert response.status_code == codes.NOT_FOUND
         response_data = response.json()
         assert "detail" in response_data
@@ -415,11 +409,7 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
     monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build_with_cancelled_error)
 
     try:
-        cancel_response = await client.post(
-            f"api/v1/build/{job_id}/cancel",
-            headers=logged_in_headers,
-            timeout=10.0
-        )
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers, timeout=10.0)
         assert cancel_response.status_code == codes.OK
         response_data = cancel_response.json()
         assert "success" in response_data
