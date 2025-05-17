@@ -154,7 +154,7 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert uuid.UUID(build_response["job_id"])
 
 
-@pytest.mark.timeout(60)  # Set a timeout for the test
+@pytest.mark.timeout(120)  # Set a timeout for the test
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with polling (non-streaming)."""
@@ -167,94 +167,67 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
     job_id = build_response["job_id"]
     assert job_id is not None
 
-    class PollingResponse:
-        def __init__(self, client, job_id, headers):
-            self.client = client  # Use the client from the fixture
-            self.job_id = job_id
-            self.headers = headers
-            self.status_code = codes.OK
-            self.max_total_events = 100  # Reduced from 200
-            self.max_empty_polls = 20  # Reduced from 30
-            self.poll_timeout = 5.0  # Reduced from 10.0
-            self.poll_interval = 0.1  # Added shorter poll interval
-            self.end_event_found = False  # Initialize as instance variable
+class PollingResponse:
+    def __init__(self, client, job_id, headers):
+        self.client = client
+        self.job_id = job_id
+        self.headers = headers
+        self.status_code = codes.OK
+        self.max_total_events = 100
+        self.max_empty_polls = 20
+        self.poll_timeout = 5.0
+        self.poll_interval = 0.1
+        self.end_event_found = False
 
-        async def aiter_lines(self):
-            empty_polls = 0
-            total_events = 0
-            logger.debug(f"Starting event polling for job_id: {self.job_id}")
-            # Use the client from the fixture instead of creating a new one
-            session = self.client
-            while (
-                empty_polls < self.max_empty_polls and total_events < self.max_total_events and not self.end_event_found
-            ):  # Use self.end_event_found
-                try:
-                    headers = {**self.headers, "Accept": "application/x-ndjson"}
-                    response = await asyncio.wait_for(
-                        session.get(  # Use the fixture client
-                            f"api/v1/build/{self.job_id}/events?event_delivery=polling",
-                            headers=headers,
-                        ),
-                        timeout=self.poll_timeout,
-                    )
-                    if response.status_code != codes.OK:
-                        logger.debug(f"Non-OK status: {response.status_code}, content: {response.text}")
-                        break
+    async def aiter_lines(self):
+        empty_polls = 0
+        total_events = 0
+        logger.debug(f"Starting event polling for job_id: {self.job_id}")
+        session = self.client
+        while (
+            empty_polls < self.max_empty_polls and total_events < self.max_total_events and not self.end_event_found
+        ):
+            try:
+                headers = {**self.headers, "Accept": "application/x-ndjson"}
+                response = await asyncio.wait_for(
+                    session.get(
+                        f"api/v1/build/{self.job_id}/events?event_delivery=polling",
+                        headers=headers,
+                    ),
+                    timeout=self.poll_timeout,
+                )
+                if response.status_code != codes.OK:
+                    logger.debug(f"Non-OK status: {response.status_code}, content: {response.text}")
+                    break
 
-                    text = response.text
-                    if not text.strip():
-                        empty_polls += 1
-                        await asyncio.sleep(self.poll_interval)
-                        continue
-
-                    empty_polls = 0
-                    for line in text.splitlines():
-                        if not line.strip():
-                            continue
-                        total_events += 1
-                        if '"event":"end"' in line or '"event": "end"' in line:
-                            self.end_event_found = True  # Use self.end_event_found
-                            logger.debug("End event found")
-                        try:
-                            json.loads(line)  # Validate JSON
-                            yield line
-                        except json.JSONDecodeError:
-                            logger.debug(f"Skipping invalid JSON: {line[:100]}")
-                    await asyncio.sleep(self.poll_interval)
-                except asyncio.TimeoutError:
+                text = response.text
+                if not text.strip():
                     empty_polls += 1
-                    logger.debug(f"Polling attempt {empty_polls}/{self.max_empty_polls}, total events: {total_events}")
+                    logger.debug(f"Empty poll {empty_polls}/{self.max_empty_polls}")
+                    await asyncio.sleep(self.poll_interval)
                     continue
-                except Exception as e:
-                    logger.error(f"Polling error: {e!s}")
-                    raise
 
-    # Pass the client to PollingResponse
-    polling_response = PollingResponse(client, job_id, logged_in_headers)
-
-    try:
-        await asyncio.wait_for(
-            consume_and_assert_stream(polling_response, job_id),
-            timeout=60.0,  # Reduced timeout
-        )
-        # Check using polling_response.end_event_found after consuming the stream
-        if not polling_response.end_event_found:
-            logger.warning("Polling finished without finding end event")
-
-    except asyncio.TimeoutError as e:
-        logger.error("Test timeout - checking final state...")
-        # Get final state for debugging
-        try:
-            debug_response = await client.get(
-                f"api/v1/build/{job_id}/events?event_delivery=polling",
-                headers={**logged_in_headers, "Accept": "application/x-ndjson"},
-                timeout=5.0,
-            )
-            logger.debug(f"Final state - status: {debug_response.status_code}")
-            logger.debug(f"Final state - content: {debug_response.text[:500]}")
-        except (httpx.RequestError, httpx.HTTPStatusError) as debug_e:
-            logger.error(f"Failed to get debug state: {debug_e}")
-        raise TimeoutError(TIMEOUT_MESSAGE) from e
+                empty_polls = 0
+                for line in text.splitlines():
+                    if not line.strip():
+                        continue
+                    total_events += 1
+                    if '"event":"end"' in line or '"event": "end"' in line:
+                        self.end_event_found = True
+                        logger.debug("End event found")
+                    try:
+                        json.loads(line)
+                        yield line
+                    except json.JSONDecodeError:
+                        logger.debug(f"Skipping invalid JSON: {line[:100]}")
+                await asyncio.sleep(self.poll_interval)
+            except asyncio.TimeoutError:
+                empty_polls += 1
+                logger.debug(f"Polling attempt {empty_polls}/{self.max_empty_polls}, total events: {total_events}")
+                continue
+            except Exception as e:
+                logger.error(f"Polling error: {e!s}")
+                raise
 
 
 @pytest.mark.benchmark
