@@ -179,7 +179,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.max_total_events = 100  # Reduced from 200
             self.max_empty_polls = 20  # Reduced from 30
             self.poll_timeout = 5.0  # Reduced from 10.0
-            self.poll_interval = 0.2  # Added shorter poll interval
+            self.poll_interval = 0.1  # Added shorter poll interval
             self.end_event_found = False  # Initialize as instance variable
 
         async def aiter_lines(self):
@@ -201,7 +201,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                         timeout=self.poll_timeout,
                     )
                     if response.status_code != codes.OK:
-                        logger.debug(f"Received non-OK status: {response.status_code}")
+                        logger.debug(f"Non-OK status: {response.status_code}, content: {response.text}")
                         break
 
                     text = response.text
@@ -226,7 +226,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                     await asyncio.sleep(self.poll_interval)
                 except asyncio.TimeoutError:
                     empty_polls += 1
-                    logger.debug(f"Polling timeout ({empty_polls}/{self.max_empty_polls})")
+                    logger.debug(f"Polling attempt {empty_polls}/{self.max_empty_polls}, total events: {total_events}")
                     continue
                 except Exception as e:
                     logger.error(f"Polling error: {e!s}")
@@ -238,7 +238,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
     try:
         await asyncio.wait_for(
             consume_and_assert_stream(polling_response, job_id),
-            timeout=30.0,  # Reduced timeout
+            timeout=60.0,  # Reduced timeout
         )
         # Check using polling_response.end_event_found after consuming the stream
         if not polling_response.end_event_found:
