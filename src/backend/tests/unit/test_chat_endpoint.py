@@ -167,6 +167,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
     job_id = build_response["job_id"]
     assert job_id is not None
 
+
 class PollingResponse:
     def __init__(self, client, job_id, headers):
         self.client = client
@@ -184,9 +185,7 @@ class PollingResponse:
         total_events = 0
         logger.debug(f"Starting event polling for job_id: {self.job_id}")
         session = self.client
-        while (
-            empty_polls < self.max_empty_polls and total_events < self.max_total_events and not self.end_event_found
-        ):
+        while empty_polls < self.max_empty_polls and total_events < self.max_total_events and not self.end_event_found:
             try:
                 headers = {**self.headers, "Accept": "application/x-ndjson"}
                 response = await asyncio.wait_for(
