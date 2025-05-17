@@ -30,6 +30,7 @@ RUN apt-get update \
     # npm
     npm \
     # gcc
+    libpq-dev\
     gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

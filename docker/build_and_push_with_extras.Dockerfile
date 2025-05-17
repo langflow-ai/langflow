@@ -31,6 +31,7 @@ RUN apt-get update \
     # gcc
     gcc \
     && apt-get clean \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN --mount=type=cache,target=/root/.cache/uv \
