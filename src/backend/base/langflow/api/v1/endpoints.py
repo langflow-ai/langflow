@@ -235,7 +235,10 @@ async def simplified_run_flow(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
 
-    # TODO: start with non-streaming?
+    # TODO: start with non-streaming
+    # TODO: build an execution service that either
+    #  1. conditionally imports the langflow-execution library and uses the local runner
+    #  2. Uses openapi.json autogen client to send requests to the appropriate endpoints
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
         asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()

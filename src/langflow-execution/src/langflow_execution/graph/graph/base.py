@@ -47,7 +47,9 @@ from langflow_execution.graph.vertex.vertex_types import ComponentVertex, Interf
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
 
-    from langflow.api.v1.schemas import InputValueRequest
+    from langflow_execution.api.v1.schema.flow import InputValueRequest
+
+    # TODO: This will move to langflow-component library 
     from langflow.custom.custom_component.component import Component
     from langflow.schema import Data
     from langflow.services.chat.schema import GetCache, SetCache
@@ -68,7 +70,7 @@ class Graph:
         flow_id: str | None = None,
         flow_name: str | None = None,
         description: str | None = None,
-        user_id: str | None = None, # TODO: Purpose of this? 
+        user_id: str | None = None, # TODO: Purpose of this?
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:

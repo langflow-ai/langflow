@@ -5,13 +5,11 @@ import time
 from fastapi import BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 
-from langflow_execution.api.v1.schema.flow import FlowExecutionRequest
+from langflow_execution.api.v1.schema.flow import FlowExecutionRequest, Flow
 from langflow_execution.services.manager import ServiceManager
 from langflow_execution.services.telemetry.schema import RunPayload
-from langflow_execution.api.v1.execute import simple_run_flow
-from langflow_execution.api.v1.schema.flow import Flow
 from langflow_execution.events.event_manager import create_stream_tokens_event_manager
-from langflow_execution.api.v1.execute import simple_run_flow
+from langflow_execution.graph.execution.execute import simple_run_flow
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +83,8 @@ class DefaultFlowRunner:
             #     media_type="text/event-stream",
             # )
         else:
+            # TODO: Convert API types to internal graph types, then call simple_run_flow
+            # Decoupling API types from internal graph types
             try:
                 result = await simple_run_flow(
                     flow=flow,
