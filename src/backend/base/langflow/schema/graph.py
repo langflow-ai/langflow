@@ -1,19 +1,5 @@
 from typing import Any
-
-from pydantic import BaseModel, Field, RootModel
-
-from langflow.schema.schema import InputType
-
-
-class InputValue(BaseModel):
-    components: list[str] | None = []
-    input_value: str | None = None
-    type: InputType | None = Field(
-        "any",
-        description="Defines on which components the input value should be applied. "
-        "'any' applies to all input components.",
-    )
-
+from pydantic import Field, RootModel
 
 class Tweaks(RootModel):
     root: dict[str, str | dict[str, Any]] = Field(

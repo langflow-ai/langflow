@@ -14,23 +14,16 @@ class Settings(BaseSettings):
     do_not_track: bool = False
     cache_type: str = "InMemoryCache"
     backend_only: bool = False
-
+    fallback_to_env_vars: bool = False
 
 class SettingsService(Service):
-    name = "execution_settings_service"
+    name = "settings_service"
 
     def __init__(self):
         super().__init__()
         self.settings = Settings()
         self.auth_settings = AuthSettings()
-
-    @classmethod
-    def initialize(cls) -> "SettingsService":
-        return cls()
-
-    def set(self, key, value):
-        setattr(self.settings, key, value)
-        return self.settings
+        self.set_ready()
 
     async def teardown(self):
         pass  # No teardown logic needed for settings

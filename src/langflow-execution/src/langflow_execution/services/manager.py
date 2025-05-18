@@ -28,7 +28,7 @@ class ServiceManager:
         return cls._instance
 
     def _start_services(self):
-        self.settings_service = SettingsService.initialize()
+        self.settings_service = SettingsService()
         self.job_queue_service = JobQueueService()
         self.state_service = InMemoryStateService()
         self.telemetry_service = TelemetryService(settings_service=self.settings_service)

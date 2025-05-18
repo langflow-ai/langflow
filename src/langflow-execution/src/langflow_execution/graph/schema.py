@@ -5,6 +5,12 @@ from langflow.schema.schema import OutputValue, StreamURL
 from langflow.serialization import serialize
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 from pydantic import BaseModel, Field, field_serializer, model_validator
+from typing import Literal
+
+
+# TODO: find where this should live
+InputType = Literal["chat", "text", "any"]
+OutputType = Literal["chat", "text", "any", "debug"]
 
 
 class ResultData(BaseModel):
@@ -72,3 +78,14 @@ OUTPUT_COMPONENTS = [
 class RunOutputs(BaseModel):
     inputs: dict = Field(default_factory=dict)
     outputs: list[ResultData | None] = Field(default_factory=list)
+
+
+class InputValue(BaseModel):
+    components: list[str] | None = []
+    input_value: str | None = None
+    type: InputType | None = Field(
+        "any",
+        description="Defines on which components the input value should be applied. "
+        "'any' applies to all input components.",
+    )
+

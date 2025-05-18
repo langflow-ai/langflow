@@ -30,6 +30,7 @@ class FlowExecutionRequest(BaseModel):
     session_id: Optional[str] = Field(default=None, description="The session id")
 
     
+# TODO: necessary?
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
     input_value: str | None = None
