@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import tempfile
 
 import chardet
@@ -66,23 +66,26 @@ class CSVAgentComponent(LCAgentComponent):
 
     def _robust_csv_path(self) -> str:
         """Reads the file with auto-detected encoding and returns a cleaned temp CSV path."""
-        file_path = self._path()
+        file_path = Path(self._path())
 
         # Detect encoding
-        with open(file_path, "rb") as f:
+        with file_path.open("rb") as f:
             raw_data = f.read(10000)
             detected = chardet.detect(raw_data)
             encoding = detected.get("encoding", "utf-8")
 
         # Read with encoding and skip bad lines
         try:
-            df = pd.read_csv(file_path, encoding=encoding, on_bad_lines="skip")
+            data_frame = pd.read_csv(file_path, encoding=encoding, on_bad_lines="skip")
         except Exception as e:
-            raise ValueError(f"Failed to read CSV: {e!s}")
+            error_msg = f"Failed to read CSV: {e}"
+            raise ValueError(error_msg) from e
 
-        # Save cleaned CSV to temp file
+        # Save cleaned CSV to temp file using context manager
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8")
-        df.to_csv(temp_file.name, index=False)
+        with Path(temp_file.name).open("w", newline="", encoding="utf-8") as f:
+            data_frame.to_csv(f, index=False)
+
         return temp_file.name
 
     def _path(self) -> str:
@@ -108,10 +111,7 @@ class CSVAgentComponent(LCAgentComponent):
         )
 
         result = agent_csv.invoke({"input": self.input_value})
-
-        # Optional cleanup
-        os.remove(cleaned_path)
-
+        Path(cleaned_path).unlink(missing_ok=True)
         return Message(text=str(result["output"]))
 
     def build_agent(self) -> AgentExecutor:
