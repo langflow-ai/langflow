@@ -1,15 +1,16 @@
+import os
+import tempfile
+
+import chardet
+import pandas as pd
 from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
+
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.field_typing import AgentExecutor
 from langflow.inputs import DropdownInput, FileInput, HandleInput
 from langflow.inputs.inputs import DictInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
-
-import pandas as pd
-import chardet
-import tempfile
-import os
 
 
 class CSVAgentComponent(LCAgentComponent):
@@ -77,10 +78,10 @@ class CSVAgentComponent(LCAgentComponent):
         try:
             df = pd.read_csv(file_path, encoding=encoding, on_bad_lines="skip")
         except Exception as e:
-            raise ValueError(f"Failed to read CSV: {str(e)}")
+            raise ValueError(f"Failed to read CSV: {e!s}")
 
         # Save cleaned CSV to temp file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline='', encoding="utf-8")
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8")
         df.to_csv(temp_file.name, index=False)
         return temp_file.name
 
