@@ -1,11 +1,15 @@
 from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
-
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.field_typing import AgentExecutor
 from langflow.inputs import DropdownInput, FileInput, HandleInput
 from langflow.inputs.inputs import DictInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
+
+import pandas as pd
+import chardet
+import tempfile
+import os
 
 
 class CSVAgentComponent(LCAgentComponent):
@@ -59,6 +63,27 @@ class CSVAgentComponent(LCAgentComponent):
         Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
     ]
 
+    def _robust_csv_path(self) -> str:
+        """Reads the file with auto-detected encoding and returns a cleaned temp CSV path."""
+        file_path = self._path()
+
+        # Detect encoding
+        with open(file_path, "rb") as f:
+            raw_data = f.read(10000)
+            detected = chardet.detect(raw_data)
+            encoding = detected.get("encoding", "utf-8")
+
+        # Read with encoding and skip bad lines
+        try:
+            df = pd.read_csv(file_path, encoding=encoding, on_bad_lines="skip")
+        except Exception as e:
+            raise ValueError(f"Failed to read CSV: {str(e)}")
+
+        # Save cleaned CSV to temp file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline='', encoding="utf-8")
+        df.to_csv(temp_file.name, index=False)
+        return temp_file.name
+
     def _path(self) -> str:
         if isinstance(self.path, Message) and isinstance(self.path.text, str):
             return self.path.text
@@ -70,16 +95,22 @@ class CSVAgentComponent(LCAgentComponent):
             "allow_dangerous_code": True,
         }
 
+        cleaned_path = self._robust_csv_path()
+
         agent_csv = create_csv_agent(
             llm=self.llm,
-            path=self._path(),
+            path=cleaned_path,
             agent_type=self.agent_type,
-            handle_parsing_errors=self.handle_parsing_errors,
+            handle_parsing_errors=True,
             pandas_kwargs=self.pandas_kwargs,
             **agent_kwargs,
         )
 
         result = agent_csv.invoke({"input": self.input_value})
+
+        # Optional cleanup
+        os.remove(cleaned_path)
+
         return Message(text=str(result["output"]))
 
     def build_agent(self) -> AgentExecutor:
@@ -88,11 +119,13 @@ class CSVAgentComponent(LCAgentComponent):
             "allow_dangerous_code": True,
         }
 
+        cleaned_path = self._robust_csv_path()
+
         agent_csv = create_csv_agent(
             llm=self.llm,
-            path=self._path(),
+            path=cleaned_path,
             agent_type=self.agent_type,
-            handle_parsing_errors=self.handle_parsing_errors,
+            handle_parsing_errors=True,
             pandas_kwargs=self.pandas_kwargs,
             **agent_kwargs,
         )
