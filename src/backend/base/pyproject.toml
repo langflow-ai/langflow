@@ -72,7 +72,7 @@ dependencies = [
     "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
-    "fastapi-pagination>=0.12.29,<1.0.0",
+    "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
     "pypdf~=5.1.0",
     "validators>=0.34.0",
