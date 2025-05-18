@@ -18,7 +18,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-execution==0.1.0",
+    "langflow-execution==0.1.0", # TODO: The default should probably include langflow-execution, but it'll be its own service in prod, so we'll need to configure that rationally
     "langflow-base==0.4.1",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
@@ -204,7 +204,7 @@ cassio = [
 local = [
     "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
-    "ctransformers>=0.2.10"
+    "ctransformers>=0.2.10", 
 ]
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"
@@ -218,8 +218,8 @@ nv-ingest = [
 postgresql = [
   "sqlalchemy[postgresql_psycopg2binary]",
     "sqlalchemy[postgresql_psycopg]",
-
 ]
+
 
 [project.scripts]
 langflow = "langflow.__main__:main"
