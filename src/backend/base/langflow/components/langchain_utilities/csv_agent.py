@@ -74,17 +74,18 @@ class CSVAgentComponent(LCAgentComponent):
             detected = chardet.detect(raw_data)
             encoding = detected.get("encoding", "utf-8")
 
-        # Read with encoding and skip bad lines
         try:
             data_frame = pd.read_csv(file_path, encoding=encoding, on_bad_lines="skip")
         except Exception as e:
-            raise ValueError(f"Failed to read CSV: {e}") from e
+            error_msg = f"Failed to read CSV: {e}"
+            raise ValueError(error_msg) from e
 
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8"
         ) as temp_file:
             data_frame.to_csv(temp_file, index=False)
             return temp_file.name
+
 
     def _path(self) -> str:
         if isinstance(self.path, Message) and isinstance(self.path.text, str):
