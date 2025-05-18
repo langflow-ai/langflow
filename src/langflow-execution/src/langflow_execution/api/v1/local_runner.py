@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import time
-from typing import Annotated
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+
+from langflow_execution.api.v1.schema.flow import FlowExecutionRequest
 
 # Add your actual imports for these as needed
 # from your_module import (
@@ -21,10 +22,8 @@ class DefaultFlowRunner:
         self,
         *,
         background_tasks: BackgroundTasks,
-        flow: Annotated["FlowRead | None", Depends("get_flow_by_id_or_endpoint_name")],
-        input_request: "SimplifiedAPIRequest | None" = None,
+        input_request: FlowExecutionRequest,
         stream: bool = False,
-        api_key_user: Annotated["UserRead", Depends("api_key_security")],
     ):
         """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -58,9 +57,6 @@ class DefaultFlowRunner:
                 - "end": Final execution result
         """
         telemetry_service = get_telemetry_service()
-        input_request = input_request if input_request is not None else SimplifiedAPIRequest()
-        if flow is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
         start_time = time.perf_counter()
 
         if stream:

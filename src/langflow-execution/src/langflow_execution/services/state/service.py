@@ -1,10 +1,6 @@
 from collections import defaultdict
 from collections.abc import Callable
 from threading import Lock
-
-# TODO: Split Settings into separate set of execution-specific configs
-# TODO: FRAZ - likelihood of circular imports
-from langflow.services.settings.service import SettingsService
 from loguru import logger
 
 from langflow_execution.services.service import Service
@@ -33,8 +29,7 @@ class StateService(Service):
 
 
 class InMemoryStateService(StateService):
-    def __init__(self, settings_service: SettingsService):
-        self.settings_service = settings_service
+    def __init__(self):
         self.states: dict[str, dict] = {}
         self.observers: dict[str, list[Callable]] = defaultdict(list)
         self.lock = Lock()
@@ -83,3 +78,6 @@ class InMemoryStateService(StateService):
             if observer in self.observers[key]:
                 # Use list.remove() since observers[key] is a list
                 self.observers[key].remove(observer)
+
+    async def teardown(self):
+        pass  # No teardown logic needed for in-memory state

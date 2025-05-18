@@ -21,8 +21,7 @@ from langflow_execution.services.telemetry.schema import (
 )
 
 if TYPE_CHECKING:
-    # TODO: Split Settings into separate set of execution-specific configs
-    from langflow.services.settings.service import SettingsService
+    from langflow_execution.services.settings.service import SettingsService
     from pydantic import BaseModel
 
 

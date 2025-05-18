@@ -5,25 +5,24 @@ import json
 import time
 import uuid
 from functools import partial
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from fastapi.encoders import jsonable_encoder
-from langflow.schema.playground_events import create_event_by_type
+# TODO: playground translation layer?
+# from langflow.schema.playground_events import create_event_by_type
 from loguru import logger
 from typing_extensions import Protocol
 
 if TYPE_CHECKING:
     import asyncio
 
-    from langflow.schema.log import LoggableType
-
 
 class EventCallback(Protocol):
-    def __call__(self, *, manager: EventManager, event_type: str, data: LoggableType): ...
+    def __call__(self, *, manager: EventManager, event_type: str, data: Any): ...
 
 
 class PartialEventCallback(Protocol):
-    def __call__(self, *, data: LoggableType): ...
+    def __call__(self, *, data: Any): ...
 
 
 class EventManager:
@@ -64,10 +63,13 @@ class EventManager:
             callback_ = partial(callback, manager=self, event_type=event_type)
         self.events[name] = callback_
 
-    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
+    # TODO: replace data: Any with data: SomeMessageResultType
+    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: Any):
         try:
             if isinstance(data, dict) and event_type in {"message", "error", "warning", "info", "token"}:
-                data = create_event_by_type(event_type, **data)
+                # TODO: need to define schema for message in event queue
+                pass
+                # data = create_event_by_type(**data)
         except TypeError as e:
             logger.debug(f"Error creating playground event: {e}")
         except Exception:
@@ -78,7 +80,7 @@ class EventManager:
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
-    def noop(self, *, data: LoggableType) -> None:
+    def noop(self, *, data: Any) -> None:
         pass
 
     def __getattr__(self, name: str) -> PartialEventCallback:
