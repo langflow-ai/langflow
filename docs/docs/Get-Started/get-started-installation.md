@@ -266,6 +266,11 @@ sudo apt-get install gcc
 
 ## Install and run Langflow Desktop
 
+:::important
+Langflow Desktop is in **Alpha**.
+Development is ongoing, and the features and functionality are subject to change.
+:::
+
 **Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
 
 To install Langflow Desktop, follow these steps:
