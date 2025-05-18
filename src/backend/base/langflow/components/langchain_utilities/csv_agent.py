@@ -78,15 +78,11 @@ class CSVAgentComponent(LCAgentComponent):
         try:
             data_frame = pd.read_csv(file_path, encoding=encoding, on_bad_lines="skip")
         except Exception as e:
-            error_msg = f"Failed to read CSV: {e}"
-            raise ValueError(error_msg) from e
+            raise ValueError(f"Failed to read CSV: {e}") from e
 
-        # Save cleaned CSV to temp file using context manager
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8")
-        with Path(temp_file.name).open("w", newline="", encoding="utf-8") as f:
-            data_frame.to_csv(f, index=False)
-
-        return temp_file.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8") as temp_file:
+            data_frame.to_csv(temp_file, index=False)
+            return temp_file.name
 
     def _path(self) -> str:
         if isinstance(self.path, Message) and isinstance(self.path.text, str):
