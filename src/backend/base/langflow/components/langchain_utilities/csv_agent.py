@@ -86,7 +86,6 @@ class CSVAgentComponent(LCAgentComponent):
             data_frame.to_csv(temp_file, index=False)
             return temp_file.name
 
-
     def _path(self) -> str:
         if isinstance(self.path, Message) and isinstance(self.path.text, str):
             return self.path.text
