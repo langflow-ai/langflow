@@ -1,5 +1,5 @@
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import chardet
 import pandas as pd
