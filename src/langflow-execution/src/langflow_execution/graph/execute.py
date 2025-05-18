@@ -1,4 +1,3 @@
-from typing import Literal
 from langflow_execution.graph.graph.base import Graph
 from langflow_execution.graph.schema import InputValue, RunOutputs
 from langflow_execution.events.event_manager import EventManager

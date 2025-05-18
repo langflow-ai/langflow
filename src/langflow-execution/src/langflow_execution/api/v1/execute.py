@@ -1,8 +1,12 @@
 from langflow_execution.api.v1.schema.flow import Flow, FlowExecutionRequest, InputValueRequest
 from langflow_execution.events.event_manager import EventManager
 
-from langflow_execution.graph.schema import RunOutputs
+from langflow_execution.graph.schema import RunOutputs, RunResponse
 from langflow_execution.graph.graph.base import Graph
+from langflow_execution.graph.execute import run_graph_internal
+
+from loguru import logger
+import sqlalchemy as sa
 
 async def simple_run_flow(
     flow: Flow,
@@ -58,10 +62,9 @@ async def simple_run_flow(
         
 async def simple_run_flow_task(
     flow: Flow,
-    input_request: SimplifiedAPIRequest,
+    input_request: FlowExecutionRequest,
     *,
     stream: bool = False,
-    api_key_user: User | None = None,
     event_manager: EventManager | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
@@ -70,7 +73,6 @@ async def simple_run_flow_task(
             flow=flow,
             input_request=input_request,
             stream=stream,
-            api_key_user=api_key_user,
             event_manager=event_manager,
         )
 

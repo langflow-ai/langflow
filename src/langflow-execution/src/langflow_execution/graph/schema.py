@@ -4,7 +4,7 @@ from typing import Any
 from langflow.schema.schema import OutputValue, StreamURL
 from langflow.serialization import serialize
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
-from pydantic import BaseModel, Field, field_serializer, model_validator
+from pydantic import BaseModel, Field, field_serializer, model_serializer, model_validator
 from typing import Literal
 
 
@@ -78,6 +78,27 @@ OUTPUT_COMPONENTS = [
 class RunOutputs(BaseModel):
     inputs: dict = Field(default_factory=dict)
     outputs: list[ResultData | None] = Field(default_factory=list)
+
+
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: list[RunOutputs] | None = []
+    session_id: str | None = None
+
+    @model_serializer(mode="plain")
+    def serialize(self):
+        # Serialize all the outputs if they are base models
+        serialized = {"session_id": self.session_id, "outputs": []}
+        if self.outputs:
+            serialized_outputs = []
+            for output in self.outputs:
+                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
+                    serialized_outputs.append(output.model_dump(exclude_none=True))
+                else:
+                    serialized_outputs.append(output)
+            serialized["outputs"] = serialized_outputs
+        return serialized
 
 
 class InputValue(BaseModel):

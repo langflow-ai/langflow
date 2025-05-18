@@ -13,7 +13,6 @@ from pydantic import (
     model_serializer,
 )
 
-from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
@@ -60,28 +59,6 @@ class ProcessResponse(BaseModel):
     task: TaskResponse | None = None
     session_id: str | None = None
     backend: str | None = None
-
-
-class RunResponse(BaseModel):
-    """Run response schema."""
-
-    outputs: list[RunOutputs] | None = []
-    session_id: str | None = None
-
-    @model_serializer(mode="plain")
-    def serialize(self):
-        # Serialize all the outputs if they are base models
-        serialized = {"session_id": self.session_id, "outputs": []}
-        if self.outputs:
-            serialized_outputs = []
-            for output in self.outputs:
-                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
-                    serialized_outputs.append(output.model_dump(exclude_none=True))
-                else:
-                    serialized_outputs.append(output)
-            serialized["outputs"] = serialized_outputs
-        return serialized
-
 
 class PreloadResponse(BaseModel):
     """Preload response schema."""

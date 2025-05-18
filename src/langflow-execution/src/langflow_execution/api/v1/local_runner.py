@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 
-from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 
 from langflow_execution.api.v1.schema.flow import FlowExecutionRequest
@@ -11,7 +11,7 @@ from langflow_execution.services.telemetry.schema import RunPayload
 from langflow_execution.api.v1.execute import simple_run_flow
 from langflow_execution.api.v1.schema.flow import Flow
 from langflow_execution.events.event_manager import create_stream_tokens_event_manager
-from langflow_execution.api.v1.execute import simple_run_flow, run_flow_generator, consume_and_yield
+from langflow_execution.api.v1.execute import simple_run_flow
 
 logger = logging.getLogger(__name__)
 
@@ -60,34 +60,35 @@ class DefaultFlowRunner:
         start_time = time.perf_counter()
 
         if stream:
-            asyncio_queue: asyncio.Queue = asyncio.Queue()
-            asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
-            event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
-            main_task = asyncio.create_task(
-                run_flow_generator(
-                    flow=flow,
-                    input_request=input_request,
-                    api_key_user=api_key_user,
-                    event_manager=event_manager,
-                    client_consumed_queue=asyncio_queue_client_consumed,
-                )
-            )
+            # TODO: implement streaming
+            pass
+            # asyncio_queue: asyncio.Queue = asyncio.Queue()
+            # asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+            # event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
+            # main_task = asyncio.create_task(
+            #     run_flow_generator(
+            #         flow=flow,
+            #         input_request=input_request,
+            #         api_key_user=api_key_user,
+            #         event_manager=event_manager,
+            #         client_consumed_queue=asyncio_queue_client_consumed,
+            #     )
+            # )
 
-            async def on_disconnect() -> None:
-                logger.debug("Client disconnected, closing tasks")
-                main_task.cancel()
+            # async def on_disconnect() -> None:
+            #     logger.debug("Client disconnected, closing tasks")
+            #     main_task.cancel()
 
-            return StreamingResponse(
-                consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
-                background=on_disconnect,
-                media_type="text/event-stream",
-            )
+            # return StreamingResponse(
+            #     consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+            #     background=on_disconnect,
+            #     media_type="text/event-stream",
+            # )
         else:
             try:
                 result = await simple_run_flow(
                     flow=flow,
                     input_request=input_request,
-                    event_manager=event_manager,
                     stream=False,
                 )
                 end_time = time.perf_counter()
