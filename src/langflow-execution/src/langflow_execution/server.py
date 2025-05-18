@@ -9,6 +9,7 @@ from uvicorn.workers import UvicornWorker
 from langflow_execution.logging.logger import InterceptHandler
 
 
+# TODO: may not need this complexity
 class LangflowUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {"loop": "asyncio"}
 
@@ -45,7 +46,7 @@ class LangflowApplication(BaseApplication):
     def __init__(self, app, options=None) -> None:
         self.options = options or {}
 
-        self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
+        self.options["worker_class"] = "langflow_execution.server.LangflowUvicornWorker"
         self.options["logger_class"] = Logger
         self.application = app
         super().__init__()

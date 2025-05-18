@@ -1,18 +1,12 @@
 [project]
-name = "langflow-execution"
+name = "langflow-components"
 version = "0.1.0"
-description = "Langflow execution layer"
+description = "Langflow components"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
 readme = "README.md"
 
 dependencies = [
-    "langflow-components==0.1.0",
-    "fastapi>=0.115.2,<1.0.0",
-    "httpx[http2]>=0.27,<1.0.0",
-    "aiofile>=3.9.0,<4.0.0",
-    "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<24.0.0",
     "langchain~=0.3.21",
     "langchain-community~=0.3.20",
     "langchain-core~=0.3.45",
@@ -72,7 +66,6 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
-    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "elevenlabs>=1.54.0",
     "webrtcvad>=2.0.10",
     "scipy>=1.15.2",
@@ -120,14 +113,9 @@ dev = [
     "codeflash>=0.8.4"
 ]
 
-[tool.uv.sources]
-langflow-components = { workspace = true }
-
-[tool.uv.workspace]
-members = ["../langflow-components", "."]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/langflow_execution"]
+packages = ["src/langflow_components"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -145,12 +133,11 @@ plugins = ["pydantic.mypy"]
 follow_imports = "skip"
 disable_error_code = ["type-var"]
 namespace_packages = true
-mypy_path = "src/langflow_execution"
+mypy_path = "src/langflow_components"
 ignore_missing_imports = true
 
 [tool.ruff]
 target-version = "py310"
-exclude = ["langflow/alembic/versions"]
 line-length = 120
 
 [tool.ruff.lint]
@@ -163,8 +150,6 @@ flake8-bugbear.extend-immutable-calls = [
 ]
 flake8-type-checking.runtime-evaluated-base-classes = [
     "pydantic.BaseModel",
-    "typing.TypedDict", # Needed by fastapi
-    "typing_extensions.TypedDict", # Needed by fastapi
 ]
 pydocstyle.convention = "google"
 select = ["ALL"]
@@ -190,7 +175,7 @@ ignore = [
 
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.
-module-root = "langflow_execution"
+module-root = "langflow_components"
 tests-root = "../tests/unit"
 test-framework = "pytest"
 formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
@@ -204,6 +189,3 @@ build-backend = "hatchling.build"
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
-
-[project.scripts]
-langflow-execution = "langflow_execution.__main__:main"
