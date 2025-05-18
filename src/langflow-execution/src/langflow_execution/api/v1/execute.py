@@ -1,23 +1,24 @@
+from langflow_execution.api.v1.schema.flow import Flow, FlowExecutionRequest
+from langflow_execution.events.event_manager import EventManager
+
+from langflow_execution.graph.schema import RunOutputs
+from langflow_execution.graph.graph.base import Graph
 
 async def simple_run_flow(
     flow: Flow,
-    input_request: SimplifiedAPIRequest,
+    input_request: FlowExecutionRequest,
     *,
     stream: bool = False,
-    api_key_user: User | None = None,
     event_manager: EventManager | None = None,
 ):
-    validate_input_and_tweaks(input_request)
     try:
         task_result: list[RunOutputs] = []
-        user_id = api_key_user.id if api_key_user else None
         flow_id_str = str(flow.id)
-        if flow.data is None:
-            msg = f"Flow {flow_id_str} has no data"
-            raise ValueError(msg)
+
+        # copy the flow data to avoid modifying the original data
         graph_data = flow.data.copy()
-        graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
+
+        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=None, flow_name=flow.name) # TODO: user_id
         inputs = None
         if input_request.input_value is not None:
             inputs = [

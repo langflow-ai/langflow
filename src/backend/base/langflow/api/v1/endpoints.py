@@ -28,11 +28,11 @@ from langflow.api.v1.schemas import (
 )
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
-from langflow.events.event_manager import create_stream_tokens_event_manager
+# from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
+# from langflow.graph.graph.base import Graph
+# from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
@@ -261,6 +261,10 @@ async def simplified_run_flow(
         )
 
     try:
+        validate_input_and_tweaks(input_request)
+
+        flow_data_with_tweaks = process_tweaks(flow.data, input_request.tweaks)
+
         # TODO: Here - you will either create a langflow-execution flow runner (or use from some new service) and either
         # call the API endpoint or use the flow runner directly.
         result = await simple_run_flow(

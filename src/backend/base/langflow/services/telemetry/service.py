@@ -79,9 +79,6 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.error("Unexpected error occurred")
 
-    async def log_package_run(self, payload: RunPayload) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "run"))
-
     async def log_package_shutdown(self) -> None:
         payload = ShutdownPayload(time_running=(datetime.now(timezone.utc) - self._start_time).seconds)
         await self._queue_event(payload)

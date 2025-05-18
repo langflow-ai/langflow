@@ -6,6 +6,11 @@ from langflow_execution.services.telemetry.service import TelemetryService
 
 
 class ServiceManager:
+    """
+    Singleton service manager for the execution layer.
+
+    Ensures only one instance exists (thread-safe) and provides lifecycle management (start/stop) for all services.
+    """
     _instance = None
     _instance_lock = Lock()
 

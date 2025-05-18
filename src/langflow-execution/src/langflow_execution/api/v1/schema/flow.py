@@ -1,6 +1,12 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from uuid import UUID
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, Literal
 
+# TODO: necessary?
+InputType = Literal["chat", "text", "any"]
+OutputType = Literal["chat", "text", "any", "debug"]
+
+# TODO: This came from SimplifiedAPIRequest class
 class FlowExecutionRequest(BaseModel):
     """
     Request model for executing a flow.
@@ -23,15 +29,54 @@ class FlowExecutionRequest(BaseModel):
     tweaks: Optional[dict] = Field(default=None, description="The tweaks")
     session_id: Optional[str] = Field(default=None, description="The session id")
 
+    
+class InputValueRequest(BaseModel):
+    components: list[str] | None = []
+    input_value: str | None = None
+    session: str | None = None
+    type: InputType | None = Field(
+        "any",
+        description="Defines on which components the input value should be applied. "
+        "'any' applies to all input components.",
+    )
+
+    # add an example
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
+                {"components": ["Component Name"], "input_value": "input_value"},
+                {"input_value": "input_value"},
+                {
+                    "components": ["Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
+                {"input_value": "input_value", "session": "session_id"},
+                {"type": "chat", "input_value": "input_value"},
+                {"type": "json", "input_value": '{"key": "value"}'},
+            ]
+        },
+        extra="forbid",
+    )
 class Flow(BaseModel):
     """
     The flow to execute.
 
     Attributes:
         id (str): The unique identifier of the flow.
+        name (str): The name of the flow.
+        user_id (str): The unique identifier of the user.
         data: (dict): The data of the flow.
+          Tweaks should already be applied to the data.
     """
     id: str
+    name: str
+    user_id: UUID | None = Field(default=None)
     data: dict
 
     

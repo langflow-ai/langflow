@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import httpx
 from langflow.utils.version import get_version_info
 from loguru import logger
+from sqlmodel import Field
 
 from langflow_execution.services.service import Service
 from langflow_execution.services.telemetry.opentelemetry import OpenTelemetry
@@ -24,7 +25,14 @@ if TYPE_CHECKING:
     from langflow_execution.services.settings.service import SettingsService
     from pydantic import BaseModel
 
+class RunPayload(BaseModel):
+    run_is_webhook: bool = Field(default=False, serialization_alias="runIsWebhook")
+    run_seconds: int = Field(serialization_alias="runSeconds")
+    run_success: bool = Field(serialization_alias="runSuccess")
+    run_error_message: str = Field("", serialization_alias="runErrorMessage")
 
+
+# TODO: clean up non-execution stuff
 class TelemetryService(Service):
     name = "telemetry_service"
 
