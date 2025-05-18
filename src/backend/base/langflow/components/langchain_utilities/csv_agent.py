@@ -80,7 +80,9 @@ class CSVAgentComponent(LCAgentComponent):
         except Exception as e:
             raise ValueError(f"Failed to read CSV: {e}") from e
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8") as temp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8"
+        ) as temp_file:
             data_frame.to_csv(temp_file, index=False)
             return temp_file.name
 
