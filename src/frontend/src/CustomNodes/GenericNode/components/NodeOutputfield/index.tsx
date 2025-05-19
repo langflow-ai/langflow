@@ -315,8 +315,6 @@ function NodeOutputField({
       data.node?.outputs![index].types[0] ??
       tooltipTitle;
 
-    console.log("title", title, data?.type);
-
     return (
       <HandleRenderComponent
         left={false}
