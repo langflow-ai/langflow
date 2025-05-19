@@ -889,7 +889,14 @@
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
