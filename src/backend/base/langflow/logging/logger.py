@@ -146,14 +146,6 @@ def patching(record) -> None:
         record.pop("exception", None)
 
 
-class LogConfig(TypedDict):
-    log_level: NotRequired[str]
-    log_file: NotRequired[Path]
-    disable: NotRequired[bool]
-    log_env: NotRequired[str]
-    log_format: NotRequired[str]
-
-
 class AsyncFileSink(AsyncSink):
     def __init__(self, file):
         self._sink = FileSink(

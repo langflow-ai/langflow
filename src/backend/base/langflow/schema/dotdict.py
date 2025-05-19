@@ -58,7 +58,6 @@ class dotdict(dict):  # noqa: N801
         except KeyError as e:
             msg = f"'dotdict' object has no attribute '{key}'"
             raise AttributeError(msg) from e
-
     def __missing__(self, key):
         """Handle missing keys by returning an empty dotdict. This allows chaining access without raising KeyError.
 
@@ -69,3 +68,4 @@ class dotdict(dict):  # noqa: N801
             An empty dotdict instance for the given missing key.
         """
         return dotdict()
+

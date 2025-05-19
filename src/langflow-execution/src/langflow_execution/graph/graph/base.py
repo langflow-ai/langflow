@@ -15,8 +15,7 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
-from langflow.exceptions.component import ComponentBuildError
-from langflow.logging.logger import LogConfig, configure
+from langflow_execution.logging.logger import LogConfig, configure
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from langflow.services.cache.utils import CacheMiss
@@ -24,6 +23,7 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 from loguru import logger
 
+from langflow_execution.graph.vertex.exceptions import ComponentBuildError
 from langflow_execution.graph.edge.base import CycleEdge, Edge
 from langflow_execution.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow_execution.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -140,7 +140,7 @@ class Graph:
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
             raise TypeError(msg)
-        self._context = dotdict(context or {})
+        self._context = context or {}
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
         except Exception:  # noqa: BLE001
@@ -154,19 +154,17 @@ class Graph:
             raise ValueError(msg)
 
     @property
-    def context(self) -> dotdict:
-        if isinstance(self._context, dotdict):
-            return self._context
-        return dotdict(self._context)
+    def context(self) -> dict:
+        return self._context
 
-    @context.setter
-    def context(self, value: dict[str, Any]):
-        if not isinstance(value, dict):
-            msg = "Context must be a dictionary"
-            raise TypeError(msg)
-        if isinstance(value, dict):
-            value = dotdict(value)
-        self._context = value
+    # @context.setter
+    # def context(self, value: dict[str, Any]):
+    #     if not isinstance(value, dict):
+    #         msg = "Context must be a dictionary"
+    #         raise TypeError(msg)
+    #     if isinstance(value, dict):
+    #         value = dotdict(value)
+    #     self._context = value
 
     @property
     def session_id(self):
