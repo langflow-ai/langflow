@@ -426,6 +426,8 @@ class MCPToolsComponent(Component):
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
 
+                if len(output.content) == 0:
+                    return Message(text="No output from tool", error=True)
                 return Message(text=output.content[len(output.content) - 1].text)
             return Message(text="You must select a tool", error=True)
         except Exception as e:
