@@ -1001,6 +1001,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       lastCopiedSelection: null,
       verticesBuild: null,
       flowBuildStatus: {},
+      buildError: null,
       isBuilding: false,
       isPending: true,
       positionDictionary: {},
