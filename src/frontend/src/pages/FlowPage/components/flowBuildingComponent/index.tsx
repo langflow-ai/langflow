@@ -77,7 +77,7 @@ export default function FlowBuildingComponent() {
   useEffect(() => {
     if (buildInfo?.success) {
       setTimeout(() => {
-        setDismissed(true);
+        handleDismiss();
       }, 2000);
     }
   }, [buildInfo?.success]);
