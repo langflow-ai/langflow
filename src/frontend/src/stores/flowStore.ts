@@ -628,6 +628,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         stream,
         eventDelivery,
       },
+      buildError: null,
     });
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
