@@ -21,6 +21,7 @@ class RSSReaderComponent(Component):
             info="URL of the RSS feed to parse.",
             tool_mode=True,
             input_types=[],
+            required=True,
         )
     ]
 
@@ -46,6 +47,7 @@ class RSSReaderComponent(Component):
             for item in items
         ]
 
-        df_articles = pd.DataFrame(articles)
+        # Ensure the DataFrame has the correct columns even if empty
+        df_articles = pd.DataFrame(articles, columns=["title", "link", "published", "summary"])
         logger.info(f"Fetched {len(df_articles)} articles.")
         return DataFrame(df_articles)
