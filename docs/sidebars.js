@@ -112,6 +112,11 @@ module.exports = {
           label: "Docker"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-caddyfile",
+          label: "Docker with a Caddy reverse proxy"
+        },
+        {
           type: "category",
           label: "Kubernetes",
           items: [
