@@ -156,6 +156,8 @@ export type FlowStoreType = {
   unselectAll: () => void;
   playgroundPage: boolean;
   setPlaygroundPage: (playgroundPage: boolean) => void;
+  buildError: { id?: string; error: string[] } | null;
+  setBuildError: (buildError: { id?: string; error: string[] } | null) => void;
   pastBuildFlowParams: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -202,17 +204,12 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (
-    nodeIdList: string[],
-    status: BuildStatus,
-    error?: string[],
-  ) => void;
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
     [key: string]: {
       status: BuildStatus;
       timestamp?: string;
-      error?: string[];
     };
   };
   updateFlowPool: (
