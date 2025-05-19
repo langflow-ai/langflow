@@ -5,10 +5,10 @@ from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
 
-from langflow.custom import Component
-from langflow.field_typing.range_spec import RangeSpec
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
+from langflow.inputs.inputs import TableInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
@@ -19,7 +19,7 @@ class URLComponent(Component):
     """A component that loads and parses child links from a root URL recursively."""
 
     display_name = "URL"
-    description = "Fetch content from one or more web pages, following links recursively."
+    description = "Load and parse child links from a root URL recursively"
     icon = "layout-template"
     name = "URLComponent"
 
@@ -32,11 +32,10 @@ class URLComponent(Component):
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
-            # input_types=["None"],
         ),
-        SliderInput(
+        IntInput(
             name="max_depth",
-            display_name="Depth",
+            display_name="Max Depth",
             info=(
                 "Controls how many 'clicks' away from the initial page the crawler will go:\n"
                 "- depth 1: only the initial page\n"
@@ -45,7 +44,6 @@ class URLComponent(Component):
                 "Note: This is about link traversal, not URL path depth."
             ),
             value=1,
-            range_spec=RangeSpec(min=1, max=10, step=1),
             required=False,
         ),
         BoolInput(
@@ -111,7 +109,9 @@ class URLComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Page Results", name="page_results", method="fetch_content"),
+        Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="Message", name="text", method="fetch_content_text"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def validate_url(self, string: str) -> bool:
@@ -133,7 +133,7 @@ class URLComponent(Component):
 
         return url
 
-    def fetch_url_contents(self) -> list[Data]:
+    def fetch_content(self) -> list[Data]:
         """Load documents from the URLs."""
         all_docs = []
         data = []
@@ -213,13 +213,13 @@ class URLComponent(Component):
 
     def fetch_content_text(self) -> Message:
         """Load documents and return their text content."""
-        data = self.fetch_url_contents()
+        data = self.fetch_content()
         result_string = data_to_text("{text}", data)
         self.status = result_string
         return Message(text=result_string)
 
-    def fetch_content(self) -> DataFrame:
+    def as_dataframe(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
-        data_frame = DataFrame(self.fetch_url_contents())
+        data_frame = DataFrame(self.fetch_content())
         self.status = data_frame
         return data_frame
