@@ -21,7 +21,7 @@ Replace `DANA@EXAMPLE.COM` with your email address.
 ssh-keygen -t ed25519 -C "DANA@EXAMPLE.COM"
 ```
 
-2. In your terminal, follow the instructions to create your key.
+2. In your terminal, follow the instructions to create your public key.
 This key allows you to connect to your server remotely.
 To copy the key from your terminal, enter the following command:
 ```bash
