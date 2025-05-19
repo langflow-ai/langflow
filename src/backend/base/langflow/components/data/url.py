@@ -203,8 +203,8 @@ class URLComponent(Component):
             self.status = data
 
         except Exception as e:
-            message = e.message if hasattr(e, "message") else e
-            msg = f"Error loading documents: {message!s}"
+            error_msg = e.message if hasattr(e, "message") else e
+            msg = f"Error loading documents: {error_msg!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
 
