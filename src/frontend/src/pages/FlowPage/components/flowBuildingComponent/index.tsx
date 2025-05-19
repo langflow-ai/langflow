@@ -13,8 +13,8 @@ import remarkGfm from "remark-gfm";
 export default function FlowBuildingComponent() {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const flowBuildStatus = useFlowStore((state) => state.flowBuildStatus);
-  const buildError = useFlowStore((state) => state.buildError);
-  const setBuildError = useFlowStore((state) => state.setBuildError);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+  const setBuildInfo = useFlowStore((state) => state.setBuildInfo);
   const [duration, setDuration] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
@@ -74,10 +74,18 @@ export default function FlowBuildingComponent() {
     );
   }, [isBuilding, statusBuilding]);
 
+  useEffect(() => {
+    if (buildInfo?.success) {
+      setTimeout(() => {
+        setDismissed(true);
+      }, 2000);
+    }
+  }, [buildInfo?.success]);
+
   const handleDismiss = () => {
     setDismissed(true);
     setTimeout(() => {
-      setBuildError(null);
+      setBuildInfo(null);
       setDismissed(false);
     }, 500);
   };
@@ -95,16 +103,20 @@ export default function FlowBuildingComponent() {
   return (
     <div
       className={cn(
-        "absolute bottom-2 left-1/2 z-50 flex w-[530px] -translate-x-1/2 flex-col gap-4 rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-all ease-out",
-        ((!isBuilding && !buildError) || dismissed) &&
+        "absolute bottom-2 left-1/2 z-50 flex min-h-14 w-[530px] -translate-x-1/2 flex-col justify-center gap-4 rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-all ease-out",
+        ((!isBuilding && !buildInfo?.error && !buildInfo?.success) ||
+          dismissed) &&
           "bottom-0 translate-y-[120%]",
         !isBuilding &&
-          buildError &&
+          buildInfo?.error &&
           "border-accent-red-foreground text-accent-red-foreground",
+        !isBuilding &&
+          buildInfo?.success &&
+          "border-accent-emerald-foreground text-accent-emerald-foreground",
       )}
     >
       <AnimatePresence>
-        {(isBuilding || buildError) && (
+        {(isBuilding || buildInfo?.error || buildInfo?.success) && (
           <>
             {isBuilding && (
               <BorderTrail
@@ -119,37 +131,44 @@ export default function FlowBuildingComponent() {
             <div className="flex w-full items-center justify-between gap-2">
               {buildingContent || (
                 <span className="flex items-center gap-2">
-                  <ForwardedIconComponent
-                    name="CircleAlert"
-                    className="h-5 w-5"
-                  />
-                  Flow build failed
+                  {buildInfo?.success ? (
+                    "Flow built successfully"
+                  ) : (
+                    <>
+                      <ForwardedIconComponent
+                        name="CircleAlert"
+                        className="h-5 w-5"
+                      />
+                      Flow build failed
+                    </>
+                  )}
                 </span>
               )}
-              <div className="flex items-center gap-2">
-                <span className="mr-2 font-mono text-xs">{humanizedTime}</span>
-                {buildError ? (
-                  <>
-                    <Button size="sm" onClick={handleRetry}>
-                      Retry
+              <div className="flex items-center gap-4">
+                <span className="font-mono text-xs">{humanizedTime}</span>
+                {!buildInfo?.success &&
+                  (buildInfo?.error ? (
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={handleRetry}>
+                        Retry
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-primary"
+                        onClick={handleDismiss}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" onClick={handleStop}>
+                      Stop
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-primary"
-                      onClick={handleDismiss}
-                    >
-                      Dismiss
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" onClick={handleStop}>
-                    Stop
-                  </Button>
-                )}
+                  ))}
               </div>
             </div>
-            {buildError && (
+            {buildInfo?.error && (
               <Markdown
                 linkTarget="_blank"
                 remarkPlugins={[remarkGfm]}
@@ -174,7 +193,7 @@ export default function FlowBuildingComponent() {
                   },
                 }}
               >
-                {buildError.error.join("\n")}
+                {buildInfo?.error?.join("\n")}
               </Markdown>
             )}
           </>
