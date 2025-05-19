@@ -425,96 +425,87 @@ export default function Dropdown({
       <DropdownMenuGroup defaultChecked={false}>
         {filteredOptions?.length > 0 ? (
           filteredOptions?.map((option, index) => (
-            <ShadTooltip
-              key={index}
-              delayDuration={700}
-              styleClasses="whitespace-pre-wrap"
-              content={formatTooltipContent(option, index)}
-            >
-              <div>
-                <DropdownMenuItem
-                  onSelect={() => {
-                    onSelect(option);
-                    setOpen(false);
-                  }}
-                  className="items-center"
-                  data-testid={`${option}-${index}-option`}
-                >
-                  <div className="flex w-full items-center gap-2">
-                    {filteredMetadata?.[index]?.icon && (
-                      <ForwardedIconComponent
-                        name={filteredMetadata?.[index]?.icon || "Unknown"}
-                        className="h-4 w-4 shrink-0 text-primary"
-                      />
-                    )}
-                    <div
-                      className={cn("flex truncate", {
-                        "flex-col":
-                          filteredMetadata && filteredMetadata?.length > 0,
-                        "w-full pl-2": !filteredMetadata?.[index]?.icon,
-                      })}
-                    >
-                      <div className="flex truncate">
-                        {option}{" "}
-                        <span
-                          className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            filteredMetadata?.[index]?.status,
-                          )}`}
-                        >
-                          <LoadingTextComponent
-                            text={filteredMetadata?.[
-                              index
-                            ]?.status?.toLowerCase()}
-                          />
-                        </span>
-                      </div>
-                      {filteredMetadata && filteredMetadata?.length > 0 ? (
-                        <div className="flex w-full items-center overflow-hidden text-muted-foreground">
-                          {Object.entries(
-                            filterMetadataKeys(filteredMetadata?.[index] || {}),
-                          )
-                            .filter(
-                              ([key, value]) =>
-                                value !== null && key !== "icon",
-                            )
-                            .map(([key, value], i, arr) => (
-                              <div
-                                key={key}
-                                className={cn("flex items-center", {
-                                  "flex-1 overflow-hidden":
-                                    i === arr.length - 1,
-                                })}
-                              >
-                                {i > 0 && (
-                                  <ForwardedIconComponent
-                                    name="Circle"
-                                    className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
-                                  />
-                                )}
-                                <div
-                                  className={cn("text-xs", {
-                                    "w-full truncate": i === arr.length - 1,
-                                  })}
-                                >{`${String(value)} ${key}`}</div>
-                              </div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="ml-auto flex">
-                          <ForwardedIconComponent
-                            name="Check"
-                            className={cn(
-                              "h-4 w-4 shrink-0 text-primary",
-                              value === option ? "opacity-100" : "opacity-0",
-                            )}
-                          />
-                        </div>
-                      )}
+            <div>
+              <DropdownMenuItem
+                onSelect={() => {
+                  onSelect(option);
+                  setOpen(false);
+                }}
+                className="items-center"
+                data-testid={`${option}-${index}-option`}
+              >
+                <div className="flex w-full items-center gap-2">
+                  {filteredMetadata?.[index]?.icon && (
+                    <ForwardedIconComponent
+                      name={filteredMetadata?.[index]?.icon || "Unknown"}
+                      className="h-4 w-4 shrink-0 text-primary"
+                    />
+                  )}
+                  <div
+                    className={cn("flex truncate", {
+                      "flex-col":
+                        filteredMetadata && filteredMetadata?.length > 0,
+                      "w-full pl-2": !filteredMetadata?.[index]?.icon,
+                    })}
+                  >
+                    <div className="flex truncate">
+                      {option}{" "}
+                      <span
+                        className={`flex items-center pl-2 text-xs ${getStatusColor(
+                          filteredMetadata?.[index]?.status,
+                        )}`}
+                      >
+                        <LoadingTextComponent
+                          text={filteredMetadata?.[
+                            index
+                          ]?.status?.toLowerCase()}
+                        />
+                      </span>
                     </div>
+                    {filteredMetadata && filteredMetadata?.length > 0 ? (
+                      <div className="flex w-full items-center overflow-hidden text-muted-foreground">
+                        {Object.entries(
+                          filterMetadataKeys(filteredMetadata?.[index] || {}),
+                        )
+                          .filter(
+                            ([key, value]) => value !== null && key !== "icon",
+                          )
+                          .map(([key, value], i, arr) => (
+                            <div
+                              key={key}
+                              className={cn("flex items-center", {
+                                "flex-1 overflow-hidden": i === arr.length - 1,
+                              })}
+                            >
+                              {i > 0 && (
+                                <ForwardedIconComponent
+                                  name="Circle"
+                                  className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
+                                />
+                              )}
+                              <div
+                                className={cn("text-xs", {
+                                  "w-full truncate": i === arr.length - 1,
+                                })}
+                              >{`${String(value)} ${key}`}</div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="ml-auto flex">
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-primary",
+                            value === option ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
-                </DropdownMenuItem>
-              </div>
-            </ShadTooltip>
+                </div>
+              </DropdownMenuItem>
+            </div>
           ))
         ) : (
           <DropdownMenuItem disabled className="text-center text-sm">
@@ -532,9 +523,7 @@ export default function Dropdown({
   );
 
   const renderPopoverContent = () => (
-    <PopoverContentDropdown
-      side="bottom"
-      avoidCollisions={!!children}
+    <DropdownMenuGroup
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
@@ -544,7 +533,7 @@ export default function Dropdown({
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
       </div>
-    </PopoverContentDropdown>
+    </DropdownMenuGroup>
   );
 
   // Loading state
@@ -586,7 +575,7 @@ export default function Dropdown({
         align="start"
         className="w-full min-w-[200px]"
       >
-        {renderOptionsList()}
+        {renderPopoverContent()}
       </DropdownMenuContent>
     </DropdownMenu>
   );
