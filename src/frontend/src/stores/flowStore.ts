@@ -17,10 +17,7 @@ import {
 } from "@xyflow/react";
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
-import {
-  FLOW_BUILD_SUCCESS_ALERT,
-  MISSED_ERROR_ALERT,
-} from "../constants/alerts_constants";
+import { FLOW_BUILD_SUCCESS_ALERT } from "../constants/alerts_constants";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
@@ -597,6 +594,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   pastBuildFlowParams: null,
+  buildError: null,
+  setBuildError: (buildError: { id?: string; error: string[] } | null) => {
+    set({ buildError });
+  },
   buildFlow: async ({
     startNodeId,
     stopNodeId,
@@ -634,22 +635,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
-    const setNoticeData = useAlertStore.getState().setNoticeData;
 
     const edges = get().edges;
     let error = false;
+    let errors: string[] = [];
     for (const edge of edges) {
-      const errors = validateEdge(edge, get().nodes, edges);
-      if (errors.length > 0) {
+      const errorsEdge = validateEdge(edge, get().nodes, edges);
+      if (errorsEdge.length > 0) {
         error = true;
-        setErrorData({
-          title: MISSED_ERROR_ALERT,
-          list: errors,
-        });
+        errors.push(errorsEdge.join("\n"));
       }
     }
     if (error) {
       get().setIsBuilding(false);
+      get().setBuildError({ error: errors });
       throw new Error("Invalid components");
     }
 
@@ -661,14 +660,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
-        setErrorData({
-          title: MISSED_ERROR_ALERT,
-          list: errors,
-        });
+        get().setBuildError({ error: errors });
         get().setIsBuilding(false);
         const ids = errorsObjs.map((obj) => obj.id).flat();
 
-        get().updateBuildStatus(ids, BuildStatus.ERROR, errors);
+        get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid components");
       }
       // get().updateEdgesRunningByNodes(nodes, true);
@@ -781,11 +777,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      onGetOrderSuccess: () => {
-        if (!silent) {
-          setNoticeData({ title: "Running components" });
-        }
-      },
+      onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
         if (!silent) {
@@ -815,9 +807,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           (elementList
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
-        useFlowStore
-          .getState()
-          .updateBuildStatus(idList, BuildStatus.ERROR, list);
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
         if (get().componentsToUpdate.length > 0)
           setErrorData({
             title:
@@ -827,7 +817,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           get().nodes.map((n) => n.id),
           false,
         );
-        setErrorData({ list, title });
+        get().setBuildError({ id: idList[0], error: list });
         get().setIsBuilding(false);
         get().buildController.abort();
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
@@ -937,11 +927,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
     });
   },
-  updateBuildStatus: (
-    nodeIdList: string[],
-    status: BuildStatus,
-    error?: string[],
-  ) => {
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
@@ -950,9 +936,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (status == BuildStatus.BUILT) {
         const timestamp_string = new Date(Date.now()).toLocaleString();
         newFlowBuildStatus[id].timestamp = timestamp_string;
-      }
-      if (error && status == BuildStatus.ERROR) {
-        newFlowBuildStatus[id].error = error;
       }
     });
     set({ flowBuildStatus: newFlowBuildStatus });
