@@ -11,6 +11,7 @@ class DirectoryComponent(Component):
     description = "Recursively load files from a directory."
     icon = "folder"
     name = "Directory"
+    legacy = True
 
     inputs = [
         MessageTextInput(
