@@ -128,7 +128,13 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Export", loading: isBuilding }} />
+        <BaseModal.Footer
+          submit={{
+            label: "Export",
+            loading: isBuilding,
+            dataTestId: "modal-export-button",
+          }}
+        />
       </BaseModal>
     );
   },
