@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator
 from typing import Any
 
@@ -119,6 +120,8 @@ class ChatOutput(ChatComponent):
     async def message_response(self) -> Message:
         # First convert the input to string if needed
         text = self.convert_to_string()
+        if isinstance(text, list):
+            text = json.dumps(text, indent=2)
         # Get source properties
         source, icon, display_name, source_id = self.get_properties_from_source_component()
         background_color = self.background_color
