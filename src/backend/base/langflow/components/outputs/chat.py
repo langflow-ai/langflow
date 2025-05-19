@@ -187,10 +187,7 @@ class ChatOutput(ChatComponent):
             if isinstance(data, Message):
                 return data.get_text()
             if isinstance(data, Data):
-                if data.get_text() is None:
-                    msg = "Empty Data object"
-                    raise ValueError(msg)
-                return data.get_text()
+                return "```json\n" + json.dumps(data.data, indent=4) + "\n```"
             if isinstance(data, DataFrame):
                 if self.clean_data:
                     # Remove empty rows
