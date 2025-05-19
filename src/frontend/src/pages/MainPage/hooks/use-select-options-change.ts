@@ -4,8 +4,8 @@ const useSelectOptionsChange = (
   selectedFlowsComponentsCards: string[] | undefined,
   setErrorData: (data: { title: string; list: string[] }) => void,
   setOpenDelete: (value: boolean) => void,
-  handleDuplicate: () => void,
   handleExport: () => void,
+  handleDuplicate: () => void,
   handleEdit: () => void,
 ) => {
   const handleSelectOptionsChange = useCallback(
@@ -33,8 +33,8 @@ const useSelectOptionsChange = (
       setErrorData,
       setOpenDelete,
       handleDuplicate,
-      handleExport,
       handleEdit,
+      handleExport,
     ],
   );
 
