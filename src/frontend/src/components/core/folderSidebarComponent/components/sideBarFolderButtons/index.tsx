@@ -30,6 +30,7 @@ import {
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import { customGetDownloadFolderBlob } from "@/customization/utils/custom-get-download-folders";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -169,35 +170,14 @@ const SideBarFoldersButtonsComponent = ({
     });
   };
 
-  const handleDownloadFolder = (id: string) => {
+  const handleDownloadFolder = (id: string, folderName: string) => {
     mutateDownloadFolder(
       {
         folderId: id,
       },
       {
         onSuccess: (response) => {
-          // Create a blob from the response data
-          const blob = new Blob([response.data], {
-            type: "application/x-zip-compressed",
-          });
-
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-
-          // Get filename from header or use default
-          const filename =
-            response.headers?.["content-disposition"]
-              ?.split("filename=")[1]
-              ?.replace(/['"]/g, "") ?? "flows.zip";
-
-          link.setAttribute("download", filename);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-
-          track("Project Exported", { folderId: id });
+          customGetDownloadFolderBlob(response, id, folderName, setSuccessData);
         },
         onError: (e) => {
           setErrorData({
@@ -460,7 +440,9 @@ const SideBarFoldersButtonsComponent = ({
                             item={item}
                             index={index}
                             handleDeleteFolder={handleDeleteFolder}
-                            handleDownloadFolder={handleDownloadFolder}
+                            handleDownloadFolder={() =>
+                              handleDownloadFolder(item.id!, item.name)
+                            }
                             handleSelectFolderToRename={
                               handleSelectFolderToRename
                             }
