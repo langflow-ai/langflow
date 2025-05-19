@@ -617,6 +617,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   }) => {
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
+    set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -654,7 +655,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setIsBuilding(false);
         const ids = errorsObjs.map((obj) => obj.id).flat();
 
-        get().updateBuildStatus(ids, BuildStatus.ERROR);
+        get().updateBuildStatus(ids, BuildStatus.ERROR, errors);
         throw new Error("Invalid components");
       }
       // get().updateEdgesRunningByNodes(nodes, true);
@@ -666,10 +667,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     ) {
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
-        get().updateBuildStatus(
-          vertexBuildData.inactivated_vertices,
-          BuildStatus.INACTIVE,
-        );
+        if (vertexBuildData.inactivated_vertices.length > 0) {
+          get().updateBuildStatus(
+            vertexBuildData.inactivated_vertices,
+            BuildStatus.INACTIVE,
+          );
+        }
       }
 
       if (vertexBuildData.next_vertices_ids) {
@@ -754,8 +757,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         { ...vertexBuildData, run_id: runId },
         vertexBuildData.id,
       );
-
-      useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+      if (status !== BuildStatus.ERROR) {
+        get().updateBuildStatus([vertexBuildData.id], status);
+      }
     }
     await buildFlowVerticesWithFallback({
       session,
@@ -798,7 +802,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           (elementList
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
+        useFlowStore
+          .getState()
+          .updateBuildStatus(idList, BuildStatus.ERROR, list);
         if (get().componentsToUpdate.length > 0)
           setErrorData({
             title:
@@ -918,7 +924,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
     });
   },
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    error?: string[],
+  ) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
@@ -927,6 +937,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (status == BuildStatus.BUILT) {
         const timestamp_string = new Date(Date.now()).toLocaleString();
         newFlowBuildStatus[id].timestamp = timestamp_string;
+      }
+      if (error && status == BuildStatus.ERROR) {
+        newFlowBuildStatus[id].error = error;
       }
     });
     set({ flowBuildStatus: newFlowBuildStatus });
