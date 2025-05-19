@@ -59,6 +59,7 @@ import {
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import FlowBuildingComponent from "../flowBuildingComponent";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
@@ -612,6 +613,7 @@ export default function Page({
             <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
               <UpdateAllComponents />
             </div>
+            <FlowBuildingComponent />
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
