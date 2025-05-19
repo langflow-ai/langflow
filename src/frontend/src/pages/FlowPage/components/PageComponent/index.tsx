@@ -616,7 +616,7 @@ export default function Page({
             onPaneClick={onPaneClick}
             onEdgeClick={handleEdgeClick}
           >
-            <MemoizedBackground /> 
+            <MemoizedBackground />
           </ReactFlow>
           <div
             id="shadow-box"

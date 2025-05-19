@@ -14,6 +14,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
+import { useShallow } from "zustand/react/shallow";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -28,7 +29,6 @@ import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
-import { useShallow } from "zustand/react/shallow";
 
 export default function IOModal({
   children,
@@ -52,11 +52,13 @@ export default function IOModal({
       flowId: state.currentFlow?.id,
       flowGradient: state.currentFlow?.gradient,
       flowName: state.currentFlow?.name,
-    }))
+    })),
   );
   const filteredInputs = inputs.filter((input) => input.type !== "ChatInput");
   const chatInput = inputs.find((input) => input.type === "ChatInput");
-  const filteredOutputs = outputs.filter((output) => output.type !== "ChatOutput");
+  const filteredOutputs = outputs.filter(
+    (output) => output.type !== "ChatOutput",
+  );
   const chatOutput = outputs.find((output) => output.type === "ChatOutput");
   const filteredNodes = nodes.filter(
     (node) =>
@@ -140,7 +142,9 @@ export default function IOModal({
     ),
   );
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
-  const setCurrentSessionId = useUtilityStore((state) => state.setCurrentSessionId);
+  const setCurrentSessionId = useUtilityStore(
+    (state) => state.setCurrentSessionId,
+  );
 
   const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
