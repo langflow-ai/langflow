@@ -596,6 +596,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     });
   },
+  pastBuildFlowParams: null,
   buildFlow: async ({
     startNodeId,
     stopNodeId,
@@ -615,6 +616,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => {
+    set({
+      pastBuildFlowParams: {
+        startNodeId,
+        stopNodeId,
+        input_value,
+        files,
+        silent,
+        session,
+        stream,
+        eventDelivery,
+      },
+    });
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     set({ flowBuildStatus: {} });
