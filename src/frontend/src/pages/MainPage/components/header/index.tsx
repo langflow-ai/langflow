@@ -82,6 +82,7 @@ const HeaderComponent = ({
 
   const handleDownload = () => {
     downloadFlows({ ids: selectedFlows });
+    setSuccessData({ title: "Flows downloaded successfully" });
   };
 
   const handleDelete = () => {
@@ -198,6 +199,7 @@ const HeaderComponent = ({
                     variant="outline"
                     size="iconMd"
                     className="h-8 w-8"
+                    data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
                   >
