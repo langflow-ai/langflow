@@ -111,7 +111,7 @@ When the `Welcome to Langflow` message appears, Langflow is running and accessib
 Your address must use `http`, because you haven't enabled HTTPS.
 8. To enable HTTPS, modify your domain's A record to point to your server's IP address.
 For example:
-```text
+```
 Type: A
 Name: langflow
 Value: 5.161.250.132  (your server's IP address)
@@ -119,7 +119,7 @@ Value: 5.161.250.132  (your server's IP address)
 9. Stop your server.
 10. Modify your Caddyfile to include port `443` for HTTPS.
 
-```json
+```
 :80, :443 {
     reverse_proxy langflow:7860
 }
