@@ -39,6 +39,7 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
+        "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
       ],
@@ -54,7 +55,6 @@ module.exports = {
         "Components/components-embedding-models",
         "Components/components-helpers",
         "Components/components-io",
-        "Components/components-loaders",
         "Components/components-logic",
         "Components/components-memories",
         "Components/components-models",
@@ -112,9 +112,25 @@ module.exports = {
           label: "Docker"
         },
         {
-          type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
+          type: "category",
+          label: "Kubernetes",
+          items: [
+            {
+              type: "doc",
+              id: "Deployment/deployment-prod-best-practices",
+              label: "Langflow architecture and best practices"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-dev",
+              label: "Deploy in development"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-prod",
+              label: "Deploy in production"
+            }
+          ]
         },
         {
           type: "doc",
@@ -135,7 +151,7 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-render",
           label: "Render"
-        }
+        },
       ],
     },
     {
@@ -158,14 +174,6 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
-        {
-          type: 'category',
-          label: 'MCP (Model Context Protocol)',
-          items: [
-            'Integrations/MCP/integrations-mcp',
-            'Integrations/MCP/mcp-component-astra',
-          ],
-        },
         "Integrations/Apify/integrations-apify",
         {
           type: "doc",
@@ -179,11 +187,17 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/mcp-component-astra",
+          label: "Astra DB MCP server",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
             'Integrations/Google/integrations-setup-google-oauth-langflow',
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
+            'Integrations/Google/integrations-google-big-query',
           ],
         },
         "Integrations/integrations-langfuse",
