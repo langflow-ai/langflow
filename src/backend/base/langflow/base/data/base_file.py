@@ -174,7 +174,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
+        Output(display_name="File Data", name="dataframe", method="load_dataframe"),
     ]
 
     @abstractmethod
