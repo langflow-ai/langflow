@@ -13,7 +13,8 @@ import remarkGfm from "remark-gfm";
 export default function FlowBuildingComponent() {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const flowBuildStatus = useFlowStore((state) => state.flowBuildStatus);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const buildError = useFlowStore((state) => state.buildError);
+  const setBuildError = useFlowStore((state) => state.setBuildError);
   const [duration, setDuration] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
@@ -22,16 +23,6 @@ export default function FlowBuildingComponent() {
     (state) => state.pastBuildFlowParams,
   );
   const buildFlow = useFlowStore((state) => state.buildFlow);
-  const statusError = useMemo(
-    () =>
-      Object.entries(flowBuildStatus)
-        .filter(([_, s]) => s.status === BuildStatus.ERROR)
-        .map(([id, s]) => ({
-          id,
-          ...s,
-        })),
-    [flowBuildStatus],
-  );
   const statusBuilding = useMemo(
     () =>
       Object.entries(flowBuildStatus)
@@ -44,17 +35,10 @@ export default function FlowBuildingComponent() {
   );
 
   useEffect(() => {
-    if (statusError.length > 0) {
-      setError(statusError[0].error?.join("\n") ?? undefined);
-    }
-  }, [flowBuildStatus]);
-
-  useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
     if (isBuilding && !prevIsBuilding.current) {
       setDismissed(false);
-      setError(undefined);
       setDuration(0);
     }
 
@@ -93,8 +77,9 @@ export default function FlowBuildingComponent() {
   const handleDismiss = () => {
     setDismissed(true);
     setTimeout(() => {
-      setError(undefined);
-    }, 1000);
+      setBuildError(null);
+      setDismissed(false);
+    }, 500);
   };
 
   const handleStop = () => {
@@ -102,7 +87,6 @@ export default function FlowBuildingComponent() {
   };
 
   const handleRetry = () => {
-    setError(undefined);
     if (pastBuildFlowParams) {
       buildFlow(pastBuildFlowParams);
     }
@@ -111,16 +95,16 @@ export default function FlowBuildingComponent() {
   return (
     <div
       className={cn(
-        "absolute bottom-2 left-1/2 z-50 flex w-[530px] -translate-x-1/2 flex-col items-center justify-between gap-4 rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-all ease-out",
-        ((!isBuilding && statusError.length === 0) || dismissed) &&
+        "absolute bottom-2 left-1/2 z-50 flex w-[530px] -translate-x-1/2 flex-col gap-4 rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-all ease-out",
+        ((!isBuilding && !buildError) || dismissed) &&
           "bottom-0 translate-y-[120%]",
         !isBuilding &&
-          statusError.length > 0 &&
+          buildError &&
           "border-accent-red-foreground text-accent-red-foreground",
       )}
     >
       <AnimatePresence>
-        {(isBuilding || statusError.length > 0) && (
+        {(isBuilding || buildError) && (
           <>
             {isBuilding && (
               <BorderTrail
@@ -144,7 +128,7 @@ export default function FlowBuildingComponent() {
               )}
               <div className="flex items-center gap-2">
                 <span className="mr-2 font-mono text-xs">{humanizedTime}</span>
-                {error ? (
+                {buildError ? (
                   <>
                     <Button size="sm" onClick={handleRetry}>
                       Retry
@@ -165,35 +149,33 @@ export default function FlowBuildingComponent() {
                 )}
               </div>
             </div>
-            {error && (
-              <div className="flex items-center">
-                <Markdown
-                  linkTarget="_blank"
-                  remarkPlugins={[remarkGfm]}
-                  className="align-text-top truncate-doubleline"
-                  components={{
-                    a: ({ node, ...props }) => (
-                      <a
-                        href={props.href}
-                        target="_blank"
-                        className="underline"
-                        rel="noopener noreferrer"
-                      >
+            {buildError && (
+              <Markdown
+                linkTarget="_blank"
+                remarkPlugins={[remarkGfm]}
+                className="mb-1.5 align-text-top truncate-doubleline"
+                components={{
+                  a: ({ node, ...props }) => (
+                    <a
+                      href={props.href}
+                      target="_blank"
+                      className="underline"
+                      rel="noopener noreferrer"
+                    >
+                      {props.children}
+                    </a>
+                  ),
+                  p({ node, ...props }) {
+                    return (
+                      <span className="inline-block w-fit max-w-full align-text-top">
                         {props.children}
-                      </a>
-                    ),
-                    p({ node, ...props }) {
-                      return (
-                        <span className="inline-block w-fit max-w-full align-text-top">
-                          {props.children}
-                        </span>
-                      );
-                    },
-                  }}
-                >
-                  {error}
-                </Markdown>
-              </div>
+                      </span>
+                    );
+                  },
+                }}
+              >
+                {buildError.error.join("\n")}
+              </Markdown>
             )}
           </>
         )}
