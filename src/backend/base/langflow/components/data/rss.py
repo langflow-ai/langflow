@@ -1,0 +1,51 @@
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output
+from langflow.logging import logger
+from langflow.schema import DataFrame
+
+
+class RSSReaderComponent(Component):
+    display_name = "RSS Reader"
+    description = "Fetches and parses an RSS feed."
+    icon = "rss"
+    name = "RSSReaderSimple"
+
+    inputs = [
+        MessageTextInput(
+            name="rss_url",
+            display_name="RSS Feed URL",
+            info="URL of the RSS feed to parse.",
+            tool_mode=True,
+            input_types=[],
+        )
+    ]
+
+    outputs = [Output(name="articles", display_name="Articles", method="read_rss")]
+
+    def read_rss(self) -> DataFrame:
+        try:
+            response = requests.get(self.rss_url, timeout=5)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "xml")
+            items = soup.find_all("item")
+        except (requests.RequestException, ValueError) as e:
+            self.status = f"Failed to fetch RSS: {e}"
+            return DataFrame(pd.DataFrame([{"title": "Error", "link": "", "published": "", "summary": str(e)}]))
+
+        articles = [
+            {
+                "title": item.title.text if item.title else "",
+                "link": item.link.text if item.link else "",
+                "published": item.pubDate.text if item.pubDate else "",
+                "summary": item.description.text if item.description else "",
+            }
+            for item in items
+        ]
+
+        df_articles = pd.DataFrame(articles)
+        logger.info(f"Fetched {len(df_articles)} articles.")
+        return DataFrame(df_articles)
