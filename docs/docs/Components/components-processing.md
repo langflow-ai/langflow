@@ -240,15 +240,15 @@ The component supports the following operations:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The Data object to operate on. |
+| data | Data | The [Data](/concepts-objects#data-object) object to operate on. |
 | operations | Operations | The operation to perform on the data. |
-| select_keys_input | Select Keys | List of keys to select from the data. |
-| filter_key | Filter Key | Key to filter by. |
+| select_keys_input | Select Keys | A list of keys to select from the data. |
+| filter_key | Filter Key | The key to filter by. |
 | operator | Comparison Operator | The operator to apply for comparing values. |
-| filter_values | Filter Values | List of values to filter by. |
-| append_update_data | Append or Update | Data to append or update the existing data with. |
-| remove_keys_input | Remove Keys | List of keys to remove from the data. |
-| rename_keys_input | Rename Keys | List of keys to rename in the data. |
+| filter_values | Filter Values | A list of values to filter by. |
+| append_update_data | Append or Update | The data to append or update the existing data with. |
+| remove_keys_input | Remove Keys | A list of keys to remove from the data. |
+| rename_keys_input | Rename Keys | A list of keys to rename in the data. |
 
 **Outputs**
 
