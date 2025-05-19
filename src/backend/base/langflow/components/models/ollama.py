@@ -316,7 +316,7 @@ class ChatOllamaComponent(LCModelComponent):
                     logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
 
                     if self.DESIRED_CAPABILITY in capabilities and (
-                        not self.tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
+                        not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
                     ):
                         model_ids.append(model_name)
 
