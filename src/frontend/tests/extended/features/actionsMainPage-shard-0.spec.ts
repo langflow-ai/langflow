@@ -35,6 +35,9 @@ test(
     await page.getByTestId("icon-ChevronLeft").last().click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
+    await page.getByText("Export").first().isVisible();
+    await page.getByTestId("modal-export-button").isVisible();
+    await page.getByTestId("modal-export-button").click();
     await expect(page.getByText(/.*exported successfully/)).toBeVisible({
       timeout: 10000,
     });
@@ -42,6 +45,9 @@ test(
     await page.getByText("Flows", { exact: true }).click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
+    await page.getByText("Export").first().isVisible();
+    await page.getByTestId("modal-export-button").isVisible();
+    await page.getByTestId("modal-export-button").click();
     await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
       timeout: 10000,
     });
