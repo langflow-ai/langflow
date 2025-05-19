@@ -11,7 +11,7 @@ export default function NodeOutputs({
   isToolMode,
   showHiddenOutputs,
 }) {
-  if (!outputs.length) return null;
+  if (!outputs?.length) return null;
 
   return outputs?.map((output, idx) => (
     <OutputParameter
