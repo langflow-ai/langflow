@@ -124,6 +124,10 @@ dependencies = [
     "opik>=1.6.3",
     "openai>=1.68.2",
     "twelvelabs>=0.4.7",
+    "opentelemetry-instrumentation-langchain>=0.33.0",
+    "opentelemetry-exporter-otlp>=1.30.0",
+    "opentelemetry-sdk>=1.30.0",
+    "opentelemetry-api>=1.30.0",
 ]
 
 [dependency-groups]
