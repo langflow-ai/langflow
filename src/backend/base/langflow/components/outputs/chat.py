@@ -1,6 +1,8 @@
-import json
 from collections.abc import Generator
 from typing import Any
+
+import orjson
+from fastapi.encoders import jsonable_encoder
 
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
@@ -120,8 +122,7 @@ class ChatOutput(ChatComponent):
     async def message_response(self) -> Message:
         # First convert the input to string if needed
         text = self.convert_to_string()
-        if isinstance(text, list):
-            text = json.dumps(text, indent=2)
+
         # Get source properties
         source, icon, display_name, source_id = self.get_properties_from_source_component()
         background_color = self.background_color
@@ -179,6 +180,15 @@ class ChatOutput(ChatComponent):
             msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
             raise TypeError(msg)
 
+    def _serialize_data(self, data: Data) -> str:
+        """Serialize Data object to JSON string."""
+        # Convert data.data to JSON-serializable format
+        serializable_data = jsonable_encoder(data.data)
+        # Serialize with orjson, enabling pretty printing with indentation
+        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
+        # Convert bytes to string and wrap in Markdown code blocks
+        return "```json\n" + json_bytes.decode("utf-8") + "\n```"
+
     def _safe_convert(self, data: Any) -> str:
         """Safely convert input data to string."""
         try:
@@ -187,7 +197,7 @@ class ChatOutput(ChatComponent):
             if isinstance(data, Message):
                 return data.get_text()
             if isinstance(data, Data):
-                return "```json\n" + json.dumps(data.data, indent=4) + "\n```"
+                return self._serialize_data(data)
             if isinstance(data, DataFrame):
                 if self.clean_data:
                     # Remove empty rows
