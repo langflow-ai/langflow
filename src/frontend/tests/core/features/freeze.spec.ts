@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { selectOutput } from "../../utils/select-outputs";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -112,41 +113,26 @@ test(
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 2);
 
-    const selectOutput = async (inputId: string, outputId: string) => {
-      // Get the input handle element
-      const inputHandle = await page.getByTestId(inputId);
-
-      // If input handle is visible, click it directly
-      if (await inputHandle.isVisible()) {
-        await inputHandle.nth(0).click();
-        await page.getByTestId(outputId).click();
-      } else {
-        // Otherwise find and click the corresponding output handle
-        const outputSelector = inputId.replace("handle", "output");
-        const outputHandle = await page.getByTestId(outputSelector);
-
-        // Click both handles to establish connection
-        await outputHandle.click();
-        await page.getByTestId(outputId).click();
-      }
-    };
-
     await selectOutput(
+      page,
       "handle-urlcomponent-shownode-data-right",
       "handle-splittext-shownode-data or dataframe-left",
     );
 
     await selectOutput(
+      page,
       "handle-textinput-shownode-message-right",
       "handle-splittext-shownode-separator-left",
     );
 
     await selectOutput(
+      page,
       "handle-splittext-shownode-chunks-right",
       "handle-parsedata-shownode-data-left",
     );
 
     await selectOutput(
+      page,
       "handle-parsedata-shownode-message-right",
       "handle-chatoutput-shownode-text-left",
     );

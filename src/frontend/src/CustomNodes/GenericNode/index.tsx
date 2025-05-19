@@ -308,7 +308,7 @@ function GenericNode({
           id={id}
           colors={colors}
           colorName={colorNames}
-          title={output.name}
+          title={output.display_name ?? output.name}
           tooltipTitle={output.display_name || output.name}
           index={outputIndex}
           outputProxy={output.proxy}
