@@ -14,8 +14,8 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import ExportModal from "@/modals/exportModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
+import { downloadFlow } from "@/utils/reactflowUtils";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useEffect, useState } from "react";
@@ -87,6 +87,15 @@ const ListComponent = ({
       ? parseInt(flowData.gradient)
       : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;
+
+  const handleExport = () => {
+    if (flowData.is_component) {
+      downloadFlow(flowData, flowData.name, flowData.description);
+      setSuccessData({ title: `${flowData.name} exported successfully` });
+    } else {
+      setOpenExportModal(true);
+    }
+  };
 
   const [icon, setIcon] = useState<string>("");
 
@@ -195,12 +204,9 @@ const ListComponent = ({
               <DropdownComponent
                 flowData={flowData}
                 setOpenDelete={setOpenDelete}
-                setOpenExportModal={setOpenExportModal}
+                handleExport={handleExport}
                 handleEdit={() => {
                   setOpenSettings(true);
-                }}
-                handlePlaygroundClick={() => {
-                  // handlePlaygroundClick();
                 }}
               />
             </DropdownMenuContent>

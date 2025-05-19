@@ -8,15 +8,14 @@ import useSelectOptionsChange from "../../hooks/use-select-options-change";
 type DropdownComponentProps = {
   flowData: FlowType;
   setOpenDelete: (open: boolean) => void;
-  setOpenExportModal: (open: boolean) => void;
-  handlePlaygroundClick?: () => void;
+  handleExport: () => void;
   handleEdit: () => void;
 };
 
 const DropdownComponent = ({
   flowData,
   setOpenDelete,
-  setOpenExportModal,
+  handleExport,
   handleEdit,
 }: DropdownComponentProps) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -35,7 +34,7 @@ const DropdownComponent = ({
     [flowData.id],
     setErrorData,
     setOpenDelete,
-    setOpenExportModal,
+    handleExport,
     duplicateFlow,
     handleEdit,
   );

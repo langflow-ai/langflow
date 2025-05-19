@@ -4,7 +4,7 @@ const useSelectOptionsChange = (
   selectedFlowsComponentsCards: string[] | undefined,
   setErrorData: (data: { title: string; list: string[] }) => void,
   setOpenDelete: (value: boolean) => void,
-  setOpenExportModal: (value: boolean) => void,
+  handleExport: () => void,
   handleDuplicate: () => void,
   handleEdit: () => void,
 ) => {
@@ -23,7 +23,7 @@ const useSelectOptionsChange = (
       } else if (action === "duplicate") {
         handleDuplicate();
       } else if (action === "export") {
-        setOpenExportModal(true);
+        handleExport();
       } else if (action === "edit") {
         handleEdit();
       }
@@ -34,7 +34,7 @@ const useSelectOptionsChange = (
       setOpenDelete,
       handleDuplicate,
       handleEdit,
-      setOpenExportModal,
+      handleExport,
     ],
   );
 
