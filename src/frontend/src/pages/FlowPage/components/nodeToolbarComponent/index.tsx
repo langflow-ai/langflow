@@ -79,8 +79,6 @@ const NodeToolbarComponent = memo(
     const updateNodeInternals = useUpdateNodeInternals();
 
     const paste = useFlowStore((state) => state.paste);
-    const nodes = useFlowStore((state) => state.nodes);
-    const edges = useFlowStore((state) => state.edges);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
@@ -200,8 +198,6 @@ const NodeToolbarComponent = memo(
           data.id,
           updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
           data.node!.template,
-          nodes,
-          edges,
           setNodes,
           setEdges,
           data.node?.outputs,
@@ -213,8 +209,6 @@ const NodeToolbarComponent = memo(
       data.node?.flow,
       data.node?.template,
       data.node?.outputs,
-      nodes,
-      edges,
       setNodes,
       setEdges,
       takeSnapshot,
@@ -307,6 +301,7 @@ const NodeToolbarComponent = memo(
 
     const handleSelectChange = useCallback(
       (event) => {
+        let nodes;
         setSelectedValue(event);
 
         switch (event) {
@@ -356,10 +351,12 @@ const NodeToolbarComponent = memo(
             updateNode();
             break;
           case "copy":
+            nodes = useFlowStore.getState().nodes;
             const node = nodes.filter((node) => node.id === data.id);
             setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
             break;
           case "duplicate":
+            nodes = useFlowStore.getState().nodes;
             paste(
               {
                 nodes: [nodes.find((node) => node.id === data.id)!],
