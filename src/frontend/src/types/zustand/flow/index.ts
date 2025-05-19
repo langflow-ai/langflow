@@ -190,10 +190,18 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    error?: string[],
+  ) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
-    [key: string]: { status: BuildStatus; timestamp?: string };
+    [key: string]: {
+      status: BuildStatus;
+      timestamp?: string;
+      error?: string[];
+    };
   };
   updateFlowPool: (
     nodeId: string,
