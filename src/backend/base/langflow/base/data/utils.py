@@ -1,8 +1,8 @@
+import re
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
 from pathlib import Path
-import re
 
 import chardet
 import orjson
@@ -182,14 +182,12 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool, original_fil
             parts = str(path).split("/")
             if len(parts) >= 2:
                 original_filename = parts[-1]
-                if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]+$', original_filename):
+                if re.match(
+                    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]+$", original_filename
+                ):
                     pass
 
-    return Data(data={
-        "file_path": file_path,
-        "text": text,
-        "original_filename": original_filename
-    })
+    return Data(data={"file_path": file_path, "text": text, "original_filename": original_filename})
 
 
 # ! Removing unstructured dependency until

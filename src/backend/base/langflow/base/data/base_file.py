@@ -1,23 +1,23 @@
+import asyncio
+import os
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
-import os
-import asyncio
 
 import pandas as pd
+from platformdirs import user_cache_dir
+from sqlmodel import select
 
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.services.deps import get_db_service
 from langflow.services.database.models.file import File as UserFile
-from sqlmodel import select
-from platformdirs import user_cache_dir
+from langflow.services.deps import get_db_service
 
 
 class BaseFileComponent(Component, ABC):
@@ -505,29 +505,32 @@ class BaseFileComponent(Component, ABC):
                 self._unpack_bundle(path, temp_dir_path)
                 subpaths = list(temp_dir_path.iterdir())
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
-                
+
                 # Get the original filename for the archive
                 archive_original_name = self.get_original_filename(str(path))
-                
+
                 # Create new data objects with archive metadata
                 archive_data = []
                 for sub_path in subpaths:
                     # Skip macOS-specific hidden files
-                    if sub_path.name.startswith('._'):
+                    if sub_path.name.startswith("._"):
                         continue
-                        
+
                     # Create a new Data object with archive metadata
                     base_data = data[0].data if data else {}
-                    
+
                     # Get the original filename from the database
                     try:
-                        from langflow.services.deps import get_db_service
-                        from langflow.services.database.models.file import File as UserFile
                         from sqlmodel import select
+
+                        from langflow.services.database.models.file import File as UserFile
+                        from langflow.services.deps import get_db_service
+
                         db = get_db_service()
                         # Convert absolute path to relative path
                         cache_root = user_cache_dir("langflow", "langflow")
                         relative_path = os.path.relpath(str(sub_path), start=cache_root)
+
                         async def get_filename():
                             async with db.with_session() as session:
                                 stmt = select(UserFile).where(UserFile.path == relative_path)
@@ -538,18 +541,21 @@ class BaseFileComponent(Component, ABC):
                                     extension = os.path.splitext(file_record.path)[1]
                                     return file_record.name + extension
                             return None
+
                         original_filename = asyncio.run(get_filename())
-                    except Exception as e:
+                    except Exception:
                         original_filename = sub_path.name
-                    
-                    new_data = Data(data={
-                        **base_data,
-                        "archive_name": archive_original_name,
-                        "archive_path": str(path),
-                        "original_filename": original_filename
-                    })
+
+                    new_data = Data(
+                        data={
+                            **base_data,
+                            "archive_name": archive_original_name,
+                            "archive_path": str(path),
+                            "original_filename": original_filename,
+                        }
+                    )
                     archive_data.append(new_data)
-                
+
                 collected_files.extend(
                     [
                         BaseFileComponent.BaseFile(
@@ -558,7 +564,7 @@ class BaseFileComponent(Component, ABC):
                             delete_after_processing=delete_after_processing,
                         )
                         for sub_path in subpaths
-                        if not sub_path.name.startswith('._')  # Skip macOS hidden files
+                        if not sub_path.name.startswith("._")  # Skip macOS hidden files
                     ]
                 )
             else:
@@ -663,7 +669,7 @@ class BaseFileComponent(Component, ABC):
             # Convert absolute path to relative path
             cache_root = user_cache_dir("langflow", "langflow")
             relative_path = os.path.relpath(file_path, start=cache_root)
-            
+
             async def get_filename():
                 db = get_db_service()
                 async with db.with_session() as session:
@@ -681,6 +687,6 @@ class BaseFileComponent(Component, ABC):
                 # Fallback to the UUID-based filename if database lookup fails
                 return os.path.basename(file_path)
             return original_filename
-        except Exception as e:
+        except Exception:
             # Fallback to the UUID-based filename if there's an error
             return os.path.basename(file_path)

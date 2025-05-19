@@ -1,6 +1,4 @@
 from langchain_unstructured import UnstructuredLoader
-import os
-import asyncio
 
 from langflow.base.data import BaseFileComponent
 from langflow.inputs import DropdownInput, MessageTextInput, NestedDictInput, SecretStrInput

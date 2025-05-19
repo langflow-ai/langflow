@@ -1,10 +1,12 @@
+import asyncio
+import os
+
+from platformdirs import user_cache_dir
+
 from langflow.base.data import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import BoolInput, IntInput
 from langflow.schema import Data
-import asyncio
-import os
-from platformdirs import user_cache_dir
 
 
 class FileComponent(BaseFileComponent):
@@ -57,7 +59,7 @@ class FileComponent(BaseFileComponent):
             """Processes a single file and returns its Data object."""
             try:
                 # Skip macOS-specific hidden files
-                if os.path.basename(file_path).startswith('._'):
+                if os.path.basename(file_path).startswith("._"):
                     return None
 
                 # Try to get original_filename from the BaseFile's data
@@ -77,13 +79,16 @@ class FileComponent(BaseFileComponent):
                 # If we still don't have the original filename, try to get it from the database
                 if not original_filename:
                     try:
-                        from langflow.services.deps import get_db_service
-                        from langflow.services.database.models.file import File as UserFile
                         from sqlmodel import select
+
+                        from langflow.services.database.models.file import File as UserFile
+                        from langflow.services.deps import get_db_service
+
                         db = get_db_service()
                         # Convert absolute path to relative path
                         cache_root = user_cache_dir("langflow", "langflow")
                         relative_path = os.path.relpath(file_path, start=cache_root)
+
                         async def get_filename():
                             async with db.with_session() as session:
                                 stmt = select(UserFile).where(UserFile.path == relative_path)
@@ -94,11 +99,14 @@ class FileComponent(BaseFileComponent):
                                     extension = os.path.splitext(file_record.path)[1]
                                     return file_record.name + extension
                             return None
+
                         original_filename = asyncio.run(get_filename())
-                    except Exception as e:
+                    except Exception:
                         pass
 
-                result = parse_text_file_to_data(file_path, silent_errors=silent_errors, original_filename=original_filename)
+                result = parse_text_file_to_data(
+                    file_path, silent_errors=silent_errors, original_filename=original_filename
+                )
                 if result and result.data:
                     return result
             except FileNotFoundError as e:
@@ -123,14 +131,18 @@ class FileComponent(BaseFileComponent):
         if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:
             if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
-            processed_data = [process_file(str(file.path), silent_errors=self.silent_errors, base_file=file) for file in file_list]
+            processed_data = [
+                process_file(str(file.path), silent_errors=self.silent_errors, base_file=file) for file in file_list
+            ]
         else:
             self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
             # For parallel, we need to pass base_file as well, so use a lambda
             processed_data = parallel_load_data(
                 [(str(file.path), file) for file in file_list],
                 silent_errors=self.silent_errors,
-                load_function=lambda args, silent_errors: process_file(args[0], silent_errors=silent_errors, base_file=args[1]),
+                load_function=lambda args, silent_errors: process_file(
+                    args[0], silent_errors=silent_errors, base_file=args[1]
+                ),
                 max_concurrency=concurrency,
             )
 

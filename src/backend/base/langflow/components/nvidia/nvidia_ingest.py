@@ -1,7 +1,4 @@
 from urllib.parse import urlparse
-from pathlib import Path
-import os
-import asyncio
 
 from langflow.base.data import BaseFileComponent
 from langflow.io import (
