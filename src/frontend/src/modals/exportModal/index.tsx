@@ -27,6 +27,7 @@ const ExportModal = forwardRef(
     ref,
   ): JSX.Element => {
     const version = useDarkStore((state) => state.version);
+    const setSuccessData = useAlertStore((state) => state.setSuccessData);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
     const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
@@ -85,7 +86,11 @@ const ExportModal = forwardRef(
               }),
               name!,
               description,
-            );
+            ).then(() => {
+              setSuccessData({
+                title: "Flow exported successfully",
+              });
+            });
           setOpen(false);
           track("Flow Exported", { flowId: currentFlow!.id });
         }}
