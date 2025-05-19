@@ -543,6 +543,7 @@ function GenericNode({
     isOutdated,
     isUserEdited,
     selected,
+    shortcuts,
     selectedNodesCount,
     editedNameDescription,
     toggleEditNameDescription,

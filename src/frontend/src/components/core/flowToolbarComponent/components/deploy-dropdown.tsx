@@ -104,11 +104,11 @@ export default function PublishDropdown() {
           className="min-w-[300px] max-w-[400px]"
         >
           <DropdownMenuItem
-            className="group rounded-none"
+            className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}
           >
             <div
-              className="flex w-full items-center"
+              className="group-hover:bg-accent"
               data-testid="api-access-item"
             >
               <IconComponent
@@ -123,9 +123,12 @@ export default function PublishDropdown() {
             to={`/mcp/folder/${folderId}`}
             target={customMcpOpen()}
           >
-            <DropdownMenuItem className="group" onClick={() => {}}>
+            <DropdownMenuItem
+              className="deploy-dropdown-item group"
+              onClick={() => {}}
+            >
               <div
-                className="flex w-full items-center"
+                className="group-hover:bg-accent"
                 data-testid="mcp-server-item"
               >
                 <IconComponent
@@ -143,9 +146,9 @@ export default function PublishDropdown() {
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
-              className="group"
+              className="deploy-dropdown-item group"
             >
-              <div className="flex w-full items-center">
+              <div className="group-hover:bg-accent">
                 <IconComponent
                   name="Columns2"
                   className={`${groupStyle} icon-size mr-2`}
@@ -186,10 +189,10 @@ export default function PublishDropdown() {
                 >
                   <DropdownMenuItem
                     disabled={!hasIO || !isPublished}
-                    className="group flex-1"
+                    className="deploy-dropdown-item group flex-1"
                     onClick={() => {}}
                   >
-                    <div className="flex w-full items-center">
+                    <div className="group-hover:bg-accent">
                       <IconComponent
                         name="Globe"
                         className={`${groupStyle} icon-size mr-2`}
