@@ -17,7 +17,6 @@ import {
 } from "@xyflow/react";
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
-import { FLOW_BUILD_SUCCESS_ALERT } from "../constants/alerts_constants";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
@@ -594,9 +593,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   pastBuildFlowParams: null,
-  buildError: null,
-  setBuildError: (buildError: { id?: string; error: string[] } | null) => {
-    set({ buildError });
+  buildInfo: null,
+  setBuildInfo: (buildInfo: { error?: string[]; success?: boolean } | null) => {
+    set({ buildInfo });
   },
   buildFlow: async ({
     startNodeId,
@@ -628,7 +627,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         stream,
         eventDelivery,
       },
-      buildError: null,
+      buildInfo: null,
     });
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
@@ -649,7 +648,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     if (error) {
       get().setIsBuilding(false);
-      get().setBuildError({ error: errors });
+      get().setBuildInfo({ error: errors, success: false });
       throw new Error("Invalid components");
     }
 
@@ -661,7 +660,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
-        get().setBuildError({ error: errors });
+        get().setBuildInfo({ error: errors, success: false });
         get().setIsBuilding(false);
         const ids = errorsObjs.map((obj) => obj.id).flat();
 
@@ -783,14 +782,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const nodeId = startNodeId || stopNodeId;
         if (!silent) {
           if (allNodesValid) {
-            setSuccessData({
-              title: nodeId
-                ? `${
-                    get().nodes.find((node) => node.id === nodeId)?.data.node
-                      ?.display_name
-                  } built successfully`
-                : FLOW_BUILD_SUCCESS_ALERT,
-            });
+            get().setBuildInfo({ success: true });
           }
         }
         get().updateEdgesRunningByNodes(
@@ -818,7 +810,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           get().nodes.map((n) => n.id),
           false,
         );
-        get().setBuildError({ id: idList[0], error: list });
+        get().setBuildInfo({ error: list, success: false });
         get().setIsBuilding(false);
         get().buildController.abort();
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
@@ -1001,7 +993,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       lastCopiedSelection: null,
       verticesBuild: null,
       flowBuildStatus: {},
-      buildError: null,
+      buildInfo: null,
       isBuilding: false,
       isPending: true,
       positionDictionary: {},

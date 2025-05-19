@@ -156,8 +156,10 @@ export type FlowStoreType = {
   unselectAll: () => void;
   playgroundPage: boolean;
   setPlaygroundPage: (playgroundPage: boolean) => void;
-  buildError: { id?: string; error: string[] } | null;
-  setBuildError: (buildError: { id?: string; error: string[] } | null) => void;
+  buildInfo: { error?: string[]; success?: boolean } | null;
+  setBuildInfo: (
+    buildInfo: { error?: string[]; success?: boolean } | null,
+  ) => void;
   pastBuildFlowParams: {
     startNodeId?: string;
     stopNodeId?: string;
