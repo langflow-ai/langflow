@@ -246,20 +246,69 @@ function GenericNode({
     callback: toggleEditNameDescription,
   });
 
+  const { shownOutputs, hiddenOutputs } = useMemo(
+    () => ({
+      shownOutputs:
+        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
+      hiddenOutputs:
+        data.node?.outputs?.filter((output) => output.hidden) ?? [],
+    }),
+    [data.node?.outputs],
+  );
+
+  const [selectedOutput, setSelectedOutput] = useState(shownOutputs[0]);
+
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
-      return outputs?.map((output, idx) => (
+      const output = outputs.find(
+        (output) => output.name === selectedOutput.name,
+      );
+      const idx =
+        data.node!.outputs?.findIndex((out) => out.name === output.name) ?? 0;
+
+      const isLoop = output?.allows_loop ?? false;
+
+      return isLoop ? (
+        outputs?.map((output, idx) => (
+          <MemoizedOutputParameter
+            key={`${key}-${output.name}-${idx}`}
+            output={output}
+            idx={
+              data.node!.outputs?.findIndex(
+                (out) => out.name === output.name,
+              ) ?? idx
+            }
+            lastOutput={idx === outputs.length - 1}
+            data={data}
+            types={types}
+            selected={selected}
+            showNode={showNode}
+            isToolMode={isToolMode}
+            showHiddenOutputs={showHiddenOutputs}
+            handleSelectOutput={() => {}}
+            hidden={
+              key === "hidden"
+                ? showHiddenOutputs
+                  ? output.hidden
+                  : true
+                : false
+            }
+          />
+        ))
+      ) : (
         <MemoizedOutputParameter
           key={`${key}-${output.name}-${idx}`}
           output={output}
+          outputs={outputs}
           idx={
             data.node!.outputs?.findIndex((out) => out.name === output.name) ??
             idx
           }
-          lastOutput={idx === outputs.length - 1}
+          lastOutput={true}
           data={data}
           types={types}
           selected={selected}
+          handleSelectOutput={setSelectedOutput}
           showNode={showNode}
           isToolMode={isToolMode}
           showHiddenOutputs={showHiddenOutputs}
@@ -271,19 +320,17 @@ function GenericNode({
               : false
           }
         />
-      ));
+      );
     },
-    [data, types, selected, showNode, isToolMode, showHiddenOutputs],
-  );
-
-  const { shownOutputs, hiddenOutputs } = useMemo(
-    () => ({
-      shownOutputs:
-        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
-      hiddenOutputs:
-        data.node?.outputs?.filter((output) => output.hidden) ?? [],
-    }),
-    [data.node?.outputs],
+    [
+      data,
+      types,
+      selected,
+      showNode,
+      isToolMode,
+      showHiddenOutputs,
+      selectedOutput,
+    ],
   );
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =

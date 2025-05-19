@@ -166,12 +166,14 @@ function NodeOutputField({
   index,
   type,
   outputName,
+  outputs,
   outputProxy,
   lastOutput,
   colorName,
   isToolMode = false,
   showHiddenOutputs,
   hidden,
+  handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -403,13 +405,6 @@ function NodeOutputField({
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
           )}
-          <HideShowButton
-            disabled={disabledOutput}
-            onClick={() => handleUpdateOutputHide()}
-            hidden={!!hidden}
-            isToolMode={isToolMode}
-            title={title}
-          />
         </div>
 
         {data.node?.frozen && (
@@ -422,6 +417,7 @@ function NodeOutputField({
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
               proxy={outputProxy}
+              outputs={outputs}
               idx={index}
               types={type?.split("|") ?? []}
               selected={
@@ -433,6 +429,7 @@ function NodeOutputField({
               frozen={data.node?.frozen}
               name={title ?? type}
               isToolMode={isToolMode}
+              handleSelectOutput={handleSelectOutput}
             />
           </span>
 
