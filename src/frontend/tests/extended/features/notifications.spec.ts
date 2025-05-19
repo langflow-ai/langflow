@@ -39,7 +39,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=Running components", {
+    await page.waitForSelector("text=Running", {
       timeout: 30000,
       state: "visible",
     });
@@ -52,9 +52,7 @@ test(
     const trashIcon = page.getByTestId("icon-Trash2").last();
     await expect(trashIcon).toBeVisible();
 
-    const runningComponentsText = page
-      .getByText("Running components", { exact: true })
-      .last();
+    const runningComponentsText = page.getByText("Running").last();
     await expect(runningComponentsText).toBeVisible();
 
     const builtSuccessfullyText = page
