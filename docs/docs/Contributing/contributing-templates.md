@@ -20,7 +20,7 @@ Follow these steps to submit your template:
 
 ## Required items for template submission
 
-Follow these guidelines when submitting your template.
+Include the following items and follow these guidelines when submitting your template.
 
 ### Name
 The template name must be concise and contain no more than three words.
