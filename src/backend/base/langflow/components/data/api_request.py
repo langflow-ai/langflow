@@ -29,13 +29,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_settings_service
 from langflow.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
 
-# Get settings using the service
 
-# Define mode configurations
-MODE_CONFIG = {
-    "URL": {"is_list": False, "log_msg": "setting URL mode fields"},
-    "cURL": {"is_list": False, "log_msg": "setting cURL mode fields"},
-}
 
 # Define fields for each mode
 MODE_FIELDS = {
