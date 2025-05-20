@@ -15,10 +15,9 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").first().click();
+    await page.getByTestId("flow_name").click();
     await page
-      .getByPlaceholder("Flow name")
+      .getByTestId("input-flow-name")
       .fill(
         "Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test",
       );
@@ -39,8 +38,7 @@ test(
 
     await page.getByText("Changes saved successfully").isVisible();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").first().click();
+    await page.getByTestId("flow_name").click();
 
     const flowName = await page.getByPlaceholder("Flow name").inputValue();
     const flowDescription = await page

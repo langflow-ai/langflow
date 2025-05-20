@@ -98,6 +98,7 @@ export default function FlowSettingsComponent({
         <Button
           variant="default"
           size="sm"
+          data-testid="save-flow-settings"
           onClick={handleClick}
           loading={isSaving}
           disabled={disableSave}

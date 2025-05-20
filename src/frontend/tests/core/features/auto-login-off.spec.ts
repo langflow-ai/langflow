@@ -146,10 +146,9 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
+    await page.getByTestId("flow_name").click();
 
-    await page.getByPlaceholder("Flow Name").fill(randomFlowName);
+    await page.getByTestId("input_flow_name").fill(randomFlowName);
 
     await page.getByText("Save", { exact: true }).click();
 
@@ -226,12 +225,11 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
+    await page.getByTestId("flow_name").click();
 
-    await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
+    await page.getByTestId("input-flow-name").fill(secondRandomFlowName);
 
-    await page.getByText("Save", { exact: true }).click();
+    await page.getByText("Save", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,

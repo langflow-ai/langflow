@@ -13,9 +13,8 @@ test("user must be able to move flow from folder", async ({ page }) => {
     timeout: 3000,
   });
 
-  await page.getByTestId("flow_menu_trigger").click();
-  await page.getByText("Edit Details").first().click();
-  await page.getByPlaceholder("Flow name").fill(randomName);
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("input-flow-name").fill(randomName);
 
   await page.getByTestId("save-flow-settings").click();
 

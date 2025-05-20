@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "flow state should be properly cleaned up between user sessions",
@@ -110,10 +109,9 @@ test(
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-    await page.getByPlaceholder("Flow Name").fill(userAFlowName);
-    await page.getByText("Save", { exact: true }).click();
+    await page.getByTestId("flow_name").click();
+    await page.getByTestId("input-flow-name").fill(userAFlowName);
+    await page.getByText("Save", { exact: true }).last().click();
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 30000,
     });
