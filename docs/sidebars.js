@@ -114,7 +114,7 @@ module.exports = {
         {
           type: "doc",
           id: "Deployment/deployment-caddyfile",
-          label: "Docker with a Caddy reverse proxy"
+          label: "Deploy Langflow on a remote server"
         },
         {
           type: "category",

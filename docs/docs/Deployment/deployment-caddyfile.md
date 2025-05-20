@@ -1,9 +1,10 @@
 ---
-title: Deploy Langflow with a Caddyfile
+title: Deploy Langflow on a remote server
 slug: /deployment-caddyfile
 ---
 
-Deploy a Langflow server to the public internet using a Docker container served with a Caddy reverse proxy.
+Learn how to deploy Langflow on your own remote server with secure web access.
+This guide walks you through setting up Langflow on a remote server using [Docker](https://docs.docker.com/) and configuring secure web access with [Caddy](https://caddyserver.com/docs/).
 
 :::tip
 The [host-langflow](https://github.com/datastax/host-langflow) repository offers pre-built copies of this `docker-compose.yml` and `Caddyfile`, if you prefer to fork the repository to your server.
