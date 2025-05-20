@@ -21,6 +21,7 @@ To upload a file from your local machine:
 
 
 You can upload multiple files in a single action.
+Hover over a file's icon to click the checkbox.
 Files are available to flows stored in different projects.
 
 Files stored in **My Files** can be renamed, downloaded, duplicated, or deleted.
