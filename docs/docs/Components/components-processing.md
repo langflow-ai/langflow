@@ -621,8 +621,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 </details>
 
-
-## Combine text
+### Combine text
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
