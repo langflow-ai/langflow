@@ -284,9 +284,17 @@ class LCModelComponent(Component):
             # Ensure component_inputs is a list of the expected types
             if not isinstance(component_inputs, list):
                 component_inputs = []
-            models_module = importlib.import_module("langflow.components.models")
-            component_class = getattr(models_module, str(module_name))
-            component = component_class()
+
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+                )
+                warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+                models_module = importlib.import_module("langflow.components.models")
+                component_class = getattr(models_module, str(module_name))
+                component = component_class()
 
             return self.build_llm_model_from_inputs(component, component_inputs)
         except Exception as e:
