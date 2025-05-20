@@ -29,8 +29,6 @@ from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_settings_service
 from langflow.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
 
-
-
 # Define fields for each mode
 MODE_FIELDS = {
     "URL": [
