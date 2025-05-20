@@ -23,9 +23,12 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { VertexBuildTypeAPI } from "../../types/api";
+import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import { checkHasToolMode } from "../../utils/reactflowUtils";
+import {
+  checkHasToolMode,
+  scapedJSONStringfy,
+} from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -91,6 +94,7 @@ function GenericNode({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const edges = useFlowStore((state) => state.edges);
+  const setEdges = useFlowStore((state) => state.setEdges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
@@ -257,14 +261,36 @@ function GenericNode({
     [data.node?.outputs],
   );
 
-  const [selectedOutput, setSelectedOutput] = useState(shownOutputs[0]);
+  const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
+    null,
+  );
 
   const handleSelectOutput = useCallback(
     (output) => {
       setSelectedOutput(output);
+      // Remove any edges connected to this output handle
+      const sourceHandleId = scapedJSONStringfy({
+        output_types: [output.selected ?? output.types[0]],
+        id: data.id,
+        dataType: data.type,
+        name: output.name,
+      });
+
+      setEdges((eds) =>
+        eds.filter((edge) => edge.sourceHandle !== sourceHandleId),
+      );
+
       setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);
         if (newNode.data.node?.outputs) {
+          // First, clear any previous selections
+          newNode.data.node.outputs.forEach((out) => {
+            if (out.selected) {
+              out.selected = undefined;
+            }
+          });
+
+          // Then set the new selection
           const outputIndex = newNode.data.node.outputs.findIndex(
             (o) => o.name === output.name,
           );
@@ -280,14 +306,17 @@ function GenericNode({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, setNode, updateNodeInternals],
+    [data.id, setNode, setEdges, updateNodeInternals],
   );
 
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
-      const output = outputs.find(
-        (output) => output.name === selectedOutput.name,
-      );
+      const output = selectedOutput
+        ? outputs.find((output) => output.name === selectedOutput.name)
+        : outputs[0];
+
+      if (!output) return null;
+
       const idx =
         data.node!.outputs?.findIndex((out) => out.name === output.name) ?? 0;
 
