@@ -50,7 +50,7 @@ withEventDeliveryModes(
       timeout: 30000,
     });
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByPlaceholder(
         "No chat input variables found. Click to run your flow.",

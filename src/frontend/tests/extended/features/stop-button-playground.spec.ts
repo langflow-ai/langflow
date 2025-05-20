@@ -109,7 +109,7 @@ class CustomComponent(Component):
 
     await page.getByTestId("button_run_chat output").click();
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-stop"]', {
       timeout: 30000,

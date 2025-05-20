@@ -303,7 +303,7 @@ test(
       .first()
       .click();
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
@@ -369,7 +369,9 @@ await page.getByRole("button", { name: "Playground", exact: true }).click();
         timeout: 1000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
-  await page.getByRole("button", { name: "Playground", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Playground", exact: true })
+        .click();
       await page.getByTestId("icon-MoreHorizontal").last().click();
       await page.getByText("Delete", { exact: true }).last().click();
 

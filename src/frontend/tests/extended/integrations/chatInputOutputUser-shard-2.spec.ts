@@ -24,7 +24,7 @@ test(
 
     await initialGPTsetup(page);
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
@@ -56,7 +56,7 @@ await page.getByRole("button", { name: "Playground", exact: true }).click();
       .fill(
         "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
       );
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
@@ -83,7 +83,7 @@ await page.getByRole("button", { name: "Playground", exact: true }).click();
       .nth(0)
       .fill("TestSenderNameAI");
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

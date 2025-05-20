@@ -39,7 +39,7 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

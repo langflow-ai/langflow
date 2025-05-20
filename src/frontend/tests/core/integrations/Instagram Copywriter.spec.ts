@@ -50,7 +50,7 @@ test(
       timeout: 15000,
     });
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByText("No input message provided.", { exact: true })
       .last()

@@ -71,7 +71,7 @@ withEventDeliveryModes(
       timeout: 15000,
     });
 
-await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector("text=default session", {
       timeout: 30000,
