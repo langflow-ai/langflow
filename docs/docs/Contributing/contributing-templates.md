@@ -37,7 +37,7 @@ For example:```json  "description": "Auto-generate a customized blog post from i
 Use icons from the [Lucide](https://lucide.dev/icons/) icon library.
 
 ### Flow
-Only use components available in the sidebar.
+Use only the components that are available in the sidebar.
 Do not use custom components.
 Include a note to guide users. Notes accept Markdown syntax.
 A single note usually suffices.
