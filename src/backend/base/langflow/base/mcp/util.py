@@ -12,6 +12,7 @@ import aiofiles
 import httpx
 from anyio import Path
 from httpx import codes as httpx_codes
+from httpx_sse import aconnect_sse
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
@@ -339,7 +340,7 @@ class MCPSseClient:
         self.retry_delay = 1.0  # seconds
 
     async def validate_url(self, url: str | None) -> tuple[bool, str]:
-        """Validate the SSE URL before attempting connection."""
+        """Validate the SSE URL before attempting connection using httpx-sse."""
         try:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
@@ -347,17 +348,17 @@ class MCPSseClient:
 
             async with httpx.AsyncClient() as client:
                 try:
-                    # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
-                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
-                        return False, f"Server returned error status: {response.status_code}"
+                    # First try a GET request to check if server is reachable
+                    async with aconnect_sse(client, "GET", url, timeout=5.0):
+                        return True, ""
 
                 except httpx.TimeoutException:
                     return False, "Connection timed out. Server may be down or unreachable."
                 except httpx.NetworkError:
                     return False, "Network error. Could not reach the server."
-                else:
-                    return True, ""
+                except Exception as e:
+                    msg = f"SSE connection error: {e!s}"
+                    raise ConnectionError(msg) from e
 
         except (httpx.HTTPError, ValueError, OSError) as e:
             return False, f"URL validation error: {e!s}"
