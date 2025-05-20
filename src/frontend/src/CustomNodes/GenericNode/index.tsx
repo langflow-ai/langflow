@@ -625,16 +625,17 @@ function GenericNode({
               </div>
               {!showHiddenOutputs &&
                 shownOutputs &&
-                renderOutputs(shownOutputs, "shown")}
+                renderOutputs(data.node!.outputs, "shown")}
 
-              <div
+              {/* <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
                 <div className="block">
-                  {renderOutputs(data.node!.outputs, "hidden")}
+                  {renderOutputs(hiddenOutputs, "hidden")}
                 </div>
-              </div>
-              {hiddenOutputs && hiddenOutputs.length > 0 && (
+              </div> */}
+
+              {/* {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
                   content={
                     showHiddenOutputs
@@ -657,7 +658,7 @@ function GenericNode({
                     />
                   </div>
                 </ShadTooltip>
-              )}
+              )} */}
             </>
           </div>
         )}
