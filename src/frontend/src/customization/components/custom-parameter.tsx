@@ -1,36 +1,50 @@
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import useFlowStore from "@/stores/flowStore";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { targetHandleType } from "@/types/flow";
+import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 
 export function CustomParameterComponent({
   handleOnNewValue,
   name,
   nodeId,
+  inputId,
   templateData,
   templateValue,
   editNode,
   handleNodeClass,
   nodeClass,
-  disabled,
   placeholder,
-  isToolMode,
+  isToolMode = false,
   nodeInformationMetadata,
+  proxy,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
   nodeId: string;
+  inputId: targetHandleType;
   templateData: Partial<InputFieldType>;
   templateValue: any;
   editNode: boolean;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
-  disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
+  proxy: { field: string; id: string } | undefined;
 }) {
+  const edges = useFlowStore((state) => state.edges);
+
+  let disabled =
+    edges.some(
+      (edge) =>
+        edge.targetHandle ===
+        scapedJSONStringfy(proxy ? { ...inputId, proxy } : inputId),
+    ) || isToolMode;
+
   return (
     <ParameterRenderComponent
       handleOnNewValue={handleOnNewValue}
