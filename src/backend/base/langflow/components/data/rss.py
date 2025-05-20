@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from langflow.io import IntInput, MessageTextInput, Output
 from langflow.logging import logger
 from langflow.schema import DataFrame
 
@@ -22,15 +22,31 @@ class RSSReaderComponent(Component):
             tool_mode=True,
             input_types=[],
             required=True,
-        )
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout for the RSS feed request.",
+            value=5,
+            advanced=True,
+        ),
     ]
 
     outputs = [Output(name="articles", display_name="Articles", method="read_rss")]
 
     def read_rss(self) -> DataFrame:
         try:
-            response = requests.get(self.rss_url, timeout=5)
+            response = requests.get(self.rss_url, timeout=self.timeout)
             response.raise_for_status()
+            if not response.content.strip():
+                msg = "Empty response received"
+                raise ValueError(msg)
+            # Check if the response is valid XML
+            try:
+                BeautifulSoup(response.content, "xml")
+            except Exception as e:
+                msg = f"Invalid XML response: {e}"
+                raise ValueError(msg) from e
             soup = BeautifulSoup(response.content, "xml")
             items = soup.find_all("item")
         except (requests.RequestException, ValueError) as e:
