@@ -40,7 +40,7 @@ Inspect the flow to understand how this information was extracted.
 The **Structured Output** component uses the attached **OpenAI** model component as its "brain" to extract financial data into a [DataFrame](/concepts-objects#dataframe-object) with this defined schema.
 ```text
 | Name         | Description           | Type | Multiple |
-|--------------|----------------------|------|----------|
+|--------------|-----------------------|------|----------|
 | EBITDA       | description of field  | text | False    |
 | NET_INCOME   | description of field  | text | False    |
 | GROSS_PROFIT | description of field  | text | False    |
