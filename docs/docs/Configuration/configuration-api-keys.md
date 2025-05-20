@@ -5,6 +5,7 @@ slug: /configuration-api-keys
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 Langflow provides an API key functionality that allows users to access their individual components and flows without traditional login authentication.
 
@@ -81,7 +82,7 @@ To revoke an API key, delete it from the list of keys in the **Settings** menu.
 
 1. Click your user icon, and then select **Settings**.
 2. Click **Langflow API**.
-3. Select the keys you want to delete and click the trash can icon.
+3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 This action immediately invalidates the key and prevents it from being used again.
 
