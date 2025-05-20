@@ -24,7 +24,7 @@ class DataFrameProcessor(Component):
     """A component that processes pandas DataFrames with various operations."""
 ```
 
-2. Define class attributes to provide information about your custom component:
+3. Define class attributes to provide information about your custom component:
 ```python
 from typing import Any, Dict, Optional
 import pandas as pd
@@ -46,10 +46,10 @@ class DataFrameProcessor(Component):
    * `documentation`: Link to detailed documentation.
    * `icon`: An emoji or icon identifier for visual representation.
 {/*For more information, see [Contributing bundles](/contributing-bundles#add-the-bundle-to-the-frontend-folder).*/}
-   * `priority`: Optional integer to control display order (lower numbers appear first).
+   * `priority`: Optional integer to control display order. Lower numbers appear first.
    * `name`: Optional internal identifier (defaults to class name).
 
-3. Define the component's interface by specifying its inputs, outputs, and the method that will process them. The method name must match the `method` field in your outputs list, as this is how Langflow knows which method to call to generate each output.
+4. Define the component's interface by specifying its inputs, outputs, and the method that will process them. The method name must match the `method` field in your outputs list, as this is how Langflow knows which method to call to generate each output.
 This example creates a minimal custom component skeleton.
 For more information on creating your custom component, see [Create custom Python components](/components-custom-components).
 ```python
@@ -76,17 +76,17 @@ class DataFrameProcessor(Component):
         return ...
 ```
 
-4. Save the `dataframe_processor.py` to the `src > backend > base > langflow > components` directory.
+5. Save the `dataframe_processor.py` to the `src > backend > base > langflow > components` directory.
 This example adds a **Data** component, so add it to the `/data` directory.
 
-5. Add the component dependency to `src > backend > base > langflow > components > data > __init__.py` as `from .DataFrameProcessor import DataFrameProcessor`.
+6. Add the component dependency to `src > backend > base > langflow > components > data > __init__.py` as `from .DataFrameProcessor import DataFrameProcessor`.
 You can view the [/data/__init__.py](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/components/data/__init__.py) in the Langflow repository.
 
-6. Add any new dependencies to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L20) file.
+7. Add any new dependencies to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L20) file.
 
-7. Submit documentation for your component. For this example component, you would submit documentation to the [Data components page](https://github.com/langflow-ai/langflow/blob/main/docs/docs/Components/components-data.md).
+8. Submit documentation for your component. For this example component, you would submit documentation to the [Data components page](https://github.com/langflow-ai/langflow/blob/main/docs/docs/Components/components-data.md).
 
-8. Submit your changes as a pull request. The Langflow team will review, suggest changes, and add your component to Langflow.
+9. Submit your changes as a pull request. The Langflow team will review, suggest changes, and add your component to Langflow.
 
 ## Best practices for modifying components
 
@@ -98,7 +98,7 @@ Changing the class name or the `name` attribute breaks the component for all exi
 
 Instead, do the following:
 * Change only the display name if the old name is unclear.
-* Change only the display name if functionality changes but remains related
+* Change only the display name if functionality changes but remains related.
 * If a new internal name is necessary, mark the old component as `legacy=true` and create a new component.
 
 For example:
@@ -116,7 +116,7 @@ Instead, mark fields as `deprecated` and keep them in the same location. If remo
 
 ### Maintain outdated components as legacy
 
-When updating components, create them as completely separate entities while maintaining the old component as a legacy version. Always ensure backward compatibility and never remove methods and attributes from base classes (such as `LCModelComponent`).
+When updating components, create them as completely separate entities while maintaining the old component as a legacy version. Always ensure backward compatibility and never remove methods and attributes from base classes, such as `LCModelComponent`.
 
 ### Favor asynchronous methods
 
@@ -141,23 +141,23 @@ For example:
 This pull request updates the Notify component.
 
 ## What changed
-- Added new `timeout` field to control how long the component waits for a response
-- Renamed `message` field to `notification_text` for clarity
-- Added support for async operations
-- Deprecated the `retry_count` field in favor of `max_retries`
+- Added new `timeout` field to control how long the component waits for a response.
+- Renamed `message` field to `notification_text` for clarity.
+- Added support for async operations.
+- Deprecated the `retry_count` field in favor of `max_retries`.
 
 ## Why it changed
-- `timeout` field addresses user requests for better control over wait times
-- `message` to `notification_text` change makes the field's purpose clearer
-- Async support improves performance in complex flows
-- `retry_count` to `max_retries` aligns with common retry pattern terminology
+- `timeout` field addresses user requests for better control over wait times.
+- `message` to `notification_text` change makes the field's purpose clearer.
+- Async support improves performance in complex flows.
+- `retry_count` to `max_retries` aligns with common retry pattern terminology.
 
 ## Impact on users
-- New `timeout` field is optional (defaults to 30 seconds)
-- Users will see a deprecation warning for `retry_count`
-  - Migration: Replace `retry_count` with `max_retries` in existing flows
-  - Both fields will work until version 2.0
-- No action needed for async support - it's backward compatible
+- New `timeout` field is optional (defaults to 30 seconds).
+- Users will see a deprecation warning for `retry_count`.
+  - Migration: Replace `retry_count` with `max_retries` in existing flows.
+  - Both fields will work until version 2.0.
+- No action needed for async support - it's backward compatible.
 ```
 
 </details>
