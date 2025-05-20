@@ -1,16 +1,17 @@
-import pytest
-from langflow.components.data.web_search import WebSearchComponent, DEFAULT_TIMEOUT
-from langflow.schema import DataFrame
-from tests.base import ComponentTestBaseWithoutClient
 import httpx
+import pytest
+from langflow.components.data.web_search import DEFAULT_TIMEOUT, WebSearchComponent
+from langflow.schema import DataFrame
 from langflow.services.deps import get_settings_service
+
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestWebSearchComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return WebSearchComponent()
+        return WebSearchComponent
 
     @pytest.fixture
     def default_kwargs(self):
