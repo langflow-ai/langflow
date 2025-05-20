@@ -43,11 +43,11 @@ class DataFrameProcessor(Component):
 
    * `display_name`: A user-friendly name shown in the UI.
    * `description`: A brief description of what your component does.
-   * `documentation`: Link to detailed documentation.
+   * `documentation`: A link to detailed documentation.
    * `icon`: An emoji or icon identifier for visual representation.
 {/*For more information, see [Contributing bundles](/contributing-bundles#add-the-bundle-to-the-frontend-folder).*/}
-   * `priority`: Optional integer to control display order. Lower numbers appear first.
-   * `name`: Optional internal identifier (defaults to class name).
+   * `priority`: An optional integer to control display order. Lower numbers appear first.
+   * `name`: An optional internal identifier that defaults to class name.
 
 4. Define the component's interface by specifying its inputs, outputs, and the method that will process them. The method name must match the `method` field in your outputs list, as this is how Langflow knows which method to call to generate each output.
 This example creates a minimal custom component skeleton.
