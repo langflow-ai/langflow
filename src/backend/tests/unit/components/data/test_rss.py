@@ -1,11 +1,9 @@
 from unittest.mock import Mock, patch
 
-import pandas as pd
 import pytest
-from bs4 import BeautifulSoup
+import requests
 from langflow.components.data.rss import RSSReaderComponent
 from langflow.schema import DataFrame
-import requests
 
 from tests.base import ComponentTestBaseWithoutClient
 
