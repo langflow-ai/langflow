@@ -1,6 +1,9 @@
 from collections.abc import Generator
 from typing import Any
 
+import orjson
+from fastapi.encoders import jsonable_encoder
+
 from langflow.base.io.chat import ChatComponent
 from langflow.helpers.data import safe_convert
 from langflow.inputs import BoolInput
@@ -120,6 +123,7 @@ class ChatOutput(ChatComponent):
     async def message_response(self) -> Message:
         # First convert the input to string if needed
         text = self.convert_to_string()
+
         # Get source properties
         source, icon, display_name, source_id = self.get_properties_from_source_component()
         background_color = self.background_color
@@ -176,6 +180,46 @@ class ChatOutput(ChatComponent):
             type_name = type(self.input_value).__name__
             msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
             raise TypeError(msg)
+
+    def _serialize_data(self, data: Data) -> str:
+        """Serialize Data object to JSON string."""
+        # Convert data.data to JSON-serializable format
+        serializable_data = jsonable_encoder(data.data)
+        # Serialize with orjson, enabling pretty printing with indentation
+        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
+        # Convert bytes to string and wrap in Markdown code blocks
+        return "```json\n" + json_bytes.decode("utf-8") + "\n```"
+
+    def _safe_convert(self, data: Any) -> str:
+        """Safely convert input data to string."""
+        try:
+            if isinstance(data, str):
+                return data
+            if isinstance(data, Message):
+                return data.get_text()
+            if isinstance(data, Data):
+                return self._serialize_data(data)
+            if isinstance(data, DataFrame):
+                if self.clean_data:
+                    # Remove empty rows
+                    data = data.dropna(how="all")
+                    # Remove empty lines in each cell
+                    data = data.replace(r"^\s*$", "", regex=True)
+                    # Replace multiple newlines with a single newline
+                    data = data.replace(r"\n+", "\n", regex=True)
+
+                # Replace pipe characters to avoid markdown table issues
+                processed_data = data.replace(r"\|", r"\\|", regex=True)
+
+                processed_data = processed_data.map(
+                    lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
+                )
+
+                return processed_data.to_markdown(index=False)
+            return str(data)
+        except (ValueError, TypeError, AttributeError) as e:
+            msg = f"Error converting data: {e!s}"
+            raise ValueError(msg) from e
 
     def convert_to_string(self) -> str | Generator[Any, None, None]:
         """Convert input data to string with proper error handling."""
