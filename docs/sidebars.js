@@ -88,13 +88,41 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        "Develop/develop-overview",
-        "Develop/develop-application",
-        "Develop/install-custom-dependencies",
-        "Develop/memory",
-        "Develop/session-id",
-        "Develop/logging",
-        "Develop/webhook",
+        {
+          type: "doc",
+          id: "Develop/develop-overview",
+          label: "Overview"
+        },
+        {
+          type: "doc",
+          id: "Develop/develop-application",
+          label: "Develop an application in Langflow"
+        },
+        {
+          type: "doc",
+          id: "Develop/install-custom-dependencies",
+          label: "Install custom dependencies"
+        },
+        {
+          type: "doc",
+          id: "Develop/memory",
+          label: "Memory management"
+        },
+        {
+          type: "doc",
+          id: "Develop/session-id",
+          label: "Session ID"
+        },
+        {
+          type: "doc",
+          id: "Develop/logging",
+          label: "Logging"
+        },
+        {
+          type: "doc",
+          id: "Develop/webhook",
+          label: "Webhook"
+        },
       ],
     },
     {
@@ -180,16 +208,16 @@ module.exports = {
           id: "Integrations/Arize/integrations-arize",
           label: "Arize",
         },
+        {
+          type: "doc",
+          id: "Integrations/mcp-component-astra",
+          label: "Astra DB MCP server",
+        },
         "Integrations/integrations-assemblyai",
         {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
           label: "Composio",
-        },
-        {
-          type: "doc",
-          id: "Integrations/mcp-component-astra",
-          label: "Astra DB MCP server",
         },
         {
           type: 'category',
