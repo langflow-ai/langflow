@@ -23,7 +23,7 @@ For example, if the component being tested is `PromptComponent`, then the test c
 
 ## Imports, inheritance, and mandatory methods
 
-To standardize comoponent tests, base test classes have been created and should be imported and inherited by all component test classes. These base classes are located in the file `src/backend/tests/unit/base.py`.
+To standardize component tests, base test classes have been created and should be imported and inherited by all component test classes. These base classes are located in the file `src/backend/tests/unit/base.py`.
 
 To import the base test classes:
 
