@@ -151,7 +151,6 @@ class LangFuseTracer(BaseTracer):
             "metadata": metadata,
         }
         self.trace.update(**serialize(content_update))
-        self._client.flush()
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:

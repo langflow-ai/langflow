@@ -115,4 +115,4 @@ def set_langchain_cache(settings) -> None:
         except ImportError:
             logger.warning(f"Could not import {cache_type}. ")
     else:
-        logger.info("No LLM cache set.")
+        logger.debug("No LLM cache set.")
