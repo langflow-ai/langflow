@@ -7,7 +7,7 @@ from langflow.io import DataInput, Output
 from langflow.logging import logger
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-from langflow.utils.component_utils import set_current_fields
+from langflow.utils.component_utils import set_current_fields, set_field_display
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -385,6 +385,7 @@ class DataOperationsComponent(Component):
                 action_fields=self.actions_data,
                 selected_action=action,
                 default_fields=self.default_keys,
+                func=set_field_display,
             )
 
         # Handle no operations case
@@ -395,6 +396,7 @@ class DataOperationsComponent(Component):
                 action_fields=self.actions_data,
                 selected_action=None,
                 default_fields=self.default_keys,
+                func=set_field_display,
             )
 
         return build_config
