@@ -22,7 +22,7 @@ Ask the user for:
 ### 2. Define the Component
 
 - Inherit from `Component`.
-- Set `display_name`, `description`, `icon`, and `name`.
+- Set `display_name`, `description`, `icon`.
 - Define the `inputs` and `outputs` as lists of input/output field objects (e.g., `DropdownInput`, `MessageTextInput`, `Output`).
 - Implement the main logic as a method (e.g., `get_current_date`, `true_response`, etc.).
 
