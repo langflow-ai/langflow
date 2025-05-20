@@ -18,7 +18,7 @@ test(
 
     await page.getByTestId("input-flow-name").fill(randomName);
 
-    await page.keyboard.press("Enter");
+    await page.getByTestId("save-flow-settings").click();
 
     await page.waitForTimeout(1000);
 
@@ -45,7 +45,7 @@ test(
 
     await page.getByTestId("input-flow-name").fill(randomName2);
 
-    await page.keyboard.press("Enter");
+    await page.getByTestId("save-flow-settings").click();
 
     await page.waitForTimeout(1000);
 
@@ -87,7 +87,7 @@ test(
 
     await page.getByTestId("input-flow-name").fill(randomName4);
 
-    await page.keyboard.press("Enter");
+    await page.getByTestId("save-flow-settings").click();
 
     await page.waitForTimeout(1000);
 

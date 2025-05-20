@@ -55,11 +55,11 @@ test(
       state: "visible",
     });
 
-    await page.getByTestId("input-flow-name").click();
+    await page.getByTestId("flow_name").click();
 
     await page.getByTestId("input-flow-name").fill(randomFlowName);
 
-    await page.keyboard.press("Enter");
+    await page.getByTestId("save-flow-settings").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
