@@ -234,8 +234,8 @@ class APIRequestComponent(Component):
             # Update basic configuration
             url = parsed.url
             # Normalize URL before setting it
-            if not url.startswith(("http://", "https://")):
-                url = f"https://{url}"
+            url = self._normalize_url(url)
+
             build_config["url_input"]["value"] = url
             build_config["method"]["value"] = parsed.method.upper()
 
@@ -269,6 +269,11 @@ class APIRequestComponent(Component):
 
     def _normalize_url(self, url: str) -> str:
         """Normalize URL by adding https:// if no protocol is specified."""
+        if not url or not isinstance(url, str):
+            msg = "URL cannot be empty"
+            raise ValueError(msg)
+
+        url = url.strip()
         if url.startswith(("http://", "https://")):
             return url
         return f"https://{url}"
@@ -415,13 +420,7 @@ class APIRequestComponent(Component):
         #     url = self._build_config["url_input"]["value"]
 
         # Normalize URL before validation
-        if not url or not isinstance(url, str):
-            msg = "URL cannot be empty"
-            raise ValueError(msg)
-
-        # Add https:// if no protocol is specified
-        if not url.startswith(("http://", "https://")):
-            url = f"https://{url}"
+        url = self._normalize_url(url)
 
         # Validate URL
         if not validators.url(url):
