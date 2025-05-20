@@ -107,12 +107,14 @@ An example `.env` file is available in the [project repository](https://github.c
 
 ## Projects
 
-The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
+The **Projects** page displays all the flows you've created in the Langflow workspace.
 
 ![](/img/my-projects.png)
 
-**My Projects** is the default space where all new projects and components are initially stored.
+You can select multiple flows in a single action.
+Hover over a flow's icon to click the checkbox.
 
+**Starter Project** is the default space where all new projects are initially stored.
 To create a new project, click <Icon name="Plus"aria-hidden="true"/> **Create new project**.
 
 To upload a flow to your project, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
