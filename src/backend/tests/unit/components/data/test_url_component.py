@@ -60,7 +60,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         data_frame = component.fetch_content()
         assert isinstance(data_frame, DataFrame)
         assert len(data_frame) == 1
-        
+
         row = data_frame.iloc[0]
         assert row["text"] == "test content"
         assert row["url"] == "https://example.com"
@@ -202,7 +202,9 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         # Test no documents found
         mock_recursive_loader.side_effect = None
         mock_recursive_loader.return_value = []
-        with pytest.raises(ValueError, match="Error loading documents: No documents were successfully loaded from any URL"):
+        with pytest.raises(
+            ValueError, match="Error loading documents: No documents were successfully loaded from any URL"
+        ):
             component.fetch_content()
 
     def test_url_component_ensure_url(self):
