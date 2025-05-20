@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFil
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import apaginate
+from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -247,7 +247,14 @@ async def read_flows(
             return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
-        return await apaginate(session, stmt, params=params)
+
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+            )
+            return await apaginate(session, stmt, params=params)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

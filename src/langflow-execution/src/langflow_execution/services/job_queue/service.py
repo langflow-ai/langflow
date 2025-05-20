@@ -117,7 +117,7 @@ class JobQueueService(Service):
         # Clean up each registered job queue.
         for job_id in list(self._queues.keys()):
             await self.cleanup_job(job_id)
-        logger.info("JobQueueService stopped: all job queues have been cleaned up.")
+        logger.debug("JobQueueService stopped: all job queues have been cleaned up.")
 
     async def teardown(self) -> None:
         await self.stop()
@@ -225,7 +225,7 @@ class JobQueueService(Service):
             logger.debug(f"No queue found for job_id {job_id} during cleanup.")
             return
 
-        logger.info(f"Commencing cleanup for job_id {job_id}")
+        logger.debug(f"Commencing cleanup for job_id {job_id}")
         main_queue, _event_manager, task, _ = self._queues[job_id]
 
         # Cancel the associated task if it is still running.
@@ -250,7 +250,7 @@ class JobQueueService(Service):
         logger.debug(f"Removed {items_cleared} items from queue for job_id {job_id}")
         # Remove the job entry from the registry
         self._queues.pop(job_id, None)
-        logger.info(f"Cleanup successful for job_id {job_id}: resources have been released.")
+        logger.debug(f"Cleanup successful for job_id {job_id}: resources have been released.")
 
     async def _periodic_cleanup(self) -> None:
         """Execute a periodic task that cleans up completed or cancelled job queues.

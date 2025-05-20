@@ -152,7 +152,13 @@ async def read_project(
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
-            paginated_flows = await apaginate(session, stmt, params=params)
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+                )
+                paginated_flows = await apaginate(session, stmt, params=params)
 
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
