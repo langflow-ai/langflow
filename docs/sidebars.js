@@ -96,17 +96,17 @@ module.exports = {
         {
           type: "doc",
           id: "Develop/develop-application",
-          label: "Develop applications"
+          label: "Develop an application in Langflow"
         },
         {
           type: "doc",
           id: "Develop/install-custom-dependencies",
-          label: "Install Custom Dependencies"
+          label: "Install custom dependencies"
         },
         {
           type: "doc",
           id: "Develop/memory",
-          label: "Memory"
+          label: "Memory management"
         },
         {
           type: "doc",
