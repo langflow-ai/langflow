@@ -238,8 +238,9 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
+        "Release-Notes/release-notes",
         {
           type: "link",
           label: "Changelog",
