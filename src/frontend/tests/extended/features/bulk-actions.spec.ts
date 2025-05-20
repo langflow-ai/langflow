@@ -58,9 +58,8 @@ test(
     await expect(secondCheckbox).toBeChecked();
     await expect(thirdCheckbox).toBeChecked();
     // Test bulk download
-    await page.getByTestId("home-dropdown-menu").first().click();
-    await page.getByTestId("btn-download-json").last().click();
-    await expect(page.getByText(/.*exported successfully/)).toBeVisible({
+    await page.getByTestId("download-bulk-btn").last().click();
+    await expect(page.getByText(/.*downloaded successfully/)).toBeVisible({
       timeout: 10000,
     });
 
