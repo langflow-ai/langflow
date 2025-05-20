@@ -196,6 +196,12 @@ class LangSmithTracer(BaseTracer):
         if self._trace:
             self._trace.__exit__()
 
+    @property
+    def run_link(self):
+        if not self._ready or not self._run_tree:
+            return None
+        return self._run_tree.get_url()
+
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None

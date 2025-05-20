@@ -1,6 +1,6 @@
-import React, { Suspense, forwardRef, lazy, memo } from "react";
+import React, { Suspense, forwardRef, memo } from "react";
 import { IconComponentProps } from "../../../types/components";
-import { getNodeIcon, iconCache } from "../../../utils/styleUtils";
+import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,55 +23,42 @@ export const ForwardedIconComponent = memo(
     ) => {
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
-      const [initialName, setInitialName] = useState(name);
-      const [TargetIcon, setTargetIcon] = useState<any>(iconCache.get(name));
+      const [TargetIcon, setTargetIcon] = useState<any>(getCachedIcon(name));
 
       useEffect(() => {
-        // Reset states when icon name changes
-        if (!TargetIcon || initialName !== name) {
-          setInitialName(name);
-          setIconError(false);
-          setTargetIcon(null);
+        setIconError(false);
+        setTargetIcon(null);
+        setShowFallback(false);
 
-          const cachedIcon = iconCache.get(name);
+        let isMounted = true;
+        let timer: NodeJS.Timeout | null = null;
 
-          const timer = cachedIcon
-            ? setTimeout(() => {
-                setShowFallback(true);
-              }, 30)
-            : null;
+        if (name && typeof name === "string") {
+          getNodeIcon(name)
+            .then((component) => {
+              if (isMounted) {
+                setTargetIcon(component);
+                setShowFallback(false);
+              }
+            })
+            .catch((error) => {
+              if (isMounted) {
+                console.error(`Error loading icon ${name}:`, error);
+                setIconError(true);
+                setShowFallback(false);
+              }
+            });
 
-          // Load the icon if we have a name
-          if (name && typeof name === "string") {
-            // Check if the icon is already in cache
-
-            if (cachedIcon && cachedIcon !== TargetIcon) {
-              setTargetIcon(cachedIcon);
-              setShowFallback(false);
-            } else {
-              getNodeIcon(name)
-                .then((component) => {
-                  // Store the fetched icon in cache
-                  iconCache.set(name, component);
-                  setTargetIcon(component);
-                  setShowFallback(false);
-                })
-                .catch((error) => {
-                  console.error(`Error loading icon ${name}:`, error);
-                  setIconError(true);
-                  setShowFallback(false);
-                });
-            }
-          } else {
-            setShowFallback(false);
-          }
-
-          return () => {
-            if (timer) {
-              clearTimeout(timer);
-            }
-          };
+          // Show fallback skeleton if icon takes too long
+          timer = setTimeout(() => {
+            if (isMounted) setShowFallback(true);
+          }, 30);
         }
+
+        return () => {
+          isMounted = false;
+          if (timer) clearTimeout(timer);
+        };
       }, [name]);
 
       const style = {

@@ -8,6 +8,7 @@
   --ag-header-background-color: hsl(var(--background)) !important;
   --ag-tooltip-background-color: hsl(var(--muted)) !important;
   --ag-disabled-foreground-color: hsl(var(--muted-foreground)) !important;
+  --ag-active-color: hsl(var(--foreground)) !important;
   --ag-border-color: hsl(var(--border)) !important;
   --ag-selected-row-background-color: hsl(var(--accent)) !important;
   --ag-menu-background-color: hsl(var(--accent)) !important;
@@ -99,6 +100,36 @@
   box-shadow: none !important;
   outline: none !important;
 }
+.ag-no-border .ag-selection-checkbox {
+  margin-right: 0px !important;
+}
+.ag-no-border .ag-selection-checkbox .ag-checkbox {
+  width: 0px !important;
+  margin-right: 0px !important;
+  transition: width 0.1s ease-in-out;
+  opacity: 0;
+}
+.ag-no-border .ag-selection-checkbox:hover .ag-checkbox {
+  opacity: 1;
+}
+
+.ag-no-border .ag-selection-checkbox .ag-checkbox:has(.ag-checked) {
+  width: 32px !important;
+  opacity: 1 !important;
+}
+
+.ag-cell-wrapper:hover:has(.ag-checked) .file-icon {
+  transition: opacity 0.1s ease-in-out;
+}
+
+.ag-checkbox-input-wrapper:focus-within,
+.ag-checkbox-input-wrapper:active {
+  box-shadow: none !important;
+}
+.ag-cell-wrapper:has(.ag-selection-checkbox:hover):not(:has(.ag-checked))
+  .file-icon {
+  opacity: 0;
+}
 
 .ag-tool-mode .ag-root-wrapper {
   border: none !important;
@@ -135,10 +166,19 @@
   padding: 0rem 1rem !important;
 }
 
-.ag-tool-mode .ag-row-focus {
+.ag-tool-mode:not(.ag-no-selection) .ag-row-focus {
   background-color: hsl(var(--accent)) !important;
 }
-
-.ag-tool-mode .ag-row-selected:not(.ag-row-focus)::before {
+.ag-tool-mode.ag-no-selection .ag-row-selected::before {
   background-color: hsl(var(--background)) !important;
+}
+
+.ag-tool-mode .ag-checkbox-input-wrapper:focus-within,
+.ag-tool-mode .ag-checkbox-input-wrapper:active {
+  box-shadow: none !important;
+}
+
+.ag-tool-mode .ag-layout-auto-height .ag-center-cols-container,
+.ag-tool-mode .ag-layout-auto-height .ag-center-cols-viewport {
+  min-height: 0px !important;
 }

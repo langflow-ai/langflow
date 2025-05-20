@@ -5,12 +5,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import CustomAccountMenu from "@/customization/components/custom-AccountMenu";
+import CustomLangflowCounts from "@/customization/components/custom-langflow-counts";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
-import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
@@ -42,8 +43,6 @@ export default function AppHeader(): JSX.Element {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  useResetDismissUpdateAll();
 
   const getNotificationBadge = () => {
     const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
@@ -97,7 +96,7 @@ export default function AppHeader(): JSX.Element {
             unstyled
             className="hidden items-center whitespace-nowrap pr-2 lg:inline"
           >
-            <LangflowCounts />
+            <CustomLangflowCounts />
           </Button>
         </>
         <AlertDropdown
@@ -145,7 +144,7 @@ export default function AppHeader(): JSX.Element {
         />
 
         <div className="flex">
-          <AccountMenu />
+          <CustomAccountMenu />
         </div>
       </div>
     </div>
