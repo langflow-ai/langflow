@@ -100,7 +100,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Set flow tab id
   useEffect(() => {
     const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "") {
+      if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
@@ -114,7 +114,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId]);
+  }, [id, flows, currentFlowId, types]);
 
   useEffect(() => {
     setOnFlowPage(true);
