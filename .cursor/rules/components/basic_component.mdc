@@ -66,6 +66,7 @@ class CurrentDateComponent(Component):
 - Provide helpful `info` for each input/output to guide users.
 - Handle errors gracefully and provide meaningful error messages.
 - Use appropriate icons to visually represent the component's function.
+- Use a Lucide icon or if you want a custom icon follow the icon rules (`./cursor/rules/icons.mdc`)
 
 ---
 
