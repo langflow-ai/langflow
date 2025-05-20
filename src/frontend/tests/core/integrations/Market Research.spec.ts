@@ -46,10 +46,6 @@ withEventDeliveryModes(
       timeout: 60000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.getByText("Playground", { exact: true }).last().click();
     await page
       .getByText("No input message provided.", { exact: true })

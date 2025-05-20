@@ -44,10 +44,6 @@ test.skip(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.getByText("Playground", { exact: true }).last().click();
 
     expect(await page.locator(".markdown").count()).toBeGreaterThan(0);
