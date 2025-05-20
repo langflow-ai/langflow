@@ -6,6 +6,7 @@ import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import { FlowStoreType } from "@/types/zustand/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
@@ -258,6 +259,30 @@ function GenericNode({
 
   const [selectedOutput, setSelectedOutput] = useState(shownOutputs[0]);
 
+  const handleSelectOutput = useCallback(
+    (output) => {
+      setSelectedOutput(output);
+      setNode(data.id, (oldNode) => {
+        const newNode = cloneDeep(oldNode);
+        if (newNode.data.node?.outputs) {
+          const outputIndex = newNode.data.node.outputs.findIndex(
+            (o) => o.name === output.name,
+          );
+          if (outputIndex !== -1) {
+            const outputTypes = output.types || [];
+            const defaultType =
+              outputTypes.length > 0 ? outputTypes[0] : undefined;
+            newNode.data.node.outputs[outputIndex].selected =
+              output.selected ?? defaultType;
+          }
+        }
+        return newNode;
+      });
+      updateNodeInternals(data.id);
+    },
+    [data.id, setNode, updateNodeInternals],
+  );
+
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
       const output = outputs.find(
@@ -285,7 +310,7 @@ function GenericNode({
             showNode={showNode}
             isToolMode={isToolMode}
             showHiddenOutputs={showHiddenOutputs}
-            handleSelectOutput={() => {}}
+            handleSelectOutput={handleSelectOutput}
             hidden={
               key === "hidden"
                 ? showHiddenOutputs
@@ -308,7 +333,7 @@ function GenericNode({
           data={data}
           types={types}
           selected={selected}
-          handleSelectOutput={setSelectedOutput}
+          handleSelectOutput={handleSelectOutput}
           showNode={showNode}
           isToolMode={isToolMode}
           showHiddenOutputs={showHiddenOutputs}
@@ -330,6 +355,7 @@ function GenericNode({
       isToolMode,
       showHiddenOutputs,
       selectedOutput,
+      handleSelectOutput,
     ],
   );
 
