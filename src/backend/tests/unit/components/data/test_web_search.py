@@ -1,8 +1,6 @@
-import httpx
 import pytest
-from langflow.components.data.web_search import DEFAULT_TIMEOUT, WebSearchComponent
+from langflow.components.data.web_search import WebSearchComponent
 from langflow.schema import DataFrame
-from langflow.services.deps import get_settings_service
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -25,7 +23,6 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for the component."""
         return []
 
-
     async def test_invalid_url_handling(self):
         # Create a test instance of the component
         component = WebSearchComponent()
@@ -36,7 +33,6 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         # Ensure the URL is invalid
         with pytest.raises(ValueError, match="Invalid URL"):
             component.ensure_url(invalid_url)
-
 
     def test_successful_web_search(self):
         component = WebSearchComponent()

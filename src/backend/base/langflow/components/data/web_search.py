@@ -11,6 +11,8 @@ from langflow.schema import DataFrame
 from langflow.services.deps import get_settings_service
 
 DEFAULT_TIMEOUT = 5
+
+
 class WebSearchComponent(Component):
     display_name = "Web Search"
     description = (
