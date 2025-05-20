@@ -90,4 +90,5 @@ LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_CACHE_TYPE=Async
 ```
 
-Alternative caching options can be configured using the `LANGFLOW_CACHE_TYPE` environment variable, but options other than the default asynchronous, in-memory cache are not supported by Langflow.
+Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported by Langflow.
+The default behavior is suitable for most use cases.
