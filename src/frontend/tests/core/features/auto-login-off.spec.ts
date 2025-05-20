@@ -148,7 +148,7 @@ test(
 
     await page.getByTestId("flow_name").click();
 
-    await page.getByTestId("input_flow_name").fill(randomFlowName);
+    await page.getByTestId("input-flow-name").fill(randomFlowName);
 
     await page.getByText("Save", { exact: true }).click();
 
