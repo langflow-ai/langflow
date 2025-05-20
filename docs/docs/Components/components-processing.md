@@ -623,6 +623,11 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 ### Combine text
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development.
+Instead, use the [Combine data](#combine-data) component.
+:::
+
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
 1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
