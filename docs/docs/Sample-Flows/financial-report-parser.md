@@ -18,7 +18,8 @@ In this example, the **Chat Input** component is pre-loaded with a sample financ
 
 1. From the Langflow dashboard, click **New Flow**.
 2. Select **Financial Report Parser**.
-3. The **Financial Report Parser** flow is created.
+
+The **Financial Report Parser** flow is created.
 
 ![](/img/starter-flow-financial-report-parser.png)
 
@@ -36,11 +37,11 @@ EBITDA: $900 million , Net Income: $500 million , GROSS_PROFIT: $1.2 billion
 Inspect the flow to understand how this information was extracted.
 
 3. To inspect the output schema table, in the **Structured Output** component, click **Open table**.
-The **Structured Output** component uses the attached **OpenAI** model component as its "brain" to extract financial data into a  [DataFrame](/concepts-objects#dataframe-object) with this defined schema.
+The **Structured Output** component uses the attached **OpenAI** model component as its "brain" to extract financial data into a [DataFrame](/concepts-objects#dataframe-object) with this defined schema.
 ```text
 | Name         | Description           | Type | Multiple |
 |--------------|----------------------|------|----------|
-| EBITDA      | description of field  | text | False    |
+| EBITDA       | description of field  | text | False    |
 | NET_INCOME   | description of field  | text | False    |
 | GROSS_PROFIT | description of field  | text | False    |
 ```
