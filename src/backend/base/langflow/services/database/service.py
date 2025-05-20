@@ -338,7 +338,7 @@ class DatabaseService(Service):
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
             else:
-                logger.info("Alembic already initialized")
+                logger.info("Alembic initialized")
 
             logger.info(f"Running DB migrations in {self.script_location}")
 
