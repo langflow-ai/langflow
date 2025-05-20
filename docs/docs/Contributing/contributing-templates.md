@@ -11,12 +11,12 @@ For template formatting examples, see the Langflow repository's [starter_project
 
 Follow these steps to submit your template:
 
-1. Fork the Langflow repository on GitHub.
-2. Add your `template.json` file to the `src/backend/base/langflow/initial_setup/starter_projects` folder in your fork.
+1. Fork the [Langflow repository](https://github.com/langflow-ai/langflow) on GitHub.
+2. Add your `template.json` file to the Langflow repository's [starter_projects](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/initial_setup/starter_projects) folder in your fork.
 3. Create a Pull Request from your fork to the main Langflow repository.
 4. Include a screenshot of your template in the PR.
 
-  The Langflow team will review your PR, offer feedback, and merge the template.
+The Langflow team will review your PR, offer feedback, and merge the template.
 
 ## Required items for template submission
 
@@ -39,6 +39,7 @@ Use icons from the [Lucide](https://lucide.dev/icons/) icon library.
 ### Flow
 Use only the components that are available in the sidebar.
 Do not use custom components.
+
 Include a note to guide users. Notes accept Markdown syntax.
 A single note usually suffices.
 
