@@ -149,6 +149,7 @@ export type outputComponentType = {
   isToolMode?: boolean;
   outputs?: any;
   handleSelectOutput?: (output: any) => void;
+  outputName?: string;
 };
 
 export type DisclosureComponentType = {

@@ -104,6 +104,9 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
+    await page.getByTestId("dropdown-output-urlcomponent").click();
+    await page.getByTestId("dropdown-item-output-urlcomponent-message").click();
+
     await page
       .getByTestId("handle-urlcomponent-shownode-message-right")
       .nth(0)
@@ -133,6 +136,11 @@ test(
     await page.getByText("Close").first().click();
 
     // Connect dataframe output to second chat output
+    await page.getByTestId("dropdown-output-urlcomponent").click();
+    await page
+      .getByTestId("dropdown-item-output-urlcomponent-dataframe")
+      .click();
+
     await page
       .getByTestId("handle-urlcomponent-shownode-dataframe-right")
       .nth(0)

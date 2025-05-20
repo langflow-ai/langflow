@@ -21,6 +21,7 @@ export default function OutputComponent({
   proxy,
   isToolMode = false,
   handleSelectOutput,
+  outputName,
 }: outputComponentType) {
   const displayProxy = (children) => {
     if (proxy) {
@@ -51,7 +52,11 @@ export default function OutputComponent({
       {outputs.length > 1 ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button unstyled className="flex items-center gap-2">
+            <Button
+              unstyled
+              className="flex items-center gap-2"
+              data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
+            >
               {name}
               <ForwardedIconComponent
                 name="ChevronDown"
@@ -63,6 +68,7 @@ export default function OutputComponent({
             {outputs.map((output) => (
               <DropdownMenuItem
                 key={output.name}
+                data-testid={`dropdown-item-output-${outputName?.toLowerCase()}-${output.display_name?.toLowerCase()}`}
                 className="cursor-pointer px-3 py-2"
                 onClick={() => {
                   handleSelectOutput && handleSelectOutput(output);

@@ -421,6 +421,7 @@ function NodeOutputField({
               name={title ?? type}
               isToolMode={isToolMode}
               handleSelectOutput={handleSelectOutput}
+              outputName={data.node?.key as string}
             />
           </span>
 
