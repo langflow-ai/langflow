@@ -13,8 +13,9 @@ Follow these steps to submit your template:
 
 1. Fork the [Langflow repository](https://github.com/langflow-ai/langflow) on GitHub.
 2. Add your `template.json` file to the Langflow repository's [starter_projects](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/initial_setup/starter_projects) folder in your fork.
-3. Create a Pull Request from your fork to the main Langflow repository.
-4. Include a screenshot of your template in the PR.
+3. Include the [Required items for template submission](#required-items-for-template-submission) listed below.
+4. Create a Pull Request from your fork to the main Langflow repository.
+5. Include a screenshot of your template in the PR.
 
 The Langflow team will review your PR, offer feedback, and merge the template.
 
