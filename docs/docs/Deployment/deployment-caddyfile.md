@@ -128,6 +128,8 @@ Value: 5.161.250.132  (your server's IP address)
 11. Start your server.
 Caddy recognizes the incoming traffic and routes it to your server.
 
+To exit your SSH session, type `exit`.
+
 ## Step-by-step video guide
 
 For a step-by-step guide to deploying Langflow, including deployments to [fly.io](https://fly.io/) and [Flightcontrol.dev](https://www.flightcontrol.dev/), see [How to Host Langflow Anywhere](https://www.youtube.com/watch?v=q4qt5hSnte4).
