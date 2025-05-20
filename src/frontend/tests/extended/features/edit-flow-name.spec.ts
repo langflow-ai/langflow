@@ -13,8 +13,9 @@ test(
 
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+    await page.getByTestId("flow_name").click();
+
     await page.getByTestId("input-flow-name").click();
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("input-flow-name").fill(randomName);
 
@@ -22,9 +23,13 @@ test(
 
     await page.waitForTimeout(1000);
 
+    await page.getByTestId("flow_name").click();
+
     let flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName);
+
+    await page.getByText("Cancel", { exact: true }).first().click();
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -41,6 +46,8 @@ test(
 
     await page.getByText(randomName).click();
 
+    await page.getByTestId("flow_name").click();
+
     await page.getByTestId("input-flow-name").click();
 
     await page.getByTestId("input-flow-name").fill(randomName2);
@@ -49,9 +56,13 @@ test(
 
     await page.waitForTimeout(1000);
 
+    await page.getByTestId("flow_name").click();
+
     flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName2);
+
+    await page.getByText("Cancel", { exact: true }).first().click();
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -66,9 +77,11 @@ test(
 
     expect(await page.getByText(randomName2).count()).toBe(1);
 
-    await page.getByTestId("home-dropdown-menu").first().click();
+    await page.getByText(randomName2).click();
 
-    await page.getByTestId("btn-edit-flow").click();
+    await page.getByTestId("flow_name").click();
+
+    await page.getByTestId("input-flow-name").click();
 
     await page.getByTestId("input-flow-name").fill(randomName3);
 
@@ -81,7 +94,7 @@ test(
 
     expect(await page.getByText(randomName3).count()).toBe(1);
 
-    await page.getByText(randomName3).click();
+    await page.getByTestId("flow_name").click();
 
     await page.getByTestId("input-flow-name").click();
 
@@ -91,9 +104,15 @@ test(
 
     await page.waitForTimeout(1000);
 
+    await page.getByTestId("flow_name").click();
+
+    await page.getByTestId("input-flow-name").click();
+
     flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName4);
+
+    await page.getByText("Cancel", { exact: true }).first().click();
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 

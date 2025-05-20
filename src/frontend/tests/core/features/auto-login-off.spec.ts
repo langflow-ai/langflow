@@ -148,6 +148,8 @@ test(
 
     await page.getByTestId("flow_name").click();
 
+    await page.getByTestId("input-flow-name").click();
+
     await page.getByTestId("input-flow-name").fill(randomFlowName);
 
     await page.getByText("Save", { exact: true }).click();
@@ -226,6 +228,8 @@ test(
     await page.getByTestId("zoom_out").click();
 
     await page.getByTestId("flow_name").click();
+
+    await page.getByTestId("input-flow-name").click();
 
     await page.getByTestId("input-flow-name").fill(secondRandomFlowName);
 

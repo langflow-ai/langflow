@@ -110,6 +110,7 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
     await page.getByTestId("flow_name").click();
+    await page.getByTestId("input-flow-name").click();
     await page.getByTestId("input-flow-name").fill(userAFlowName);
     await page.getByText("Save", { exact: true }).last().click();
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {

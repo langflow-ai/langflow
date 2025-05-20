@@ -11,11 +11,13 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    await page.getByTestId("flow_name").click();
+
     await page.waitForSelector('[data-testid="input-flow-name"]', {
       timeout: 3000,
     });
 
-    await page.getByTestId("flow_name").click();
     await page
       .getByTestId("input-flow-name")
       .fill(

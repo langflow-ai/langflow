@@ -9,11 +9,10 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[data-testid="input-flow-name"]', {
-    timeout: 3000,
-  });
-
   await page.getByTestId("flow_name").click();
+
+  await page.getByTestId("input-flow-name").click();
+
   await page.getByTestId("input-flow-name").fill(randomName);
 
   await page.getByTestId("save-flow-settings").click();
