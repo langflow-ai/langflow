@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 This page describes how to use Langflow as an *MCP server*.
-For information about using Langflow as an *MCP client*, see the [MCP component](/components-tools#mcp-server).
+For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-tools#mcp-connection).
 
 As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
 

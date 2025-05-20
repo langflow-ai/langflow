@@ -68,7 +68,7 @@ export default function ToolsComponent({
             disabled={!value || disabled}
             size={"iconMd"}
             className={cn(
-              "absolute -top-8 right-0 font-semibold text-muted-foreground group-hover:text-primary",
+              "absolute -top-8 right-0 !text-mmd font-normal text-muted-foreground group-hover:text-primary",
             )}
             data-testid="button_open_actions"
             onClick={() => setIsModalOpen(true)}

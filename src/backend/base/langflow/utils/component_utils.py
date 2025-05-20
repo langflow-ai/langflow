@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any
 
 from langflow.schema.dotdict import dotdict
@@ -52,49 +53,51 @@ def update_input_types(build_config: dotdict) -> dotdict:
     return build_config
 
 
-def set_field_display(build_config: dotdict, field: str, is_visible: bool | None = None) -> dotdict:
+def set_field_display(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
     """Set whether a field should be displayed in the UI."""
     if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
-        build_config[field]["show"] = is_visible
+        build_config[field]["show"] = value
     return build_config
 
 
 def set_multiple_field_display(
     build_config: dotdict,
     fields: dict[str, bool] | None = None,
-    is_visible: bool | None = None,
+    value: bool | None = None,
     field_list: list[str] | None = None,
 ) -> dotdict:
     """Set display property for multiple fields at once."""
     if fields is not None:
         for field, visibility in fields.items():
-            set_field_display(build_config, field, visibility)
+            build_config = set_field_display(build_config, field, visibility)
     elif field_list is not None:
         for field in field_list:
-            set_field_display(build_config, field, is_visible)
+            build_config = set_field_display(build_config, field, value)
     return build_config
 
 
-def set_field_advanced(build_config: dotdict, field: str, is_advanced: bool | None = None) -> dotdict:
+def set_field_advanced(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
     """Set whether a field is considered 'advanced' in the UI."""
+    if value is None:
+        value = False
     if field in build_config and isinstance(build_config[field], dict):
-        build_config[field]["advanced"] = is_advanced
+        build_config[field]["advanced"] = value
     return build_config
 
 
 def set_multiple_field_advanced(
     build_config: dotdict,
     fields: dict[str, bool] | None = None,
-    is_advanced: bool | None = None,
+    value: bool | None = None,
     field_list: list[str] | None = None,
 ) -> dotdict:
     """Set advanced property for multiple fields at once."""
     if fields is not None:
         for field, advanced in fields.items():
-            set_field_advanced(build_config, field, advanced)
+            build_config = set_field_advanced(build_config, field, advanced)
     elif field_list is not None:
         for field in field_list:
-            set_field_advanced(build_config, field, is_advanced)
+            build_config = set_field_advanced(build_config, field, value)
     return build_config
 
 
@@ -114,18 +117,28 @@ def merge_build_configs(base_config: dotdict, override_config: dotdict) -> dotdi
 def set_current_fields(
     build_config: dotdict,
     action_fields: dict[str, list[str]],
-    selected_action: str,
+    selected_action: str | None = None,
     default_fields: list[str] = DEFAULT_FIELDS,
+    func: Callable[[dotdict, str, bool], dotdict] = set_field_display,
+    default_value: bool | None = None,
 ) -> dotdict:
     """Set the current fields for a selected action."""
     # action_fields = {action1: [field1, field2], action2: [field3, field4]}
     # we need to show action of one field and disable the rest
+    if default_value is None:
+        default_value = False
     if selected_action in action_fields:
         for field in action_fields[selected_action]:
-            set_field_display(build_config=build_config, field=field, is_visible=True)
-        for field in action_fields[selected_action]:
-            set_field_display(build_config=build_config, field=field, is_visible=False)
+            build_config = func(build_config, field, not default_value)
+        for key, value in action_fields.items():
+            if key != selected_action:
+                for field in value:
+                    build_config = func(build_config, field, default_value)
+    if selected_action is None:
+        for value in action_fields.values():
+            for field in value:
+                build_config = func(build_config, field, default_value)
     if default_fields is not None:
         for field in default_fields:
-            set_field_display(build_config=build_config, field=field, is_visible=True)
+            build_config = func(build_config, field, not default_value)
     return build_config

@@ -2,6 +2,7 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { GetStartedProgress } from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons/components/get-started-progress";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
+import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import useAuthStore from "@/stores/authStore";
 import { Separator } from "@radix-ui/react-separator";
 import { useState } from "react";
@@ -45,7 +46,7 @@ export const HeaderButtons = ({
     <>
       {!isDismissedDialog && (
         <>
-          <GetStartedProgress
+          <CustomGetStartedProgress
             userData={userData!}
             isGithubStarred={isGithubStarred ?? false}
             isDiscordJoined={isDiscordJoined ?? false}
@@ -63,7 +64,7 @@ export const HeaderButtons = ({
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div className="flex-1 text-sm font-semibold">Projects</div>
+        <div className="flex-1 text-sm font-medium">Projects</div>
         <div className="flex items-center gap-1">
           <UploadFolderButton
             onClick={handleUploadFlowsToFolder}

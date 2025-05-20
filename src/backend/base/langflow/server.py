@@ -11,6 +11,7 @@ from langflow.logging.logger import InterceptHandler
 
 class LangflowUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {"loop": "asyncio"}
+    _has_exited = False
 
     def _install_sigint_handler(self) -> None:
         """Install a SIGQUIT handler on workers.
@@ -20,6 +21,14 @@ class LangflowUvicornWorker(UvicornWorker):
         """
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGINT, self.handle_exit, signal.SIGINT, None)
+        loop.add_signal_handler(signal.SIGTERM, self.handle_exit, signal.SIGTERM, None)
+
+    def handle_exit(self, sig, frame):
+        if not self._has_exited:
+            print("👋 See you next time!")  # noqa: T201
+            self._has_exited = True
+
+        super().handle_exit(sig, frame)
 
     async def _serve(self) -> None:
         # We do this to not log the "Worker (pid:XXXXX) was sent SIGINT"

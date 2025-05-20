@@ -7,6 +7,7 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
 import { useUpdateNodeInternals } from "@xyflow/react";
@@ -34,7 +35,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
+import { cn, getNodeLength } from "../../../../utils/utils";
 import { ToolbarButton } from "./components/toolbar-button";
 import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
@@ -78,8 +79,6 @@ const NodeToolbarComponent = memo(
     const updateNodeInternals = useUpdateNodeInternals();
 
     const paste = useFlowStore((state) => state.paste);
-    const nodes = useFlowStore((state) => state.nodes);
-    const edges = useFlowStore((state) => state.edges);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
@@ -199,8 +198,6 @@ const NodeToolbarComponent = memo(
           data.id,
           updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
           data.node!.template,
-          nodes,
-          edges,
           setNodes,
           setEdges,
           data.node?.outputs,
@@ -212,8 +209,6 @@ const NodeToolbarComponent = memo(
       data.node?.flow,
       data.node?.template,
       data.node?.outputs,
-      nodes,
-      edges,
       setNodes,
       setEdges,
       takeSnapshot,
@@ -249,12 +244,12 @@ const NodeToolbarComponent = memo(
 
     const openDocs = useCallback(() => {
       if (data.node?.documentation) {
-        return openInNewTab(data.node.documentation);
+        return customOpenNewTab(data.node.documentation);
       }
       setNoticeData({
         title: `${data.id} docs is not available at the moment.`,
       });
-    }, [data.id, data.node?.documentation, openInNewTab]);
+    }, [data.id, data.node?.documentation]);
 
     useShortcuts({
       showOverrideModal,
@@ -306,6 +301,7 @@ const NodeToolbarComponent = memo(
 
     const handleSelectChange = useCallback(
       (event) => {
+        let nodes;
         setSelectedValue(event);
 
         switch (event) {
@@ -355,10 +351,12 @@ const NodeToolbarComponent = memo(
             updateNode();
             break;
           case "copy":
+            nodes = useFlowStore.getState().nodes;
             const node = nodes.filter((node) => node.id === data.id);
             setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
             break;
           case "duplicate":
+            nodes = useFlowStore.getState().nodes;
             paste(
               {
                 nodes: [nodes.find((node) => node.id === data.id)!],
@@ -606,7 +604,9 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      style={hasBreakingChange ? "text-warning" : ""}
+                      style={
+                        hasBreakingChange ? "text-accent-amber-foreground" : ""
+                      }
                       value={isUserEdited ? "Restore" : "Update"}
                       icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"

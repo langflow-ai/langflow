@@ -6,9 +6,13 @@ export default function TableDropdownCellEditor({
   values,
   onValueChange,
   colDef,
+  eGridCell,
 }: CustomCellEditorProps & { values: string[] }) {
   return (
-    <div className="flex h-full items-center px-2">
+    <div
+      style={{ width: eGridCell.clientWidth }}
+      className="flex h-full items-center px-2"
+    >
       <InputComponent
         setSelectedOption={(value) => onValueChange(value)}
         value={value}

@@ -117,7 +117,7 @@ class AgentComponent(ToolCallingAgentComponent):
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
         # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
+        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
 
         return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 

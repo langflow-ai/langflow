@@ -4,10 +4,11 @@ import CodeAreaComponent from "@/components/core/parameterRenderComponent/compon
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
+import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
 import ToolsComponent from "./components/ToolsComponent";
-import ConnectionComponent from "./components/connectionComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -146,7 +147,7 @@ export function ParameterRenderComponent({
         );
       case "link":
         return (
-          <LinkComponent
+          <CustomLinkComponent
             {...baseInputProps}
             icon={templateData.icon}
             text={templateData.text}
@@ -248,7 +249,7 @@ export function ParameterRenderComponent({
           )?.link || "";
 
         return (
-          <ConnectionComponent
+          <CustomConnectionComponent
             {...baseInputProps}
             name={name}
             nodeId={nodeId}

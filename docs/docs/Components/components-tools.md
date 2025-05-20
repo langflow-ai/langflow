@@ -309,17 +309,17 @@ This component allows you to call the Serper.dev Google Search API.
 
 </details>
 
-## MCP server
+## MCP connection
 
-This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
+The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
 
-In addition to being an MCP client that can leverage MCP servers, the MCP component's [SSE mode](#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
+In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
 
-To use the MCP server component with an agent component, follow these steps:
+To use the **MCP connection** component with an agent component, follow these steps:
 
-1. Add the MCP server component to your workflow.
+1. Add the **MCP connection** component to your workflow.
 
-2. In the MCP server component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+2. In the **MCP connection** component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
 
     ```bash
     uvx mcp-server-fetch
@@ -347,11 +347,11 @@ To use the MCP server component with an agent component, follow these steps:
 The available fields change based on the selected tool.
 For information on the parameters, see the MCP server's documentation.
 
-5. In the MCP server component, enable **Tool mode**.
-Connect the MCP server component's **Toolset** port to an **Agent** component's **Tools** port.
+5. In the **MCP connection** component, enable **Tool mode**.
+Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
 
     The flow looks similar to this:
-    ![MCP server component](/img/component-mcp-stdio.png)
+    ![MCP connection component](/img/component-mcp-stdio.png)
 
 6. Open the **Playground**.
 Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
@@ -368,16 +368,16 @@ If you're using **Langflow for Desktop**, the default address is `http://127.0.0
 The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
 This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
 
-1. In the **MCP Server** component, select **SSE**.
+1. In the **MCP connection** component, select **SSE**.
 A default address appears in the **MCP SSE URL** field.
 2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
 The default value is `http://localhost:7860/api/v1/mcp/sse`.
-3. In the **MCP Server** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
+3. In the **MCP connection** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
 4. Click the **Tools** field.
 All of your flows are listed as tools.
-5. Enable **Tool Mode**, and then connect the **MCP Server** component to an agent component's tool port.
+5. Enable **Tool Mode**, and then connect the **MCP connection** component to an agent component's tool port.
 The flow looks like this:
-![MCP server component](/img/component-mcp-sse-mode.png)
+![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
 6. Open the **Playground** and chat with your tool.
 The agent chooses the correct tool based on your query.
 
@@ -628,13 +628,13 @@ Deprecated components have been replaced by newer alternatives and should not be
 ### MCP Tools (stdio)
 :::important
 This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP server component](/components-tools#mcp-server)
+Instead, use the [MCP connection component](/components-tools#mcp-connection)
 :::
 
 
 ### MCP Tools (SSE)
 :::important
 This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP server component](/components-tools#mcp-server)
+Instead, use the [MCP connection component](/components-tools#mcp-connection)
 :::
 

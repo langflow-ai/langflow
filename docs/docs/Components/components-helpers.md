@@ -62,14 +62,15 @@ record_number: {batch_index}, name: {text_input}, summary: {model_response}
 | model | HandleInput | Connect the 'Language Model' output from your LLM component here. Required. |
 | system_message | MultilineInput | A multi-line system instruction for all rows in the DataFrame. |
 | df | DataFrameInput | The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
-| column_name | MessageTextInput | The name of the DataFrame column to treat as text messages. Default='text'. Required. |
+| column_name | MessageTextInput | The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
+| output_column_name | MessageTextInput | Name of the column where the model's response is stored. Default=`model_response`. |
 | enable_metadata | BoolInput | If True, add metadata to the output DataFrame. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| batch_results | DataFrame | A DataFrame with columns: 'text_input', 'model_response', 'batch_index', and optional 'metadata' containing processing information. |
+| batch_results | DataFrame | A DataFrame with all original columns plus the model's response column. |
 
 </details>
 
@@ -149,8 +150,8 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 | Name | Type | Description |
 |------|------|-------------|
 | messages | Data | The retrieved messages as Data objects. |
-| messages_text | String | The retrieved messages formatted as text. |
-| lc_memory | Memory | A constructed Langchain [ConversationBufferMemory](https://api.python.langchain.com/en/latest/memory/langchain.memory.buffer.ConversationBufferMemory.html) object. |
+| messages_text | Message | The retrieved messages formatted as text. |
+| dataframe | DataFrame | A DataFrame containing the message data. |
 
 </details>
 

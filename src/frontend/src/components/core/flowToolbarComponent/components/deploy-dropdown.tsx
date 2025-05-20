@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
+import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useAlertStore from "@/stores/alertStore";
@@ -120,7 +121,7 @@ export default function PublishDropdown() {
           <CustomLink
             className={cn("flex-1")}
             to={`/mcp/folder/${folderId}`}
-            target="_blank"
+            target={customMcpOpen()}
           >
             <DropdownMenuItem
               className="deploy-dropdown-item group"

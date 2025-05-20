@@ -1,6 +1,6 @@
 import re
 
-import requests
+import httpx
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
@@ -144,17 +144,28 @@ class URLComponent(Component):
             if not urls:
                 raise ValueError(no_urls_msg)
 
+            # If there's only one URL, we'll make sure to propagate any errors
+            single_url = len(urls) == 1
+
             for processed_url in urls:
                 msg = f"Loading documents from {processed_url}"
                 logger.info(msg)
 
-                extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+                # Create headers dictionary
                 headers_dict = {header["key"]: header["value"] for header in self.headers}
+
+                # Configure RecursiveUrlLoader with httpx-compatible settings
+                extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+
+                # Modified settings for RecursiveUrlLoader
+                # Note: We need to pass a compatible client or settings to RecursiveUrlLoader
+                # This will depend on how RecursiveUrlLoader is implemented
                 loader = RecursiveUrlLoader(
                     url=processed_url,
                     max_depth=self.max_depth,
                     prevent_outside=self.prevent_outside,
                     use_async=self.use_async,
+                    continue_on_failure=not single_url,
                     extractor=extractor,
                     timeout=self.timeout,
                     headers=headers_dict,
@@ -165,19 +176,35 @@ class URLComponent(Component):
                     if not docs:
                         msg = f"No documents found for {processed_url}"
                         logger.warning(msg)
+                        if single_url:
+                            message = f"No documents found for {processed_url}"
+                            raise ValueError(message)
                     else:
                         msg = f"Found {len(docs)} documents from {processed_url}"
                         logger.info(msg)
                         all_docs.extend(docs)
-                except requests.exceptions.RequestException as e:
+                except (httpx.HTTPError, httpx.RequestError) as e:
                     msg = f"Error loading documents from {processed_url}: {e}"
                     logger.exception(msg)
+                    if single_url:
+                        raise  # Re-raise the exception if it's the only URL
+                except UnicodeDecodeError as e:
+                    msg = f"Error decoding content from {processed_url}: {e}"
+                    logger.error(msg)
+                    if single_url:
+                        raise  # Re-raise the exception if it's the only URL
+                except Exception as e:
+                    msg = f"Unexpected error loading documents from {processed_url}: {e}"
+                    logger.exception(msg)
+                    if single_url:
+                        raise  # Re-raise the exception if it's the only URL
 
             data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
             self.status = data
 
         except Exception as e:
-            msg = f"Error loading documents: {e!s}"
+            error_msg = e.message if hasattr(e, "message") else e
+            msg = f"Error loading documents: {error_msg!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
 

@@ -508,7 +508,7 @@ async def experimental_run_flow(
 
     ### Example usage:
     ```json
-    POST /run/{flow_id}
+    POST /run/flow_id
     x-api-key: YOUR_API_KEY
     Payload:
     {

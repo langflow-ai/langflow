@@ -55,7 +55,6 @@ module.exports = {
         "Components/components-embedding-models",
         "Components/components-helpers",
         "Components/components-io",
-        "Components/components-loaders",
         "Components/components-logic",
         "Components/components-memories",
         "Components/components-models",
@@ -198,6 +197,7 @@ module.exports = {
           items: [
             'Integrations/Google/integrations-setup-google-oauth-langflow',
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
+            'Integrations/Google/integrations-google-big-query',
           ],
         },
         "Integrations/integrations-langfuse",

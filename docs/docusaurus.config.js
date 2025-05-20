@@ -251,6 +251,10 @@ const config = {
             from: "/components/custom",
           },
           {
+            to: "/components-bundle-components",
+            from: "/components-loaders",
+          },
+          {
             to: "/mcp-server",
             from: "/integrations-mcp",
           },

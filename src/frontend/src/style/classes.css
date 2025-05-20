@@ -395,6 +395,11 @@ input[type="search"]::-webkit-search-cancel-button {
   height: 38px !important;
 }
 
+.cm-selectionLayer {
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
 .cm-button:hover {
   background-color: hsl(var(--border)) !important;
 }

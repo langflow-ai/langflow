@@ -1,7 +1,6 @@
 ---
 title: Integrate Google Cloud Vertex AI with Langflow
 slug: /integrations-setup-google-cloud-vertex-ai-langflow
-description: "A comprehensive guide on creating a Google OAuth app, obtaining tokens, and integrating them with Langflow's Google components."
 ---
 
 Langflow integrates with the [Google Vertex AI API](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com) for authenticating the [Vertex AI embeddings model](/components-embedding-models#vertexai-embeddings) and [Vertex AI](/components-models#vertexai) components.

@@ -13,36 +13,39 @@ To connect the **Webhook** to a **Parser** component to view and parse your data
 2. Add a [Parser](/components-processing#parser) component to your flow.
 3. Connect the **Webhook** component's **Data** output to the **Parser** component's **Data** input.
 4. In the **Template** field of the **Parser** component, enter a template for parsing the **Webhook** component's input into structured text.
-Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
-For example, to parse `id`, `name`, and `email` strings:
-```text
-ID: {id} - Name: {name} - Email: {email}
-```
-
-:::important
-The component may fail to build because it needs data from the **Webhook** first.
-If you experience issues, change the **Mode** on the **Parser** component to **Stringify**, so the component outputs a single string.
-:::
+    :::important
+    The component may fail to build because it needs data from the **Webhook** first.
+    If you experience issues, change the **Mode** on the **Parser** component to **Stringify**, so the component outputs a single string.
+    :::
+    Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
+    For example, to parse `id`, `name`, and `email` strings:
+    ```text
+    ID: {id} - Name: {name} - Email: {email}
+    ```
 
 5. In the **Endpoint** field of the **Webhook** component, copy the API endpoint for your external requests.
 6. Optionally, to retrieve a complete example request from the component, click **Controls**, and then copy the command from the **cURL** value field.
+    :::important
+    The default curl command includes a field for `x-api-key`. This field is **optional** and can be deleted from the command if you aren't using authentication.
+    :::
 7. Send a POST request with any data to trigger your flow.
 This example uses `id`, `name`, and `email` strings.
 Replace **YOUR_FLOW_ID** with your flow ID.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
-    -H 'Content-Type: application/json' \
-    -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
-```
+    ```text
+    curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+        -H 'Content-Type: application/json' \
+        -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
+    ```
 
-This response indicates Langflow received your request:
-```
-{"message":"Task started in the background","status":"in progress"}
-```
+    This response indicates Langflow received your request:
+
+    ```text
+    {"message":"Task started in the background","status":"in progress"}
+    ```
 
 8. To view the data received from your request, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 
-You should see a string of parsed text, like `ID: 12345 - Name: alex - Email: alex@email.com`.
+You should receive a string of parsed text, like `ID: 12345 - Name: alex - Email: alex@email.com`.
 
 You have successfully parsed data out of an external JSON payload.
 
