@@ -228,11 +228,12 @@ module.exports = {
       label: "Contributing",
       items: [
         "Contributing/contributing-community",
+        "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
-        "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-telemetry",
       ],
     },
