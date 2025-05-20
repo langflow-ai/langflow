@@ -111,16 +111,13 @@ The **Projects** page displays all the flows you've created in the Langflow work
 
 ![](/img/my-projects.png)
 
-You can select multiple flows in a single action.
-Hover over a flow's icon to click the checkbox.
-
 **Starter Project** is the default space where all new projects are initially stored.
 To create a new project, click <Icon name="Plus"aria-hidden="true"/> **Create new project**.
 
 To upload a flow to your project, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
 
 To delete a flow from your project, click a flow's checkbox to select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
-You can delete multiple flows in a single action.
+You can select multiple flows in a single action.
 
 ## File management
 

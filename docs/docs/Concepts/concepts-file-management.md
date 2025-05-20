@@ -19,17 +19,15 @@ To upload a file from your local machine:
 2. Select the file to upload.
    The file is uploaded to Langflow.
 
-
 You can upload multiple files in a single action.
-Hover over a file's icon to click the checkbox.
 Files are available to flows stored in different projects.
 
 Files stored in **My Files** can be renamed, downloaded, duplicated, or deleted.
 
-To delete a file from your project, click a file's checkbox to select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+To delete a file from your project, hover over a file's icon to click and select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 You can delete multiple files in a single action.
 
-To download a file from your project, click a file's checkbox to select it, and then click <Icon name="Download" aria-hidden="true"/> **Download**.
+To download a file from your project, hover over a file's icon to click and select it, and then click <Icon name="Download" aria-hidden="true"/> **Download**.
 You can download multiple files in a single action, but they will be saved together in a .ZIP file.
 
 ## Use uploaded files in a flow
