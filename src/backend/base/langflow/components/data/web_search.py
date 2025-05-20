@@ -6,11 +6,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from langflow.io import IntInput, MessageTextInput, Output
 from langflow.schema import DataFrame
 from langflow.services.deps import get_settings_service
-
-DEFAULT_TIMEOUT = 5
 
 
 class WebSearchComponent(Component):
@@ -30,7 +28,14 @@ class WebSearchComponent(Component):
             tool_mode=True,
             input_types=[],
             required=True,
-        )
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout for the web search request.",
+            value=5,
+            advanced=True,
+        ),
     ]
 
     outputs = [Output(name="results", display_name="Search Results", method="perform_search")]
@@ -44,24 +49,38 @@ class WebSearchComponent(Component):
 
     def ensure_url(self, url: str) -> str:
         if not url.startswith(("http://", "https://")):
-            url = "http://" + url
+            url = "https://" + url
         if not self.validate_url(url):
             msg = f"Invalid URL: {url}"
             raise ValueError(msg)
         return url
 
+    def _sanitize_query(self, query: str) -> str:
+        """Sanitize search query."""
+        # Remove potentially dangerous characters
+        return re.sub(r'[<>"\']', "", query.strip())
+
     def perform_search(self) -> DataFrame:
+        query = self._sanitize_query(self.query)
+        if not query:
+            msg = "Empty search query"
+            raise ValueError(msg)
         headers = {"User-Agent": get_settings_service().settings.user_agent}
-        params = {"q": self.query, "kl": "us-en"}
+        params = {"q": query, "kl": "us-en"}
         url = "https://html.duckduckgo.com/html/"
 
         try:
-            response = requests.get(url, params=params, headers=headers, timeout=DEFAULT_TIMEOUT)
+            response = requests.get(url, params=params, headers=headers, timeout=self.timeout)
             response.raise_for_status()
         except requests.RequestException as e:
-            self.status = f"Failed request: {e}"
+            self.status = f"Failed request: {e!s}"
             return DataFrame(pd.DataFrame([{"title": "Error", "link": "", "snippet": str(e), "content": ""}]))
 
+        if not response.text or "text/html" not in response.headers.get("content-type", "").lower():
+            self.status = "No results found"
+            return DataFrame(
+                pd.DataFrame([{"title": "Error", "link": "", "snippet": "No results found", "content": ""}])
+            )
         soup = BeautifulSoup(response.text, "html.parser")
         results = []
 
@@ -76,12 +95,12 @@ class WebSearchComponent(Component):
 
                 try:
                     final_url = self.ensure_url(decoded_link)
-                    page = requests.get(final_url, headers=headers, timeout=DEFAULT_TIMEOUT)
+                    page = requests.get(final_url, headers=headers, timeout=self.timeout)
                     page.raise_for_status()
                     content = BeautifulSoup(page.text, "lxml").get_text(separator=" ", strip=True)
                 except requests.RequestException as e:
                     final_url = decoded_link
-                    content = f"(Failed to fetch: {e})"
+                    content = f"(Failed to fetch: {e!s}"
 
                 results.append(
                     {
