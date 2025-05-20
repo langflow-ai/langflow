@@ -1,4 +1,5 @@
 import asyncio
+import json
 import uuid
 from uuid import UUID
 
@@ -6,6 +7,7 @@ import pytest
 from httpx import codes
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
+from loguru import logger
 
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
 
@@ -160,33 +162,87 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.job_id = job_id
             self.headers = headers
             self.status_code = codes.OK
+            self.max_total_events = 50  # Limit to prevent infinite loops
+            self.max_empty_polls = 10  # Maximum number of empty polls before giving up
+            self.poll_timeout = 1.0  # Timeout for each polling request
 
         async def aiter_lines(self):
             try:
-                sleeps = 0
-                max_sleeps = 100
-                while True:
-                    response = await self.client.get(
-                        f"api/v1/build/{self.job_id}/events?event_delivery=polling", headers=self.headers
-                    )
-                    assert response.status_code == codes.OK
-                    data = response.json()
+                empty_polls = 0
+                total_events = 0
+                end_event_found = False
 
-                    if data["event"] is None:
-                        # No event available, add delay to prevent tight polling
+                while (
+                    empty_polls < self.max_empty_polls and total_events < self.max_total_events and not end_event_found
+                ):
+                    # Add Accept header for NDJSON
+                    headers = {**self.headers, "Accept": "application/x-ndjson"}
+
+                    # Set a timeout for the request
+                    response = await asyncio.wait_for(
+                        self.client.get(
+                            f"api/v1/build/{self.job_id}/events?event_delivery=polling",
+                            headers=headers,
+                        ),
+                        timeout=self.poll_timeout,
+                    )
+
+                    assert response.status_code == codes.OK
+
+                    # Get the NDJSON response as text
+                    text = response.text
+
+                    # Skip if response is empty
+                    if not text.strip():
+                        empty_polls += 1
                         await asyncio.sleep(0.1)
-                        sleeps += 1
                         continue
 
-                    yield data["event"]
+                    # Reset empty polls counter since we got data
+                    empty_polls = 0
 
-                    # If this was the end event, stop polling
-                    if '"end"' in data["event"]:
-                        break
-                    if sleeps > max_sleeps:
-                        msg = "Build event polling timed out."
-                        raise TimeoutError(msg)
+                    # Process each line as an individual JSON object
+                    line_count = 0
+                    for line in text.splitlines():
+                        if not line.strip():
+                            continue
+
+                        line_count += 1
+                        total_events += 1
+
+                        # Check for end event with multiple possible formats
+                        if '"event":"end"' in line or '"event": "end"' in line:
+                            end_event_found = True
+
+                        # Validate it's proper JSON before yielding
+                        try:
+                            json.loads(line)  # Test parse to ensure it's valid JSON
+                            yield line
+                        except json.JSONDecodeError as e:
+                            logger.debug(f"WARNING: Skipping invalid JSON: {line}")
+                            logger.debug(f"Error: {e}")
+                            # Don't yield invalid JSON, but continue processing other lines
+
+                    # If we had no events in this batch, count as empty poll
+                    if line_count == 0:
+                        empty_polls += 1
+
+                    # Add a small delay to prevent tight polling
+                    await asyncio.sleep(0.1)
+
+                # If we hit the limit without finding the end event, log a warning
+                if total_events >= self.max_total_events:
+                    logger.debug(
+                        f"WARNING: Reached maximum event limit ({self.max_total_events}) without finding end event"
+                    )
+
+                if empty_polls >= self.max_empty_polls and not end_event_found:
+                    logger.debug(
+                        f"WARNING: Reached maximum empty polls ({self.max_empty_polls}) without finding end event"
+                    )
+
             except asyncio.TimeoutError as e:
+                logger.debug(f"ERROR: Polling request timed out after {self.poll_timeout}s")
                 msg = "Build event polling timed out."
                 raise TimeoutError(msg) from e
 

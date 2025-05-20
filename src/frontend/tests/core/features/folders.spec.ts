@@ -19,46 +19,50 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
     await page.getByPlaceholder("Search flows").first().isVisible();
     await page.getByText("Flows").first().isVisible();
-    await page.getByText("Components").first().isVisible();
+    if (await page.getByText("Components").first().isVisible()) {
+      await page.getByText("Components").first().isVisible();
+    } else {
+      await page.getByText("MCP Server").first().isVisible();
+    }
     await page.getByText("All").first().isVisible();
     await page.getByText("Select All").first().isVisible();
 
-    await page.getByTestId("add-folder-button").click();
+    await page.getByTestId("add-project-button").click();
     await page
-      .locator("[data-testid='folder-sidebar']")
-      .getByText("New Folder")
+      .locator("[data-testid='project-sidebar']")
+      .getByText("New Project")
       .last()
       .isVisible();
 
     await page
-      .locator("[data-testid='folder-sidebar']")
-      .getByText("New Folder")
+      .locator("[data-testid='project-sidebar']")
+      .getByText("New Project")
       .last()
       .dblclick();
 
-    const element = await page.getByTestId("input-folder");
-    await element.fill("new folder test name");
+    const element = await page.getByTestId("input-project");
+    await element.fill("new project test name");
 
-    await page.getByText("My Projects").last().click({
+    await page.getByText("Starter Project").last().click({
       force: true,
     });
 
-    await page.getByText("new folder test name").last().waitFor({
+    await page.getByText("new project test name").last().waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByText("new folder test name")
+      .getByText("new project test name")
       .last()
       .hover()
       .then(async () => {
         await page.getByTestId("more-options-button").last().click();
       });
 
-    await page.getByTestId("btn-delete-folder").click();
+    await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
-    await expect(page.getByText("Folder deleted successfully")).toBeVisible({
+    await expect(page.getByText("Project deleted successfully")).toBeVisible({
       timeout: 3000,
     });
   },
@@ -137,26 +141,28 @@ test("change flow folder", async ({ page }) => {
 
   await page.getByPlaceholder("Search flows").isVisible();
   await page.getByText("Flows").first().isVisible();
-  await page.getByText("Components").first().isVisible();
-  await page.getByText("All").first().isVisible();
-  await page.getByText("Select All").first().isVisible();
+  if (await page.getByText("Components").first().isVisible()) {
+    await page.getByText("Components").first().isVisible();
+  } else {
+    await page.getByText("MCP Server").first().isVisible();
+  }
 
-  await page.getByTestId("add-folder-button").click();
+  await page.getByTestId("add-project-button").click();
   await page
-    .locator("[data-testid='folder-sidebar']")
-    .getByText("New Folder")
+    .locator("[data-testid='project-sidebar']")
+    .getByText("New Project")
     .last()
     .isVisible();
   await page
-    .locator("[data-testid='folder-sidebar']")
-    .getByText("New Folder")
+    .locator("[data-testid='project-sidebar']")
+    .getByText("New Project")
     .last()
     .dblclick();
-  await page.getByTestId("input-folder").fill("new folder test name");
+  await page.getByTestId("input-project").fill("new project test name");
   await page.keyboard.press("Enter");
-  await page.getByText("new folder test name").last().isVisible();
+  await page.getByText("new project test name").last().isVisible();
 
-  await page.getByText("My Projects").last().click();
+  await page.getByText("Starter Project").last().click();
   await page.getByText("Basic Prompting").first().hover();
   await page.mouse.down();
   await page.getByText("test").first().hover();

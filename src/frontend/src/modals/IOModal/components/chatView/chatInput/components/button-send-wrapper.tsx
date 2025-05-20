@@ -60,9 +60,9 @@ const ButtonSendWrapper = ({
       data-testid={showStopButton ? "button-stop" : "button-send"}
     >
       <Case condition={showStopButton}>
-        <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
+        <div className="flex items-center gap-2 rounded-md text-sm font-medium">
           Stop
-          <Loading className="h-[16px] w-[16px]" />
+          <Loading className="h-4 w-4" />
         </div>
       </Case>
 
@@ -75,7 +75,7 @@ const ButtonSendWrapper = ({
       </Case> */}
 
       <Case condition={showSendButton}>
-        <div className="flex h-fit w-fit items-center gap-2 text-[14px] font-medium">
+        <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
           Send
         </div>
       </Case>

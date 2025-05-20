@@ -167,10 +167,12 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
+    | "notice"
     | "x-small"
     | "retangular"
     | "smaller"
     | "small"
+    | "small-update"
     | "small-query"
     | "medium"
     | "medium-tall"

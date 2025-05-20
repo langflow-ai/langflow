@@ -23,60 +23,75 @@ This loaded data informs the **Open AI** component's responses to your questions
 
 The Confluence component integrates with the Confluence wiki collaboration platform to load and process documents. It utilizes the ConfluenceLoader from LangChain to fetch content from a specified Confluence space.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| url | Site URL | The base URL of the Confluence Space (e.g., `https://company.atlassian.net/wiki`) |
-| username | Username | Atlassian User E-mail (e.g., `email@example.com`) |
-| api_key | API Key | Atlassian API Key (Create an API key at: [Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens)) |
-| space_key | Space Key | The key of the Confluence space to access |
-| cloud | Use Cloud? | Whether to use Confluence Cloud (default: true) |
-| content_format | Content Format | Specify content format (default: STORAGE) |
-| max_pages | Max Pages | Maximum number of pages to retrieve (default: 1000) |
+| url | Site URL | The base URL of the Confluence Space, for example https://company.atlassian.net/wiki. |
+| username | Username | The Atlassian User E-mail, for example email@example.com. |
+| api_key | API Key | The Atlassian API Key. Create an API key at [Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens). |
+| space_key | Space Key | The key of the Confluence space to access. |
+| cloud | Use Cloud? | Whether to use Confluence Cloud. Default is true. |
+| content_format | Content Format | The content format. Default is STORAGE. |
+| max_pages | Max Pages | The maximum number of pages to retrieve. Default is 1000. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| data | Data | List of Data objects containing the loaded Confluence documents |
+| data | Data | A list of Data objects containing the loaded Confluence documents. |
+
+</details>
 
 ## GitLoader
 
 The GitLoader component uses the GitLoader from LangChain to fetch and load documents from a specified Git repository.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| repo_path | Repository Path | The local path to the Git repository |
-| clone_url | Clone URL | The URL to clone the Git repository from (optional) |
-| branch | Branch | The branch to load files from (default: 'main') |
-| file_filter | File Filter | Patterns to filter files (e.g., '.py' to include only .py files, '!.py' to exclude .py files) |
-| content_filter | Content Filter | A regex pattern to filter files based on their content |
+| repo_path | Repository Path | The local path to the Git repository. |
+| clone_url | Clone URL | The URL to clone the Git repository from. This field is optional. |
+| branch | Branch | The branch to load files from. Default is main. |
+| file_filter | File Filter | The patterns to filter files. Use .py to include only Python files, or !.py to exclude Python files. |
+| content_filter | Content Filter | A regex pattern to filter files based on their content. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| data | Data | List of Data objects containing the loaded Git repository documents |
+| data | Data | A list of Data objects containing the loaded Git repository documents. |
+
+</details>
 
 ## Unstructured
 
 This component uses the [Unstructured.io](https://unstructured.io/) Serverless API to load and parse files into a list of structured [Data](/concepts-objects) objects.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| file | File | The path to the file to be parsed (supported types are listed [here](https://docs.unstructured.io/api-reference/api-services/overview#supported-file-types)) |
-| api_key | API Key | Unstructured.io Serverless API Key |
-| api_url | Unstructured.io API URL | Optional URL for the Unstructured API |
-| chunking_strategy | Chunking Strategy | Strategy for chunking the document (options: "", "basic", "by_title", "by_page", "by_similarity") |
-| unstructured_args | Additional Arguments | Optional dictionary of additional arguments for the Unstructured.io API |
+| file | File | The path to the file to be parsed. Supported types are listed in the [Unstructured documentation](https://docs.unstructured.io/api-reference/api-services/overview#supported-file-types). |
+| api_key | API Key | The Unstructured.io Serverless API Key. |
+| api_url | Unstructured.io API URL | The URL for the Unstructured API. This field is optional. |
+| chunking_strategy | Chunking Strategy | The strategy for chunking the document. Options include basic, by_title, by_page, and by_similarity. |
+| unstructured_args | Additional Arguments | A dictionary of additional arguments for the Unstructured.io API. This field is optional. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| data | Data | List of Data objects containing the parsed content from the input file |
+| data | Data | A list of Data objects containing the parsed content from the input file. |
+
+</details>

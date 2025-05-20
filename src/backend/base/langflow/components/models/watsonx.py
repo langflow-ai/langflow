@@ -1,9 +1,9 @@
 import json
-import logging
 from typing import Any
 
 import requests
 from langchain_ibm import ChatWatsonx
+from loguru import logger
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -11,9 +11,6 @@ from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from langflow.schema.dotdict import dotdict
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class WatsonxAIComponent(LCModelComponent):
@@ -45,6 +42,8 @@ class WatsonxAIComponent(LCModelComponent):
         StrInput(
             name="project_id",
             display_name="watsonx Project ID",
+            required=True,
+            info="The project ID or deployment space ID that is associated with the foundation model.",
         ),
         SecretStrInput(
             name="api_key",
@@ -150,7 +149,7 @@ class WatsonxAIComponent(LCModelComponent):
             data = response.json()
             models = [model["model_id"] for model in data.get("resources", [])]
             return sorted(models)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error fetching models. Using default models.")
             return WatsonxAIComponent._default_models
 
@@ -166,7 +165,7 @@ class WatsonxAIComponent(LCModelComponent):
                     build_config.model_name.value = models[0]
                 info_message = f"Updated model options: {len(models)} models found in {build_config.url.value}"
                 logger.info(info_message)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
 
     def build_model(self) -> LanguageModel:

@@ -1,12 +1,12 @@
-import "ace-builds/src-noconflict/ace";
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
-// import "ace-builds/webpack-resolver";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import useFlowStore from "@/stores/flowStore";
+import "ace-builds/src-noconflict/ace";
+import "ace-builds/src-noconflict/ext-language_tools";
+import "ace-builds/src-noconflict/ext-searchbox";
+import "ace-builds/src-noconflict/mode-python";
+import "ace-builds/src-noconflict/theme-github";
+import "ace-builds/src-noconflict/theme-twilight";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -54,13 +54,12 @@ export default function CodeAreaModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const codeRef = useRef<ReactAce | null>(null);
-  const { mutate, isPending } = usePostValidateCode();
+  const { mutate } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-  const setNode = useFlowStore((state) => state.setNode);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -177,6 +176,8 @@ export default function CodeAreaModal({
         } else {
           if (
             !(
+              codeRef.current?.editor.completer &&
+              "popup" in codeRef.current?.editor.completer &&
               codeRef.current?.editor.completer.popup &&
               codeRef.current?.editor.completer.popup.isOpen
             )

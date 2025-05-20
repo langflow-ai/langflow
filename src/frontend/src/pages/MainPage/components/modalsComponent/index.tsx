@@ -29,7 +29,7 @@ const ModalsComponent = ({
         }}
         description="folder"
         note={
-          "Deleting the selected folder will remove all associated flows and components."
+          "Deleting the selected project will remove all associated flows and components."
         }
       >
         <></>

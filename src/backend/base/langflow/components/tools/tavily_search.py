@@ -1,47 +1,18 @@
-from enum import Enum
-
 import httpx
-from langchain.tools import StructuredTool
-from langchain_core.tools import ToolException
 from loguru import logger
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.custom import Component
+from langflow.helpers.data import data_to_text
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
-class TavilySearchDepth(Enum):
-    BASIC = "basic"
-    ADVANCED = "advanced"
-
-
-class TavilySearchTopic(Enum):
-    GENERAL = "general"
-    NEWS = "news"
-
-
-class TavilySearchSchema(BaseModel):
-    query: str = Field(..., description="The search query you want to execute with Tavily.")
-    search_depth: TavilySearchDepth = Field(TavilySearchDepth.BASIC, description="The depth of the search.")
-    topic: TavilySearchTopic = Field(TavilySearchTopic.GENERAL, description="The category of the search.")
-    max_results: int = Field(5, description="The maximum number of search results to return.")
-    include_images: bool = Field(default=False, description="Include a list of query-related images in the response.")
-    include_answer: bool = Field(default=False, description="Include a short answer to original query.")
-
-
-class TavilySearchToolComponent(LCToolComponent):
-    display_name = "Tavily AI Search [DEPRECATED]"
-    description = """**Tavily AI** is a search engine optimized for LLMs and RAG, \
-        aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.
-
-Note: Check 'Advanced' for all options.
-"""
+class TavilySearchComponent(Component):
+    display_name = "Tavily Search API"
+    description = """**Tavily Search** is a search engine optimized for LLMs and RAG, \
+        aimed at efficient, quick, and persistent search results."""
     icon = "TavilyIcon"
-    name = "TavilyAISearch"
-    documentation = "https://docs.tavily.com/"
-    legacy = True
 
     inputs = [
         SecretStrInput(
@@ -54,21 +25,36 @@ Note: Check 'Advanced' for all options.
             name="query",
             display_name="Search Query",
             info="The search query you want to execute with Tavily.",
+            tool_mode=True,
         ),
         DropdownInput(
             name="search_depth",
             display_name="Search Depth",
             info="The depth of the search.",
-            options=list(TavilySearchDepth),
-            value=TavilySearchDepth.ADVANCED,
+            options=["basic", "advanced"],
+            value="advanced",
+            advanced=True,
+        ),
+        IntInput(
+            name="chunks_per_source",
+            display_name="Chunks Per Source",
+            info=("The number of content chunks to retrieve from each source (1-3). Only works with advanced search."),
+            value=3,
             advanced=True,
         ),
         DropdownInput(
             name="topic",
             display_name="Search Topic",
             info="The category of the search.",
-            options=list(TavilySearchTopic),
-            value=TavilySearchTopic.GENERAL,
+            options=["general", "news"],
+            value="general",
+            advanced=True,
+        ),
+        IntInput(
+            name="days",
+            display_name="Days",
+            info="Number of days back from current date to include. Only available with news topic.",
+            value=7,
             advanced=True,
         ),
         IntInput(
@@ -79,128 +65,151 @@ Note: Check 'Advanced' for all options.
             advanced=True,
         ),
         BoolInput(
-            name="include_images",
-            display_name="Include Images",
-            info="Include a list of query-related images in the response.",
-            value=True,
-            advanced=True,
-        ),
-        BoolInput(
             name="include_answer",
             display_name="Include Answer",
             info="Include a short answer to original query.",
             value=True,
             advanced=True,
         ),
+        DropdownInput(
+            name="time_range",
+            display_name="Time Range",
+            info="The time range back from the current date to filter results.",
+            options=["day", "week", "month", "year"],
+            value=None,  # Default to None to make it optional
+            advanced=True,
+        ),
+        BoolInput(
+            name="include_images",
+            display_name="Include Images",
+            info="Include a list of query-related images in the response.",
+            value=True,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="include_domains",
+            display_name="Include Domains",
+            info="Comma-separated list of domains to include in the search results.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="exclude_domains",
+            display_name="Exclude Domains",
+            info="Comma-separated list of domains to exclude from the search results.",
+            advanced=True,
+        ),
+        BoolInput(
+            name="include_raw_content",
+            display_name="Include Raw Content",
+            info="Include the cleaned and parsed HTML content of each search result.",
+            value=False,
+            advanced=True,
+        ),
     ]
 
-    def run_model(self) -> list[Data]:
-        # Convert string values to enum instances with validation
+    outputs = [
+        Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="Text", name="text", method="fetch_content_text"),
+    ]
+
+    def fetch_content(self) -> list[Data]:
         try:
-            search_depth_enum = (
-                self.search_depth
-                if isinstance(self.search_depth, TavilySearchDepth)
-                else TavilySearchDepth(str(self.search_depth).lower())
-            )
-        except ValueError as e:
-            error_message = f"Invalid search depth value: {e!s}"
-            self.status = error_message
-            return [Data(data={"error": error_message})]
+            # Only process domains if they're provided
+            include_domains = None
+            exclude_domains = None
 
-        try:
-            topic_enum = (
-                self.topic if isinstance(self.topic, TavilySearchTopic) else TavilySearchTopic(str(self.topic).lower())
-            )
-        except ValueError as e:
-            error_message = f"Invalid topic value: {e!s}"
-            self.status = error_message
-            return [Data(data={"error": error_message})]
+            if self.include_domains:
+                include_domains = [domain.strip() for domain in self.include_domains.split(",") if domain.strip()]
 
-        return self._tavily_search(
-            self.query,
-            search_depth=search_depth_enum,
-            topic=topic_enum,
-            max_results=self.max_results,
-            include_images=self.include_images,
-            include_answer=self.include_answer,
-        )
+            if self.exclude_domains:
+                exclude_domains = [domain.strip() for domain in self.exclude_domains.split(",") if domain.strip()]
 
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="tavily_search",
-            description="Perform a web search using the Tavily API.",
-            func=self._tavily_search,
-            args_schema=TavilySearchSchema,
-        )
-
-    def _tavily_search(
-        self,
-        query: str,
-        *,
-        search_depth: TavilySearchDepth = TavilySearchDepth.BASIC,
-        topic: TavilySearchTopic = TavilySearchTopic.GENERAL,
-        max_results: int = 5,
-        include_images: bool = False,
-        include_answer: bool = False,
-    ) -> list[Data]:
-        # Validate enum values
-        if not isinstance(search_depth, TavilySearchDepth):
-            msg = f"Invalid search_depth value: {search_depth}"
-            raise TypeError(msg)
-        if not isinstance(topic, TavilySearchTopic):
-            msg = f"Invalid topic value: {topic}"
-            raise TypeError(msg)
-
-        try:
             url = "https://api.tavily.com/search"
             headers = {
                 "content-type": "application/json",
                 "accept": "application/json",
             }
+
             payload = {
                 "api_key": self.api_key,
-                "query": query,
-                "search_depth": search_depth.value,
-                "topic": topic.value,
-                "max_results": max_results,
-                "include_images": include_images,
-                "include_answer": include_answer,
+                "query": self.query,
+                "search_depth": self.search_depth,
+                "topic": self.topic,
+                "max_results": self.max_results,
+                "include_images": self.include_images,
+                "include_answer": self.include_answer,
+                "include_raw_content": self.include_raw_content,
+                "days": self.days,
+                "time_range": self.time_range,
             }
 
-            with httpx.Client() as client:
+            # Only add domains to payload if they exist and have values
+            if include_domains:
+                payload["include_domains"] = include_domains
+            if exclude_domains:
+                payload["exclude_domains"] = exclude_domains
+
+            # Add conditional parameters only if they should be included
+            if self.search_depth == "advanced" and self.chunks_per_source:
+                payload["chunks_per_source"] = self.chunks_per_source
+
+            if self.topic == "news" and self.days:
+                payload["days"] = int(self.days)  # Ensure days is an integer
+
+            # Add time_range if it's set
+            if hasattr(self, "time_range") and self.time_range:
+                payload["time_range"] = self.time_range
+
+            # Add timeout handling
+            with httpx.Client(timeout=90.0) as client:
                 response = client.post(url, json=payload, headers=headers)
 
             response.raise_for_status()
             search_results = response.json()
 
-            data_results = [
-                Data(
-                    data={
-                        "title": result.get("title"),
-                        "url": result.get("url"),
-                        "content": result.get("content"),
-                        "score": result.get("score"),
-                    }
-                )
-                for result in search_results.get("results", [])
-            ]
+            data_results = []
 
-            if include_answer and search_results.get("answer"):
-                data_results.insert(0, Data(data={"answer": search_results["answer"]}))
+            if self.include_answer and search_results.get("answer"):
+                data_results.append(Data(text=search_results["answer"]))
 
-            if include_images and search_results.get("images"):
-                data_results.append(Data(data={"images": search_results["images"]}))
+            for result in search_results.get("results", []):
+                content = result.get("content", "")
+                result_data = {
+                    "title": result.get("title"),
+                    "url": result.get("url"),
+                    "content": content,
+                    "score": result.get("score"),
+                }
+                if self.include_raw_content:
+                    result_data["raw_content"] = result.get("raw_content")
 
-            self.status = data_results  # type: ignore[assignment]
+                data_results.append(Data(text=content, data=result_data))
 
-        except httpx.HTTPStatusError as e:
-            error_message = f"HTTP error: {e.response.status_code} - {e.response.text}"
-            logger.debug(error_message)
-            self.status = error_message
-            raise ToolException(error_message) from e
-        except Exception as e:
-            error_message = f"Unexpected error: {e}"
-            logger.opt(exception=True).debug("Error running Tavily Search")
-            self.status = error_message
-            raise ToolException(error_message) from e
-        return data_results
+            if self.include_images and search_results.get("images"):
+                data_results.append(Data(text="Images found", data={"images": search_results["images"]}))
+
+        except httpx.TimeoutException:
+            error_message = "Request timed out (90s). Please try again or adjust parameters."
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except httpx.HTTPStatusError as exc:
+            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except httpx.RequestError as exc:
+            error_message = f"Request error occurred: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except ValueError as exc:
+            error_message = f"Invalid response format: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        else:
+            self.status = data_results
+            return data_results
+
+    def fetch_content_text(self) -> Message:
+        data = self.fetch_content()
+        result_string = data_to_text("{text}", data)
+        self.status = result_string
+        return Message(text=result_string)

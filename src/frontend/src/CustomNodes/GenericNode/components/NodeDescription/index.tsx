@@ -78,7 +78,7 @@ export default function NodeDescription({
       <MemoizedMarkdown
         linkTarget="_blank"
         className={cn(
-          "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          "markdown prose flex w-full flex-col text-mmd leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
           mdClassName,
         )}
       >
@@ -153,7 +153,7 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel h-full w-full p-0 text-[13px] focus:border-primary focus:ring-0",
+              "nowheel h-full w-full p-0 text-mmd focus:border-primary focus:ring-0",
               inputClassName,
             )}
             autoFocus
@@ -166,7 +166,7 @@ export default function NodeDescription({
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
-                "pt-1 text-left text-[13px]",
+                "pt-1 text-left text-mmd",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
@@ -183,7 +183,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-[13px] text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-grab text-mmd text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}

@@ -5,7 +5,7 @@ slug: /webhook
 
 import Icon from "@site/src/components/icon";
 
-Add a **Webhook** component to your flow to trigger it with external requests. 
+Add a **Webhook** component to your flow to trigger it with external requests.
 
 To connect the **Webhook** to a **Parser** component to view and parse your data payload, do the following:
 

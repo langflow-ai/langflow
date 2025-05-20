@@ -73,6 +73,9 @@ RUN apt-get update \
         git \
         # Add PostgreSQL client libraries
         libpq5 \
+        gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
@@ -96,6 +99,7 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+ENV LANGFLOW_EVENT_DELIVERY=polling
 
 USER 1000
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]

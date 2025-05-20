@@ -267,7 +267,7 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
+@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,

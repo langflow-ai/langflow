@@ -64,6 +64,8 @@ A component inherits from a base `Component` class that defines its interface an
 
 For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
+<details>
+<summary>Recursive character text splitter code</summary>
 ```python
 from typing import Any
 
@@ -125,6 +127,8 @@ class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
         )
 
 ```
+
+</details>
 
 Components include definitions for inputs and outputs, which are represented in the UI with color-coded ports.
 
@@ -217,4 +221,4 @@ The sidebar includes a component **Search** bar, and includes flags for showing 
 
 **Beta** components are still being tested and are not suitable for production workloads.
 
-**Legacy** components are available to use but no longer supported.
+Legacy components are available for use but are no longer supported.

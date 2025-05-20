@@ -1,11 +1,12 @@
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { GradientSave } from "@/icons/GradientSparkles";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
-import { lucideIcons } from "../icons/lucideIcons";
+
+const iconCache = new Map<string, any>();
 
 export const BG_NOISE =
   "url(data:image/png;base64,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)";
@@ -230,6 +231,11 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  {
+    display_name: "Googlecalendar",
+    name: "googlecalendar",
+    icon: "Googlecalendar",
+  },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -401,25 +407,11 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   wrappers: "Gift",
   unknown: "HelpCircle",
   custom: "Edit",
-  BotMessageSquareIcon: "BotMessageSquare",
-  TextSearchIcon: "TextSearch",
-  ChevronsUpDown: "ChevronsUpDown",
-  SunIcon: "Sun",
-  MoonIcon: "Moon",
-  FolderIcon: "FolderIcon",
-  GradientSave: "GradientSave",
-  FolderPlusIcon: "FolderPlus",
-  PaperclipIcon: "Paperclip",
-  TerminalIcon: "TerminalIcon",
-  OptionIcon: "Option",
-  Option: "OptionIcon",
-  GlobeOkIcon: "GlobeOk",
   ThumbDownIconCustom: "ThumbDownCustom",
   ThumbUpIconCustom: "ThumbUpCustom",
   ScrapeGraphAI: "ScrapeGraph",
   ScrapeGraphSmartScraperApi: "ScrapeGraph",
   ScrapeGraphMarkdownifyApi: "ScrapeGraph",
-  Unlink: "UnlinkIcon",
   note: "StickyNote",
 };
 
@@ -431,66 +423,76 @@ export const getLucideIconName = (name: string): string => {
     Wand2: "wand-sparkles",
   };
   const kebabCaseName = name
+    .replace(/Icon/g, "")
     .replace(/([a-z])([A-Z])/g, "$1-$2")
+    .replace(/(\d)/g, "-$1")
     .replace(/\s+/g, "-")
     .toLowerCase();
   return map[name] || kebabCaseName;
 };
 
 // Initialize icon mappings based on if we want to support lazy loading for cloud
-const iconMappingsPromise = ENABLE_DATASTAX_LANGFLOW
-  ? import("../icons/lazyIconImports").then((module) => module.lazyIconsMapping)
-  : import("../icons/eagerIconImports").then(
-      (module) => module.eagerIconsMapping,
-    );
+const iconMappingsPromise = import("../icons/lazyIconImports").then(
+  (module) => module.lazyIconsMapping,
+);
 
 export const eagerLoadedIconsMap = {
   // Custom icons
   GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
-  "sticky-note": lucideIcons.StickyNote,
 
-  // React icons
+  // React icon
   FaApple: FaApple,
   FaDiscord: FaDiscord,
   FaGithub: FaGithub,
   TwitterLogoIcon: TwitterLogoIcon,
-
-  // All Lucide Icons
-  ...lucideIcons,
 };
 
-// Function to get a lazy-loaded icon component
+export const getCachedIcon = (name: string) => {
+  return iconCache.get(name);
+};
+
 export const getNodeIcon = async (name: string) => {
+  const cacheAndReturn = (icon: any) => {
+    iconCache.set(name, icon);
+    return icon;
+  };
+
+  if (iconCache.has(name)) {
+    return iconCache.get(name);
+  }
   const iconName = nodeIconToDisplayIconMap[name];
 
-  // Always check eagerly loaded icons first
   if (eagerLoadedIconsMap[iconName || name]) {
-    return eagerLoadedIconsMap[iconName || name];
+    return cacheAndReturn(eagerLoadedIconsMap[iconName || name]);
+  }
+
+  if (isFontAwesomeIcon(iconName || name)) {
+    return cacheAndReturn(fontAwesomeIcons[iconName || name]);
   }
 
   const iconMappings = await iconMappingsPromise;
 
   if (iconMappings[iconName || name]) {
-    return ENABLE_DATASTAX_LANGFLOW
-      ? lazy(iconMappings[iconName || name])
-      : iconMappings[iconName || name];
+    return cacheAndReturn(lazy(iconMappings[iconName || name]));
   }
 
   const lucideIconName = getLucideIconName(iconName || name);
   if (dynamicIconImports[lucideIconName]) {
     try {
-      return lazy(dynamicIconImports[lucideIconName]);
+      return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
     } catch (e) {
       // Fall through to next option
     }
   }
 
   // If all else fails, return a simple empty component
-  return lazy(() =>
-    Promise.resolve({
-      default: () => null,
-    }),
+  return cacheAndReturn(
+    lazy(() =>
+      Promise.resolve({
+        default: () => null,
+      }),
+    ),
   );
 };
 
@@ -500,6 +502,7 @@ export const iconExists = async (name: string): Promise<boolean> => {
 
   return !!(
     eagerLoadedIconsMap[iconName] ||
+    isFontAwesomeIcon(iconName) ||
     iconMappings[iconName] ||
     dynamicIconImports[getLucideIconName(iconName)]
   );

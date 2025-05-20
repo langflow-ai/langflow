@@ -5,11 +5,11 @@ slug: /concepts-publish
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow via API endpoints, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
+Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow as an API endpoint, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
 
 ## API access
 
-The **API** pane presents code templates for integrating your flow into external applications.
+The **API access** pane presents code templates for integrating your flow into external applications.
 
 ![](/img/api-pane.png)
 
@@ -63,7 +63,7 @@ For example, changing the **Chat Input** component's `input_value` changes that 
 
 ### Send files to your flow with the API
 
-For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files).
+For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files-v1).
 
 ### Webhook cURL
 

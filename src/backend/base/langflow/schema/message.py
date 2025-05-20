@@ -51,6 +51,7 @@ class Message(Data):
     properties: Properties = Field(default_factory=Properties)
     category: Literal["message", "error", "warning", "info"] | None = "message"
     content_blocks: list[ContentBlock] = Field(default_factory=list)
+    duration: int | None = None
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -306,6 +307,7 @@ class MessageResponse(DefaultModel):
     text: str
     files: list[str] = []
     edit: bool
+    duration: float | None = None
 
     properties: Properties | None = None
     category: str | None = None
