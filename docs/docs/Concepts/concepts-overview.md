@@ -107,17 +107,17 @@ An example `.env` file is available in the [project repository](https://github.c
 
 ## Projects
 
-## Projects
-
-The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
+The **Projects** page displays all the flows you've created in the Langflow workspace.
 
 ![](/img/my-projects.png)
 
-**My Projects** is the default space where all new projects and components are initially stored.
-
+**Starter Project** is the default space where all new projects are initially stored.
 To create a new project, click <Icon name="Plus"aria-hidden="true"/> **Create new project**.
 
 To upload a flow to your project, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
+
+To delete a flow from your project, click a flow's checkbox to select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+You can select multiple flows in a single action.
 
 ## File management
 
