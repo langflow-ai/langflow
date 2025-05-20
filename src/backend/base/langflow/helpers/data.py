@@ -2,6 +2,8 @@ import re
 from collections import defaultdict
 from typing import Any
 
+import orjson
+from fastapi.encoders import jsonable_encoder
 from langchain_core.documents import Document
 
 from langflow.schema import Data, DataFrame
@@ -146,8 +148,18 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
 def clean_string(s):
     # Remove empty lines
     s = re.sub(r"^\s*$", "", s, flags=re.MULTILINE)
-    # Replace multiple newlines with a single newline
+    # Replace three or more newlines with a double newline
     return re.sub(r"\n{3,}", "\n\n", s)
+
+
+def _serialize_data(data: Data) -> str:
+    """Serialize Data object to JSON string."""
+    # Convert data.data to JSON-serializable format
+    serializable_data = jsonable_encoder(data.data)
+    # Serialize with orjson, enabling pretty printing with indentation
+    json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
+    # Convert bytes to string and wrap in Markdown code blocks
+    return "```json\n" + json_bytes.decode("utf-8") + "\n```"
 
 
 def safe_convert(data: Any, *, clean_data: bool = False) -> str:
@@ -158,20 +170,24 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
         if isinstance(data, Message):
             unclean_str = data.get_text()
         if isinstance(data, Data):
-            if data.get_text() is None:
-                msg = "Empty Data object"
-                raise ValueError(msg)
-            unclean_str = data.get_text()
+            unclean_str = _serialize_data(data)
         if isinstance(data, DataFrame):
             if clean_data:
                 # Remove empty rows
                 data = data.dropna(how="all")
+                # Remove empty lines in each cell
+                data = data.replace(r"^\s*$", "", regex=True)
+                # Replace multiple newlines with a single newline
+                data = data.replace(r"\n+", "\n", regex=True)
 
             # Replace pipe characters to avoid markdown table issues
-            unclean_data = data.replace(r"\|", r"\\|", regex=True)
+            processed_data = data.replace(r"\|", r"\\|", regex=True)
 
-            unclean_data = unclean_data.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
-            unclean_str = unclean_data.to_markdown(index=False)
+            processed_data = processed_data.map(
+                lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
+            )
+
+            return processed_data.to_markdown(index=False)
 
         # Convert and return the string
         clean_str = str(unclean_str)
