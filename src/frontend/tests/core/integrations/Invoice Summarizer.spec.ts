@@ -44,7 +44,7 @@ test(
     });
 
     // Switch to Playground
-    await page.getByText("Playground", { exact: true }).last().click();
+await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Wait for the playground to be ready
     const inputPlaceholder = page
