@@ -151,7 +151,7 @@ export const MenuBar = memo((): JSX.Element => {
               />
             </div>
           </PopoverTrigger>
-          <div className={"hidden shrink-0 items-center sm:flex"}>
+          <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
               <ShadTooltip
                 content={
