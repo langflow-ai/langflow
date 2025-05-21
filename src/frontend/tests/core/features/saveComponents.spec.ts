@@ -18,7 +18,7 @@ test.describe("save component tests", () => {
 
       // Read your file into a buffer.
       const jsonContent = readFileSync(
-        "/tests/assets/flow_group_test.json",
+        "tests/assets/flow_group_test.json",
         "utf-8",
       );
 
