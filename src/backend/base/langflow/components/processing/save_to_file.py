@@ -70,15 +70,11 @@ class SaveToFileComponent(Component):
         # Validate file format based on input type
         file_format = self.file_format or self._get_default_format()
         allowed_formats = (
-            self.MESSAGE_FORMAT_CHOICES
-            if self._get_input_type() == "Message"
-            else self.DATA_FORMAT_CHOICES
+            self.MESSAGE_FORMAT_CHOICES if self._get_input_type() == "Message" else self.DATA_FORMAT_CHOICES
         )
         if file_format not in allowed_formats:
             msg = f"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         # Prepare file path
         file_path = Path(self.file_name).expanduser()
