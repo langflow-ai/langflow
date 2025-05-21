@@ -196,7 +196,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         b = cache["b"]
     """
 
-    def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60) -> None:
+    def __init__(self, host="localhost", port=6379, db=0, url=None, password=None, expiration_time=60 * 60) -> None:
         """Initialize a new RedisCache instance.
 
         Args:
@@ -204,6 +204,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             port (int, optional): Redis port.
             db (int, optional): Redis DB.
             url (str, optional): Redis URL.
+            password (str, optional): Redis password.
             expiration_time (int, optional): Time in seconds after which a
                 cached item expires. Default is 1 hour.
         """
@@ -222,7 +223,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         if url:
             self._client = StrictRedis.from_url(url)
         else:
-            self._client = StrictRedis(host=host, port=port, db=db)
+            self._client = StrictRedis(host=host, port=port, db=db, password=password)
         self.expiration_time = expiration_time
 
     async def is_connected(self) -> bool:
