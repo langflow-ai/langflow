@@ -55,10 +55,14 @@ def build_and_validate_all_files(reader: DirectoryReader, file_list):
 
 async def abuild_and_validate_all_files(reader: DirectoryReader, file_list):
     """Build and validate all files."""
-    data = await reader.abuild_component_menu_list(file_list)
+    data = await reader.abuild_component_menu_list_with_cache(file_list)
 
+    import time
+    start = time.time()
     valid_components = reader.filter_loaded_components(data=data, with_errors=False)
     invalid_components = reader.filter_loaded_components(data=data, with_errors=True)
+    end = time.time()
+    print(f"Filtering Time taken: {end - start:.2f} seconds")
 
     return valid_components, invalid_components
 

@@ -2,15 +2,17 @@ import ast
 import asyncio
 import zlib
 from pathlib import Path
+import os
+import json
 
 import anyio
 from aiofile import async_open
+from langflow.services.deps import get_settings_service
 from loguru import logger
 
 from langflow.custom import Component
 
 MAX_DEPTH = 2
-
 
 class CustomComponentPathValueError(ValueError):
     pass
@@ -349,6 +351,15 @@ class DirectoryReader:
         logger.debug("-------------------- Component menu list built --------------------")
         return response
 
+    async def abuild_component_menu_list_with_cache(self, file_paths):
+        cached = load_menu_cache()
+        if cached is not None:
+            return cached
+
+        menu_results = await self.abuild_component_menu_list(file_paths)
+        save_menu_cache(menu_results)
+        return menu_results
+
     @staticmethod
     def get_output_types_from_code(code: str) -> list:
         """Get the output types from the code."""
@@ -357,3 +368,17 @@ class DirectoryReader:
 
         # Get the name of types classes
         return [type_.__name__ for type_ in types_list if hasattr(type_, "__name__")]
+
+def save_menu_cache(menu):
+    settings_service = get_settings_service()
+    cache_path = Path(settings_service.settings.config_dir) / "component_menu_cache.json"
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(menu, f)
+
+def load_menu_cache():
+    settings_service = get_settings_service()
+    cache_path = Path(settings_service.settings.config_dir) / "component_menu_cache.json"
+    if cache_path.exists():
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
