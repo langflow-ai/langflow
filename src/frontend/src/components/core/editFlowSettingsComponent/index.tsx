@@ -10,11 +10,13 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   invalidNameList = [],
   description,
   maxLength = 50,
+  descriptionMaxLength = 250,
   minLength = 1,
   setName,
   setDescription,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
+  const [isMaxDescriptionLength, setIsMaxDescriptionLength] = useState(false);
   const [isMinLength, setIsMinLength] = useState(false);
   const [isInvalidName, setIsInvalidName] = useState(false);
 
@@ -49,7 +51,13 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription!(event.target.value);
+    const { value } = event.target;
+    if (value.length >= descriptionMaxLength) {
+      setIsMaxDescriptionLength(true);
+    } else {
+      setIsMaxDescriptionLength(false);
+    }
+    setDescription!(value);
   };
 
   //this function is necessary to select the text when double clicking, this was not working with the onFocus event
@@ -69,9 +77,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             </span>
           )}
           {isInvalidName && (
-            <span className="edit-flow-span">
-              Name invalid or already exists
-            </span>
+            <span className="edit-flow-span">Flow name already exists</span>
           )}
         </div>
         {setName ? (
@@ -102,6 +108,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span className="text-mmd font-medium">
             Description{setDescription ? "" : ":"}
           </span>
+          {isMaxDescriptionLength && (
+            <span className="edit-flow-span">Character limit reached</span>
+          )}
         </div>
         {setDescription ? (
           <Textarea
@@ -113,6 +122,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             data-testid="input-flow-description"
             className="mt-2 max-h-[250px] resize-none font-normal"
             rows={5}
+            maxLength={descriptionMaxLength}
             onDoubleClickCapture={(event) => {
               handleFocus(event);
             }}
