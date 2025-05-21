@@ -7,8 +7,9 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.helpers.data import data_to_text, safe_convert
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
-from langflow.schema.dataframe import DataFrame
+from langflow.schema import DataFrame, Message
 from langflow.services.deps import get_settings_service
 
 # Constants
@@ -224,7 +225,7 @@ class URLComponent(Component):
                 raise ValueError(msg)
 
             # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
-            list_of_dicts = [
+            data = [
                 {
                     "text": doc.page_content,
                     "url": doc.metadata.pop("source", ""),
@@ -236,11 +237,24 @@ class URLComponent(Component):
                 for doc in all_docs
             ]
         except Exception as e:
-            error_msg = f"Error loading documents: {e!s}"
-            logger.exception(error_msg)
-            raise ValueError(error_msg) from e
-        else:
-            return list_of_dicts
+            error_msg = e.message if hasattr(e, "message") else e
+            msg = f"Error loading documents: {error_msg!s}"
+            logger.exception(msg)
+            raise ValueError(msg) from e
+
+        self.status = data
+        return data
+
+    def fetch_content_text(self) -> Message:
+        """Load documents and return their text content."""
+        data = self.fetch_content()
+        result_string = data_to_text("{text}", data)
+        self.status = result_string
+
+        # Clean up the result string
+        result_string = safe_convert(result_string, clean_data=True)
+
+        return Message(text=result_string)
 
     def fetch_content(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
