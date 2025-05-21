@@ -1,9 +1,9 @@
 import httpx
 import pkg_resources
 import typer
-from langflow_execution.logging.logger import logger
 from packaging import version as pkg_version
 
+from langflow_execution.logging.logger import logger
 from langflow_execution.main import run_server
 
 app = typer.Typer(no_args_is_help=True)

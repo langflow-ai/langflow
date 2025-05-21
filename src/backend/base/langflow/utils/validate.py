@@ -1,8 +1,8 @@
 import ast
 import importlib
 
-from langchain_core._api.deprecation import LangChainDeprecationWarning
 from loguru import logger
+
 
 def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
@@ -53,4 +53,3 @@ def validate_code(code):
 
     # Return the errors dictionary
     return errors
-

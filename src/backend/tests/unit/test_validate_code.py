@@ -1,14 +1,11 @@
 from pathlib import Path
-from unittest import mock
 
-import pytest
 from langflow.utils.validate import (
     create_class,
     create_function,
     extract_function_name,
     validate_code,
 )
-from requests.exceptions import MissingSchema
 
 
 def test_create_function():
@@ -61,6 +58,7 @@ def square(x)
         "imports": {"errors": []},
         "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
     }
+
 
 def test_create_class():
     code = """
