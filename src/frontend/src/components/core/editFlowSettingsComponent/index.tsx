@@ -40,12 +40,10 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     }
     setIsInvalidName(invalid);
 
-    // Only update the name if it's valid (not empty and not invalid)
-    if (value.length >= minLength && !invalid) {
-      setName!(value);
-    } else if (value.length === 0) {
+    setName!(value);
+
+    if (value.length === 0) {
       // For empty string, update state but keep isMinLength true
-      setName!("");
       setIsMinLength(true);
     }
   };
