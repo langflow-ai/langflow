@@ -50,7 +50,7 @@ withEventDeliveryModes(
       timeout: 15000,
     });
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByText("Add a Chat Input component to your flow to send messages.", {
         exact: true,

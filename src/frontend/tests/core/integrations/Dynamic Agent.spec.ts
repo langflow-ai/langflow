@@ -42,7 +42,7 @@ test.skip(
     await page.getByText("built successfully").last().click({
       timeout: 15000,
     });
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForTimeout(1000);
     expect(page.getByText("apple").last()).toBeVisible();
     const textContents = await page
