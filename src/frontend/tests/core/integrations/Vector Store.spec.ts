@@ -248,7 +248,7 @@ withEventDeliveryModes(
       timeout: 60000 * 2,
     });
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 60000,
     });

@@ -46,7 +46,7 @@ withEventDeliveryModes(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByPlaceholder(
         "No chat input variables found. Click to run your flow.",
