@@ -73,15 +73,15 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
         if t == "object":
             req_here = set(schema.get("required", []))
             # Handle additionalProperties for objects
-            if "additionalProperties" in schema:
-                flat_props[name] = {"type": "object", "additionalProperties": schema["additionalProperties"]}
-                if inherited_req:
-                    required_list.append(name)
-                return
 
             for k, subschema in schema.get("properties", {}).items():
                 child_name = f"{name}.{k}" if name else k
                 _walk(name=child_name, schema=subschema, inherited_req=inherited_req and k in req_here)
+
+            if "additionalProperties" in schema:
+                flat_props[name] = {"type": "object", "additionalProperties": schema["additionalProperties"]}
+                if inherited_req:
+                    required_list.append(name)
             return
 
         # ── arrays (always recurse into the first item as “[0]”) ───────────
