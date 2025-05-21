@@ -167,7 +167,6 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
     job_id = build_response["job_id"]
     assert job_id is not None
 
-
     # Create a response object that mimics a streaming response but uses polling
     class PollingResponse:
         def __init__(self, client, job_id, headers):
