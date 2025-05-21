@@ -6,6 +6,7 @@ from .json_to_data import JSONToDataComponent
 from .rss import RSSReaderComponent
 from .sql_executor import SQLComponent
 from .url import URLComponent
+from .web_search import WebSearchComponent
 from .webhook import WebhookComponent
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "RSSReaderComponent",
     "SQLComponent",
     "URLComponent",
+    "WebSearchComponent",
     "WebhookComponent",
 ]
