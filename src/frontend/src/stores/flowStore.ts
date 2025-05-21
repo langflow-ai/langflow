@@ -1,3 +1,4 @@
+import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
@@ -644,6 +645,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (errorsEdge.length > 0) {
         error = true;
         errors.push(errorsEdge.join("\n"));
+        useAlertStore.getState().addNotificationToHistory({
+          title: MISSED_ERROR_ALERT,
+          type: "error",
+          list: errorsEdge,
+        });
       }
     }
     if (error) {
@@ -661,6 +667,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         get().setBuildInfo({ error: errors, success: false });
+        useAlertStore.getState().addNotificationToHistory({
+          title: MISSED_ERROR_ALERT,
+          type: "error",
+          list: errors,
+        });
         get().setIsBuilding(false);
         const ids = errorsObjs.map((obj) => obj.id).flat();
 
@@ -811,6 +822,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setBuildInfo({ error: list, success: false });
+        useAlertStore.getState().addNotificationToHistory({
+          title: title,
+          type: "error",
+          list: list,
+        });
         get().setIsBuilding(false);
         get().buildController.abort();
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
