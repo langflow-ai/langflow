@@ -10,7 +10,6 @@ from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.data import data_to_text, safe_convert
 from langflow.inputs.inputs import TableInput
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
-from langflow.schema import Data
 from langflow.services.deps import get_settings_service
 
 # Constants
