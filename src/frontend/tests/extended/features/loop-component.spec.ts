@@ -80,10 +80,10 @@ test(
         targetPosition: { x: 700, y: 400 },
       });
 
-    await page
-      .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(1)
-      .click();
+    await page.getByTestId("dropdown-output-parsedata").nth(1).click();
+    await page.getByTestId("dropdown-item-output-parsedata-data list").click();
+
+    await page.getByTestId("handle-parsedata-shownode-data list-right").click();
 
     const loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
