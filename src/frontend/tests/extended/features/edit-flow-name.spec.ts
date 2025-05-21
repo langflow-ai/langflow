@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 test(
   "user should be able to edit flow name by clicking on the header or on the main page",
-  { tag: ["@release"] },
+  { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     const randomName = Math.random().toString(36).substring(2, 15);
     const randomName2 = Math.random().toString(36).substring(2, 15);
@@ -14,10 +14,13 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
     await page.getByTestId("input-flow-name").click();
+    await page.waitForTimeout(1000);
 
     await page.getByTestId("input-flow-name").fill(randomName);
 
     await page.keyboard.press("Enter");
+
+    await page.waitForTimeout(1000);
 
     let flowName = await page.getByTestId("input-flow-name").inputValue();
 
@@ -43,6 +46,8 @@ test(
     await page.getByTestId("input-flow-name").fill(randomName2);
 
     await page.keyboard.press("Enter");
+
+    await page.waitForTimeout(1000);
 
     flowName = await page.getByTestId("input-flow-name").inputValue();
 
@@ -83,6 +88,8 @@ test(
     await page.getByTestId("input-flow-name").fill(randomName4);
 
     await page.keyboard.press("Enter");
+
+    await page.waitForTimeout(1000);
 
     flowName = await page.getByTestId("input-flow-name").inputValue();
 
