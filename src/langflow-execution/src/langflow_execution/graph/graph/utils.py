@@ -1,3 +1,4 @@
+import asyncio
 import copy
 from collections import defaultdict, deque
 from collections.abc import Callable
@@ -1022,3 +1023,12 @@ def filter_vertices_from_vertex(
                 queue.append(successor)
 
     return filtered_vertices
+
+def run_until_complete(coro):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # If there's no event loop, create a new one and run the coroutine
+        return asyncio.run(coro)
+    return loop.run_until_complete(coro)
+

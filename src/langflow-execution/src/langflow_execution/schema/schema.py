@@ -5,10 +5,10 @@ from typing import Literal
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
-from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
-from langflow.serialization.serialization import serialize
+from langflow_execution.schema.data import Data
+from langflow_execution.schema.dataframe import DataFrame
+from langflow_execution.schema.message import Message
+from langflow_execution.serialization.serialization import serialize
 
 INPUT_FIELD_NAME = "input_value"
 

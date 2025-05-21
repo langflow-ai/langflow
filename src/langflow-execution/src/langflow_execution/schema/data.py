@@ -10,8 +10,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
-from langflow.utils.image import create_data_url
+from langflow_execution.schema.image import create_data_url
+from langflow_execution.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
 class Data(BaseModel):

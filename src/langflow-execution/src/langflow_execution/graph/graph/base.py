@@ -9,19 +9,19 @@ import queue
 import threading
 import traceback
 import uuid
+from loguru import logger
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+from pydantic import BaseModel
+
+# TODO: Implement tracing service
+# from langflow_execution.services.tracing.service import TracingService
 
 from langflow_execution.logging.logger import LogConfig, configure
-from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
-from langflow.services.cache.utils import CacheMiss
-from langflow.services.deps import get_chat_service, get_tracing_service
-from langflow.utils.async_helpers import run_until_complete
-from loguru import logger
+from langflow_execution.graph.graph.utils import run_until_complete
 
 from langflow_execution.graph.vertex.exceptions import ComponentBuildError
 from langflow_execution.graph.edge.base import CycleEdge, Edge
@@ -47,17 +47,37 @@ from langflow_execution.graph.vertex.vertex_types import ComponentVertex, Interf
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
 
-    from langflow_execution.api.v1.schema.flow import InputValueRequest
-
     # TODO: This will move to langflow-component library 
     from langflow.custom.custom_component.component import Component
     from langflow.schema import Data
-    from langflow.services.chat.schema import GetCache, SetCache
-    from langflow.services.tracing.service import TracingService
 
+    from langflow_execution.api.v1.schema.flow import InputValueRequest
     from langflow_execution.events.event_manager import EventManager
     from langflow_execution.graph.edge.schema import EdgeData
     from langflow_execution.graph.schema import ResultData
+
+
+InputType = Literal["chat", "text", "any"]
+OutputType = Literal["chat", "text", "any", "debug"]
+
+
+class StreamURL(TypedDict):
+    location: str
+
+class ErrorLog(TypedDict):
+    errorMessage: str
+    stackTrace: str
+class OutputValue(BaseModel):
+    message: ErrorLog | StreamURL | dict | list | str
+    type: str
+
+class CacheMiss:
+    def __repr__(self) -> str:
+        return "<CACHE_MISS>"
+
+    def __bool__(self) -> bool:
+        return False
+
 
 
 class Graph:
@@ -142,7 +162,9 @@ class Graph:
             raise TypeError(msg)
         self._context = context or {}
         try:
-            self.tracing_service: TracingService | None = get_tracing_service()
+            # TODO: Implement tracing service
+            # self.tracing_service: TracingService | None = get_tracing_service()
+            self.tracing_service = None
         except Exception:  # noqa: BLE001
             logger.exception("Error getting tracing service")
             self.tracing_service = None
@@ -1058,7 +1080,9 @@ class Graph:
         self.__dict__.update(state)
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         self.state_manager = GraphStateManager()
-        self.tracing_service = get_tracing_service()
+        # TODO: Implement tracing service
+        # self.tracing_service = get_tracing_service()
+        self.tracing_service = None
         self.set_run_id(self._run_id)
 
     @classmethod
@@ -1327,14 +1351,14 @@ class Graph:
             self._end_all_traces_async()
             return Finish()
         vertex_id = self.get_next_in_queue()
-        chat_service = get_chat_service()
+        # chat_service = get_chat_service()
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
             inputs_dict=inputs.model_dump() if inputs else {},
             files=files,
-            get_cache=chat_service.get_cache,
-            set_cache=chat_service.set_cache,
+            # get_cache=chat_service.get_cache,
+            # set_cache=chat_service.set_cache,
             event_manager=event_manager,
         )
 
@@ -1391,8 +1415,8 @@ class Graph:
         self,
         vertex_id: str,
         *,
-        get_cache: GetCache | None = None,
-        set_cache: SetCache | None = None,
+        # get_cache: GetCache | None = None,
+        # set_cache: SetCache | None = None,
         inputs_dict: dict[str, str] | None = None,
         files: list[str] | None = None,
         user_id: str | None = None,
@@ -1426,33 +1450,35 @@ class Graph:
             if not vertex.frozen:
                 should_build = True
             else:
+                # TODO: Implement cache / chat service
+                pass
                 # Check the cache for the vertex
-                if get_cache is not None:
-                    cached_result = await get_cache(key=vertex.id)
-                else:
-                    cached_result = CacheMiss()
-                if isinstance(cached_result, CacheMiss):
-                    should_build = True
-                else:
-                    try:
-                        cached_vertex_dict = cached_result["result"]
-                        # Now set update the vertex with the cached vertex
-                        vertex.built = cached_vertex_dict["built"]
-                        vertex.artifacts = cached_vertex_dict["artifacts"]
-                        vertex.built_object = cached_vertex_dict["built_object"]
-                        vertex.built_result = cached_vertex_dict["built_result"]
-                        vertex.full_data = cached_vertex_dict["full_data"]
-                        vertex.results = cached_vertex_dict["results"]
-                        try:
-                            vertex.finalize_build()
+                # if get_cache is not None:
+                #     cached_result = await get_cache(key=vertex.id)
+                # else:
+                #     cached_result = CacheMiss()
+                # if isinstance(cached_result, CacheMiss):
+                #     should_build = True
+                # else:
+                #     try:
+                #         cached_vertex_dict = cached_result["result"]
+                #         # Now set update the vertex with the cached vertex
+                #         vertex.built = cached_vertex_dict["built"]
+                #         vertex.artifacts = cached_vertex_dict["artifacts"]
+                #         vertex.built_object = cached_vertex_dict["built_object"]
+                #         vertex.built_result = cached_vertex_dict["built_result"]
+                #         vertex.full_data = cached_vertex_dict["full_data"]
+                #         vertex.results = cached_vertex_dict["results"]
+                #         try:
+                #             vertex.finalize_build()
 
-                            if vertex.result is not None:
-                                vertex.result.used_frozen_result = True
-                        except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug("Error finalizing build")
-                            should_build = True
-                    except KeyError:
-                        should_build = True
+                #             if vertex.result is not None:
+                #                 vertex.result.used_frozen_result = True
+                #         except Exception:  # noqa: BLE001
+                #             logger.opt(exception=True).debug("Error finalizing build")
+                #             should_build = True
+                #     except KeyError:
+                #         should_build = True
 
             if should_build:
                 await vertex.build(

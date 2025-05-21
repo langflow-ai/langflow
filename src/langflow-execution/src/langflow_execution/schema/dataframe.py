@@ -4,7 +4,7 @@ import pandas as pd
 from langchain_core.documents import Document
 from pandas import DataFrame as pandas_DataFrame
 
-from langflow.schema.data import Data
+from langflow_execution.schema.data import Data
 
 
 class DataFrame(pandas_DataFrame):

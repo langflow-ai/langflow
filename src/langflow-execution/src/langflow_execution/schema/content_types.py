@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing_extensions import TypedDict
 
-from langflow.schema.encoders import CUSTOM_ENCODERS
+from langflow_execution.schema.encoders import CUSTOM_ENCODERS
 
 
 class HeaderDict(TypedDict, total=False):
