@@ -17,7 +17,7 @@ from langflow.inputs.inputs import InputTypes
 from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
-from langflow.schema import DataFrame
+from langflow.schema import DataFrame, Message
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
@@ -163,7 +163,8 @@ class MCPToolsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Response", name="response", method="build_output"),
+        Output(display_name="Tools", name="prompts", method="build_tool_output"),
+        Output(display_name="Prompts", name="tools", method="build_prompt_output"),
     ]
 
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
@@ -409,7 +410,10 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-    async def build_output(self) -> DataFrame:
+    async def build_prompt_output(self) -> Message:
+        return Message()
+
+    async def build_tool_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
             await self.update_tools()
@@ -433,7 +437,7 @@ class MCPToolsComponent(Component):
                 return DataFrame(data=tool_content)
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
-            msg = f"Error in build_output: {e!s}"
+            msg = f"Error in build_tool_output: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
 
