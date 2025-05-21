@@ -98,10 +98,6 @@ const UniqueInputsDraggableComponent = ({
   const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
   const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
   const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
-    console.log("uniqueInputsComponents", {
-      chatInputAdded,
-      webhookInputAdded,
-    });
     return {
       chatInput: chatInputAdded,
       webhookInput: webhookInputAdded,

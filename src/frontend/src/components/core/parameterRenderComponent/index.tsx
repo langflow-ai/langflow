@@ -177,7 +177,7 @@ export function ParameterRenderComponent({
             fileTypes={templateData.fileTypes}
             file_path={templateData.file_path}
             isList={templateData.list ?? false}
-            tempFile={templateData.temp_file ?? false}
+            tempFile={templateData.temp_file ?? true}
             id={`inputfile_${id}`}
           />
         );
