@@ -5,7 +5,7 @@ from langchain_core.tools import ToolException
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
 
@@ -25,9 +25,12 @@ class WikidataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
         Output(display_name="Message", name="text", method="fetch_content_text"),
     ]
+
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
 
     def fetch_content(self) -> list[Data]:
         try:
@@ -78,6 +81,12 @@ class WikidataComponent(Component):
             raise ToolException(error_message) from None
         else:
             return data
+
+    def fetch_content_dataframe(self) -> DataFrame:
+        data = self.fetch_content()
+        if isinstance(data, list):
+            return DataFrame(data=[d.data for d in data])
+        return DataFrame(data=[data.data])
 
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
