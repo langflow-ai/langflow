@@ -162,7 +162,11 @@ export default function FlowBuildingComponent() {
                       </Button>
                     </div>
                   ) : (
-                    <Button size="sm" onClick={handleStop}>
+                    <Button
+                      data-testid="stop_building_button"
+                      size="sm"
+                      onClick={handleStop}
+                    >
                       Stop
                     </Button>
                   ))}
