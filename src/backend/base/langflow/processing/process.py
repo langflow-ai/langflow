@@ -8,9 +8,11 @@ from pydantic import BaseModel
 from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import Tweaks
 
+
 class Result(BaseModel):
     result: Any
     session_id: str
+
 
 def validate_input(
     graph_data: dict[str, Any], tweaks: Tweaks | dict[str, str | dict[str, Any]]

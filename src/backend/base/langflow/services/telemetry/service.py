@@ -14,7 +14,6 @@ from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
     ComponentPayload,
     PlaygroundPayload,
-    RunPayload,
     ShutdownPayload,
     VersionPayload,
 )

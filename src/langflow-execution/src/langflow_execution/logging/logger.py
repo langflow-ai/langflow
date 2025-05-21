@@ -2,11 +2,11 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
 import sys
-from typing import NotRequired, TypedDict
 from collections import deque
+from pathlib import Path
 from threading import Lock, Semaphore
+from typing import NotRequired, TypedDict
 
 import orjson
 from loguru import _defaults, logger
@@ -17,14 +17,12 @@ from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 from typing_extensions import NotRequired, override
 
-from loguru._error_interceptor import ErrorInterceptor
-
-
 VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
 DEFAULT_LOG_FORMAT = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
 )
+
 
 def configure_logger(log_level="INFO"):
     logging.basicConfig(
@@ -32,7 +30,9 @@ def configure_logger(log_level="INFO"):
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
     )
 
+
 logger = logging.getLogger("langflow-execution")
+
 
 class SizedLogBuffer:
     def __init__(
@@ -138,13 +138,13 @@ class SizedLogBuffer:
 log_buffer = SizedLogBuffer()
 
 
-
 class LogConfig(TypedDict):
     log_level: NotRequired[str]
     log_file: NotRequired[Path]
     disable: NotRequired[bool]
     log_env: NotRequired[str]
     log_format: NotRequired[str]
+
 
 class AsyncFileSink(AsyncSink):
     def __init__(self, file):
@@ -162,7 +162,6 @@ class AsyncFileSink(AsyncSink):
 
     async def write_async(self, message):
         await asyncio.to_thread(self._sink.write, message)
-
 
 
 def is_valid_log_format(format_string) -> bool:
@@ -188,6 +187,7 @@ def is_valid_log_format(format_string) -> bool:
         return False
     return True
 
+
 def serialize_log(record):
     subset = {
         "timestamp": record["time"].timestamp(),
@@ -197,9 +197,11 @@ def serialize_log(record):
     }
     return orjson.dumps(subset)
 
+
 def patching(record) -> None:
     record["extra"]["serialized"] = serialize_log(record)
     record.pop("exception", None)
+
 
 def configure(
     *,
@@ -264,7 +266,7 @@ def configure(
                 format=log_format,
                 serialize=True,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("Error setting up log file")
 
     if log_buffer.enabled():
@@ -274,6 +276,7 @@ def configure(
 
     setup_uvicorn_logger()
     setup_gunicorn_logger()
+
 
 class InterceptHandler(logging.Handler):
     """Default handler from examples in loguru documentation.
@@ -297,6 +300,7 @@ class InterceptHandler(logging.Handler):
 
         logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
+
 def setup_uvicorn_logger() -> None:
     loggers = (logging.getLogger(name) for name in logging.root.manager.loggerDict if name.startswith("uvicorn."))
     for uvicorn_logger in loggers:
@@ -307,4 +311,3 @@ def setup_uvicorn_logger() -> None:
 def setup_gunicorn_logger() -> None:
     logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
     logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
-

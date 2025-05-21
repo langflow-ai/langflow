@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from langflow.schema import DataFrame
+from loguru import logger
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable

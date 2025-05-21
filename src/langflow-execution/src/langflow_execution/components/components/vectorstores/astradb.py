@@ -7,7 +7,6 @@ from astrapy.data.info.reranking import RerankServiceOptions
 from astrapy.info import CollectionDescriptor, CollectionLexicalOptions, CollectionRerankOptions
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_astradb.utils.astradb import HybridSearchMode, _AstraDBCollectionEnvironment
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from langflow.helpers import docs_to_data

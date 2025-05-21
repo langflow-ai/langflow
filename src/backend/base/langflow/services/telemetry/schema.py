@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 
 
-
 class ShutdownPayload(BaseModel):
     time_running: int = Field(serialization_alias="timeRunning")
 

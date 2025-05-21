@@ -1,5 +1,7 @@
 from typing import Any
+
 from pydantic import Field, RootModel
+
 
 class Tweaks(RootModel):
     root: dict[str, str | dict[str, Any]] = Field(

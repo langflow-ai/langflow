@@ -2,7 +2,6 @@ from typing import cast
 
 from langchain_community.tools.bing_search import BingSearchResults
 from langchain_community.utilities import BingSearchAPIWrapper
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import IntInput, MessageTextInput, MultilineInput, SecretStrInput

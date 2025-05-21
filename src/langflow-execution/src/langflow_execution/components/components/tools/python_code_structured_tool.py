@@ -4,11 +4,6 @@ from typing import Any
 
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
-from loguru import logger
-from pydantic.v1 import Field, create_model
-from pydantic.v1.fields import Undefined
-from typing_extensions import override
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs.inputs import (
     BoolInput,
@@ -21,6 +16,10 @@ from langflow.inputs.inputs import (
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
+from loguru import logger
+from pydantic.v1 import Field, create_model
+from pydantic.v1.fields import Undefined
+from typing_extensions import override
 
 
 class PythonCodeStructuredTool(LCToolComponent):

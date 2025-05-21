@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, cast
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
-
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
@@ -24,7 +23,6 @@ from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
-
     from langflow.schema.log import SendMessageFunctionType
 
 

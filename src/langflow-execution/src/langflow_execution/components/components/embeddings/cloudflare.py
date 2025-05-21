@@ -1,5 +1,4 @@
 from langchain_community.embeddings.cloudflare_workersai import CloudflareWorkersAIEmbeddings
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
 from langflow.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput

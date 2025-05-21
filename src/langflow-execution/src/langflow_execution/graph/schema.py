@@ -1,12 +1,10 @@
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from langflow.schema.schema import OutputValue, StreamURL
 from langflow.serialization import serialize
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 from pydantic import BaseModel, Field, field_serializer, model_serializer, model_validator
-from typing import Literal
-
 
 # TODO: find where this should live
 InputType = Literal["chat", "text", "any"]
@@ -109,4 +107,3 @@ class InputValue(BaseModel):
         description="Defines on which components the input value should be applied. "
         "'any' applies to all input components.",
     )
-

@@ -1,13 +1,14 @@
-from langflow_execution.graph.execution.schema import Flow, FlowExecutionRequest, InputValueRequest
+import sqlalchemy as sa
+from loguru import logger
+
 from langflow_execution.events.event_manager import EventManager
+from langflow_execution.graph.execution.schema import Flow, FlowExecutionRequest, InputValueRequest
 from langflow_execution.graph.graph.base import Graph
 from langflow_execution.graph.schema import InputValue, RunOutputs, RunResponse
 from langflow_execution.services.manager import ServiceManager
 
-from loguru import logger
-import sqlalchemy as sa
-
 INPUT_FIELD_NAME = "input_value"
+
 
 async def simple_run_flow(
     flow: Flow,
@@ -23,7 +24,7 @@ async def simple_run_flow(
         # copy the flow data to avoid modifying the original data
         graph_data = flow.data.copy()
 
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=None, flow_name=flow.name) # TODO: user_id
+        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=None, flow_name=flow.name)  # TODO: user_id
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -58,9 +59,9 @@ async def simple_run_flow(
         return RunResponse(outputs=task_result, session_id=session_id)
 
     except sa.exc.StatementError as exc:
-        raise ValueError(str(exc)) from exc    
+        raise ValueError(str(exc)) from exc
 
-        
+
 async def simple_run_flow_task(
     flow: Flow,
     input_request: FlowExecutionRequest,
@@ -177,4 +178,3 @@ async def run_graph_internal(
         event_manager=event_manager,
     )
     return run_outputs, effective_session_id
-

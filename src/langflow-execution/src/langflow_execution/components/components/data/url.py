@@ -3,8 +3,6 @@ import re
 import httpx
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
-from loguru import logger
-
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs.inputs import TableInput
@@ -13,6 +11,7 @@ from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.deps import get_settings_service
+from loguru import logger
 
 
 class URLComponent(Component):

@@ -1,5 +1,4 @@
 from crewai import Crew, Process
-
 from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput
 

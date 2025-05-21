@@ -1,6 +1,5 @@
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-
 from langflow.custom import Component
 from langflow.inputs import HandleInput, MessageTextInput
 from langflow.io import Output

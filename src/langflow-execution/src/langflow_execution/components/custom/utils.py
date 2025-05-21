@@ -10,9 +10,6 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-from pydantic import BaseModel
-
 from langflow.custom import CustomComponent
 from langflow.custom.custom_component.component import Component
 from langflow.custom.directory_reader.utils import (
@@ -30,6 +27,8 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+from loguru import logger
+from pydantic import BaseModel
 
 
 class UpdateBuildConfigError(Exception):

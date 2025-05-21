@@ -5,13 +5,12 @@ from typing import Any
 import requests
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
-from loguru import logger
-from pydantic.v1 import Field, create_model
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.io import Output
 from langflow.schema.dotdict import dotdict
+from loguru import logger
+from pydantic.v1 import Field, create_model
 
 
 class SearXNGToolComponent(LCToolComponent):

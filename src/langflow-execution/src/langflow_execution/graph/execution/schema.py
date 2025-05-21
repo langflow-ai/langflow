@@ -1,13 +1,13 @@
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
 
-from langflow_execution.schema.schema import InputType, INPUT_FIELD_NAME
+from pydantic import BaseModel, ConfigDict, Field
+
+from langflow_execution.schema.schema import InputType
+
 
 # TODO: This came from SimplifiedAPIRequest class
 class FlowExecutionRequest(BaseModel):
-    """
-    Request model for executing a flow.
+    """Request model for executing a flow.
 
     Attributes:
         input_value (Optional[str]): The input value for the flow execution.
@@ -17,17 +17,18 @@ class FlowExecutionRequest(BaseModel):
         tweaks (Optional[dict]): Optional tweaks or overrides for the flow execution.
         session_id (Optional[str]): Optional session identifier for the flow run.
     """
-    input_value: Optional[str] = Field(default=None, description="The input value")
-    input_type: Optional[str] = Field(default="chat", description="The input type")
-    output_type: Optional[str] = Field(default="chat", description="The output type")
-    output_component: Optional[str] = Field(
+
+    input_value: str | None = Field(default=None, description="The input value")
+    input_type: str | None = Field(default="chat", description="The input type")
+    output_type: str | None = Field(default="chat", description="The output type")
+    output_component: str | None = Field(
         default="",
         description="If there are multiple output components, you can specify the component to get the output from.",
     )
-    tweaks: Optional[dict] = Field(default=None, description="The tweaks")
-    session_id: Optional[str] = Field(default=None, description="The session id")
+    tweaks: dict | None = Field(default=None, description="The tweaks")
+    session_id: str | None = Field(default=None, description="The session id")
 
-    
+
 # TODO: necessary?
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
@@ -62,9 +63,10 @@ class InputValueRequest(BaseModel):
         },
         extra="forbid",
     )
+
+
 class Flow(BaseModel):
-    """
-    The flow to execute.
+    """The flow to execute.
 
     Attributes:
         id (str): The unique identifier of the flow.
@@ -73,9 +75,8 @@ class Flow(BaseModel):
         data: (dict): The data of the flow.
           Tweaks should already be applied to the data.
     """
+
     id: str
     name: str
     user_id: UUID | None = Field(default=None)
     data: dict
-
-    

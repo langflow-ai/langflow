@@ -3,7 +3,6 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain_ollama import OllamaEmbeddings
-
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
 from langflow.field_typing import Embeddings

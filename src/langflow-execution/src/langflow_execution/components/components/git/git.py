@@ -6,7 +6,6 @@ from pathlib import Path
 
 import anyio
 from langchain_community.document_loaders.git import GitLoader
-
 from langflow.custom import Component
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema import Data

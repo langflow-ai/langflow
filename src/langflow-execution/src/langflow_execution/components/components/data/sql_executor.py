@@ -1,13 +1,12 @@
 from typing import TYPE_CHECKING, Any
 
 from langchain_community.utilities import SQLDatabase
-from sqlalchemy.exc import SQLAlchemyError
-
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import BoolInput, MessageTextInput, Output
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
+from sqlalchemy.exc import SQLAlchemyError
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Result

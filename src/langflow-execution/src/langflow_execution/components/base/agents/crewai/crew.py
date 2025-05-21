@@ -6,14 +6,13 @@ from crewai import LLM, Agent, Crew, Process, Task
 from crewai.task import TaskOutput
 from crewai.tools.base_tool import Tool
 from langchain_core.agents import AgentAction, AgentFinish
-from pydantic import SecretStr
-
 from langflow.custom import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI
+from pydantic import SecretStr
 
 
 def _find_api_key(model):

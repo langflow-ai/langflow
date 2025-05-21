@@ -5,12 +5,11 @@ from typing import Any, Protocol
 
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk, BaseMessage
-from typing_extensions import TypedDict
-
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
+from typing_extensions import TypedDict
 
 
 class ExceptionWithMessageError(Exception):

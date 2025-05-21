@@ -1,5 +1,4 @@
 from langchain_core.documents import Document
-
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 

@@ -3,8 +3,6 @@ import os
 from typing import Any
 
 import httpx
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import (
@@ -19,6 +17,7 @@ from langflow.io import (
 )
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
+from loguru import logger
 
 
 class LangWatchComponent(Component):

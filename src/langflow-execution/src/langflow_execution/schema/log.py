@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from typing_extensions import Protocol
 
 # from langflow_execution.schema.playground_events import PlaygroundEvent
-
 from langflow_execution.schema.message import ContentBlock, Message
 
 # TODO: playgroundevent? should stay in core logic

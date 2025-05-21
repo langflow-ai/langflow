@@ -1,5 +1,4 @@
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
-
 from langflow.custom import Component
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output

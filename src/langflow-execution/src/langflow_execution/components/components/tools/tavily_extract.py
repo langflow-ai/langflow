@@ -1,11 +1,10 @@
 import httpx
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
 from langflow.schema.message import Message
+from loguru import logger
 
 
 class TavilyExtractComponent(Component):

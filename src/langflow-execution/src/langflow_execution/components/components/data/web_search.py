@@ -4,7 +4,6 @@ from urllib.parse import parse_qs, unquote, urlparse
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
 from langflow.custom import Component
 from langflow.io import IntInput, MessageTextInput, Output
 from langflow.schema import DataFrame

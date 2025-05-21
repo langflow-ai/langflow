@@ -1,8 +1,5 @@
 import os
 
-from loguru import logger
-from mem0 import Memory, MemoryClient
-
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.inputs import (
     DictInput,
@@ -13,6 +10,8 @@ from langflow.inputs import (
 )
 from langflow.io import Output
 from langflow.schema import Data
+from loguru import logger
+from mem0 import Memory, MemoryClient
 
 
 class Mem0MemoryComponent(LCChatMemoryComponent):

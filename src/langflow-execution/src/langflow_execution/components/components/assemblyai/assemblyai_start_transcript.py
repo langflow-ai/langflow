@@ -1,11 +1,10 @@
 from pathlib import Path
 
 import assemblyai as aai
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
+from loguru import logger
 
 
 class AssemblyAITranscriptionJobCreator(Component):

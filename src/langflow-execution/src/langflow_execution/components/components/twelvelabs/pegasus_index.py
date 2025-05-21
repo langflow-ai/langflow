@@ -3,13 +3,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from tenacity import retry, stop_after_attempt, wait_exponential
-from twelvelabs import TwelveLabs
-
 from langflow.custom import Component
 from langflow.inputs import DataInput, DropdownInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data
+from tenacity import retry, stop_after_attempt, wait_exponential
+from twelvelabs import TwelveLabs
 
 
 class TwelveLabsError(Exception):

@@ -1,11 +1,10 @@
 import json
 
 import httpx
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
+from loguru import logger
 
 
 class OlivyaComponent(Component):

@@ -1,8 +1,5 @@
 import requests
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
-from typing_extensions import override
-
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.novita_constants import MODEL_NAMES
 from langflow.field_typing import LanguageModel
@@ -16,6 +13,8 @@ from langflow.inputs import (
     SliderInput,
 )
 from langflow.inputs.inputs import HandleInput
+from pydantic.v1 import SecretStr
+from typing_extensions import override
 
 
 class NovitaModelComponent(LCModelComponent):

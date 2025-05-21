@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from langflow_execution.api.v1.schema.flow import Flow
 
+
 class ExceptionBody(BaseModel):
     message: str | list[str]
     traceback: str | list[str] | None = None

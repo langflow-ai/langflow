@@ -1,9 +1,8 @@
 import assemblyai as aai
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
+from loguru import logger
 
 
 class AssemblyAIListTranscripts(Component):

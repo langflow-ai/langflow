@@ -1,9 +1,8 @@
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import MessageInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
+from loguru import logger
 
 
 class MessageToDataComponent(Component):

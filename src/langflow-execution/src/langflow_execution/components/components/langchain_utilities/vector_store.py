@@ -1,5 +1,4 @@
 from langchain_core.vectorstores import VectorStoreRetriever
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import VectorStore
 

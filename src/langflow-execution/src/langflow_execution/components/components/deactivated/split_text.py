@@ -1,5 +1,4 @@
 from langchain_text_splitters import CharacterTextSplitter
-
 from langflow.custom import Component
 from langflow.io import HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data

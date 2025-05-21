@@ -2,7 +2,6 @@ from typing import cast
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput

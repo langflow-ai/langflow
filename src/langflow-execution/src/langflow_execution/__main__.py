@@ -1,20 +1,22 @@
-import typer
-from langflow_execution.main import run_server
 import httpx
 import pkg_resources
+import typer
+from langflow.logging.logger import logger
 from packaging import version as pkg_version
 
-from langflow.logging.logger import logger
+from langflow_execution.main import run_server
 
 app = typer.Typer(no_args_is_help=True)
 
 PYPI_PACKAGE_NAME = "langflow-execution"
 
+
 def get_number_of_workers(workers=None):
     if workers == -1 or workers is None:
-        workers = 1 # TODO: Just 1 for now
+        workers = 1  # TODO: Just 1 for now
     logger.debug(f"Number of workers: {workers}")
     return workers
+
 
 def fetch_latest_version(package_name: str) -> str | None:
     url = f"https://pypi.org/pypi/{package_name}/json"
@@ -47,6 +49,7 @@ def run(
 ):
     run_server(host=host, port=port, log_level=log_level, reload=reload)
 
+
 @app.command()
 def version():
     """Show the version and exit, and print update notice if available."""
@@ -61,5 +64,6 @@ def version():
             typer.echo(notice)
             typer.echo(f"Run '{generate_pip_command(PYPI_PACKAGE_NAME)}' to update.")
 
+
 if __name__ == "__main__":
-    app() 
+    app()

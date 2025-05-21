@@ -2,12 +2,11 @@ from typing import Any
 
 from langchain.tools import StructuredTool
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
-from pydantic import BaseModel, Field
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
+from pydantic import BaseModel, Field
 
 
 class SearchAPIComponent(LCToolComponent):

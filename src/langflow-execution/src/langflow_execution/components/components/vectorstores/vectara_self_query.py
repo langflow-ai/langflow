@@ -4,7 +4,6 @@ from typing import cast
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.vectorstores import VectorStore
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import Retriever
 from langflow.field_typing.constants import LanguageModel

@@ -5,9 +5,8 @@ from pathlib import Path
 
 import anyio
 from aiofile import async_open
-from loguru import logger
-
 from langflow.custom import Component
+from loguru import logger
 
 MAX_DEPTH = 2
 

@@ -1,5 +1,4 @@
 from langchain_community.embeddings import FakeEmbeddings
-
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import IntInput

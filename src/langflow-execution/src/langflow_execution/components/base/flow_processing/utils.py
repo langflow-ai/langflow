@@ -1,8 +1,7 @@
-from loguru import logger
-
 from langflow.graph.schema import ResultData, RunOutputs
 from langflow.schema import Data
 from langflow.schema.message import Message
+from loguru import logger
 
 
 def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:

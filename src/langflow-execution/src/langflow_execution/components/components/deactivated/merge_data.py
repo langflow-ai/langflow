@@ -1,8 +1,7 @@
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import DataInput, Output
 from langflow.schema import Data
+from loguru import logger
 
 
 class MergeDataComponent(Component):

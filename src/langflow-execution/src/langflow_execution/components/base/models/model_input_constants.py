@@ -1,5 +1,3 @@
-from typing_extensions import TypedDict
-
 from langflow.base.models.model import LCModelComponent
 from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
@@ -11,6 +9,7 @@ from langflow.components.models.openai_chat_model import OpenAIModelComponent
 from langflow.components.models.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
+from typing_extensions import TypedDict
 
 
 class ModelProvidersDict(TypedDict):

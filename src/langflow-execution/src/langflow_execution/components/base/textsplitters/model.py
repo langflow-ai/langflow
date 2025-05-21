@@ -2,7 +2,6 @@ from abc import abstractmethod
 
 from langchain_core.documents import BaseDocumentTransformer
 from langchain_text_splitters import TextSplitter
-
 from langflow.base.document_transformers.model import LCDocumentTransformerComponent
 
 

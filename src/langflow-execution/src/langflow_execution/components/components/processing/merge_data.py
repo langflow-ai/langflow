@@ -1,11 +1,10 @@
 from enum import Enum
 from typing import cast
 
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema import DataFrame
+from loguru import logger
 
 
 class DataOperation(str, Enum):

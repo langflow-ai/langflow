@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain_ollama import ChatOllama
-
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.ollama_constants import OLLAMA_TOOL_MODELS_BASE, URL_LIST
 from langflow.field_typing import LanguageModel

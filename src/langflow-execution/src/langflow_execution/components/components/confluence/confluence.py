@@ -1,6 +1,5 @@
 from langchain_community.document_loaders import ConfluenceLoader
 from langchain_community.document_loaders.confluence import ContentFormat
-
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data

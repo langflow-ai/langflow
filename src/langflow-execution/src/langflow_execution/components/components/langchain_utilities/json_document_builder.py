@@ -12,7 +12,6 @@
 # - **Document:** The Document containing the JSON object.
 
 from langchain_core.documents import Document
-
 from langflow.custom import CustomComponent
 from langflow.services.database.models.base import orjson_dumps
 

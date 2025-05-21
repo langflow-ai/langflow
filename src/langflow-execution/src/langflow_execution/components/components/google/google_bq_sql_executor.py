@@ -5,7 +5,6 @@ from pathlib import Path
 from google.auth.exceptions import RefreshError
 from google.cloud import bigquery
 from google.oauth2.service_account import Credentials
-
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, MessageTextInput, Output
 from langflow.schema.dataframe import DataFrame

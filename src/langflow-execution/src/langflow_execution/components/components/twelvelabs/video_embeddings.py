@@ -2,11 +2,10 @@ import time
 from pathlib import Path
 from typing import Any, cast
 
-from twelvelabs import TwelveLabs
-
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, IntInput, SecretStrInput
+from twelvelabs import TwelveLabs
 
 
 class TwelveLabsVideoEmbeddings(Embeddings):

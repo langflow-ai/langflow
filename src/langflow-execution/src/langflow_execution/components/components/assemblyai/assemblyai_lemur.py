@@ -1,9 +1,8 @@
 import assemblyai as aai
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput
 from langflow.schema import Data
+from loguru import logger
 
 
 class AssemblyAILeMUR(Component):

@@ -1,16 +1,17 @@
 from threading import Lock
-from langflow_execution.services.settings.service import SettingsService
+
 from langflow_execution.services.job_queue.service import JobQueueService
+from langflow_execution.services.settings.service import SettingsService
 from langflow_execution.services.state.service import InMemoryStateService
 from langflow_execution.services.telemetry.service import TelemetryService
 
 
 class ServiceManager:
-    """
-    Singleton service manager for the execution layer.
+    """Singleton service manager for the execution layer.
 
     Ensures only one instance exists (thread-safe) and provides lifecycle management (start/stop) for all services.
     """
+
     _instance = None
     _instance_lock = Lock()
 
@@ -44,12 +45,12 @@ class ServiceManager:
 
     def get_telemetry_service(self):
         return self.telemetry_service
-    
+
     def get_job_queue_service(self):
         return self.job_queue_service
-    
+
     def get_state_service(self):
         return self.state_service
-    
+
     def get_settings_service(self):
         return self.settings_service

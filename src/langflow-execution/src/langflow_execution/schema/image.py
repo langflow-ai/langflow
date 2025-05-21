@@ -2,12 +2,12 @@ import base64
 import mimetypes
 from pathlib import Path
 
+from langflow.services.deps import get_storage_service
 from PIL import Image as PILImage
 from pydantic import BaseModel
 
-from langflow.services.deps import get_storage_service
-
 IMAGE_ENDPOINT = "/files/images/"
+
 
 class Image(BaseModel):
     path: str | None = None

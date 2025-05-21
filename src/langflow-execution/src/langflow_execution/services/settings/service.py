@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import os
 from pathlib import Path
+
 from loguru import logger
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
@@ -8,6 +10,7 @@ from pydantic_settings import BaseSettings
 from langflow_execution.services.service import Service
 
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent / "components")
+
 
 class AuthSettings(BaseSettings):
     AUTO_LOGIN: bool = False
@@ -47,6 +50,7 @@ class Settings(BaseSettings):
 
         logger.debug(f"Components path: {value}")
         return value
+
 
 class SettingsService(Service):
     name = "settings_service"

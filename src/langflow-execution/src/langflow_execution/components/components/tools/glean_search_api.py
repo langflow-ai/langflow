@@ -4,14 +4,13 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain_core.tools import StructuredTool, ToolException
-from pydantic import BaseModel
-from pydantic.v1 import Field
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
+from pydantic import BaseModel
+from pydantic.v1 import Field
 
 
 class GleanSearchAPISchema(BaseModel):

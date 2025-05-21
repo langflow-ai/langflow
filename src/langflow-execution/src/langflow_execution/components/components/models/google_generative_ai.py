@@ -1,9 +1,6 @@
 from typing import Any
 
 import requests
-from loguru import logger
-from pydantic.v1 import SecretStr
-
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
@@ -11,6 +8,8 @@ from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
 from langflow.inputs.inputs import BoolInput
 from langflow.schema import dotdict
+from loguru import logger
+from pydantic.v1 import SecretStr
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):

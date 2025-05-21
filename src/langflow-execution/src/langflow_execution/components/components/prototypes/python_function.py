@@ -1,12 +1,11 @@
 from collections.abc import Callable
 
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.custom.utils import get_function
 from langflow.io import CodeInput, Output
 from langflow.schema import Data, dotdict
 from langflow.schema.message import Message
+from loguru import logger
 
 
 class PythonFunctionComponent(Component):

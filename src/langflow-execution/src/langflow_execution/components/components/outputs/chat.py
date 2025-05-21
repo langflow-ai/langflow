@@ -3,7 +3,6 @@ from typing import Any
 
 import orjson
 from fastapi.encoders import jsonable_encoder
-
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
 from langflow.inputs.inputs import HandleInput

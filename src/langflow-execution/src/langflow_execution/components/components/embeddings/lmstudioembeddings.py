@@ -2,12 +2,11 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
-from typing_extensions import override
-
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.inputs.inputs import DropdownInput, SecretStrInput
 from langflow.io import FloatInput, MessageTextInput
+from typing_extensions import override
 
 
 class LMStudioEmbeddingsComponent(LCEmbeddingsModel):

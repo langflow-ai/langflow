@@ -2,7 +2,6 @@ from typing import Any
 
 from langchain_community.graph_vectorstores.extractors import HtmlLinkExtractor, LinkExtractorTransformer
 from langchain_core.documents import BaseDocumentTransformer
-
 from langflow.base.document_transformers.model import LCDocumentTransformerComponent
 from langflow.inputs import BoolInput, DataInput, StrInput
 

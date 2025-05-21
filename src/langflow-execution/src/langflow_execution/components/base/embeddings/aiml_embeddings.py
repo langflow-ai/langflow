@@ -2,10 +2,9 @@ import concurrent.futures
 import json
 
 import httpx
+from langflow.field_typing import Embeddings
 from loguru import logger
 from pydantic import BaseModel, SecretStr
-
-from langflow.field_typing import Embeddings
 
 
 class AIMLEmbeddingsImpl(BaseModel, Embeddings):

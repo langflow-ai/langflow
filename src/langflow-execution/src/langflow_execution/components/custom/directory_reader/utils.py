@@ -1,9 +1,8 @@
 import asyncio
 
-from loguru import logger
-
 from langflow.custom.directory_reader import DirectoryReader
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from loguru import logger
 
 
 def merge_nested_dicts_with_renaming(dict1, dict2):

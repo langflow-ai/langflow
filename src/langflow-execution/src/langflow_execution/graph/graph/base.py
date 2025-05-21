@@ -9,21 +9,14 @@ import queue
 import threading
 import traceback
 import uuid
-from loguru import logger
 from collections import defaultdict, deque
 from datetime import datetime, timezone
-from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+from loguru import logger
 from pydantic import BaseModel
 
-# TODO: Implement tracing service
-# from langflow_execution.services.tracing.service import TracingService
-
-from langflow_execution.logging.logger import LogConfig, configure
-from langflow_execution.graph.graph.utils import run_until_complete
-
-from langflow_execution.graph.vertex.exceptions import ComponentBuildError
 from langflow_execution.graph.edge.base import CycleEdge, Edge
 from langflow_execution.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow_execution.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -36,35 +29,45 @@ from langflow_execution.graph.graph.utils import (
     find_start_component_id,
     get_sorted_vertices,
     process_flow,
+    run_until_complete,
     should_continue,
 )
 from langflow_execution.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow_execution.graph.utils import log_vertex_build
 from langflow_execution.graph.vertex.base import Vertex, VertexStates
+from langflow_execution.graph.vertex.exceptions import ComponentBuildError
 from langflow_execution.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow_execution.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
-from langflow_execution.schema.schema import InputType, INPUT_FIELD_NAME
+
+# TODO: Implement tracing service
+# from langflow_execution.services.tracing.service import TracingService
+from langflow_execution.logging.logger import LogConfig, configure
+from langflow_execution.schema.schema import INPUT_FIELD_NAME, InputType
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
 
-    from langflow_execution.components.custom.custom_component.component import Component
-
-    from langflow_execution.schema.data import Data
     from langflow_execution.api.v1.schema.flow import InputValueRequest
+    from langflow_execution.components.custom.custom_component.component import Component
     from langflow_execution.events.event_manager import EventManager
     from langflow_execution.graph.edge.schema import EdgeData
     from langflow_execution.graph.schema import ResultData
+    from langflow_execution.schema.data import Data
+
 
 class StreamURL(TypedDict):
     location: str
 
+
 class ErrorLog(TypedDict):
     errorMessage: str
     stackTrace: str
+
+
 class OutputValue(BaseModel):
     message: ErrorLog | StreamURL | dict | list | str
     type: str
+
 
 class CacheMiss:
     def __repr__(self) -> str:
@@ -72,7 +75,6 @@ class CacheMiss:
 
     def __bool__(self) -> bool:
         return False
-
 
 
 class Graph:
@@ -85,7 +87,7 @@ class Graph:
         flow_id: str | None = None,
         flow_name: str | None = None,
         description: str | None = None,
-        user_id: str | None = None, # TODO: Purpose of this?
+        user_id: str | None = None,  # TODO: Purpose of this?
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
@@ -793,7 +795,6 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params({"session_id": session_id})
 
-
         # Process the graph
 
         # TODO: skipping cache for now
@@ -801,7 +802,7 @@ class Graph:
         #     cache_service = get_chat_service()
         #     if self.flow_id:
         #         await cache_service.set_cache(self.flow_id, self)
-        # except Exception:  # noqa: BLE001
+        # except Exception:
         #     logger.exception("Error setting cache")
 
         try:
@@ -1475,7 +1476,7 @@ class Graph:
 
                 #             if vertex.result is not None:
                 #                 vertex.result.used_frozen_result = True
-                #         except Exception:  # noqa: BLE001
+                #         except Exception:
                 #             logger.opt(exception=True).debug("Error finalizing build")
                 #             should_build = True
                 #     except KeyError:

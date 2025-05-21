@@ -11,13 +11,12 @@ from googleapiclient.discovery import build
 from langchain_core.chat_sessions import ChatSession
 from langchain_core.messages import HumanMessage
 from langchain_google_community.gmail.loader import GMailLoader
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
 from langflow.schema import Data
 from langflow.template import Output
+from loguru import logger
 
 
 class GmailLoaderComponent(Component):

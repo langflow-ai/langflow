@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from astra_assistants.astra_assistants_manager import AssistantManager
 from langchain_core.agents import AgentFinish
-from loguru import logger
-
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.astra_assistants.util import (
     get_patched_openai_client,
@@ -20,6 +18,7 @@ from langflow.schema.content_block import ContentBlock
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.schema.log import SendMessageFunctionType

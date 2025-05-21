@@ -1,10 +1,9 @@
 import assemblyai as aai
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import DataInput, FloatInput, Output, SecretStrInput
 from langflow.schema import Data
+from loguru import logger
 
 
 class AssemblyAITranscriptionJobPoller(Component):

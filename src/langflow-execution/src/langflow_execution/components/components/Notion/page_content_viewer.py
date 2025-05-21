@@ -1,12 +1,11 @@
 import requests
 from langchain.tools import StructuredTool
-from loguru import logger
-from pydantic import BaseModel, Field
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
+from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class NotionPageContent(LCToolComponent):

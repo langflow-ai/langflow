@@ -7,18 +7,16 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from pydantic import BaseModel
-
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from langchain_core.callbacks import Callbacks
-
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
     from langflow.inputs.inputs import InputTypes

@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
-from langflow_execution.schema.schema import INPUT_FIELD_NAME
 from langflow_execution.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
+from langflow_execution.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
     from langflow_execution.graph.vertex.base import Vertex

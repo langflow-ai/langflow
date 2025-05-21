@@ -7,7 +7,6 @@ import chardet
 import orjson
 import yaml
 from defusedxml import ElementTree
-
 from langflow.schema import Data
 
 # Types of files that can be read simply by file.read()

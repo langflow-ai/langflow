@@ -23,6 +23,7 @@ def _import_vertex_types():
 
     return vertex_types
 
+
 class LazyLoadDictBase:
     def __init__(self) -> None:
         self._all_types_dict = None
@@ -67,6 +68,7 @@ class VertexTypesDict(LazyLoadDictBase):
     def get_custom_component_vertex_type(self) -> type[CustomComponentVertex]:
         return self._types().CustomComponentVertex
 
+
 class AllTypesDict(LazyLoadDictBase):
     def __init__(self) -> None:
         self._all_types_dict = None
@@ -88,4 +90,3 @@ class AllTypesDict(LazyLoadDictBase):
 
 lazy_load_vertex_dict = VertexTypesDict()
 lazy_load_dict = AllTypesDict()
-

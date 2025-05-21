@@ -3,13 +3,12 @@ from enum import Enum
 import httpx
 from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
-from loguru import logger
-from pydantic import BaseModel, Field
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.schema import Data
+from loguru import logger
+from pydantic import BaseModel, Field
 
 # Add at the top with other constants
 MAX_CHUNKS_PER_SOURCE = 3

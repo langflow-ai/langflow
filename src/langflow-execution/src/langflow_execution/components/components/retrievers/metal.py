@@ -1,10 +1,9 @@
 from typing import cast
 
 from langchain_community.retrievers import MetalRetriever
-from metal_sdk.metal import Metal
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import Retriever
+from metal_sdk.metal import Metal
 
 
 class MetalRetrieverComponent(CustomComponent):

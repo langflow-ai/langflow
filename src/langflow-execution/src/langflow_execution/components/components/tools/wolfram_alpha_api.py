@@ -1,5 +1,4 @@
 from langchain_community.utilities.wolfram_alpha import WolframAlphaAPIWrapper
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput

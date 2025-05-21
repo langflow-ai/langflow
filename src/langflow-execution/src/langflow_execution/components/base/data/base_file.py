@@ -6,7 +6,6 @@ from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
-
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from langflow.schema import Data

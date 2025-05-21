@@ -3,10 +3,9 @@ from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
-from loguru import logger
-
 from langflow.inputs.inputs import DefaultPromptField
 from langflow.interface.utils import extract_input_variables_from_prompt
+from loguru import logger
 
 _INVALID_CHARACTERS = {
     " ",

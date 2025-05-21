@@ -1,6 +1,5 @@
 import numpy as np
 from langchain_core.vectorstores import VectorStore
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput

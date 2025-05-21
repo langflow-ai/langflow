@@ -3,7 +3,6 @@ from abc import ABC
 
 import graph_retriever.strategies as strategies_module
 from langchain_graph_retriever import GraphRetriever
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers import docs_to_data
 from langflow.inputs import DropdownInput, HandleInput, MultilineInput, NestedDictInput, StrInput

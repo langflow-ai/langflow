@@ -1,6 +1,5 @@
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import PromptTemplate
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import LanguageModel, Text
 

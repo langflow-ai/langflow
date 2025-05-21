@@ -1,5 +1,4 @@
 from langchain_community.tools import DuckDuckGoSearchRun
-
 from langflow.custom import Component
 from langflow.inputs import IntInput, MessageTextInput
 from langflow.io import Output

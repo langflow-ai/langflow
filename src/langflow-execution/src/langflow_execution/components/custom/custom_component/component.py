@@ -13,8 +13,6 @@ import nanoid
 import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, ValidationError
-
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
@@ -23,7 +21,7 @@ from langflow.base.tools.constants import (
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+from langflow.field_typing import Tool
 from langflow.graph.state.model import create_state_model
 from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
@@ -37,6 +35,7 @@ from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import find_closest_match
+from pydantic import BaseModel, ValidationError
 
 from .custom_component import CustomComponent
 

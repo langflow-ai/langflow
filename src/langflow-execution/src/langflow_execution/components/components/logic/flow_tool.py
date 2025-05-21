@@ -1,8 +1,5 @@
 from typing import Any
 
-from loguru import logger
-from typing_extensions import override
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
 from langflow.field_typing import Tool
@@ -11,6 +8,8 @@ from langflow.helpers.flow import get_flow_inputs
 from langflow.io import BoolInput, DropdownInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
+from loguru import logger
+from typing_extensions import override
 
 
 class FlowToolComponent(LCToolComponent):

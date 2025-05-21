@@ -2,7 +2,6 @@ from typing import Any
 
 from langchain.schema import Document
 from langchain_elasticsearch import ElasticsearchStore
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import (
     DropdownInput,

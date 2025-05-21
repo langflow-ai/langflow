@@ -7,11 +7,10 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 from langchain_core.documents import Document
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from loguru import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
-
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
 
 # Sentinel variable to signal a failed serialization.

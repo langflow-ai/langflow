@@ -1,5 +1,4 @@
 from langchain_community.retrievers.needle import NeedleRetriever
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.message import Message

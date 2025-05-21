@@ -1,8 +1,7 @@
-from twelvelabs import TwelveLabs
-
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
+from twelvelabs import TwelveLabs
 
 
 class TwelveLabsTextEmbeddings(Embeddings):

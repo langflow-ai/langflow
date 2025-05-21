@@ -1024,6 +1024,7 @@ def filter_vertices_from_vertex(
 
     return filtered_vertices
 
+
 def run_until_complete(coro):
     try:
         loop = asyncio.get_running_loop()
@@ -1031,4 +1032,3 @@ def run_until_complete(coro):
         # If there's no event loop, create a new one and run the coroutine
         return asyncio.run(coro)
     return loop.run_until_complete(coro)
-

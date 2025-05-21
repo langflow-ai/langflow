@@ -1,7 +1,5 @@
 from typing import Any
 
-from loguru import logger
-
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import Component
 from langflow.graph.graph.base import Graph
@@ -9,6 +7,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import DropdownInput, Output
 from langflow.schema import Data, dotdict
+from loguru import logger
 
 
 class SubFlowComponent(Component):

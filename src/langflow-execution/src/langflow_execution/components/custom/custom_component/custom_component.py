@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import yaml
 from cachetools import TTLCache
 from langchain_core.documents import Document
-from pydantic import BaseModel
-
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
@@ -19,10 +17,10 @@ from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import post_process_type
 from langflow.utils import validate
 from langflow.utils.async_helpers import run_until_complete
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
-
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.schema.dotdict import dotdict

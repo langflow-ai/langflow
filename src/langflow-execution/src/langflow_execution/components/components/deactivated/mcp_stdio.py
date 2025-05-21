@@ -1,8 +1,6 @@
 # from langflow.field_typing import Data
 
 from langchain_core.tools import StructuredTool
-from mcp import types
-
 from langflow.base.mcp.util import (
     MCPStdioClient,
     create_input_schema_from_json_schema,
@@ -12,6 +10,7 @@ from langflow.base.mcp.util import (
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
+from mcp import types
 
 
 class MCPStdio(Component):

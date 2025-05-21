@@ -1,6 +1,5 @@
 import weaviate
 from langchain_community.vectorstores import Weaviate
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput

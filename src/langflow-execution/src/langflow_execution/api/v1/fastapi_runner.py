@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from .local_runner import DefaultFlowRunner
-from .protocol import FlowRunner, FlowExecutionRequest
+from .protocol import FlowExecutionRequest, FlowRunner
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ async def run_endpoint(
     background_tasks: BackgroundTasks,
     input_request: FlowExecutionRequest,
     stream: bool = False,
-    runner = Annotated[FlowRunner, Depends(get_runner)],
+    runner=Annotated[FlowRunner, Depends(get_runner)],
 ):
     try:
         return await runner.run(

@@ -1,9 +1,8 @@
 from langchain_core.tools import tool
-from metaphor_python import Metaphor
-
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import BoolInput, IntInput, Output, SecretStrInput
+from metaphor_python import Metaphor
 
 
 class ExaSearchToolkit(Component):

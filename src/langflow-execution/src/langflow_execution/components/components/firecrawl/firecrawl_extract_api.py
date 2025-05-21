@@ -1,5 +1,3 @@
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
@@ -9,6 +7,7 @@ from langflow.io import (
     SecretStrInput,
 )
 from langflow.schema import Data
+from loguru import logger
 
 
 class FirecrawlExtractApi(Component):

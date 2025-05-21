@@ -1,7 +1,6 @@
 from typing import Any
 
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
-
 from langflow.custom import Component
 from langflow.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output

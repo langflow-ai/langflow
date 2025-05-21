@@ -6,7 +6,6 @@ import sys
 from collections import deque
 from pathlib import Path
 from threading import Lock, Semaphore
-from typing import TypedDict
 
 import orjson
 from loguru import _defaults, logger
@@ -15,7 +14,7 @@ from loguru._file_sink import FileSink
 from loguru._simple_sinks import AsyncSink
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
-from typing_extensions import NotRequired, override
+from typing_extensions import override
 
 from langflow.settings import DEV
 

@@ -14,11 +14,10 @@ import requests
 from astra_assistants import OpenAIWithDefaultKey, patch
 from astra_assistants.tools.tool_interface import ToolInterface
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
-from requests.exceptions import RequestException
-
 from langflow.base.mcp.util import create_input_schema_from_json_schema
 from langflow.services.cache.utils import CacheMiss
+from pydantic import BaseModel
+from requests.exceptions import RequestException
 
 client_lock = threading.Lock()
 client = None

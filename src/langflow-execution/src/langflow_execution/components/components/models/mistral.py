@@ -1,9 +1,8 @@
 from langchain_mistralai import ChatMistralAI
-from pydantic.v1 import SecretStr
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from pydantic.v1 import SecretStr
 
 
 class MistralAIModelComponent(LCModelComponent):

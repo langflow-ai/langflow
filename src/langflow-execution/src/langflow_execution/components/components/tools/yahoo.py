@@ -4,14 +4,13 @@ from enum import Enum
 
 import yfinance as yf
 from langchain_core.tools import ToolException
-from loguru import logger
-from pydantic import BaseModel, Field
-
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
+from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class YahooFinanceMethod(Enum):

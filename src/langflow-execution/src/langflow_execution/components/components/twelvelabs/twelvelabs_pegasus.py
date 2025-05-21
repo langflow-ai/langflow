@@ -4,14 +4,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from tenacity import retry, stop_after_attempt, wait_exponential
-from twelvelabs import TwelveLabs
-
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import DataInput, DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
 from langflow.io import Output
 from langflow.schema.message import Message
+from tenacity import retry, stop_after_attempt, wait_exponential
+from twelvelabs import TwelveLabs
 
 
 class TaskError(Exception):

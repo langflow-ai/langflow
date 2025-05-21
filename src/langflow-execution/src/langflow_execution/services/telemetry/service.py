@@ -22,8 +22,10 @@ from langflow_execution.services.telemetry.schema import (
 )
 
 if TYPE_CHECKING:
-    from langflow_execution.services.settings.service import SettingsService
     from pydantic import BaseModel
+
+    from langflow_execution.services.settings.service import SettingsService
+
 
 class RunPayload(BaseModel):
     run_is_webhook: bool = Field(default=False, serialization_alias="runIsWebhook")

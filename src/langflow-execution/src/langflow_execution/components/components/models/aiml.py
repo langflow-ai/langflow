@@ -1,7 +1,4 @@
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
-from typing_extensions import override
-
 from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
@@ -14,6 +11,8 @@ from langflow.inputs import (
     SliderInput,
     StrInput,
 )
+from pydantic.v1 import SecretStr
+from typing_extensions import override
 
 
 class AIMLModelComponent(LCModelComponent):

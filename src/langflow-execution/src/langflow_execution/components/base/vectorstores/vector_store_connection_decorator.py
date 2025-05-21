@@ -1,5 +1,4 @@
 from langchain_core.vectorstores import VectorStore
-
 from langflow.io import Output
 
 

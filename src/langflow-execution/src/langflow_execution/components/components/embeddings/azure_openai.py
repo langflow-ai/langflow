@@ -1,5 +1,4 @@
 from langchain_openai import AzureOpenAIEmbeddings
-
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings

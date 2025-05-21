@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class Service(ABC):
-    """
-    Abstract base class for all services.
+    """Abstract base class for all services.
 
     Services are responsible for initializing, managing, and providing access to core execution services.
     """
