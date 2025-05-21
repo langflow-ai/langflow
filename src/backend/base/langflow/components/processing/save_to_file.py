@@ -16,7 +16,7 @@ from langflow.services.deps import get_session, get_settings_service, get_storag
 
 class SaveToFileComponent(Component):
     display_name = "Save to File"
-    description = "Save DataFrames, Data, or Messages to the File manager."
+    description = "Save data to a local file in the selected format."
     icon = "save"
     name = "SaveToFile"
 
@@ -133,23 +133,18 @@ class SaveToFileComponent(Component):
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
-        try:
-            with file_path.open("rb") as f:
-                async for db in get_session():
-                    user_id, _ = await create_user_longterm_token(db)
-                    current_user = await get_user_by_id(db, user_id)
+        with file_path.open("rb") as f:
+            async for db in get_session():
+                user_id, _ = await create_user_longterm_token(db)
+                current_user = await get_user_by_id(db, user_id)
 
-                    await upload_user_file(
-                        file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
-                        session=db,
-                        current_user=current_user,
-                        storage_service=get_storage_service(),
-                        settings_service=get_settings_service(),
-                    )
-        finally:
-            # Remove the file even if an error occurs
-            if file_path.exists():
-                file_path.unlink()
+                await upload_user_file(
+                    file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
+                    session=db,
+                    current_user=current_user,
+                    storage_service=get_storage_service(),
+                    settings_service=get_settings_service(),
+                )
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
