@@ -572,10 +572,6 @@ export default function Page({
             </>
           )}
           <MemoizedSidebarTrigger />
-          <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-            <UpdateAllComponents />
-          </div>
-          <FlowBuildingComponent />
           <SelectionMenu
             lastSelection={lastSelection}
             isVisible={selectionMenuVisible}
@@ -620,6 +616,10 @@ export default function Page({
             onPaneClick={onPaneClick}
             onEdgeClick={handleEdgeClick}
           >
+            <FlowBuildingComponent />
+            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
+              <UpdateAllComponents />
+            </div>
             <MemoizedBackground />
           </ReactFlow>
           <div
