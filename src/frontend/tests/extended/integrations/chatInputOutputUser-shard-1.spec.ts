@@ -157,6 +157,11 @@ test(
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
     });
+
+    await page.getByTestId("dropdown-output-urlcomponent").click();
+    await page
+      .getByTestId("dropdown-item-output-urlcomponent-dataframe")
+      .click();
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
     await page.getByText(`Inspect the output of the component below.`, {
