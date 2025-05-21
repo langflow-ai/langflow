@@ -267,7 +267,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
                 "headers": {"value": [], "advanced": True},
                 "body": {"value": [], "advanced": True},
                 "mode": {"value": "URL", "advanced": False},
-                "curl_input": {"value": "", "advanced": True},
+                "curl_input": {"value": "curl -X GET https://example.com/api/test", "advanced": True},
                 "timeout": {"value": 30, "advanced": True},
                 "follow_redirects": {"value": True, "advanced": True},
                 "save_to_file": {"value": False, "advanced": True},
@@ -281,6 +281,8 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert updated["curl_input"]["advanced"] is True
         assert updated["url_input"]["advanced"] is False
 
+        # Set the component's curl_input attribute to match the build_config before switching to cURL mode
+        component.curl_input = build_config["curl_input"]["value"]
         # Test cURL mode
         updated = component.update_build_config(build_config=build_config.copy(), field_value="cURL", field_name="mode")
         assert updated["curl_input"]["advanced"] is False
