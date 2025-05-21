@@ -42,7 +42,7 @@ class DuckDuckGoSearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="data", method="fetch_content_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
     ]
 
