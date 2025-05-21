@@ -92,7 +92,12 @@ export default function FlowSettingsComponent({
         />
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={() => close()}>
+        <Button
+          variant="outline"
+          size="sm"
+          data-testid="cancel-flow-settings"
+          onClick={() => close()}
+        >
           Cancel
         </Button>
         <Button
