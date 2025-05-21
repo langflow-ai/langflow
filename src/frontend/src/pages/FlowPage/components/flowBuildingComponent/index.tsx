@@ -10,6 +10,37 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 80 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 80 },
+};
+
+const stopButtonVariants = {
+  hidden: { opacity: 0, x: 0 },
+  visible: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 0 },
+};
+
+const retryButtonVariants = {
+  hidden: { opacity: 0, x: 10 },
+  visible: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 10 },
+};
+
+const dismissButtonVariants = {
+  hidden: { opacity: 0, x: 10 },
+  visible: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 10 },
+};
+
+const timeVariants = {
+  single: { x: -75, width: "auto" },
+  double: { x: -165, width: "auto" },
+  none: { x: 0, width: "auto" },
+};
+
 export default function FlowBuildingComponent() {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const flowBuildStatus = useFlowStore((state) => state.flowBuildStatus);
@@ -101,108 +132,175 @@ export default function FlowBuildingComponent() {
   };
 
   return (
-    <div
-      className={cn(
-        "absolute bottom-2 left-1/2 z-50 flex min-h-14 w-[530px] -translate-x-1/2 flex-col justify-center gap-4 rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-all ease-out",
-        ((!isBuilding && !buildInfo?.error && !buildInfo?.success) ||
-          dismissed) &&
-          "bottom-0 translate-y-[120%]",
-        !isBuilding &&
-          buildInfo?.error &&
-          "border-accent-red-foreground text-accent-red-foreground",
-        !isBuilding &&
-          buildInfo?.success &&
-          "border-accent-emerald-foreground text-accent-emerald-foreground",
-      )}
-    >
-      <AnimatePresence>
-        {(isBuilding || buildInfo?.error || buildInfo?.success) && (
-          <>
-            {isBuilding && (
-              <BorderTrail
-                size={100}
-                transition={{
-                  repeat: Infinity,
-                  duration: 10,
-                  ease: "linear",
-                }}
-              />
+    <AnimatePresence mode="wait">
+      {(isBuilding || buildInfo?.error || buildInfo?.success) && !dismissed && (
+        <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={containerVariants}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={cn(
+              "flex flex-col justify-center overflow-hidden rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-colors duration-200",
+              !isBuilding &&
+                buildInfo?.error &&
+                "border-accent-red-foreground text-accent-red-foreground",
+              !isBuilding &&
+                buildInfo?.success &&
+                "border-accent-emerald-foreground text-accent-emerald-foreground",
             )}
-            <div className="flex w-full items-center justify-between gap-2">
-              {buildingContent || (
-                <span className="flex items-center gap-2">
-                  {buildInfo?.success ? (
-                    "Flow built successfully"
-                  ) : (
-                    <>
-                      <ForwardedIconComponent
-                        name="CircleAlert"
-                        className="h-5 w-5"
-                      />
-                      Flow build failed
-                    </>
+          >
+            <AnimatePresence mode="wait">
+              {(isBuilding || buildInfo?.error || buildInfo?.success) && (
+                <>
+                  {isBuilding && (
+                    <BorderTrail
+                      size={100}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 10,
+                        ease: "linear",
+                      }}
+                    />
                   )}
-                </span>
-              )}
-              <div className="flex items-center gap-4">
-                <span className="font-mono text-xs">{humanizedTime}</span>
-                {!buildInfo?.success &&
-                  (buildInfo?.error ? (
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={handleRetry}>
-                        Retry
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-primary"
-                        onClick={handleDismiss}
+                  <div className="flex min-h-10 w-full items-center justify-between gap-2">
+                    <AnimatePresence mode="wait">
+                      <div>
+                        {buildingContent ? (
+                          buildingContent
+                        ) : buildInfo?.success ? (
+                          "Flow built successfully"
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <ForwardedIconComponent
+                              name="CircleAlert"
+                              className="h-5 w-5"
+                            />
+                            Flow build failed
+                          </div>
+                        )}
+                      </div>
+                    </AnimatePresence>
+                    <div className="relative flex items-center gap-4">
+                      <motion.div
+                        variants={timeVariants}
+                        animate={
+                          buildInfo?.error
+                            ? "double"
+                            : buildInfo?.success
+                              ? "none"
+                              : "single"
+                        }
+                        transition={{
+                          duration: 0.2,
+                          delay: 0.05,
+                          ease: "easeOut",
+                        }}
+                        className="absolute right-0 font-mono text-xs"
                       >
-                        Dismiss
-                      </Button>
+                        {humanizedTime}
+                      </motion.div>
+                      <AnimatePresence mode="sync">
+                        {!buildInfo?.success &&
+                          (buildInfo?.error ? (
+                            <motion.div
+                              key="error-buttons"
+                              className="absolute right-0 flex items-center gap-2"
+                            >
+                              <motion.div
+                                variants={retryButtonVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                transition={{ duration: 0.2 }}
+                              >
+                                <Button size="sm" onClick={handleRetry}>
+                                  Retry
+                                </Button>
+                              </motion.div>
+                              <motion.div
+                                variants={dismissButtonVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                transition={{ duration: 0.2 }}
+                              >
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-primary"
+                                  onClick={handleDismiss}
+                                >
+                                  Dismiss
+                                </Button>
+                              </motion.div>
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="stop-button"
+                              variants={stopButtonVariants}
+                              initial="hidden"
+                              animate="visible"
+                              className="absolute right-0"
+                              exit="exit"
+                              transition={{ duration: 0.2 }}
+                            >
+                              <Button
+                                data-testid="stop_building_button"
+                                size="sm"
+                                onClick={handleStop}
+                              >
+                                Stop
+                              </Button>
+                            </motion.div>
+                          ))}
+                      </AnimatePresence>
                     </div>
-                  ) : (
-                    <Button
-                      data-testid="stop_building_button"
-                      size="sm"
-                      onClick={handleStop}
-                    >
-                      Stop
-                    </Button>
-                  ))}
-              </div>
-            </div>
-            {buildInfo?.error && (
-              <Markdown
-                linkTarget="_blank"
-                remarkPlugins={[remarkGfm]}
-                className="mb-1.5 align-text-top truncate-doubleline"
-                components={{
-                  a: ({ node, ...props }) => (
-                    <a
-                      href={props.href}
-                      target="_blank"
-                      className="underline"
-                      rel="noopener noreferrer"
-                    >
-                      {props.children}
-                    </a>
-                  ),
-                  p({ node, ...props }) {
-                    return (
-                      <span className="inline-block w-fit max-w-full align-text-top">
-                        {props.children}
-                      </span>
-                    );
-                  },
-                }}
-              >
-                {buildInfo?.error?.join("\n")}
-              </Markdown>
-            )}
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+                  </div>
+                  <AnimatePresence>
+                    {buildInfo?.error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Markdown
+                          linkTarget="_blank"
+                          remarkPlugins={[remarkGfm]}
+                          className="my-1.5 align-text-top truncate-doubleline"
+                          components={{
+                            a: ({ node, ...props }) => (
+                              <a
+                                href={props.href}
+                                target="_blank"
+                                className="underline"
+                                rel="noopener noreferrer"
+                              >
+                                {props.children}
+                              </a>
+                            ),
+                            p({ node, ...props }) {
+                              return (
+                                <span className="inline-block w-fit max-w-full align-text-top">
+                                  {props.children}
+                                </span>
+                              );
+                            },
+                          }}
+                        >
+                          {buildInfo?.error?.join("\n")}
+                        </Markdown>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
