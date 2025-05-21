@@ -5,6 +5,7 @@ from xml.etree.ElementTree import Element
 from defusedxml.ElementTree import fromstring
 
 from langflow.custom import Component
+from langflow.helpers.data import data_to_dataframe
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data, DataFrame
 
@@ -159,6 +160,4 @@ class ArXivComponent(Component):
             DataFrame: A DataFrame containing the search results.
         """
         data = self.search_papers()
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])
+        return data_to_dataframe(data)

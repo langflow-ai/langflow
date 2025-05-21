@@ -2,6 +2,7 @@ from langchain_community.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
+from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import MultilineInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
@@ -36,16 +37,18 @@ topics, delivering structured responses."""
     def _build_wrapper(self) -> WolframAlphaAPIWrapper:
         return WolframAlphaAPIWrapper(wolfram_alpha_appid=self.app_id)
 
+    def fetch_content(self) -> list[Data]:
+        wrapper = self._build_wrapper()
+        result_str = wrapper.run(self.input_value)
+        data = [Data(text=result_str)]
+        self.status = data
+        return data
+
     def fetch_content_dataframe(self) -> DataFrame:
         """Convert the Wolfram Alpha results to a DataFrame.
 
         Returns:
             DataFrame: A DataFrame containing the query results.
         """
-        wrapper = self._build_wrapper()
-        result_str = wrapper.run(self.input_value)
-        data = [Data(text=result_str)]
-        self.status = data
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])
+        data = self.fetch_content()
+        return data_to_dataframe(data)

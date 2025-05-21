@@ -9,6 +9,7 @@ from pydantic.v1 import Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
+from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
@@ -169,6 +170,4 @@ class GleanSearchAPIComponent(LCToolComponent):
             DataFrame: A DataFrame containing the search results.
         """
         data = self.fetch_content()
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])
+        return data_to_dataframe(data)

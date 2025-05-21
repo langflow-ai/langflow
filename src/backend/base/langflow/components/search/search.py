@@ -3,6 +3,7 @@ from typing import Any
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 
 from langflow.custom import Component
+from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
@@ -85,4 +86,4 @@ class SearchComponent(Component):
             DataFrame: A DataFrame containing the search results.
         """
         data = self.fetch_content()
-        return DataFrame(data)
+        return data_to_dataframe(data)
