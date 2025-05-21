@@ -8,8 +8,8 @@ from loguru import logger
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.data import data_to_text, safe_convert
-from langflow.inputs.inputs import TableInput
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
+from langflow.schema import DataFrame, Message
 from langflow.services.deps import get_settings_service
 
 # Constants
@@ -225,7 +225,7 @@ class URLComponent(Component):
                 raise ValueError(msg)
 
             # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
-            list_of_dicts = [
+            data = [
                 {
                     "text": doc.page_content,
                     "url": doc.metadata.pop("source", ""),
@@ -256,7 +256,7 @@ class URLComponent(Component):
 
         return Message(text=result_string)
 
-    def as_dataframe(self) -> DataFrame:
+    def fetch_content(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
         data_frame = DataFrame(self.fetch_url_contents())
         self.status = data_frame
