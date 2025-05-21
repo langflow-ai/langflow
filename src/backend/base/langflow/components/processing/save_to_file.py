@@ -3,22 +3,20 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import pandas as pd
+from fastapi import UploadFile
 
+from langflow.api.v2.files import upload_user_file
 from langflow.custom import Component
-from langflow.io import (
-    DataFrameInput,
-    DataInput,
-    DropdownInput,
-    MessageInput,
-    Output,
-    StrInput,
-)
+from langflow.io import DropdownInput, HandleInput, Output, StrInput
 from langflow.schema import Data, DataFrame, Message
+from langflow.services.auth.utils import create_user_longterm_token
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_session, get_settings_service, get_storage_service
 
 
 class SaveToFileComponent(Component):
     display_name = "Save to File"
-    description = "Save DataFrames, Data, or Messages to various file formats."
+    description = "Save DataFrames, Data, or Messages to the File manager."
     icon = "save"
     name = "SaveToFile"
 
@@ -27,47 +25,27 @@ class SaveToFileComponent(Component):
     MESSAGE_FORMAT_CHOICES = ["txt", "json", "markdown"]
 
     inputs = [
-        DropdownInput(
-            name="input_type",
-            display_name="Input Type",
-            options=["DataFrame", "Data", "Message"],
-            info="Select the type of input to save.",
-            value="DataFrame",
-            real_time_refresh=True,
-        ),
-        DataFrameInput(
-            name="df",
-            display_name="DataFrame",
-            info="The DataFrame to save.",
+        HandleInput(
+            name="input",
+            display_name="Input",
+            info="The input to save.",
             dynamic=True,
-            show=True,
+            input_types=["Data", "DataFrame", "Message"],
+            required=True,
         ),
-        DataInput(
-            name="data",
-            display_name="Data",
-            info="The Data object to save.",
-            dynamic=True,
-            show=False,
-        ),
-        MessageInput(
-            name="message",
-            display_name="Message",
-            info="The Message to save.",
-            dynamic=True,
-            show=False,
+        StrInput(
+            name="file_name",
+            display_name="File Name",
+            info="Name file will be saved as (without extension).",
+            required=True,
         ),
         DropdownInput(
             name="file_format",
             display_name="File Format",
-            options=DATA_FORMAT_CHOICES,
-            info="Select the file format to save the input.",
-            real_time_refresh=True,
-        ),
-        StrInput(
-            name="file_path",
-            display_name="File Path (including filename)",
-            info="The full file path (including filename and extension).",
-            value="./output",
+            options=DATA_FORMAT_CHOICES + MESSAGE_FORMAT_CHOICES,
+            info="Select the file format to save the input. If not provided, the default format will be used.",
+            value="",
+            advanced=True,
         ),
     ]
 
@@ -76,57 +54,109 @@ class SaveToFileComponent(Component):
             name="confirmation",
             display_name="Confirmation",
             method="save_to_file",
-            info="Confirmation message after saving the file.",
         ),
     ]
 
-    def update_build_config(self, build_config, field_value, field_name=None):
-        # Hide/show dynamic fields based on the selected input type
-        if field_name == "input_type":
-            build_config["df"]["show"] = field_value == "DataFrame"
-            build_config["data"]["show"] = field_value == "Data"
-            build_config["message"]["show"] = field_value == "Message"
+    async def save_to_file(self) -> str:
+        """Save the input to a file and upload it, returning a confirmation message."""
+        # Validate inputs
+        if not self.file_name:
+            msg = "File name must be provided."
+            raise ValueError(msg)
+        if not self._get_input_type():
+            msg = "Input type is not set."
+            raise ValueError(msg)
 
-            if field_value in {"DataFrame", "Data"}:
-                build_config["file_format"]["options"] = self.DATA_FORMAT_CHOICES
-            elif field_value == "Message":
-                build_config["file_format"]["options"] = self.MESSAGE_FORMAT_CHOICES
+        # Validate file format based on input type
+        file_format = self.file_format or self._get_default_format()
+        allowed_formats = (
+            self.MESSAGE_FORMAT_CHOICES
+            if self._get_input_type() == "Message"
+            else self.DATA_FORMAT_CHOICES
+        )
+        if file_format not in allowed_formats:
+            msg = f"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}"
+            raise ValueError(
+                msg
+            )
 
-        return build_config
-
-    def save_to_file(self) -> str:
-        input_type = self.input_type
-        file_format = self.file_format
-        file_path = Path(self.file_path).expanduser()
-
-        # Ensure the directory exists
+        # Prepare file path
+        file_path = Path(self.file_name).expanduser()
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
-
         file_path = self._adjust_file_path_with_format(file_path, file_format)
 
-        if input_type == "DataFrame":
-            dataframe = self.df
-            return self._save_dataframe(dataframe, file_path, file_format)
-        if input_type == "Data":
-            data = self.data
-            return self._save_data(data, file_path, file_format)
-        if input_type == "Message":
-            message = self.message
-            return self._save_message(message, file_path, file_format)
+        # Save the input to file based on type
+        if self._get_input_type() == "DataFrame":
+            confirmation = self._save_dataframe(self.input, file_path, file_format)
+        elif self._get_input_type() == "Data":
+            confirmation = self._save_data(self.input, file_path, file_format)
+        elif self._get_input_type() == "Message":
+            confirmation = await self._save_message(self.input, file_path, file_format)
+        else:
+            msg = f"Unsupported input type: {self._get_input_type()}"
+            raise ValueError(msg)
 
-        error_msg = f"Unsupported input type: {input_type}"
-        raise ValueError(error_msg)
+        # Upload the saved file
+        await self._upload_file(file_path)
+
+        return confirmation
+
+    def _get_input_type(self) -> str:
+        """Determine the input type based on the provided input."""
+        if isinstance(self.input, DataFrame):
+            return "DataFrame"
+        if isinstance(self.input, Data):
+            return "Data"
+        if isinstance(self.input, Message):
+            return "Message"
+
+        msg = f"Unsupported input type: {type(self.input)}"
+        raise ValueError(msg)
+
+    def _get_default_format(self) -> str:
+        """Return the default file format based on input type."""
+        if self._get_input_type() == "DataFrame":
+            return "csv"
+        if self._get_input_type() == "Data":
+            return "json"
+        if self._get_input_type() == "Message":
+            return "markdown"
+        return "json"  # Fallback
 
     def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:
+        """Adjust the file path to include the correct extension."""
         file_extension = path.suffix.lower().lstrip(".")
-
         if fmt == "excel":
             return Path(f"{path}.xlsx").expanduser() if file_extension not in ["xlsx", "xls"] else path
-
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
+    async def _upload_file(self, file_path: Path) -> None:
+        """Upload the saved file using the upload_user_file service."""
+        if not file_path.exists():
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
+
+        try:
+            with file_path.open("rb") as f:
+                async for db in get_session():
+                    user_id, _ = await create_user_longterm_token(db)
+                    current_user = await get_user_by_id(db, user_id)
+
+                    await upload_user_file(
+                        file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
+                        session=db,
+                        current_user=current_user,
+                        storage_service=get_storage_service(),
+                        settings_service=get_settings_service(),
+                    )
+        finally:
+            # Remove the file even if an error occurs
+            if file_path.exists():
+                file_path.unlink()
+
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
+        """Save a DataFrame to the specified file format."""
         if fmt == "csv":
             dataframe.to_csv(path, index=False)
         elif fmt == "excel":
@@ -136,12 +166,12 @@ class SaveToFileComponent(Component):
         elif fmt == "markdown":
             path.write_text(dataframe.to_markdown(index=False), encoding="utf-8")
         else:
-            error_msg = f"Unsupported DataFrame format: {fmt}"
-            raise ValueError(error_msg)
-
+            msg = f"Unsupported DataFrame format: {fmt}"
+            raise ValueError(msg)
         return f"DataFrame saved successfully as '{path}'"
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
+        """Save a Data object to the specified file format."""
         if fmt == "csv":
             pd.DataFrame(data.data).to_csv(path, index=False)
         elif fmt == "excel":
@@ -151,20 +181,20 @@ class SaveToFileComponent(Component):
         elif fmt == "markdown":
             path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
         else:
-            error_msg = f"Unsupported Data format: {fmt}"
-            raise ValueError(error_msg)
-
+            msg = f"Unsupported Data format: {fmt}"
+            raise ValueError(msg)
         return f"Data saved successfully as '{path}'"
 
-    def _save_message(self, message: Message, path: Path, fmt: str) -> str:
+    async def _save_message(self, message: Message, path: Path, fmt: str) -> str:
+        """Save a Message to the specified file format, handling async iterators."""
+        content = ""
         if message.text is None:
             content = ""
         elif isinstance(message.text, AsyncIterator):
-            # AsyncIterator needs to be handled differently
-            error_msg = "AsyncIterator not supported"
-            raise ValueError(error_msg)
+            async for item in message.text:
+                content += str(item) + " "
+            content = content.strip()
         elif isinstance(message.text, Iterator):
-            # Convert iterator to string
             content = " ".join(str(item) for item in message.text)
         else:
             content = str(message.text)
@@ -176,7 +206,6 @@ class SaveToFileComponent(Component):
         elif fmt == "markdown":
             path.write_text(f"**Message:**\n\n{content}", encoding="utf-8")
         else:
-            error_msg = f"Unsupported Message format: {fmt}"
-            raise ValueError(error_msg)
-
+            msg = f"Unsupported Message format: {fmt}"
+            raise ValueError(msg)
         return f"Message saved successfully as '{path}'"
