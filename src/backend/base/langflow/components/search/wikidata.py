@@ -3,7 +3,7 @@ from httpx import HTTPError
 from langchain_core.tools import ToolException
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
+from langflow.helpers.data import data_to_dataframe, data_to_text
 from langflow.io import MultilineInput, Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -84,9 +84,7 @@ class WikidataComponent(Component):
 
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])
+        return data_to_dataframe(data)
 
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
