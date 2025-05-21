@@ -196,7 +196,6 @@ class URLComponent(Component):
         try:
             urls = list({self.ensure_url(url) for url in self.urls if url.strip()})
             logger.info(f"URLs: {urls}")
-            print(f"URLs: {urls}")
             if not urls:
                 msg = "No valid URLs provided."
                 raise ValueError(msg)
