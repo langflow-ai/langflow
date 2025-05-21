@@ -5,7 +5,6 @@ from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 
 class DuckDuckGoSearchComponent(Component):
@@ -44,7 +43,6 @@ class DuckDuckGoSearchComponent(Component):
 
     outputs = [
         Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
-        Output(display_name="Text", name="text", method="fetch_content_text"),
     ]
 
     def _build_wrapper(self) -> DuckDuckGoSearchRun:
@@ -83,13 +81,6 @@ class DuckDuckGoSearchComponent(Component):
         else:
             self.status = data_results
             return data_results
-
-    def fetch_content_text(self) -> Message:
-        """Return search results as a single text message."""
-        data = self.fetch_content()
-        result_string = "\n".join(item.text for item in data)
-        self.status = result_string
-        return Message(text=result_string)
 
     def fetch_content_dataframe(self) -> DataFrame:
         """Convert the search results to a DataFrame.

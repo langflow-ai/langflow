@@ -12,7 +12,6 @@ from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 
 class YahooFinanceMethod(Enum):
@@ -78,20 +77,11 @@ to access financial data and market information from Yahoo Finance."""
     ]
 
     outputs = [
-        Output(display_name="Text", name="text", method="fetch_content_text"),
         Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def run_model(self) -> DataFrame:
         return self.fetch_content_dataframe()
-
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = ""
-        for item in data:
-            result_string += item.text + "\n"
-        self.status = result_string
-        return Message(text=result_string)
 
     def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:
         try:
