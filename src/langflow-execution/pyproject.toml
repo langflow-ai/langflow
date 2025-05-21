@@ -7,7 +7,6 @@ license = "MIT"
 readme = "README.md"
 
 dependencies = [
-    "langflow-components==0.1.0",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -120,11 +119,6 @@ dev = [
     "codeflash>=0.8.4"
 ]
 
-[tool.uv.sources]
-langflow-components = { workspace = true }
-
-[tool.uv.workspace]
-members = ["../langflow-components", "."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/langflow_execution"]

@@ -43,23 +43,18 @@ from langflow_execution.graph.utils import log_vertex_build
 from langflow_execution.graph.vertex.base import Vertex, VertexStates
 from langflow_execution.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow_execution.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow_execution.schema.schema import InputType, INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
 
-    # TODO: This will move to langflow-component library 
-    from langflow.custom.custom_component.component import Component
-    from langflow.schema import Data
+    from langflow_execution.components.custom.custom_component.component import Component
 
+    from langflow_execution.schema.data import Data
     from langflow_execution.api.v1.schema.flow import InputValueRequest
     from langflow_execution.events.event_manager import EventManager
     from langflow_execution.graph.edge.schema import EdgeData
     from langflow_execution.graph.schema import ResultData
-
-
-InputType = Literal["chat", "text", "any"]
-OutputType = Literal["chat", "text", "any", "debug"]
-
 
 class StreamURL(TypedDict):
     location: str
@@ -797,13 +792,17 @@ class Graph:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
             vertex.update_raw_params({"session_id": session_id})
+
+
         # Process the graph
-        try:
-            cache_service = get_chat_service()
-            if self.flow_id:
-                await cache_service.set_cache(self.flow_id, self)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error setting cache")
+
+        # TODO: skipping cache for now
+        # try:
+        #     cache_service = get_chat_service()
+        #     if self.flow_id:
+        #         await cache_service.set_cache(self.flow_id, self)
+        # except Exception:  # noqa: BLE001
+        #     logger.exception("Error setting cache")
 
         try:
             # Prioritize the webhook component if it exists
@@ -1371,7 +1370,9 @@ class Graph:
         self.reset_inactivated_vertices()
         self.reset_activated_vertices()
 
-        await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        # TODO: skipping cache for now
+        # await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+
         self._record_snapshot(vertex_id)
         return vertex_build_result
 
@@ -1488,17 +1489,18 @@ class Graph:
                     files=files,
                     event_manager=event_manager,
                 )
-                if set_cache is not None:
-                    vertex_dict = {
-                        "built": vertex.built,
-                        "results": vertex.results,
-                        "artifacts": vertex.artifacts,
-                        "built_object": vertex.built_object,
-                        "built_result": vertex.built_result,
-                        "full_data": vertex.full_data,
-                    }
 
-                    await set_cache(key=vertex.id, data=vertex_dict)
+                # TODO: skipping cache for now
+                # if set_cache is not None:
+                #     vertex_dict = {
+                #         "built": vertex.built,
+                #         "results": vertex.results,
+                #         "artifacts": vertex.artifacts,
+                #         "built_object": vertex.built_object,
+                #         "built_result": vertex.built_result,
+                #         "full_data": vertex.full_data,
+                #     }
+                #     await set_cache(key=vertex.id, data=vertex_dict)
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
@@ -1559,7 +1561,10 @@ class Graph:
         vertex_task_run_count: dict[str, int] = {}
         to_process = deque(first_layer)
         layer_index = 0
-        chat_service = get_chat_service()
+
+        # TODO: skipping chat service for now
+        # chat_service = get_chat_service()
+
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:
@@ -1574,8 +1579,8 @@ class Graph:
                         user_id=self.user_id,
                         inputs_dict={},
                         fallback_to_env_vars=fallback_to_env_vars,
-                        get_cache=chat_service.get_cache,
-                        set_cache=chat_service.set_cache,
+                        # get_cache=chat_service.get_cache,
+                        # set_cache=chat_service.set_cache,
                         event_manager=event_manager,
                     ),
                     name=f"{vertex.id} Run {vertex_task_run_count.get(vertex_id, 0)}",
@@ -1622,8 +1627,10 @@ class Graph:
                 else:
                     self.run_manager.add_to_vertices_being_run(next_v_id)
             if cache and self.flow_id is not None:
-                set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
-                await set_cache_coro(data=self, lock=lock)
+                # TODO: skipping cache for now
+                # set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
+                # await set_cache_coro(data=self, lock=lock)
+                pass
         return next_runnable_vertices
 
     async def _log_vertex_build_from_exception(self, vertex_id: str, result: Exception) -> None:

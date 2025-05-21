@@ -15,10 +15,10 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 
 # TODO: move?
-from langflow.base.prompts.utils import dict_values_to_string
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
+from langflow_execution.components.base.prompts.utils import dict_values_to_string
 from langflow_execution.schema.content_block import ContentBlock
 from langflow_execution.schema.content_types import ErrorContent
 from langflow_execution.schema.data import Data

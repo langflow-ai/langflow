@@ -1,10 +1,8 @@
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Literal
+from typing import Optional
 
-# TODO: necessary?
-InputType = Literal["chat", "text", "any"]
-OutputType = Literal["chat", "text", "any", "debug"]
+from langflow_execution.schema.schema import InputType, INPUT_FIELD_NAME
 
 # TODO: This came from SimplifiedAPIRequest class
 class FlowExecutionRequest(BaseModel):
