@@ -65,33 +65,97 @@ For example, changing the **Chat Input** component's `input_value` changes that 
 
 For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files-v1).
 
-### Webhook cURL
+## Shareable playground
 
-When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
 
-```bash
-curl -X POST \
-  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
-  -H 'Content-Type: application/json'\
-  -d '{"any": "data"}'
-```
+You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
-To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
+If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
 
 ## Embed into site
 
 The **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
+The chat widget is implemented as a web component called `langflow-chat` and is loaded from a CDN. For more information, see the [langflow-embedded-chat repository](https://github.com/langflow-ai/langflow-embedded-chat).
+
+This example includes the minimum required props for using the chat widget in your HTML code, which are `host_url` and `flow_id`.
+The `host_url` value must be `HTTPS`, and may not include a `/` after the URL.
+The `flow_id` value is found in your Langflow URL.
+For a Langflow server running the [Basic prompting flow](/starter-projects-basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to this:
 ```html
-<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js""></script>
-
+<html>
+<head>
+	<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+</head>
+<body>
   <langflow-chat
-    window_title="Basic Prompting"
-    flow_id="801abb1e-19b9-4278-9632-179b6d84f126"
-    host_url="http://localhost:7860"
+    host_url="https://c822-73-64-93-151.ngrok-free.app"
+    flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+  ></langflow-chat>
+</body>
+</html>
+```
 
+When embedded within HTML, this code becomes a responsive chatbot, powered by the basic prompting flow.
+
+![Default chat widget](/img/chat-widget-default.png)
+
+To configure your chat widget further, include additional props.
+
+All props and their types are listed in [index.tsx](https://github.com/langflow-ai/langflow-embedded-chat/blob/main/src/index.tsx).
+
+To add some styling to the chat widget, customize its elements with JSON:
+```html
+  <langflow-chat
+    host_url="https://c822-73-64-93-151.ngrok-free.app"
+    flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+    chat_window_style='{
+      "backgroundColor": "#1a0d0d",
+      "border": "4px solid #b30000",
+      "borderRadius": "16px",
+      "boxShadow": "0 8px 32px #b30000",
+      "color": "#fff",
+      "fontFamily": "Georgia, serif",
+      "padding": "16px"
+    }'
+    window_title="Custom Styled Chat"
+    height="600"
+    width="400"
   ></langflow-chat>
 ```
+
+To add a custom [session ID](/session-id) value and an API key for authentication to your Langflow server:
+```html
+<head>
+    <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+</head>
+<body>
+  <langflow-chat
+    host_url="https://c822-73-64-93-151.ngrok-free.app"
+    flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+    api_key="YOUR_API_KEY"
+    session_id="YOUR_SESSION_ID"
+  ></langflow-chat>
+</body>
+</html>
+```
+The chat widget requires your flow to contain a **Chat Input** component for the widget to communicate with it.
+To use an `input_type` other than "chat", use the Langflow API.
+
+Sending a message to Langflow without a **Chat Input** still triggers the flow, but the LLM warns you the message is empty.
+
+To change the `output_type`, 
+To change the `output_component` to something other than **Chat Output**, look up its in unique component ID in your flow and add it as a prop to langflow-chat.
+
+```html
+<langflow-chat
+  host_url="https://your-langflow-server"
+  flow_id="your-flow-id"
+  output_component="TextOutput-xyz789"
+></langflow-chat>
+```
+
 
 ### Embed the chat widget with React
 
@@ -198,11 +262,4 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
 | window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
 
-## Shareable playground
-
-The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
-
-You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
-
-If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
 
