@@ -4,6 +4,7 @@ slug: /concepts-publish
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import ChatWidget from '@site/src/components/ChatWidget';
 
 Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow as an API endpoint, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
 
@@ -153,6 +154,8 @@ To embed the Chat Widget using React, add this `<script>` tag to the React `inde
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
+Optionally, you can dynamically load the script into your site.
+
 1. Declare your web component and encapsulate it in a React component.
 
 ```javascript
@@ -168,16 +171,63 @@ export default function ChatWidget({ className }) {
   return (
     <div className={className}>
       <langflow-chat
-        chat_inputs='{"your_key":"value"}'
-        chat_input_field="your_chat_key"
-        flow_id="your_flow_id"
-        host_url="langflow_url"
+        host_url="https://c822-73-64-93-151.ngrok-free.app"
+        flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
       ></langflow-chat>
     </div>
   );
 }
 ```
 2. Place the component anywhere in your code to display the chat widget.
+
+For example, in this docset, the React widget component is located at `docs > src > components > ChatWidget > index.tsx`.
+It includes a script to load the chat widget code from CDN, and initialize the chat widget with props pointing to a Langflow server.
+```javascript
+import React, { useEffect } from 'react';
+
+// Component to load the chat widget script
+const ChatScriptLoader = () => {
+  useEffect(() => {
+    if (!document.querySelector('script[src*="langflow-embedded-chat"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  return null;
+};
+
+declare global {
+    namespace JSX {
+      interface IntrinsicElements {
+        "langflow-chat": any;
+      }
+    }
+  }
+
+  export default function ChatWidget({ className }) {
+    return (
+      <div className={className}>
+        <ChatScriptLoader />
+        <langflow-chat
+          host_url="https://c822-73-64-93-151.ngrok-free.app"
+          flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+        ></langflow-chat>
+      </div>
+    );
+  }
+```
+
+3. To import the component to your page, add this to your site.
+```
+import ChatWidget from '@site/src/components/ChatWidget';
+```
+4. To add the widget to your page, include `<ChatWidget className="my-chat-widget" />` anywhere you want to see the chat widget.
+For example, right here:
+
+<ChatWidget className="my-chat-widget" />
 
 ### Embed the chat widget with Angular
 
