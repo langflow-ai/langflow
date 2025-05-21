@@ -12,9 +12,9 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const containerVariants = {
-  hidden: { opacity: 0, y: 80 },
+  hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 80 },
+  exit: { opacity: 0, y: 20 },
 };
 
 const stopButtonVariants = {
