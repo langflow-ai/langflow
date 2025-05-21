@@ -7,7 +7,6 @@ from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 
 class SearchComponent(Component):
@@ -30,7 +29,6 @@ class SearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Text", name="text", method="fetch_content_text"),
         Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
@@ -70,14 +68,6 @@ class SearchComponent(Component):
         )
         self.status = results
         return results
-
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = ""
-        for item in data:
-            result_string += item.text + "\n"
-        self.status = result_string
-        return Message(text=result_string)
 
     def fetch_content_dataframe(self) -> DataFrame:
         """Convert the search results to a DataFrame.

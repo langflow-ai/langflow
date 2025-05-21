@@ -5,7 +5,6 @@ from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 
 class WikipediaComponent(Component):
@@ -34,6 +33,14 @@ class WikipediaComponent(Component):
     def run_model(self) -> DataFrame:
         return self.fetch_content_dataframe()
 
+    def _build_wrapper(self) -> WikipediaAPIWrapper:
+        return WikipediaAPIWrapper(
+            top_k_results=self.k,
+            lang=self.lang,
+            load_all_available_meta=self.load_all_available_meta,
+            doc_content_chars_max=self.doc_content_chars_max,
+        )
+
     def fetch_content(self) -> list[Data]:
         wrapper = self._build_wrapper()
         docs = wrapper.load(self.input_value)
@@ -44,19 +51,3 @@ class WikipediaComponent(Component):
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
         return data_to_dataframe(data)
-
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = ""
-        for item in data:
-            result_string += item.text + "\n"
-        self.status = result_string
-        return Message(text=result_string)
-
-    def _build_wrapper(self) -> WikipediaAPIWrapper:
-        return WikipediaAPIWrapper(
-            top_k_results=self.k,
-            lang=self.lang,
-            load_all_available_meta=self.load_all_available_meta,
-            doc_content_chars_max=self.doc_content_chars_max,
-        )
