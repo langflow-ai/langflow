@@ -140,22 +140,10 @@ To add a custom [session ID](/session-id) value and an API key for authenticatio
 </body>
 </html>
 ```
-The chat widget requires your flow to contain a **Chat Input** component for the widget to communicate with it.
-To use an `input_type` other than "chat", use the Langflow API.
 
+The chat widget requires your flow to contain **Chat Input** and **Chat Output** components for the widget to communicate with it.
 Sending a message to Langflow without a **Chat Input** still triggers the flow, but the LLM warns you the message is empty.
-
-To change the `output_type`, 
-To change the `output_component` to something other than **Chat Output**, look up its in unique component ID in your flow and add it as a prop to langflow-chat.
-
-```html
-<langflow-chat
-  host_url="https://your-langflow-server"
-  flow_id="your-flow-id"
-  output_component="TextOutput-xyz789"
-></langflow-chat>
-```
-
+**Text Input** and **Text Output** components can send and receive messages with Langflow, but without the ongoing LLM "chat" context.
 
 ### Embed the chat widget with React
 
