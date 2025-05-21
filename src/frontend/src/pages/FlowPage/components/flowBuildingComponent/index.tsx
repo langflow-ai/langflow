@@ -140,7 +140,7 @@ export default function FlowBuildingComponent() {
             animate="visible"
             exit="exit"
             variants={containerVariants}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: 0.2, delay: 0.2, ease: "easeOut" }}
             className={cn(
               "flex flex-col justify-center overflow-hidden rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-colors duration-200",
               !isBuilding &&

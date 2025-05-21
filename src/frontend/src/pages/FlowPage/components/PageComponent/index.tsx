@@ -23,6 +23,7 @@ import {
   reconnectEdge,
   SelectionDragHandler,
 } from "@xyflow/react";
+import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -617,9 +618,7 @@ export default function Page({
             onEdgeClick={handleEdgeClick}
           >
             <FlowBuildingComponent />
-            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-              <UpdateAllComponents />
-            </div>
+            <UpdateAllComponents />
             <MemoizedBackground />
           </ReactFlow>
           <div

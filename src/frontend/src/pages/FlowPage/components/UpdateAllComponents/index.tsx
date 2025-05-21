@@ -35,6 +35,9 @@ export default function UpdateAllComponents({}: {}) {
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+
   const updateNodeInternals = useUpdateNodeInternals();
   const updateAllNodes = useUpdateAllNodes(setNodes, updateNodeInternals);
 
@@ -187,65 +190,70 @@ export default function UpdateAllComponents({}: {}) {
 
   return (
     <AnimatePresence mode="wait">
-      {!dismissed && (
-        <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={containerVariants}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className={cn(
-              "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
-              componentsToUpdateFiltered.some(
-                (component) => component.breakingChange,
-              ) && "border-accent-amber-foreground",
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <span>
-                Update
-                {componentsToUpdateFiltered.length > 1 ? "s are" : " is"}{" "}
-                available for{" "}
-                {componentsToUpdateFiltered.length +
-                  " component" +
-                  (componentsToUpdateFiltered.length > 1 ? "s" : "")}
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="link"
-                size="icon"
-                className="shrink-0 text-sm"
-                onClick={(e) => {
-                  addDismissedNodes(
-                    componentsToUpdateFiltered.map((component) => component.id),
-                  );
-                  e.stopPropagation();
-                }}
-              >
-                Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
-              </Button>
-              <Button
-                size="sm"
-                className="shrink-0"
-                onClick={() => handleUpdateAllComponents()}
-                loading={loadingUpdate}
-                data-testid="update-all-button"
-              >
-                {breakingChanges.length > 0 ? "Review All" : "Update All"}
-              </Button>
-            </div>
-            <UpdateComponentModal
-              isMultiple={true}
-              open={isOpen}
-              setOpen={setIsOpen}
-              onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
-              components={componentsToUpdateFiltered}
-            />
-          </motion.div>
-        </div>
-      )}
+      {!dismissed &&
+        !isBuilding &&
+        !buildInfo?.error &&
+        !buildInfo?.success && (
+          <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={containerVariants}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className={cn(
+                "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
+                componentsToUpdateFiltered.some(
+                  (component) => component.breakingChange,
+                ) && "border-accent-amber-foreground",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <span>
+                  Update
+                  {componentsToUpdateFiltered.length > 1 ? "s are" : " is"}{" "}
+                  available for{" "}
+                  {componentsToUpdateFiltered.length +
+                    " component" +
+                    (componentsToUpdateFiltered.length > 1 ? "s" : "")}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="link"
+                  size="icon"
+                  className="shrink-0 text-sm"
+                  onClick={(e) => {
+                    addDismissedNodes(
+                      componentsToUpdateFiltered.map(
+                        (component) => component.id,
+                      ),
+                    );
+                    e.stopPropagation();
+                  }}
+                >
+                  Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
+                </Button>
+                <Button
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => handleUpdateAllComponents()}
+                  loading={loadingUpdate}
+                  data-testid="update-all-button"
+                >
+                  {breakingChanges.length > 0 ? "Review All" : "Update All"}
+                </Button>
+              </div>
+              <UpdateComponentModal
+                isMultiple={true}
+                open={isOpen}
+                setOpen={setIsOpen}
+                onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
+                components={componentsToUpdateFiltered}
+              />
+            </motion.div>
+          </div>
+        )}
     </AnimatePresence>
   );
 }
