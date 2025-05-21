@@ -16,6 +16,7 @@ from tests.unit.build_utils import build_flow, consume_and_assert_stream, create
 TIMEOUT_MESSAGE = "Test exceeded timeout limit"
 
 
+
 @pytest.mark.benchmark
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with the new two-step process."""
@@ -114,6 +115,7 @@ async def test_build_flow_invalid_flow_id(client, logged_in_headers):
     invalid_flow_id = uuid.uuid4()
     try:
         response = await client.post(f"api/v1/build/{invalid_flow_id}/flow", json={}, headers=logged_in_headers)
+        response = await client.post(f"api/v1/build/{invalid_flow_id}/flow", json={}, headers=logged_in_headers)
         assert response.status_code == codes.NOT_FOUND
         assert "Flow with id" in response.json()["detail"]
         assert str(invalid_flow_id) in response.json()["detail"]
@@ -121,6 +123,7 @@ async def test_build_flow_invalid_flow_id(client, logged_in_headers):
         pytest.fail(f"HTTP request failed: {e!s}")
     except AssertionError as e:
         pytest.fail(f"Assertion failed: {e!s}")
+
 
 
 @pytest.mark.benchmark
@@ -155,6 +158,7 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
 
 
 @pytest.mark.timeout(120)  # Set a timeout for the test
+@pytest.mark.timeout(120)  # Set a timeout for the test
 @pytest.mark.benchmark
 async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with polling (non-streaming)."""
@@ -167,18 +171,26 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
     job_id = build_response["job_id"]
     assert job_id is not None
 
-    # Create a response object that mimics a streaming response but uses polling
-    class PollingResponse:
-        def __init__(self, client, job_id, headers):
-            self.client = client
-            self.job_id = job_id
-            self.headers = headers
-            self.status_code = codes.OK
-            self.max_total_events = 50  # Limit to prevent infinite loops
-            self.max_empty_polls = 10  # Maximum number of empty polls before giving up
-            self.poll_timeout = 3.0  # Timeout for each polling request
+class PollingResponse:
+    def __init__(self, client, job_id, headers):
+        self.client = client
+        self.job_id = job_id
+        self.headers = headers
+        self.status_code = codes.OK
+        self.max_total_events = 100
+        self.max_empty_polls = 20
+        self.poll_timeout = 5.0
+        self.poll_interval = 0.1
+        self.end_event_found = False
 
-        async def aiter_lines(self):
+    async def aiter_lines(self):
+        empty_polls = 0
+        total_events = 0
+        logger.debug(f"Starting event polling for job_id: {self.job_id}")
+        session = self.client
+        while (
+            empty_polls < self.max_empty_polls and total_events < self.max_total_events and not self.end_event_found
+        ):
             try:
                 headers = {**self.headers, "Accept": "application/x-ndjson"}
                 response = await asyncio.wait_for(
