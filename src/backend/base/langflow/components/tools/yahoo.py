@@ -77,13 +77,12 @@ to access financial data and market information from Yahoo Finance."""
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
-    def run_model(self) -> list[Data]:
-        return self.fetch_content()
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
 
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
@@ -142,11 +141,8 @@ to access financial data and market information from Yahoo Finance."""
 
         return data_list
 
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Yahoo search results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the search results.
-        """
+    def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return DataFrame(data)
+        if isinstance(data, list):
+            return DataFrame(data=[d.data for d in data])
+        return DataFrame(data=[data.data])
