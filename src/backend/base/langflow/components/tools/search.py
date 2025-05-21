@@ -29,16 +29,15 @@ class SearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def _build_wrapper(self):
         return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)
 
-    def run_model(self) -> list[Data]:
-        return self.fetch_content()
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
 
     def fetch_content(self) -> list[Data]:
         wrapper = self._build_wrapper()
@@ -79,7 +78,7 @@ class SearchComponent(Component):
         self.status = result_string
         return Message(text=result_string)
 
-    def as_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> DataFrame:
         """Convert the search results to a DataFrame.
 
         Returns:
