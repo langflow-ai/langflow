@@ -19,9 +19,9 @@ from langchain_core.tools import BaseTool, Tool
 from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
 
-from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
+from langflow_execution.schema.data import Data
+from langflow_execution.schema.dataframe import DataFrame
+from langflow_execution.schema.message import Message
 
 NestedDict: TypeAlias = dict[str, str | dict]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)

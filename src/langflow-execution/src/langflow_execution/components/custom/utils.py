@@ -10,25 +10,26 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from langflow.custom import CustomComponent
-from langflow.custom.custom_component.component import Component
-from langflow.custom.directory_reader.utils import (
+from loguru import logger
+from pydantic import BaseModel
+
+from langflow_execution.components.custom import CustomComponent
+from langflow_execution.components.custom.custom_component.component import Component
+from langflow_execution.components.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
     merge_nested_dicts_with_renaming,
 )
-from langflow.custom.eval import eval_custom_component_code
-from langflow.custom.schema import MissingDefault
-from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.custom import format_type
-from langflow.schema import dotdict
-from langflow.template.field.base import Input
-from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
-from langflow.type_extraction.type_extraction import extract_inner_type
-from langflow.utils import validate
-from langflow.utils.util import get_base_classes
-from loguru import logger
-from pydantic import BaseModel
+from langflow_execution.components.custom.eval import eval_custom_component_code
+from langflow_execution.components.custom.schema import MissingDefault
+from langflow_execution.components.field_typing.range_spec import RangeSpec
+import langflow_execution.components.parser as parser
+from langflow_execution.schema import dotdict
+from langflow_execution.helpers.custom import format_type
+from langflow_execution.components.template.field.base import Input
+from langflow_execution.components.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
+from langflow_execution.components.type_extraction.type_extraction import extract_inner_type
+from langflow_execution.utils.util import get_base_classes
 
 
 class UpdateBuildConfigError(Exception):
@@ -540,9 +541,9 @@ def build_component(component):
 
 def get_function(code):
     """Get the function."""
-    function_name = validate.extract_function_name(code)
+    function_name = parser.extract_function_name(code)
 
-    return validate.create_function(code, function_name)
+    return parser.create_function(code, function_name)
 
 
 def get_instance_name(instance):
