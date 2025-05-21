@@ -145,8 +145,9 @@ export const MenuBar = memo((): JSX.Element => {
               <IconComponent
                 name="pencil"
                 className={cn(
-                  "h-5 w-3.5 opacity-0",
-                  !openSettings && "sm:group-hover:opacity-100",
+                  "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
+                  !openSettings &&
+                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
                 )}
               />
             </div>
