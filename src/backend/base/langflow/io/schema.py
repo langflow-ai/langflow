@@ -72,6 +72,13 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
         # ── objects ─────────────────────────────────────────────────────────
         if t == "object":
             req_here = set(schema.get("required", []))
+            # Handle additionalProperties for objects
+            if "additionalProperties" in schema:
+                flat_props[name] = {"type": "object", "additionalProperties": schema["additionalProperties"]}
+                if inherited_req:
+                    required_list.append(name)
+                return
+
             for k, subschema in schema.get("properties", {}).items():
                 child_name = f"{name}.{k}" if name else k
                 _walk(name=child_name, schema=subschema, inherited_req=inherited_req and k in req_here)
@@ -140,6 +147,19 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
         if get_origin(ann) is list:
             is_list = True
             ann = get_args(ann)[0]
+
+        # Handle dictionary types
+        if get_origin(ann) is dict:
+            inputs.append(
+                DictInput(
+                    display_name=model_field.title or field_name.replace("_", " ").title(),
+                    name=field_name,
+                    info=model_field.description or "",
+                    required=model_field.is_required(),
+                    is_list=is_list,
+                )
+            )
+            continue
 
         options: list[Any] | None = None
         if get_origin(ann) is Literal:
