@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test("user must be able to move flow from folder", async ({ page }) => {
   const randomName = Math.random().toString(36).substring(2, 15);
@@ -9,15 +10,7 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.getByTestId("flow_name").click();
-
-  await page.getByTestId("input-flow-name").click();
-
-  await page.getByTestId("input-flow-name").fill(randomName);
-
-  await page.getByTestId("save-flow-settings").click();
-
-  await page.getByText("Changes saved successfully").isVisible();
+  await renameFlow(page, { flowName: randomName });
 
   await page.getByTestId("icon-ChevronLeft").click();
   await page.waitForSelector('[data-testid="add-project-button"]', {

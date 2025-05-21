@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "should be able to move flow from folder, rename it and be displayed on correct folder",
@@ -25,11 +26,8 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.getByTestId("flow_name").click();
+    await renameFlow(page, { flowName: randomName });
 
-    await page.getByTestId("input-flow-name").click();
-    await page.getByTestId("input-flow-name").fill(randomName);
-    await page.getByText("Save", { exact: true }).last().click();
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await page.getByTestId("add-project-button").click();
@@ -73,11 +71,8 @@ test(
 
     await page.getByTestId(`card-${randomName}`).first().click();
 
-    await page.getByTestId("flow_name").click();
+    await renameFlow(page, { flowName: secondRandomName });
 
-    await page.getByTestId("input-flow-name").click();
-    await page.getByTestId("input-flow-name").fill(secondRandomName);
-    await page.getByText("Save", { exact: true }).last().click();
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await page.waitForTimeout(3000);

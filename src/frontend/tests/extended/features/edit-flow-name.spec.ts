@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 test(
   "user should be able to edit flow name by clicking on the header or on the main page",
   { tag: ["@release", "@workspace", "@components"] },
@@ -13,23 +14,11 @@ test(
 
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.getByTestId("flow_name").click();
+    await renameFlow(page, { flowName: randomName });
 
-    await page.getByTestId("input-flow-name").click();
-
-    await page.getByTestId("input-flow-name").fill(randomName);
-
-    await page.getByTestId("save-flow-settings").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.getByTestId("flow_name").click();
-
-    let flowName = await page.getByTestId("input-flow-name").inputValue();
+    let { flowName } = await renameFlow(page);
 
     expect(flowName).toBe(randomName);
-
-    await page.getByText("Cancel", { exact: true }).first().click();
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -46,23 +35,11 @@ test(
 
     await page.getByText(randomName).click();
 
-    await page.getByTestId("flow_name").click();
+    await renameFlow(page, { flowName: randomName2 });
 
-    await page.getByTestId("input-flow-name").click();
+    let { flowName: flowName2 } = await renameFlow(page);
 
-    await page.getByTestId("input-flow-name").fill(randomName2);
-
-    await page.getByTestId("save-flow-settings").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.getByTestId("flow_name").click();
-
-    flowName = await page.getByTestId("input-flow-name").inputValue();
-
-    expect(flowName).toBe(randomName2);
-
-    await page.getByText("Cancel", { exact: true }).first().click();
+    expect(flowName2).toBe(randomName2);
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -79,13 +56,17 @@ test(
 
     await page.getByText(randomName2).click();
 
-    await page.getByTestId("flow_name").click();
+    await renameFlow(page, { flowName: randomName3 });
 
-    await page.getByTestId("input-flow-name").click();
+    let { flowName: flowName3 } = await renameFlow(page);
 
-    await page.getByTestId("input-flow-name").fill(randomName3);
+    expect(flowName3).toBe(randomName3);
 
-    await page.getByTestId("save-flow-settings").click();
+    await page.getByTestId("icon-ChevronLeft").first().click();
+
+    await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
+      timeout: 5000,
+    });
 
     await page.waitForSelector(`text=${randomName3}`, {
       timeout: 3000,
@@ -94,25 +75,13 @@ test(
 
     expect(await page.getByText(randomName3).count()).toBe(1);
 
-    await page.getByTestId("flow_name").click();
+    await page.getByText(randomName3).click();
 
-    await page.getByTestId("input-flow-name").click();
+    await renameFlow(page, { flowName: randomName4 });
 
-    await page.getByTestId("input-flow-name").fill(randomName4);
+    let { flowName: flowName4 } = await renameFlow(page);
 
-    await page.getByTestId("save-flow-settings").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.getByTestId("flow_name").click();
-
-    await page.getByTestId("input-flow-name").click();
-
-    flowName = await page.getByTestId("input-flow-name").inputValue();
-
-    expect(flowName).toBe(randomName4);
-
-    await page.getByText("Cancel", { exact: true }).first().click();
+    expect(flowName4).toBe(randomName4);
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
