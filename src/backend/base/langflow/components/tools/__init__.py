@@ -14,6 +14,7 @@ from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
+from .tavily_search_tool import TavilySearchToolComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia_api import WikipediaAPIComponent
 from .yahoo_finance import YfinanceToolComponent
@@ -22,6 +23,8 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
 
 __all__ = [
+    "AstraDBCQLToolComponent",
+    "AstraDBToolComponent",
     "CalculatorComponent",
     "CalculatorToolComponent",
     "DuckDuckGoSearchComponent",
