@@ -104,8 +104,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     icon: str = "Glean"
 
     outputs = [
-        Output(display_name="Data", name="data", method="run_model"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     inputs = [
@@ -133,7 +132,10 @@ class GleanSearchAPIComponent(LCToolComponent):
 
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
+
+    def fetch_content(self) -> list[Data]:
         tool = self.build_tool()
 
         results = tool.run(
@@ -160,13 +162,13 @@ class GleanSearchAPIComponent(LCToolComponent):
             glean_access_token=glean_access_token,
         )
 
-    def as_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> DataFrame:
         """Convert the Glean search results to a DataFrame.
 
         Returns:
             DataFrame: A DataFrame containing the search results.
         """
-        data = self.run_model()
+        data = self.fetch_content()
         if isinstance(data, list):
             return DataFrame(data=[d.data for d in data])
         return DataFrame(data=[data.data])
