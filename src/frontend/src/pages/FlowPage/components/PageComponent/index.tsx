@@ -141,11 +141,12 @@ export default function Page({
   const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
   const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
-  function handleGroupNode() {
+  const handleGroupNode = useCallback(() => {
     takeSnapshot();
-    if (validateSelection(lastSelection!, edges).length === 0) {
-      const clonedNodes = cloneDeep(nodes);
-      const clonedEdges = cloneDeep(edges);
+    const edgesState = useFlowStore.getState().edges;
+    if (validateSelection(lastSelection!, edgesState).length === 0) {
+      const clonedNodes = cloneDeep(useFlowStore.getState().nodes);
+      const clonedEdges = cloneDeep(edgesState);
       const clonedSelection = cloneDeep(lastSelection);
       updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!);
       const { newFlow } = generateFlow(
@@ -169,10 +170,10 @@ export default function Page({
     } else {
       setErrorData({
         title: INVALID_SELECTION_ERROR_ALERT,
-        list: validateSelection(lastSelection!, edges),
+        list: validateSelection(lastSelection!, edgesState),
       });
     }
-  }
+  }, [lastSelection, setNodes, setErrorData, takeSnapshot]);
 
   useEffect(() => {
     const handleMouseMove = (event) => {
@@ -556,6 +557,27 @@ export default function Page({
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full bg-canvas">
+          {!view && (
+            <>
+              <MemoizedCanvasControls
+                setIsAddingNote={setIsAddingNote}
+                position={position.current}
+                shadowBoxWidth={shadowBoxWidth}
+                shadowBoxHeight={shadowBoxHeight}
+              />
+              <FlowToolbar />
+            </>
+          )}
+          <MemoizedSidebarTrigger />
+          <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
+            <UpdateAllComponents />
+          </div>
+          <SelectionMenu
+            lastSelection={lastSelection}
+            isVisible={selectionMenuVisible}
+            nodes={lastSelection?.nodes}
+            onClick={handleGroupNode}
+          />
           <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
@@ -595,29 +617,6 @@ export default function Page({
             onEdgeClick={handleEdgeClick}
           >
             <MemoizedBackground />
-            {!view && (
-              <>
-                <MemoizedCanvasControls
-                  setIsAddingNote={setIsAddingNote}
-                  position={position.current}
-                  shadowBoxWidth={shadowBoxWidth}
-                  shadowBoxHeight={shadowBoxHeight}
-                />
-                <FlowToolbar />
-              </>
-            )}
-            <MemoizedSidebarTrigger />
-            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-              <UpdateAllComponents />
-            </div>
-            <SelectionMenu
-              lastSelection={lastSelection}
-              isVisible={selectionMenuVisible}
-              nodes={lastSelection?.nodes}
-              onClick={() => {
-                handleGroupNode();
-              }}
-            />
           </ReactFlow>
           <div
             id="shadow-box"
