@@ -64,7 +64,7 @@ test(
         expect(cellsCount).toBeGreaterThan(0);
 
         await page.getByRole("gridcell").first().click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         const isChecked = await page
           .locator('input[data-ref="eInput"]')
@@ -73,7 +73,7 @@ test(
 
         if (!isChecked) {
           await page.locator('input[data-ref="eInput"]').first().click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(1000);
         }
         const isCheckedAgain = await page
           .locator('input[data-ref="eInput"]')
@@ -82,7 +82,7 @@ test(
 
         if (isCheckedAgain) {
           await page.locator('input[data-ref="eInput"]').first().click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(1000);
         }
 
         const isCheckedAgainAgain = await page
@@ -97,13 +97,13 @@ test(
           .locator('input[data-ref="eInput"]')
           .nth(rowsCount + 1)
           .click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         await page
           .getByRole("gridcell")
           .nth(cellsCount - 1)
           .click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         const isLastChecked = await page
           .locator('input[data-ref="eInput"]')
@@ -224,8 +224,9 @@ test(
         }
 
         // Verify tools are available
+        await page.waitForTimeout(3000);
         await page.getByTestId("dropdown_str_tool").click();
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
 
         const fetchOptionCount = await page.getByText("mcp_test_name").count();
         expect(fetchOptionCount).toBeGreaterThan(0);
