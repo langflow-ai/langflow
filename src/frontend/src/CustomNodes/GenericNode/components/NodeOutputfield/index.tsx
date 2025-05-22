@@ -383,7 +383,7 @@ function NodeOutputField({
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary",
       )}

@@ -35,7 +35,6 @@ import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
-import NodeStatus from "./components/NodeStatus";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
@@ -503,7 +502,6 @@ function GenericNode({
     return (
       <MemoizedNodeIcon
         dataType={data.type}
-        showNode={showNode}
         icon={data.node?.icon}
         isGroup={!!data.node?.flow}
       />
@@ -517,8 +515,6 @@ function GenericNode({
         nodeId={data.id}
         selected={selected}
         showNode={showNode}
-        validationStatus={validationStatus}
-        isOutdated={isOutdated}
         beta={data.node?.beta || false}
         editNameDescription={editNameDescription}
         toggleEditNameDescription={toggleEditNameDescription}
@@ -631,21 +627,18 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap p-4 leading-5",
+            "grid text-wrap leading-5",
             showNode ? "border-b" : "relative",
-            hasDescription && "gap-3",
           )}
         >
           <div
             data-testid={"div-generic-node"}
-            className={
-              !showNode
-                ? ""
-                : "generic-node-div-title justify-between rounded-t-lg"
-            }
+            className={cn(
+              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
+            )}
           >
             <div
-              className={"generic-node-title-arrangement"}
+              className="flex-max-width items-center overflow-hidden"
               data-testid="generic-node-title-arrangement"
             >
               {renderNodeIcon()}
