@@ -76,8 +76,8 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         file_path = os.path.join(component.workspace_folder, "main.txt")
         with open(file_path, "w") as f:
             f.write("main branch")
-        git_add(paths=["main.txt"])
-        git_commit("main commit")
+        git_add({"paths": ["main.txt"]})
+        git_commit({"message": "main commit"})
         # Create new branch
         assert "Command executed successfully" in git_branch({"new_branch": "feature"})
         # Checkout new branch
