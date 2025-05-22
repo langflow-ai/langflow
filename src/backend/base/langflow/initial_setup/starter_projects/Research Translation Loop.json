@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AnthropicModel-G2MkR{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-G2MkRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-jYebP{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-jYebPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "AnthropicModel-G2MkR",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-G2MkRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-G2MkRœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "MessagetoData-jYebP",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-jYebPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-jYebPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-5o3G0{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5o3G0œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-ylKFb{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-ylKFbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-5o3G0",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5o3G0œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5o3G0œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-ylKFb",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-ylKFbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-ylKFbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-ParserComponent-ZhlLQ{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ZhlLQœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-G2MkR{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-G2MkRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-ZhlLQ",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ZhlLQœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-ZhlLQœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-G2MkR",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-G2MkRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-G2MkRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "xy-edge__ArXivComponent-ylKFb{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-ylKFbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-9BK8B{œfieldNameœ:œdataœ,œidœ:œLoopComponent-9BK8Bœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-ylKFb",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-ylKFbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-ylKFbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-9BK8B",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-9BK8Bœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-9BK8Bœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "xy-edge__LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-ZhlLQ{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ZhlLQœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-9BK8B",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-ZhlLQ",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ZhlLQœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-ZhlLQœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -169,9 +169,9 @@
         "id": "xy-edge__LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-oTh2r{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oTh2rœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LoopComponent-9BK8B",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-oTh2r",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oTh2rœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-oTh2rœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -197,9 +197,9 @@
         "id": "xy-edge__MessagetoData-jYebP{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-jYebPœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "MessagetoData-jYebP",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-jYebPœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-jYebPœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-9BK8B",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       }
     ],
     "nodes": [
@@ -247,7 +247,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "hidden": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
@@ -406,10 +405,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -424,7 +421,6 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],
@@ -731,7 +727,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Data",
-                "hidden": false,
                 "method": "convert_message_to_data",
                 "name": "data",
                 "selected": "Data",
@@ -1152,7 +1147,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1514,11 +1508,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
-                "hidden": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1531,24 +1522,6 @@
             "score": 0.001,
             "template": {
               "_type": "Component",
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Clean Data",
-                "dynamic": false,
-                "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1625,7 +1598,7 @@
                 "multiline": true,
                 "name": "pattern",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": false,
                 "title_case": false,
                 "tool_mode": false,
@@ -1708,7 +1681,6 @@
                 "allows_loop": true,
                 "cache": true,
                 "display_name": "Item",
-                "hidden": false,
                 "method": "item_output",
                 "name": "item",
                 "selected": "Data",
@@ -1722,7 +1694,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Done",
-                "hidden": false,
                 "method": "done_output",
                 "name": "done",
                 "selected": "DataFrame",
