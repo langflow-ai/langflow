@@ -35,6 +35,7 @@ import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
+import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
@@ -46,6 +47,7 @@ const MemoizedNodeIcon = memo(NodeIcon);
 const MemoizedNodeName = memo(NodeName);
 const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
+const MemoizedNodeOutputs = memo(NodeOutputs);
 
 const HiddenOutputsButton = memo(
   ({
@@ -108,10 +110,10 @@ function GenericNode({
 
   const showNode = data.showNode ?? true;
 
-  const getValidationStatus = (data) => {
+  const getValidationStatus = useCallback((data) => {
     setValidationStatus(data);
     return null;
-  };
+  }, []);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
@@ -498,6 +500,20 @@ function GenericNode({
     }
   }, [hiddenOutputs]);
 
+  const handleToggleHiddenOutputs = useCallback(
+    () => setShowHiddenOutputs((prev) => !prev),
+    [],
+  );
+
+  const memoizedOnUpdateNode = useCallback(
+    () => handleUpdateCode(true),
+    [handleUpdateCode],
+  );
+  const memoizedSetDismissAll = useCallback(
+    () => addDismissedNodes([data.id]),
+    [addDismissedNodes, data.id],
+  );
+
   const renderNodeIcon = useCallback(() => {
     return (
       <MemoizedNodeIcon
@@ -608,12 +624,14 @@ function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
-        <UpdateComponentModal
-          open={openUpdateModal}
-          setOpen={setOpenUpdateModal}
-          onUpdateNode={() => handleUpdateCode(true)}
-          components={componentUpdate ? [componentUpdate] : []}
-        />
+        {openUpdateModal && (
+          <UpdateComponentModal
+            open={openUpdateModal}
+            setOpen={setOpenUpdateModal}
+            onUpdateNode={memoizedOnUpdateNode}
+            components={componentUpdate ? [componentUpdate] : []}
+          />
+        )}
         {memoizedNodeToolbarComponent}
         {shouldShowUpdateComponent && (
           <NodeUpdateComponent
@@ -621,7 +639,7 @@ function GenericNode({
             showNode={showNode}
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
-            setDismissAll={() => addDismissedNodes([data.id])}
+            setDismissAll={memoizedSetDismissAll}
           />
         )}
         <div
@@ -641,28 +659,89 @@ function GenericNode({
               className="flex-max-width items-center overflow-hidden"
               data-testid="generic-node-title-arrangement"
             >
-              {renderNodeIcon()}
-              <div className="generic-node-tooltip-div truncate">
-                {renderNodeName()}
+              <MemoizedNodeIcon
+                dataType={data.type}
+                icon={data.node?.icon}
+                isGroup={!!data.node?.flow}
+              />
+              <div className="ml-3 flex flex-1 overflow-hidden">
+                <MemoizedNodeName
+                  display_name={data.node?.display_name}
+                  nodeId={data.id}
+                  selected={selected}
+                  showNode={showNode}
+                  beta={data.node?.beta || false}
+                  editNameDescription={editNameDescription}
+                  toggleEditNameDescription={toggleEditNameDescription}
+                  setHasChangedNodeDescription={setHasChangedNodeDescription}
+                />
               </div>
             </div>
-            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
-              {!showNode && (
-                <>
-                  {renderInputParameters()}
-                  {shownOutputs.length > 0 &&
-                    renderOutputs(shownOutputs, "render-outputs")}
-                </>
-              )}
-            </div>
-            {renderNodeStatus()}
+            {!showNode && (
+              <>
+                <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
+                  <MemoizedRenderInputParameters
+                    data={data}
+                    types={types}
+                    isToolMode={isToolMode}
+                    showNode={showNode}
+                    shownOutputs={shownOutputs}
+                    showHiddenOutputs={showHiddenOutputs}
+                  />
+                  <MemoizedNodeOutputs
+                    outputs={shownOutputs}
+                    keyPrefix="render-outputs"
+                    data={data}
+                    types={types}
+                    selected={selected}
+                    showNode={showNode}
+                    isToolMode={isToolMode}
+                    showHiddenOutputs={showHiddenOutputs}
+                  />
+                </div>
+              </>
+            )}
+            <MemoizedNodeStatus
+              data={data}
+              frozen={data.node?.frozen}
+              showNode={showNode}
+              display_name={data.node?.display_name!}
+              nodeId={data.id}
+              selected={selected}
+              setBorderColor={setBorderColor}
+              buildStatus={buildStatus}
+              dismissAll={dismissAll}
+              isOutdated={isOutdated}
+              isUserEdited={isUserEdited}
+              isBreakingChange={hasBreakingChange}
+              getValidationStatus={getValidationStatus}
+            />
           </div>
-          {showNode && <div>{renderDescription()}</div>}
+          {showNode && (hasDescription || editNameDescription) && (
+            <div className="px-4 pb-3">
+              <MemoizedNodeDescription
+                description={data.node?.description}
+                mdClassName={"dark:prose-invert"}
+                nodeId={data.id}
+                selected={selected}
+                editNameDescription={editNameDescription}
+                setEditNameDescription={set}
+                setHasChangedNodeDescription={setHasChangedNodeDescription}
+              />
+            </div>
+          )}
         </div>
         {showNode && (
           <div className="nopan nodelete nodrag noflow relative cursor-auto">
             <>
-              {renderInputParameters()}
+              <MemoizedRenderInputParameters
+                data={data}
+                types={types}
+                isToolMode={isToolMode}
+                showNode={showNode}
+                shownOutputs={shownOutputs}
+                showHiddenOutputs={showHiddenOutputs}
+              />{" "}
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
@@ -671,10 +750,18 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {!showHiddenOutputs &&
-                shownOutputs &&
-                renderOutputs(data.node!.outputs, "shown")}
-
+              {!showHiddenOutputs && shownOutputs && (
+                <MemoizedNodeOutputs
+                  outputs={shownOutputs}
+                  keyPrefix="shown"
+                  data={data}
+                  types={types}
+                  selected={selected}
+                  showNode={showNode}
+                  isToolMode={isToolMode}
+                  showHiddenOutputs={showHiddenOutputs}
+                />
+              )}
               {/* <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
@@ -682,7 +769,6 @@ function GenericNode({
                   {renderOutputs(hiddenOutputs, "hidden")}
                 </div>
               </div> */}
-
               {/* {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
                   content={
@@ -702,7 +788,7 @@ function GenericNode({
                   >
                     <HiddenOutputsButton
                       showHiddenOutputs={showHiddenOutputs}
-                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                      onClick={handleToggleHiddenOutputs}
                     />
                   </div>
                 </ShadTooltip>
