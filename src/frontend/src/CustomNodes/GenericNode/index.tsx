@@ -49,28 +49,6 @@ const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
 const MemoizedNodeOutputs = memo(NodeOutputs);
 
-const HiddenOutputsButton = memo(
-  ({
-    showHiddenOutputs,
-    onClick,
-  }: {
-    showHiddenOutputs: boolean;
-    onClick: () => void;
-  }) => (
-    <Button
-      unstyled
-      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
-      onClick={onClick}
-    >
-      <ForwardedIconComponent
-        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="icon-size text-placeholder-foreground group-hover:text-foreground"
-      />
-    </Button>
-  ),
-);
-
 function GenericNode({
   data,
   selected,
@@ -252,15 +230,18 @@ function GenericNode({
     callback: toggleEditNameDescription,
   });
 
-  const { shownOutputs, hiddenOutputs } = useMemo(
-    () => ({
-      shownOutputs:
-        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
-      hiddenOutputs:
-        data.node?.outputs?.filter((output) => output.hidden) ?? [],
-    }),
-    [data.node?.outputs],
-  );
+  const { shownOutputs, hiddenOutputs } = useMemo(() => {
+    const shownOutputs: typeof data.node.outputs = [];
+    const hiddenOutputs: typeof data.node.outputs = [];
+    (data.node?.outputs ?? []).forEach((output) => {
+      if (output.hidden) {
+        hiddenOutputs.push(output);
+      } else {
+        shownOutputs.push(output);
+      }
+    });
+    return { shownOutputs, hiddenOutputs };
+  }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
     null,
@@ -308,85 +289,6 @@ function GenericNode({
       updateNodeInternals(data.id);
     },
     [data.id, setNode, setEdges, updateNodeInternals],
-  );
-
-  const renderOutputs = useCallback(
-    (outputs, key?: string) => {
-      const output = selectedOutput
-        ? outputs.find((output) => output.name === selectedOutput.name)
-        : outputs[0];
-
-      if (!output) return null;
-
-      const idx =
-        data.node!.outputs?.findIndex((out) => out.name === output.name) ?? 0;
-
-      const isLoop = output?.allows_loop ?? false;
-
-      return isLoop ? (
-        outputs?.map((output, idx) => (
-          <MemoizedOutputParameter
-            key={`${key}-${output.name}-${idx}`}
-            output={output}
-            idx={
-              data.node!.outputs?.findIndex(
-                (out) => out.name === output.name,
-              ) ?? idx
-            }
-            lastOutput={idx === outputs.length - 1}
-            data={data}
-            types={types}
-            selected={selected}
-            showNode={showNode}
-            isToolMode={isToolMode}
-            showHiddenOutputs={showHiddenOutputs}
-            handleSelectOutput={handleSelectOutput}
-            hidden={
-              key === "hidden"
-                ? showHiddenOutputs
-                  ? output.hidden
-                  : true
-                : false
-            }
-          />
-        ))
-      ) : (
-        <MemoizedOutputParameter
-          key={`${key}-${output.name}-${idx}`}
-          output={output}
-          outputs={outputs}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={true}
-          data={data}
-          types={types}
-          selected={selected}
-          handleSelectOutput={handleSelectOutput}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          hidden={
-            key === "hidden"
-              ? showHiddenOutputs
-                ? output.hidden
-                : true
-              : false
-          }
-        />
-      );
-    },
-    [
-      data,
-      types,
-      selected,
-      showNode,
-      isToolMode,
-      showHiddenOutputs,
-      selectedOutput,
-      handleSelectOutput,
-    ],
   );
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
@@ -500,11 +402,6 @@ function GenericNode({
     }
   }, [hiddenOutputs]);
 
-  const handleToggleHiddenOutputs = useCallback(
-    () => setShowHiddenOutputs((prev) => !prev),
-    [],
-  );
-
   const memoizedOnUpdateNode = useCallback(
     () => handleUpdateCode(true),
     [handleUpdateCode],
@@ -513,106 +410,6 @@ function GenericNode({
     () => addDismissedNodes([data.id]),
     [addDismissedNodes, data.id],
   );
-
-  const renderNodeIcon = useCallback(() => {
-    return (
-      <MemoizedNodeIcon
-        dataType={data.type}
-        icon={data.node?.icon}
-        isGroup={!!data.node?.flow}
-      />
-    );
-  }, [data.type, showNode, data.node?.icon, data.node?.flow]);
-
-  const renderNodeName = useCallback(() => {
-    return (
-      <MemoizedNodeName
-        display_name={data.node?.display_name}
-        nodeId={data.id}
-        selected={selected}
-        showNode={showNode}
-        beta={data.node?.beta || false}
-        editNameDescription={editNameDescription}
-        toggleEditNameDescription={toggleEditNameDescription}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
-      />
-    );
-  }, [
-    data.node?.display_name,
-    data.id,
-    selected,
-    showNode,
-    validationStatus,
-    isOutdated,
-    data.node?.beta,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
-
-  const renderNodeStatus = useCallback(() => {
-    return (
-      <MemoizedNodeStatus
-        data={data}
-        frozen={data.node?.frozen}
-        showNode={showNode}
-        display_name={data.node?.display_name!}
-        nodeId={data.id}
-        selected={selected}
-        setBorderColor={setBorderColor}
-        buildStatus={buildStatus}
-        dismissAll={dismissAll}
-        isOutdated={isOutdated}
-        isUserEdited={isUserEdited}
-        isBreakingChange={hasBreakingChange}
-        getValidationStatus={getValidationStatus}
-      />
-    );
-  }, [
-    data,
-    showNode,
-    selected,
-    buildStatus,
-    isOutdated,
-    isUserEdited,
-    getValidationStatus,
-    dismissAll,
-    handleUpdateCode,
-  ]);
-
-  const renderDescription = useCallback(() => {
-    return (
-      <MemoizedNodeDescription
-        description={data.node?.description}
-        mdClassName={"dark:prose-invert"}
-        nodeId={data.id}
-        selected={selected}
-        editNameDescription={editNameDescription}
-        setEditNameDescription={set}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
-      />
-    );
-  }, [
-    data.node?.description,
-    data.id,
-    selected,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
-
-  const renderInputParameters = useCallback(() => {
-    return (
-      <MemoizedRenderInputParameters
-        data={data}
-        types={types}
-        isToolMode={isToolMode}
-        showNode={showNode}
-        shownOutputs={shownOutputs}
-        showHiddenOutputs={showHiddenOutputs}
-      />
-    );
-  }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
@@ -689,14 +486,16 @@ function GenericNode({
                     showHiddenOutputs={showHiddenOutputs}
                   />
                   <MemoizedNodeOutputs
-                    outputs={shownOutputs}
-                    keyPrefix="render-outputs"
+                    outputs={data.node?.outputs ?? []}
+                    key="render-outputs"
                     data={data}
                     types={types}
-                    selected={selected}
+                    selected={selected ?? false}
                     showNode={showNode}
                     isToolMode={isToolMode}
                     showHiddenOutputs={showHiddenOutputs}
+                    selectedOutput={selectedOutput}
+                    handleSelectOutput={handleSelectOutput}
                   />
                 </div>
               </>
@@ -753,13 +552,15 @@ function GenericNode({
               {!showHiddenOutputs && shownOutputs && (
                 <MemoizedNodeOutputs
                   outputs={shownOutputs}
-                  keyPrefix="shown"
+                  key="shown"
                   data={data}
                   types={types}
-                  selected={selected}
+                  selected={selected ?? false}
                   showNode={showNode}
                   isToolMode={isToolMode}
                   showHiddenOutputs={showHiddenOutputs}
+                  selectedOutput={selectedOutput}
+                  handleSelectOutput={handleSelectOutput}
                 />
               )}
               {/* <div
@@ -788,7 +589,7 @@ function GenericNode({
                   >
                     <HiddenOutputsButton
                       showHiddenOutputs={showHiddenOutputs}
-                      onClick={handleToggleHiddenOutputs}
+                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
                     />
                   </div>
                 </ShadTooltip>
