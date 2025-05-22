@@ -46,10 +46,6 @@ withEventDeliveryModes(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
-
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByPlaceholder(

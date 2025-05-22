@@ -253,6 +253,7 @@ module.exports = {
           items: [
             "Integrations/Nvidia/integrations-nvidia-ingest",
             "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+            "Integrations/Nvidia/integrations-nvidia-system-assist",
           ],
         },
       ],
