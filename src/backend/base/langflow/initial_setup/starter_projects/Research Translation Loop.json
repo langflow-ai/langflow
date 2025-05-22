@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-QwWvb",
+            "id": "AnthropicModel-G2MkR",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-JGpfo",
+            "id": "MessagetoData-jYebP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-AnthropicModel-QwWvb{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-QwWvbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-JGpfo{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-JGpfoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-AnthropicModel-G2MkR{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-G2MkRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-jYebP{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-jYebPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "AnthropicModel-QwWvb",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-QwWvbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MessagetoData-JGpfo",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-JGpfoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "AnthropicModel-G2MkR",
+        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-G2MkRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MessagetoData-jYebP",
+        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-jYebPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-4NYFB",
+            "id": "ChatInput-5o3G0",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,112 +43,27 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-jVb9N",
+            "id": "ArXivComponent-ylKFb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-4NYFB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-4NYFBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-jVb9N{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-jVb9Nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-5o3G0{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5o3G0œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-ylKFb{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-ylKFbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-4NYFB",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-4NYFBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ArXivComponent-jVb9N",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-jVb9Nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-5o3G0",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5o3G0œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ArXivComponent-ylKFb",
+        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-ylKFbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ArXivComponent",
-            "id": "ArXivComponent-jVb9N",
-            "name": "dataframe",
-            "output_types": [
-              "DataFrame"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "BasicLoopComponent-XYgXE",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-ArXivComponent-jVb9N{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-jVb9Nœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-BasicLoopComponent-XYgXE{œfieldNameœ:œdataœ,œidœ:œBasicLoopComponent-XYgXEœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "ArXivComponent-jVb9N",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-jVb9Nœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
-        "target": "BasicLoopComponent-XYgXE",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œBasicLoopComponent-XYgXEœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "LoopComponent",
-            "id": "BasicLoopComponent-XYgXE",
-            "name": "done",
-            "output_types": [
-              "DataFrame"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-ybgay",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__BasicLoopComponent-XYgXE{œdataTypeœ:œLoopComponentœ,œidœ:œBasicLoopComponent-XYgXEœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-ybgay{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ybgayœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "BasicLoopComponent-XYgXE",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œBasicLoopComponent-XYgXEœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
-        "target": "ChatOutput-ybgay",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ybgayœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "LoopComponent",
-            "id": "BasicLoopComponent-XYgXE",
-            "name": "item",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "ParserComponent-Hb0rt",
-            "inputTypes": [
-              "DataFrame",
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__BasicLoopComponent-XYgXE{œdataTypeœ:œLoopComponentœ,œidœ:œBasicLoopComponent-XYgXEœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-Hb0rt{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Hb0rtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "BasicLoopComponent-XYgXE",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œBasicLoopComponent-XYgXEœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
-        "target": "ParserComponent-Hb0rt",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Hb0rtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-Hb0rt",
+            "id": "ParserComponent-ZhlLQ",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -156,26 +71,115 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-QwWvb",
+            "id": "AnthropicModel-G2MkR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-Hb0rt{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Hb0rtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-QwWvb{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-QwWvbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-ZhlLQ{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ZhlLQœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-G2MkR{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-G2MkRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-Hb0rt",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Hb0rtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "AnthropicModel-QwWvb",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-QwWvbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ParserComponent-ZhlLQ",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ZhlLQœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AnthropicModel-G2MkR",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-G2MkRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ArXivComponent",
+            "id": "ArXivComponent-ylKFb",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "LoopComponent-9BK8B",
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__ArXivComponent-ylKFb{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-ylKFbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-9BK8B{œfieldNameœ:œdataœ,œidœ:œLoopComponent-9BK8Bœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ArXivComponent-ylKFb",
+        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-ylKFbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "LoopComponent-9BK8B",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-9BK8Bœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-9BK8B",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "ParserComponent-ZhlLQ",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-ZhlLQ{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ZhlLQœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-9BK8B",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParserComponent-ZhlLQ",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ZhlLQœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-9BK8B",
+            "name": "done",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-oTh2r",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-oTh2r{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oTh2rœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "LoopComponent-9BK8B",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ChatOutput-oTh2r",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oTh2rœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-JGpfo",
+            "id": "MessagetoData-jYebP",
             "name": "data",
             "output_types": [
               "Data"
@@ -183,25 +187,25 @@
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "BasicLoopComponent-XYgXE",
+            "id": "LoopComponent-9BK8B",
             "name": "item",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "xy-edge__MessagetoData-JGpfo{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-JGpfoœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-BasicLoopComponent-XYgXE{œdataTypeœ:œLoopComponentœ,œidœ:œBasicLoopComponent-XYgXEœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "id": "xy-edge__MessagetoData-jYebP{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-jYebPœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
-        "source": "MessagetoData-JGpfo",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-JGpfoœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "BasicLoopComponent-XYgXE",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œBasicLoopComponent-XYgXEœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "source": "MessagetoData-jYebP",
+        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-jYebPœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "LoopComponent-9BK8B",
+        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-jVb9N",
+          "id": "ArXivComponent-ylKFb",
           "node": {
             "base_classes": [
               "Data"
@@ -221,7 +225,7 @@
             "frozen": false,
             "icon": "arXiv",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -349,7 +353,7 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-jVb9N",
+        "id": "ArXivComponent-ylKFb",
         "measured": {
           "height": 443,
           "width": 320
@@ -363,7 +367,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-QwWvb",
+          "id": "AnthropicModel-G2MkR",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -405,6 +409,7 @@
                 "hidden": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -419,6 +424,7 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],
@@ -441,7 +447,7 @@
                 "dynamic": false,
                 "info": "Your Anthropic API key.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -561,7 +567,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "claude-3-5-sonnet-20241022"
+                "value": "claude-3-7-sonnet-latest"
               },
               "prefill": {
                 "_input_type": "MessageTextInput",
@@ -682,7 +688,7 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-QwWvb",
+        "id": "AnthropicModel-G2MkR",
         "measured": {
           "height": 588,
           "width": 320
@@ -696,7 +702,7 @@
       },
       {
         "data": {
-          "id": "MessagetoData-JGpfo",
+          "id": "MessagetoData-jYebP",
           "node": {
             "base_classes": [
               "Data"
@@ -788,7 +794,7 @@
           "type": "MessagetoData"
         },
         "dragging": false,
-        "id": "MessagetoData-JGpfo",
+        "id": "MessagetoData-jYebP",
         "measured": {
           "height": 230,
           "width": 320
@@ -802,7 +808,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-ybgay",
+          "id": "ChatOutput-oTh2r",
           "node": {
             "base_classes": [
               "Message"
@@ -828,7 +834,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1097,7 +1103,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-ybgay",
+        "id": "ChatOutput-oTh2r",
         "measured": {
           "height": 66,
           "width": 192
@@ -1111,7 +1117,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-4NYFB",
+          "id": "ChatInput-5o3G0",
           "node": {
             "base_classes": [
               "Message"
@@ -1137,7 +1143,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1146,6 +1152,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
+                "hidden": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1286,7 +1293,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "ai"
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -1401,17 +1408,17 @@
             },
             "tool_mode": false
           },
-          "showNode": false,
+          "showNode": true,
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-4NYFB",
+        "id": "ChatInput-5o3G0",
         "measured": {
-          "height": 66,
-          "width": 192
+          "height": 230,
+          "width": 320
         },
         "position": {
-          "x": -235.49853728839307,
+          "x": -333.65585758816223,
           "y": 107.75353484470551
         },
         "selected": false,
@@ -1419,7 +1426,7 @@
       },
       {
         "data": {
-          "id": "note-2JB3M",
+          "id": "note-Wcn5J",
           "node": {
             "description": "### 💡 Add your Anthropic API key here 👇",
             "display_name": "",
@@ -1432,7 +1439,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-2JB3M",
+        "id": "note-Wcn5J",
         "measured": {
           "height": 324,
           "width": 358
@@ -1448,7 +1455,7 @@
       },
       {
         "data": {
-          "id": "note-PgcHR",
+          "id": "note-jY0b1",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **Anthropic** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your Anthropic API key to the **Anthropic** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **Anthropic** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -1459,7 +1466,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-PgcHR",
+        "id": "note-jY0b1",
         "measured": {
           "height": 647,
           "width": 577
@@ -1475,126 +1482,7 @@
       },
       {
         "data": {
-          "id": "BasicLoopComponent-XYgXE",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.",
-            "display_name": "Loop",
-            "documentation": "",
-            "edited": true,
-            "field_order": [
-              "data"
-            ],
-            "frozen": false,
-            "icon": "infinity",
-            "legacy": false,
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": true,
-                "cache": true,
-                "display_name": "Item",
-                "hidden": false,
-                "method": "item_output",
-                "name": "item",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Done",
-                "hidden": false,
-                "method": "done_output",
-                "name": "done",
-                "options": null,
-                "required_inputs": null,
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import HandleInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Data or DataFrame\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"Data\", \"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\"),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            return Data(text=\"\")\n\n        # Get data list and current index\n        data_list, current_index = self.loop_variables()\n        if current_index < len(data_list):\n            # Output current item and increment index\n            try:\n                current_item = data_list[current_index]\n            except IndexError:\n                current_item = Data(text=\"\")\n        self.aggregated_output()\n        self.update_ctx({f\"{self._id}_index\": current_index + 1})\n        return current_item\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
-              },
-              "data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Data or DataFrame",
-                "dynamic": false,
-                "info": "The initial list of Data objects or DataFrame to iterate over.",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "LoopComponent"
-        },
-        "dragging": false,
-        "id": "BasicLoopComponent-XYgXE",
-        "measured": {
-          "height": 280,
-          "width": 320
-        },
-        "position": {
-          "x": 518.7886483089377,
-          "y": 172.21515581188285
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ParserComponent-Hb0rt",
+          "id": "ParserComponent-ZhlLQ",
           "node": {
             "base_classes": [
               "Message"
@@ -1617,6 +1505,7 @@
             "icon": "braces",
             "key": "ParserComponent",
             "legacy": false,
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1628,6 +1517,8 @@
                 "hidden": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1640,6 +1531,24 @@
             "score": 0.001,
             "template": {
               "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Clean Data",
+                "dynamic": false,
+                "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1698,7 +1607,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "tab",
-                "value": "Parser"
+                "value": "Stringify"
               },
               "pattern": {
                 "_input_type": "MultilineInput",
@@ -1716,14 +1625,14 @@
                 "multiline": true,
                 "name": "pattern",
                 "placeholder": "",
-                "required": true,
-                "show": true,
+                "required": false,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Text: {data}"
+                "value": "Text: {dt}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
@@ -1755,31 +1664,150 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-Hb0rt",
+        "id": "ParserComponent-ZhlLQ",
         "measured": {
-          "height": 395,
+          "height": 312,
           "width": 320
         },
         "position": {
           "x": 971.3987248215344,
           "y": -186.6658506576822
         },
-        "selected": true,
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "LoopComponent-9BK8B",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
+            "beta": false,
+            "category": "logic",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.",
+            "display_name": "Loop",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data"
+            ],
+            "frozen": false,
+            "icon": "infinity",
+            "key": "LoopComponent",
+            "legacy": false,
+            "lf_version": "1.4.2",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": true,
+                "cache": true,
+                "display_name": "Item",
+                "hidden": false,
+                "method": "item_output",
+                "name": "item",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Done",
+                "hidden": false,
+                "method": "done_output",
+                "name": "done",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 2.220446049250313e-16,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\nfrom langflow.io import HandleInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Data or DataFrame\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"Data\", \"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\"),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            return Data(text=\"\")\n\n        # Get data list and current index\n        data_list, current_index = self.loop_variables()\n        if current_index < len(data_list):\n            # Output current item and increment index\n            try:\n                current_item = data_list[current_index]\n            except IndexError:\n                current_item = Data(text=\"\")\n        self.aggregated_output()\n        self.update_ctx({f\"{self._id}_index\": current_index + 1})\n        return current_item\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
+              },
+              "data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Data or DataFrame",
+                "dynamic": false,
+                "info": "The initial list of Data objects or DataFrame to iterate over.",
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "LoopComponent"
+        },
+        "dragging": false,
+        "id": "LoopComponent-9BK8B",
+        "measured": {
+          "height": 280,
+          "width": 320
+        },
+        "position": {
+          "x": 541.1188345961908,
+          "y": 181.38181401206583
+        },
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 170.88704435493423,
-      "y": 190.17678304592448,
-      "zoom": 0.5219077161746336
+      "x": -116.69751133397563,
+      "y": 176.89760533769663,
+      "zoom": 0.5570453295917549
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": null,
-  "id": "a03403ab-a37a-4af3-8333-127a9827fade",
+  "id": "105a54e1-198e-468e-8bb2-3a037f4d595a",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Research Translation Loop",
+  "name": "Research Translation Loop (2)",
   "tags": [
     "chatbots",
     "content-generation"
