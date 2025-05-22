@@ -18,8 +18,7 @@ class SQLComponent(ComponentWithCache):
 
     display_name = "SQL Database"
     description = (
-        "Executes SQL queries on any SQLAlchemy-compatible database and "
-        "returns the result as a structured dataframe."
+        "Executes SQL queries on any SQLAlchemy-compatible database and returns the result as a structured dataframe."
     )
     icon = "database"
     name = "SQLComponent"
