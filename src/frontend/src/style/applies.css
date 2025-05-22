@@ -534,7 +534,7 @@
     @apply flex justify-between;
   }
   .edit-flow-span {
-    @apply ml-10 animate-pulse text-status-red;
+    @apply ml-8 text-mmd font-normal text-status-red;
   }
 
   .float-component-pointer {
@@ -549,12 +549,6 @@
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
 
-  .header-menu-bar-display-2 {
-    @apply flex cursor-pointer items-center gap-2;
-  }
-  .header-menu-flow-name-2 {
-    @apply flex-1;
-  }
   .header-menu-flow-name {
     @apply flex-1 truncate;
   }
