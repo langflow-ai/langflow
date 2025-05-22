@@ -144,7 +144,7 @@ test.skip(
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
     await page.waitForTimeout(1000);
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.getByTestId("button_run_text_output").click();
     await page
       .getByTestId(/^rf__node-TextOutput-[a-zA-Z0-9]+$/)
@@ -167,7 +167,7 @@ test.skip(
       .getByTestId(/^rf__node-TextInput-[a-zA-Z0-9]+$/)
       .getByTestId("textarea_str_input_value")
       .fill("This is a test, again just to be sure!");
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.getByText("Run Flow", { exact: true }).click();
     await page.waitForTimeout(5000);
     textInputContent = await page
