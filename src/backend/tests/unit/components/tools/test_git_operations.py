@@ -33,11 +33,11 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         git_init = [t for t in tools if getattr(t, 'name', None) == "git_init"][0]
         git_status = [t for t in tools if getattr(t, 'name', None) == "git_status"][0]
         # Should not be a repo yet
-        assert "Not a Git repository" in git_status()
+        assert "Not a Git repository" in git_status({})
         # Init repo
-        assert "Initialized empty Git repository" in git_init()
+        assert "Initialized empty Git repository" in git_init({})
         # Now status should work
-        status = git_status()
+        status = git_status({})
         assert "On branch" in status or "No commits yet" in status
 
     def test_add_commit_log(self, component_class, default_kwargs):
@@ -48,17 +48,17 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         git_commit = [t for t in tools if getattr(t, 'name', None) == "git_commit"][0]
         git_log = [t for t in tools if getattr(t, 'name', None) == "git_log"][0]
         # Init repo
-        git_init()
+        git_init({})
         # Create a file
         file_path = os.path.join(component.workspace_folder, "test.txt")
         with open(file_path, "w") as f:
             f.write("hello world")
         # Add file
-        assert "Command executed successfully" in git_add(paths=["test.txt"])
+        assert "Command executed successfully" in git_add({"paths": ["test.txt"]})
         # Commit
-        assert "files changed" in git_commit("Initial commit") or "nothing to commit" not in git_commit("Initial commit")
+        assert "files changed" in git_commit({"message": "Initial commit"}) or "nothing to commit" not in git_commit({"message": "Initial commit"})
         # Log
-        log = git_log(max_count=1)
+        log = git_log({"max_count": 1})
         assert "Initial commit" in log or "commit" in log
 
     def test_branch_checkout_merge(self, component_class, default_kwargs):
@@ -71,7 +71,7 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         git_commit = [t for t in tools if getattr(t, 'name', None) == "git_commit"][0]
         git_add = [t for t in tools if getattr(t, 'name', None) == "git_add"][0]
         # Init repo
-        git_init()
+        git_init({})
         # Create and commit on main
         file_path = os.path.join(component.workspace_folder, "main.txt")
         with open(file_path, "w") as f:
@@ -79,18 +79,18 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         git_add(paths=["main.txt"])
         git_commit("main commit")
         # Create new branch
-        assert "Command executed successfully" in git_branch(new_branch="feature")
+        assert "Command executed successfully" in git_branch({"new_branch": "feature"})
         # Checkout new branch
-        assert "Switched to a new branch" in git_checkout("feature") or "Already on 'feature'" in git_checkout("feature")
+        assert "Switched to a new branch" in git_checkout({"branch_name": "feature"}) or "Already on 'feature'" in git_checkout({"branch_name": "feature"})
         # Add file on feature branch
         file_path2 = os.path.join(component.workspace_folder, "feature.txt")
         with open(file_path2, "w") as f:
             f.write("feature branch")
-        git_add(paths=["feature.txt"])
-        git_commit("feature commit")
+        git_add({"paths": ["feature.txt"]})
+        git_commit({"message": "feature commit"})
         # Checkout main and merge
-        git_checkout("main")
-        merge_result = git_merge("feature")
+        git_checkout({"branch_name": "main"})
+        merge_result = git_merge({"source_branch": "feature"})
         assert "Merge conflict" not in merge_result
         assert "Command executed successfully" in merge_result or "Already up to date" in merge_result
 
@@ -99,6 +99,6 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         tools = component.build_toolkit()
         git_init = [t for t in tools if getattr(t, 'name', None) == "git_init"][0]
         git_command_history = [t for t in tools if getattr(t, 'name', None) == "git_command_history"][0]
-        git_init()
-        history = git_command_history()
+        git_init({})
+        history = git_command_history({})
         assert "git init" in history
