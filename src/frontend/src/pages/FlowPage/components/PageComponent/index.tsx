@@ -23,6 +23,7 @@ import {
   reconnectEdge,
   SelectionDragHandler,
 } from "@xyflow/react";
+import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -59,9 +60,11 @@ import {
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import FlowBuildingComponent from "../flowBuildingComponent";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
+  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -559,6 +562,7 @@ export default function Page({
         <div id="react-flow-id" className="h-full w-full bg-canvas">
           {!view && (
             <>
+              <MemoizedLogCanvasControls />
               <MemoizedCanvasControls
                 setIsAddingNote={setIsAddingNote}
                 position={position.current}
@@ -569,9 +573,6 @@ export default function Page({
             </>
           )}
           <MemoizedSidebarTrigger />
-          <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-            <UpdateAllComponents />
-          </div>
           <SelectionMenu
             lastSelection={lastSelection}
             isVisible={selectionMenuVisible}
@@ -616,6 +617,8 @@ export default function Page({
             onPaneClick={onPaneClick}
             onEdgeClick={handleEdgeClick}
           >
+            <FlowBuildingComponent />
+            <UpdateAllComponents />
             <MemoizedBackground />
           </ReactFlow>
           <div
