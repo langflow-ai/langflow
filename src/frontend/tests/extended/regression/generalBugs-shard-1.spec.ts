@@ -24,10 +24,6 @@ test(
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
-
     await page.getByTestId("user-profile-settings").click();
 
     await page.waitForSelector('text="Settings"');

@@ -85,15 +85,13 @@ export default function PublishDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="default"
-            className="!h-8 !w-[95px] font-medium"
+            variant="ghost"
+            size="md"
+            className="!px-2.5 font-medium"
             data-testid="publish-button"
           >
-            Publish
-            <IconComponent
-              name="ChevronDown"
-              className="icon-size font-medium"
-            />
+            Share
+            <IconComponent name="ChevronDown" className="!h-5 !w-5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

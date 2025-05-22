@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
@@ -146,12 +147,7 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-
-    await page.getByPlaceholder("Flow Name").fill(randomFlowName);
-
-    await page.getByText("Save", { exact: true }).click();
+    await renameFlow(page, { flowName: randomFlowName });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
@@ -226,12 +222,7 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-
-    await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
-
-    await page.getByText("Save", { exact: true }).click();
+    await renameFlow(page, { flowName: secondRandomFlowName });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,

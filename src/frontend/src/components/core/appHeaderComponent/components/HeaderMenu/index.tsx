@@ -16,7 +16,7 @@ export const HeaderMenu = ({ children }) => (
 
 export const HeaderMenuToggle = ({ children }) => (
   <DropdownMenuTrigger
-    className="inline-flex w-full items-center justify-center rounded-md pl-4 pr-1"
+    className="inline-flex w-full items-center justify-center rounded-md pl-1 pr-1"
     data-testid="user_menu_button"
     id="user_menu_button"
   >

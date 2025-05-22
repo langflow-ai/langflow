@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "flow state should be properly cleaned up between user sessions",
@@ -110,13 +110,9 @@ test(
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-    await page.getByPlaceholder("Flow Name").fill(userAFlowName);
-    await page.getByText("Save", { exact: true }).click();
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-      timeout: 30000,
-    });
+
+    await renameFlow(page, { flowName: userAFlowName });
+
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     // Verify User A can see their flow
