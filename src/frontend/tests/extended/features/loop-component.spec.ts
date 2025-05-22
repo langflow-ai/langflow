@@ -31,7 +31,7 @@ test(
     await page
       .getByTestId("dataURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
+        targetPosition: { x: 50, y: 100 },
       });
 
     // Add Loop component
@@ -44,7 +44,7 @@ test(
     await page
       .getByTestId("logicLoop")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 100 },
+        targetPosition: { x: 280, y: 100 },
       });
 
     // Add Update Data component
@@ -70,14 +70,14 @@ test(
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 700, y: 100 },
+        targetPosition: { x: 720, y: 100 },
       });
 
     //This one is for testing the wrong loop message
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 700, y: 400 },
+        targetPosition: { x: 720, y: 400 },
       });
 
     await page
@@ -100,7 +100,7 @@ test(
     await page
       .getByTestId("outputsChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 900, y: 100 },
+        targetPosition: { x: 940, y: 100 },
       });
 
     await page.getByTestId("fit_view").click();
