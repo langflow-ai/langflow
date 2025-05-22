@@ -50,13 +50,13 @@ test(
 
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("update data");
-    await page.waitForSelector('[data-testid="processingUpdate Data"]', {
+    await page.getByTestId("sidebar-search-input").fill("data operations");
+    await page.waitForSelector('[data-testid="processingData Operations"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingUpdate Data")
+      .getByTestId("processingData Operations")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
@@ -111,7 +111,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-updatedata-shownode-data-left")
+      .getByTestId("handle-dataoperations-shownode-data-left")
       .first()
       .click();
 
@@ -184,8 +184,10 @@ test(
       .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
     await page.getByTestId("div-generic-node").nth(2).click();
-    await page.getByTestId("int_int_number_of_fields").fill("1");
-    await page.getByTestId("div-generic-node").nth(2).click();
+
+    await page.getByTestId("button_open_list_selection").click();
+
+    await page.getByTestId("list_item_append_or_update").click();
 
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
@@ -210,7 +212,7 @@ test(
     // Update Data -> Loop Item (left side)
 
     await page
-      .getByTestId("handle-updatedata-shownode-data-right")
+      .getByTestId("handle-dataoperations-shownode-data-right")
       .first()
       .click();
     await page
