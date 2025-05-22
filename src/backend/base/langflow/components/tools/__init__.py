@@ -23,8 +23,6 @@ from .yahoo_finance import YfinanceToolComponent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
-    from .astradb import AstraDBToolComponent
-    from .astradb_cql import AstraDBCQLToolComponent
 
 __all__ = [
     "AstraDBCQLToolComponent",
