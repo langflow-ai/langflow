@@ -224,8 +224,9 @@ test(
         }
 
         // Verify tools are available
+        await page.waitForTimeout(3000);
         await page.getByTestId("dropdown_str_tool").click();
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
 
         const fetchOptionCount = await page.getByText("mcp_test_name").count();
         expect(fetchOptionCount).toBeGreaterThan(0);
