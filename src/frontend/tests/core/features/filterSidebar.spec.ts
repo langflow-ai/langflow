@@ -32,12 +32,12 @@ test(
     await adjustScreenView(page);
 
     await page.waitForSelector(
-      '[data-testid="handle-apirequest-shownode-urls-left"]',
+      '[data-testid="handle-apirequest-shownode-url-left"]',
       {
         timeout: 3000,
       },
     );
-    await page.getByTestId("handle-apirequest-shownode-urls-left").click();
+    await page.getByTestId("handle-apirequest-shownode-url-left").click();
 
     await page.waitForTimeout(500);
 

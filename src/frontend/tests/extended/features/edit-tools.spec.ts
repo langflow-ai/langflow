@@ -9,17 +9,17 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="dataURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("dataURL")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-api-request").click();
+        await page.getByTestId("add-component-button-url").click();
       });
 
     await page.waitForSelector(
@@ -44,7 +44,7 @@ test(
 
     await page.getByTestId("button_open_actions").click();
 
-    await page.waitForSelector("text=API Request", { timeout: 30000 });
+    await page.waitForSelector("text=URL", { timeout: 30000 });
 
     const rowsCount = await page.getByRole("gridcell").count();
 
@@ -200,7 +200,11 @@ test(
     await page.getByText("Close").last().click();
 
     expect(
-      await page.locator('[data-testid="tool_make_requests"]').isVisible(),
+      await page.locator('[data-testid="tool_fetch_content"]').isVisible(),
+    ).toBe(true);
+
+    expect(
+      await page.locator('[data-testid="tool_as_dataframe"]').isVisible(),
     ).toBe(true);
   },
 );
