@@ -135,12 +135,12 @@ test(
       // Get the SSE URL from the configuration
       const configJson = await page.locator("pre").textContent();
       expect(configJson).toContain("mcpServers");
-      expect(configJson).toContain("supergateway");
-      expect(configJson).toContain("sse");
+      expect(configJson).toContain("mcp-proxy");
+      expect(configJson).toContain("uvx");
 
       // Extract the SSE URL from the configuration
       const sseUrlMatch = configJson?.match(
-        /"args":\s*\[\s*"-y",\s*"supergateway",\s*"--sse",\s*"([^"]+)"/,
+        /"args":\s*\[\s*"mcp-proxy",\s*"([^"]+)"/,
       );
       expect(sseUrlMatch).not.toBeNull();
       const sseUrl = sseUrlMatch![1];
