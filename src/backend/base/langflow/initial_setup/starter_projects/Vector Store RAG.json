@@ -7,47 +7,28 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-WVuwT",
+            "id": "ChatInput-FzOTA",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-dcKE8",
-            "inputTypes": ["Message", "Text"],
+            "id": "Prompt-kr3Rx",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-WVuwT{œdataTypeœ:œChatInputœ,œidœ:œChatInput-WVuwTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-dcKE8{œfieldNameœ:œquestionœ,œidœ:œPrompt-dcKE8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-FzOTA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FzOTAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-kr3Rx{œfieldNameœ:œquestionœ,œidœ:œPrompt-kr3Rxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-WVuwT",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-WVuwTœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-dcKE8",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-dcKE8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-CBftc",
-            "name": "data",
-            "output_types": []
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitText-gIoap",
-            "inputTypes": ["Data", "DataFrame"],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-File-CBftc{œdataTypeœ:œFileœ,œidœ:œFile-CBftcœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-gIoap{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gIoapœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "File-CBftc",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-CBftcœ, œnameœ: œdataœ, œoutput_typesœ: []}",
-        "target": "SplitText-gIoap",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-gIoapœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "ChatInput-FzOTA",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FzOTAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-kr3Rx",
+        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-kr3Rxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -55,23 +36,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-dcKE8",
+            "id": "Prompt-kr3Rx",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-7W8gE",
-            "inputTypes": ["Message"],
+            "id": "OpenAIModel-Ej17f",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-dcKE8{œdataTypeœ:œPromptœ,œidœ:œPrompt-dcKE8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-7W8gE{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-7W8gEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-kr3Rx{œdataTypeœ:œPromptœ,œidœ:œPrompt-kr3Rxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Ej17f{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Ej17fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-dcKE8",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-dcKE8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-7W8gE",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-7W8gEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-kr3Rx",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-kr3Rxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-Ej17f",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Ej17fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -79,23 +64,29 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-7W8gE",
+            "id": "OpenAIModel-Ej17f",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-mbLiD",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "id": "ChatOutput-nGc6Z",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-7W8gE{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-7W8gEœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mbLiD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mbLiDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-Ej17f{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Ej17fœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-nGc6Z{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-nGc6Zœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-7W8gE",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-7W8gEœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-mbLiD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mbLiDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-Ej17f",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Ej17fœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-nGc6Z",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-nGc6Zœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -103,23 +94,28 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-l9sAS",
+            "id": "parser-YIJGN",
             "name": "parsed_text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-dcKE8",
-            "inputTypes": ["Message", "Text"],
+            "id": "Prompt-kr3Rx",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-l9sAS{œdataTypeœ:œparserœ,œidœ:œparser-l9sASœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-dcKE8{œfieldNameœ:œcontextœ,œidœ:œPrompt-dcKE8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-YIJGN{œdataTypeœ:œparserœ,œidœ:œparser-YIJGNœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-kr3Rx{œfieldNameœ:œcontextœ,œidœ:œPrompt-kr3Rxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-l9sAS",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-l9sASœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-dcKE8",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-dcKE8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-YIJGN",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-YIJGNœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-kr3Rx",
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-kr3Rxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -127,23 +123,28 @@
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-gIoap",
+            "id": "SplitText-aHhAi",
             "name": "chunks",
-            "output_types": ["Data"]
+            "output_types": [
+              "Data"
+            ]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraDB-xD6ep",
-            "inputTypes": ["Data", "DataFrame"],
+            "id": "AstraDB-lXzoG",
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-gIoap{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-gIoapœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-xD6ep{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-xD6epœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SplitText-aHhAi{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-aHhAiœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-lXzoG{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-lXzoGœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SplitText-gIoap",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-gIoapœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-xD6ep",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-xD6epœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "SplitText-aHhAi",
+        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-aHhAiœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
+        "target": "AstraDB-lXzoG",
+        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-lXzoGœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -151,23 +152,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-rarJb",
+            "id": "OpenAIEmbeddings-tSZ8A",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-xD6ep",
-            "inputTypes": ["Embeddings"],
+            "id": "AstraDB-lXzoG",
+            "inputTypes": [
+              "Embeddings"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-rarJb{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-rarJbœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-xD6ep{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-xD6epœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-tSZ8A{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-tSZ8Aœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-lXzoG{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-lXzoGœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-rarJb",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-rarJbœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-xD6ep",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-xD6epœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-tSZ8A",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-tSZ8Aœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "AstraDB-lXzoG",
+        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-lXzoGœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -175,23 +180,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-qP71s",
+            "id": "OpenAIEmbeddings-M2xTe",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-PTTd1",
-            "inputTypes": ["Embeddings"],
+            "id": "AstraDB-BRnBB",
+            "inputTypes": [
+              "Embeddings"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-qP71s{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-qP71sœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-PTTd1{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-PTTd1œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-M2xTe{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-M2xTeœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-BRnBB{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-BRnBBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-qP71s",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-qP71sœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-PTTd1",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-PTTd1œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-M2xTe",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-M2xTeœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "AstraDB-BRnBB",
+        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-BRnBBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -199,44 +208,85 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-WVuwT",
+            "id": "ChatInput-FzOTA",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-PTTd1",
-            "inputTypes": ["Message"],
+            "id": "AstraDB-BRnBB",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-WVuwT{œdataTypeœ:œChatInputœ,œidœ:œChatInput-WVuwTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-PTTd1{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-PTTd1œ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-FzOTA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FzOTAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-BRnBB{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-BRnBBœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-WVuwT",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-WVuwTœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-PTTd1",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-PTTd1œ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-FzOTA",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FzOTAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AstraDB-BRnBB",
+        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-BRnBBœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-PTTd1",
+            "id": "AstraDB-BRnBB",
             "name": "dataframe",
-            "output_types": ["DataFrame"]
+            "output_types": [
+              "DataFrame"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-l9sAS",
-            "inputTypes": ["DataFrame", "Data"],
+            "id": "parser-YIJGN",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
             "type": "other"
           }
         },
-        "id": "xy-edge__AstraDB-PTTd1{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-PTTd1œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-l9sAS{œfieldNameœ:œinput_dataœ,œidœ:œparser-l9sASœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraDB-PTTd1",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-PTTd1œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-l9sAS",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-l9sASœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-AstraDB-BRnBB{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-BRnBBœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-YIJGN{œfieldNameœ:œinput_dataœ,œidœ:œparser-YIJGNœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "AstraDB-BRnBB",
+        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-BRnBBœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "parser-YIJGN",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-YIJGNœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-EO8pn",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitText-aHhAi",
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__File-EO8pn{œdataTypeœ:œFileœ,œidœ:œFile-EO8pnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-aHhAi{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-aHhAiœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "File-EO8pn",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-EO8pnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "SplitText-aHhAi",
+        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-aHhAiœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
@@ -244,9 +294,11 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-WVuwT",
+          "id": "ChatInput-FzOTA",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -273,11 +325,14 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
+                "hidden": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -290,7 +345,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -309,7 +366,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -407,7 +466,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -421,7 +483,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -439,7 +503,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -473,7 +539,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -492,7 +560,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-WVuwT",
+        "id": "ChatInput-FzOTA",
         "measured": {
           "height": 234,
           "width": 320
@@ -513,20 +581,27 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-dcKE8",
+          "id": "Prompt-kr3Rx",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": ["context", "question"]
+              "template": [
+                "context",
+                "question"
+              ]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": ["template"],
+            "field_order": [
+              "template"
+            ],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -543,11 +618,14 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
+                "hidden": false,
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -580,7 +658,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -600,7 +681,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -634,7 +718,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -655,7 +741,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-dcKE8",
+        "id": "Prompt-kr3Rx",
         "measured": {
           "height": 433,
           "width": 320
@@ -676,9 +762,11 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-gIoap",
+          "id": "SplitText-aHhAi",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -703,11 +791,14 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Chunks",
+                "hidden": false,
                 "method": "split_text",
                 "name": "chunks",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -718,7 +809,9 @@
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -778,7 +871,10 @@
                 "display_name": "Data or DataFrame",
                 "dynamic": false,
                 "info": "The data with texts to split in chunks.",
-                "input_types": ["Data", "DataFrame"],
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
                 "list": false,
                 "name": "data_inputs",
                 "placeholder": "",
@@ -798,7 +894,12 @@
                 "dynamic": false,
                 "info": "Whether to keep the separator in the output chunks and where to place it.",
                 "name": "keep_separator",
-                "options": ["False", "True", "Start", "End"],
+                "options": [
+                  "False",
+                  "True",
+                  "Start",
+                  "End"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -814,7 +915,9 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "separator",
@@ -833,7 +936,9 @@
                 "display_name": "Text Key",
                 "dynamic": false,
                 "info": "The key to use for the text column.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -854,7 +959,7 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-gIoap",
+        "id": "SplitText-aHhAi",
         "measured": {
           "height": 475,
           "width": 320
@@ -873,7 +978,7 @@
       },
       {
         "data": {
-          "id": "note-J8qae",
+          "id": "note-eJrcq",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -886,7 +991,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-J8qae",
+        "id": "note-eJrcq",
         "measured": {
           "height": 324,
           "width": 325
@@ -910,7 +1015,7 @@
       },
       {
         "data": {
-          "id": "note-FZuGD",
+          "id": "note-oUrKA",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -923,7 +1028,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-FZuGD",
+        "id": "note-oUrKA",
         "measured": {
           "height": 324,
           "width": 325
@@ -949,9 +1054,11 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-mbLiD",
+          "id": "ChatOutput-nGc6Z",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -985,7 +1092,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -998,7 +1107,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -1018,7 +1129,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -1074,7 +1187,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1094,7 +1209,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1115,7 +1234,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1131,7 +1253,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1151,7 +1275,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1187,7 +1313,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -1208,7 +1336,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-mbLiD",
+        "id": "ChatOutput-nGc6Z",
         "measured": {
           "height": 234,
           "width": 320
@@ -1227,9 +1355,11 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-qP71s",
+          "id": "OpenAIEmbeddings-M2xTe",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1271,12 +1401,17 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Embeddings",
+                "hidden": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
-                "required_inputs": ["openai_api_key"],
+                "required_inputs": [
+                  "openai_api_key"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1305,7 +1440,9 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -1375,7 +1512,9 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -1481,7 +1620,9 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_base",
@@ -1518,7 +1659,9 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_type",
@@ -1538,7 +1681,9 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -1558,7 +1703,9 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -1578,7 +1725,9 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -1662,7 +1811,9 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
@@ -1683,7 +1834,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-qP71s",
+        "id": "OpenAIEmbeddings-M2xTe",
         "measured": {
           "height": 320,
           "width": 320
@@ -1696,13 +1847,13 @@
           "x": 825.435626932521,
           "y": 739.6327999745448
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-59Lnn",
+          "id": "note-cYKfJ",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1715,7 +1866,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-59Lnn",
+        "id": "note-cYKfJ",
         "measured": {
           "height": 324,
           "width": 325
@@ -1739,9 +1890,11 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-rarJb",
+          "id": "OpenAIEmbeddings-tSZ8A",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1783,12 +1936,17 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Embeddings",
+                "hidden": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
-                "required_inputs": ["openai_api_key"],
+                "required_inputs": [
+                  "openai_api_key"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1817,7 +1975,9 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -1887,7 +2047,9 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -1993,7 +2155,9 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_base",
@@ -2030,7 +2194,9 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_type",
@@ -2050,7 +2216,9 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -2070,7 +2238,9 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -2090,7 +2260,9 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -2174,7 +2346,9 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
@@ -2195,7 +2369,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-rarJb",
+        "id": "OpenAIEmbeddings-tSZ8A",
         "measured": {
           "height": 320,
           "width": 320
@@ -2214,9 +2388,11 @@
       },
       {
         "data": {
-          "id": "File-CBftc",
+          "id": "File-EO8pn",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2241,12 +2417,15 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Loaded Files",
+                "hidden": false,
                 "method": "load_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2309,7 +2488,10 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": ["Data", "Message"],
+                "input_types": [
+                  "Data",
+                  "Message"
+                ],
                 "list": true,
                 "name": "file_path",
                 "placeholder": "",
@@ -2453,7 +2635,7 @@
         },
         "dragging": false,
         "height": 367,
-        "id": "File-CBftc",
+        "id": "File-EO8pn",
         "measured": {
           "height": 367,
           "width": 320
@@ -2472,7 +2654,7 @@
       },
       {
         "data": {
-          "id": "note-OdHnx",
+          "id": "note-NsKYL",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2485,7 +2667,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-OdHnx",
+        "id": "note-NsKYL",
         "measured": {
           "height": 324,
           "width": 324
@@ -2504,7 +2686,7 @@
       },
       {
         "data": {
-          "id": "note-wU2vU",
+          "id": "note-By1Lm",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2517,7 +2699,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-wU2vU",
+        "id": "note-By1Lm",
         "measured": {
           "height": 324,
           "width": 324
@@ -2536,7 +2718,7 @@
       },
       {
         "data": {
-          "id": "note-7BvDa",
+          "id": "note-iSzAZ",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2549,7 +2731,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-7BvDa",
+        "id": "note-iSzAZ",
         "measured": {
           "height": 324,
           "width": 324
@@ -2568,9 +2750,12 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-7W8gE",
+          "id": "OpenAIModel-Ej17f",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -2604,12 +2789,15 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
+                "hidden": false,
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2618,10 +2806,14 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": ["api_key"],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2670,7 +2862,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2856,7 +3050,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2925,9 +3121,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-7W8gE",
+        "id": "OpenAIModel-Ej17f",
         "measured": {
-          "height": 525,
+          "height": 614,
           "width": 320
         },
         "position": {
@@ -2939,9 +3135,11 @@
       },
       {
         "data": {
-          "id": "parser-l9sAS",
+          "id": "parser-YIJGN",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "processing",
             "conditional_paths": [],
@@ -2950,7 +3148,12 @@
             "display_name": "Parser",
             "documentation": "",
             "edited": false,
-            "field_order": ["mode", "pattern", "input_data", "sep"],
+            "field_order": [
+              "mode",
+              "pattern",
+              "input_data",
+              "sep"
+            ],
             "frozen": false,
             "icon": "braces",
             "key": "parser",
@@ -2963,11 +3166,14 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
+                "hidden": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2999,7 +3205,10 @@
                 "display_name": "Data or DataFrame",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": ["DataFrame", "Data"],
+                "input_types": [
+                  "DataFrame",
+                  "Data"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -3018,7 +3227,10 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": ["Parser", "Stringify"],
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -3036,7 +3248,9 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3058,7 +3272,9 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3080,7 +3296,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-l9sAS",
+        "id": "parser-YIJGN",
         "measured": {
           "height": 395,
           "width": 320
@@ -3094,9 +3310,13 @@
       },
       {
         "data": {
-          "id": "AstraDB-PTTd1",
+          "id": "AstraDB-BRnBB",
           "node": {
-            "base_classes": ["Data", "DataFrame", "VectorStore"],
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "VectorStore"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3141,6 +3361,7 @@
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
+                "options": null,
                 "required_inputs": [
                   "collection_name",
                   "database_name",
@@ -3148,7 +3369,9 @@
                 ],
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3157,10 +3380,13 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "options": null,
                 "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3170,9 +3396,13 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
+                "options": null,
+                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
-                "types": ["VectorStore"],
+                "types": [
+                  "VectorStore"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3504,7 +3734,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -3536,7 +3766,9 @@
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding_model",
@@ -3557,7 +3789,11 @@
                 "dynamic": false,
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": ["prod", "test", "dev"],
+                "options": [
+                  "prod",
+                  "test",
+                  "dev"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -3593,7 +3829,10 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Data", "DataFrame"],
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -3632,7 +3871,9 @@
                 "display_name": "Lexical Terms",
                 "dynamic": false,
                 "info": "Add additional terms/keywords to augment search precision.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3695,7 +3936,10 @@
                 "dynamic": false,
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": ["Hybrid Search", "Vector Search"],
+                "options": [
+                  "Hybrid Search",
+                  "Vector Search"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -3713,7 +3957,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3813,9 +4059,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-PTTd1",
+        "id": "AstraDB-BRnBB",
         "measured": {
-          "height": 532,
+          "height": 449,
           "width": 320
         },
         "position": {
@@ -3827,9 +4073,13 @@
       },
       {
         "data": {
-          "id": "AstraDB-xD6ep",
+          "id": "AstraDB-lXzoG",
           "node": {
-            "base_classes": ["Data", "DataFrame", "VectorStore"],
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "VectorStore"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3874,6 +4124,7 @@
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
+                "options": null,
                 "required_inputs": [
                   "collection_name",
                   "database_name",
@@ -3881,7 +4132,9 @@
                 ],
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3890,10 +4143,13 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "options": null,
                 "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3903,9 +4159,13 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
+                "options": null,
+                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
-                "types": ["VectorStore"],
+                "types": [
+                  "VectorStore"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4241,7 +4501,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -4273,7 +4533,9 @@
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding_model",
@@ -4294,7 +4556,11 @@
                 "dynamic": false,
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": ["prod", "test", "dev"],
+                "options": [
+                  "prod",
+                  "test",
+                  "dev"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -4330,7 +4596,10 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Data", "DataFrame"],
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -4369,7 +4638,9 @@
                 "display_name": "Lexical Terms",
                 "dynamic": false,
                 "info": "Add additional terms/keywords to augment search precision.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4432,7 +4703,10 @@
                 "dynamic": false,
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": ["Hybrid Search", "Vector Search"],
+                "options": [
+                  "Hybrid Search",
+                  "Vector Search"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -4450,7 +4724,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4550,9 +4826,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-xD6ep",
+        "id": "AstraDB-lXzoG",
         "measured": {
-          "height": 532,
+          "height": 449,
           "width": 320
         },
         "position": {
@@ -4564,16 +4840,21 @@
       }
     ],
     "viewport": {
-      "x": 64.31890075704814,
-      "y": -152.80810149799015,
-      "zoom": 0.4579952769661764
+      "x": 90.57560089396452,
+      "y": -149.7037806007536,
+      "zoom": 0.46276403161264995
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
   "endpoint_name": null,
-  "id": "d82edeca-129b-4b9d-84df-b87408c81433",
+  "id": "e120d90a-3ba4-4f53-a551-8b6d94ccb424",
   "is_component": false,
-  "last_tested_version": "1.3.2",
+  "last_tested_version": "1.4.2",
   "name": "Vector Store RAG",
-  "tags": ["openai", "astradb", "rag", "q-a"]
+  "tags": [
+    "openai",
+    "astradb",
+    "rag",
+    "q-a"
+  ]
 }
