@@ -3,7 +3,7 @@ from uuid import UUID
 import orjson
 import pytest
 from httpx import AsyncClient
-from langflow.components.logic import BasicLoopComponent
+from langflow.components.logic import LoopComponent
 from langflow.memory import aget_messages
 from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
@@ -22,7 +22,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return BasicLoopComponent
+        return LoopComponent
 
     @pytest.fixture
     def file_names_mapping(self):
