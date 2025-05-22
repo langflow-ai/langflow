@@ -32,8 +32,6 @@ test(
 
     await page.getByTestId("button_run_duckduckgo search").click();
 
-    await page.getByTestId("fit_view").click();
-
     const result = await Promise.race([
       page.waitForSelector("text=built successfully", { timeout: 30000 }),
       page.waitForSelector("text=ratelimit", { timeout: 30000 }),
