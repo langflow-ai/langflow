@@ -52,6 +52,80 @@ docker run -it --rm \
 When you start Langflow, it looks for environment variables that you've set in your terminal.
 If it detects a supported environment variable, then it automatically adopts the specified value, subject to [precedence rules](#precedence).
 
+
+#### Set environment variables for GUI (Langflow Desktop) on macOS
+
+If you're using macOS and want to configure environment variables for the Langflow Desktop version, it's important to know that variables set in your terminal (e.g. `.zshrc` or `.bash_profile`) are **not automatically available to GUI applications**, such as Langflow Desktop when launched via Finder or the Dock.
+
+To make environment variables available to GUI apps on macOS, you need to use `launchctl` with a `plist` file.
+
+##### Step-by-step:
+
+1. Create the `LaunchAgents` directory (if it doesn't exist):
+
+```bash
+mkdir -p ~/Library/LaunchAgents
+```
+
+2. Create a file called dev.langflow.env.plist with the following content (adjust the variable names and values as needed):
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>dev.langflow.env</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>launchctl</string>
+      <string>setenv</string>
+      <string>LANGFLOW_CONFIG_DIR</string>
+      <string>/Users/your_user/custom/config</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+  </dict>
+</plist>
+
+```
+
+3. Load the file using launchctl:
+```bash
+launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
+```
+This will set the LANGFLOW_CONFIG_DIR environment variable for all GUI apps launched from Finder or Spotlight.
+
+#### Set environment variables for GUI (Langflow Desktop) on Windows
+
+On Windows, environment variables set in a terminal session (such as using `set` in `cmd` or `$env:VAR=...` in PowerShell) are **not available to GUI applications** launched from the Start Menu, desktop shortcuts, or Windows Explorer.
+
+To make environment variables available to the Langflow Desktop app, you must set them at the **user or system level** using the System Properties interface or through the command line.
+
+##### Option 1: Set variables using the GUI (recommended for most users)
+
+1. Press `Win + R`, type `SystemPropertiesAdvanced`, and press Enter.
+2. Click **Environment Variables**.
+3. Under **User variables** (or **System variables** if you want the setting to apply to all users), click **New**.
+4. Enter the variable name (e.g., `LANGFLOW_CONFIG_DIR`) and value (e.g., `C:\Users\your_user\.langflow_config`).
+5. Click **OK** to save.
+
+The next time you launch Langflow Desktop, it will have access to these variables.
+
+##### Option 2: Set variables using PowerShell (advanced users)
+
+You can also define environment variables using PowerShell:
+
+```powershell
+# For current user
+[System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Users\your_user\.langflow_config", "User")
+
+# For all users (requires Administrator privileges)
+[System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Langflow\Config", "Machine")
+```
+After setting the variables, you need to restart the Langflow Desktop application for the new values to take effect.
+
+
 ### Import environment variables from a .env file {#configure-variables-env-file}
 
 1. Create a `.env` file and open it in your preferred editor.
