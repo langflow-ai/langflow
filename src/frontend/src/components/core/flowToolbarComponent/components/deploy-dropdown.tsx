@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
+import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useAlertStore from "@/stores/alertStore";
@@ -28,6 +29,7 @@ export default function PublishDropdown() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
   const flowName = currentFlow?.name;
+  const folderId = currentFlow?.folder_id;
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutateAsync } = usePatchUpdateFlow();
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -116,6 +118,31 @@ export default function PublishDropdown() {
               <span>API access</span>
             </div>
           </DropdownMenuItem>
+          <CustomLink
+            className={cn("flex-1")}
+            to={`/mcp/folder/${folderId}`}
+            target={customMcpOpen()}
+          >
+            <DropdownMenuItem
+              className="deploy-dropdown-item group"
+              onClick={() => {}}
+            >
+              <div
+                className="group-hover:bg-accent"
+                data-testid="mcp-server-item"
+              >
+                <IconComponent
+                  name="Mcp"
+                  className={`${groupStyle} icon-size mr-2 fill-muted-foreground group-hover:fill-foreground`}
+                />
+                <span>MCP Server</span>
+                <IconComponent
+                  name="ExternalLink"
+                  className={`${groupStyle} icon-size ml-auto hidden group-hover:block`}
+                />
+              </div>
+            </DropdownMenuItem>
+          </CustomLink>
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
