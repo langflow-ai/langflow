@@ -22,7 +22,7 @@ const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
 const ERROR_MESSAGE_EDGES_LOST =
   "Some edges were lost after updating the components. Please review the flow and reconnect them.";
 
-const containerVariants = {
+const CONTAINER_VARIANTS = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: 20 },
@@ -186,6 +186,15 @@ export default function UpdateAllComponents({}: {}) {
     };
   };
 
+  const handleDismissAllComponents = (
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    addDismissedNodes(
+      componentsToUpdateFiltered.map((component) => component.id),
+    );
+    e.stopPropagation();
+  };
+
   if (componentsToUpdateFiltered.length === 0) return null;
 
   return (
@@ -199,7 +208,7 @@ export default function UpdateAllComponents({}: {}) {
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={containerVariants}
+              variants={CONTAINER_VARIANTS}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
                 "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
@@ -223,14 +232,7 @@ export default function UpdateAllComponents({}: {}) {
                   variant="link"
                   size="icon"
                   className="shrink-0 text-sm"
-                  onClick={(e) => {
-                    addDismissedNodes(
-                      componentsToUpdateFiltered.map(
-                        (component) => component.id,
-                      ),
-                    );
-                    e.stopPropagation();
-                  }}
+                  onClick={handleDismissAllComponents}
                 >
                   Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
                 </Button>

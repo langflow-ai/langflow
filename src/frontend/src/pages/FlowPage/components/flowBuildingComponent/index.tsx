@@ -10,36 +10,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 20 },
-};
-
-const stopButtonVariants = {
-  hidden: { opacity: 0, x: 0 },
-  visible: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 0 },
-};
-
-const retryButtonVariants = {
-  hidden: { opacity: 0, x: 10 },
-  visible: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 10 },
-};
-
-const dismissButtonVariants = {
-  hidden: { opacity: 0, x: 10 },
-  visible: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 10 },
-};
-
-const timeVariants = {
-  single: { x: -75, width: "auto" },
-  double: { x: -165, width: "auto" },
-  none: { x: 0, width: "auto" },
-};
+import {
+  CONTAINER_VARIANTS,
+  DISMISS_BUTTON_VARIANTS,
+  RETRY_BUTTON_VARIANTS,
+  STOP_BUTTON_VARIANTS,
+  TIME_VARIANTS,
+} from "./helpers/visual-variants";
 
 export default function FlowBuildingComponent() {
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -139,7 +116,7 @@ export default function FlowBuildingComponent() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            variants={containerVariants}
+            variants={CONTAINER_VARIANTS}
             transition={{ duration: 0.2, delay: 0.2, ease: "easeOut" }}
             className={cn(
               "flex flex-col justify-center overflow-hidden rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-colors duration-200",
@@ -184,7 +161,7 @@ export default function FlowBuildingComponent() {
                     </AnimatePresence>
                     <div className="relative flex items-center gap-4">
                       <motion.div
-                        variants={timeVariants}
+                        variants={TIME_VARIANTS}
                         animate={
                           buildInfo?.error
                             ? "double"
@@ -209,7 +186,7 @@ export default function FlowBuildingComponent() {
                               className="absolute right-0 flex items-center gap-2"
                             >
                               <motion.div
-                                variants={retryButtonVariants}
+                                variants={RETRY_BUTTON_VARIANTS}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
@@ -220,7 +197,7 @@ export default function FlowBuildingComponent() {
                                 </Button>
                               </motion.div>
                               <motion.div
-                                variants={dismissButtonVariants}
+                                variants={DISMISS_BUTTON_VARIANTS}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
@@ -239,7 +216,7 @@ export default function FlowBuildingComponent() {
                           ) : (
                             <motion.div
                               key="stop-button"
-                              variants={stopButtonVariants}
+                              variants={STOP_BUTTON_VARIANTS}
                               initial="hidden"
                               animate="visible"
                               className="absolute right-0"
