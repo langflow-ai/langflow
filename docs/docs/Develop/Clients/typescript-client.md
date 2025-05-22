@@ -85,7 +85,6 @@ async function runFlow() {
     const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf"; // Replace with your actual flow ID
     const input = "Is anyone there?"; // Replace with your actual input
 
-    const flow = client.flow(flowId);
     const response = await client.flow(flowId).run(input);
     console.log(response);
 }
@@ -116,7 +115,7 @@ The `outputs` array contains the results of your flow execution.
 console.log(JSON.stringify(response, null, 2));
 ```
 
-The exact structure of `inputs` and `outputs` will depend on how your flow is configured in Langflow.
+The exact structure of the returned `inputs` and `outputs` will depend on how your flow is configured in Langflow.
 
 ### 
 
