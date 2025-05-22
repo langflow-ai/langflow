@@ -25,23 +25,18 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import {
-  checkHasToolMode,
-  scapedJSONStringfy,
-} from "../../utils/reactflowUtils";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
-import { OutputParameter } from "./components/NodeOutputParameter";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
-const MemoizedOutputParameter = memo(OutputParameter);
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
 const MemoizedNodeName = memo(NodeName);
@@ -509,7 +504,7 @@ function GenericNode({
                   />
                   <MemoizedNodeOutputs
                     outputs={shownOutputs ?? []}
-                    key="render-outputs"
+                    keyPrefix="render-outputs"
                     data={data}
                     types={types}
                     selected={selected ?? false}
@@ -574,7 +569,7 @@ function GenericNode({
               {!showHiddenOutputs && shownOutputs && (
                 <MemoizedNodeOutputs
                   outputs={shownOutputs}
-                  key="shown"
+                  keyPrefix="shown"
                   data={data}
                   types={types}
                   selected={selected ?? false}
@@ -591,7 +586,7 @@ function GenericNode({
                 <div className="block">
                   <MemoizedNodeOutputs
                     outputs={data.node!.outputs}
-                    key="hidden"
+                    keyPrefix="hidden"
                     data={data}
                     types={types}
                     selected={selected ?? false}
