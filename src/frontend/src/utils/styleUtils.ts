@@ -243,7 +243,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
-    name: "astra_assistants",
+    name: "datastax",
     icon: "AstraDB",
   },
   { display_name: "Olivya", name: "olivya", icon: "Olivya" },

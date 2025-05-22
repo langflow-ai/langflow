@@ -1,4 +1,6 @@
 from .astra_assistant_manager import AstraAssistantManager
+from .astradb_cql import AstraDBCQLToolComponent
+from .astradb_tool import AstraDBToolComponent
 from .create_assistant import AssistantsCreateAssistant
 from .create_thread import AssistantsCreateThread
 from .dotenv import Dotenv
@@ -14,6 +16,8 @@ __all__ = [
     "AssistantsListAssistants",
     "AssistantsRun",
     "AstraAssistantManager",
+    "AstraDBCQLToolComponent",
+    "AstraDBToolComponent",
     "Dotenv",
     "GetEnvVar",
 ]
