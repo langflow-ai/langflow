@@ -1,9 +1,12 @@
 import os
-import tempfile
 import shutil
+import tempfile
+
 import pytest
 from langflow.components.tools.git_operations import GitOperations
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
 
 class TestGitOperations(ComponentTestBaseWithoutClient):
     @pytest.fixture
@@ -30,8 +33,8 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
     def test_init_and_status(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         tools = component.build_toolkit()
-        git_init = [t for t in tools if getattr(t, 'name', None) == "git_init"][0]
-        git_status = [t for t in tools if getattr(t, 'name', None) == "git_status"][0]
+        git_init = [t for t in tools if getattr(t, "name", None) == "git_init"][0]
+        git_status = [t for t in tools if getattr(t, "name", None) == "git_status"][0]
         # Should not be a repo yet
         assert "Not a Git repository" in git_status({})
         # Init repo
@@ -43,10 +46,10 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
     def test_add_commit_log(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         tools = component.build_toolkit()
-        git_init = [t for t in tools if getattr(t, 'name', None) == "git_init"][0]
-        git_add = [t for t in tools if getattr(t, 'name', None) == "git_add"][0]
-        git_commit = [t for t in tools if getattr(t, 'name', None) == "git_commit"][0]
-        git_log = [t for t in tools if getattr(t, 'name', None) == "git_log"][0]
+        git_init = [t for t in tools if getattr(t, "name", None) == "git_init"][0]
+        git_add = [t for t in tools if getattr(t, "name", None) == "git_add"][0]
+        git_commit = [t for t in tools if getattr(t, "name", None) == "git_commit"][0]
+        git_log = [t for t in tools if getattr(t, "name", None) == "git_log"][0]
         # Init repo
         git_init({})
         # Create a file
@@ -56,7 +59,9 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         # Add file
         assert "Command executed successfully" in git_add({"paths": ["test.txt"]})
         # Commit
-        assert "files changed" in git_commit({"message": "Initial commit"}) or "nothing to commit" not in git_commit({"message": "Initial commit"})
+        assert "files changed" in git_commit({"message": "Initial commit"}) or "nothing to commit" not in git_commit(
+            {"message": "Initial commit"}
+        )
         # Log
         log = git_log({"max_count": 1})
         assert "Initial commit" in log or "commit" in log
@@ -64,12 +69,12 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
     def test_branch_checkout_merge(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         tools = component.build_toolkit()
-        git_init = [t for t in tools if getattr(t, 'name', None) == "git_init"][0]
-        git_branch = [t for t in tools if getattr(t, 'name', None) == "git_branch"][0]
-        git_checkout = [t for t in tools if getattr(t, 'name', None) == "git_checkout"][0]
-        git_merge = [t for t in tools if getattr(t, 'name', None) == "git_merge"][0]
-        git_commit = [t for t in tools if getattr(t, 'name', None) == "git_commit"][0]
-        git_add = [t for t in tools if getattr(t, 'name', None) == "git_add"][0]
+        git_init = [t for t in tools if getattr(t, "name", None) == "git_init"][0]
+        git_branch = [t for t in tools if getattr(t, "name", None) == "git_branch"][0]
+        git_checkout = [t for t in tools if getattr(t, "name", None) == "git_checkout"][0]
+        git_merge = [t for t in tools if getattr(t, "name", None) == "git_merge"][0]
+        git_commit = [t for t in tools if getattr(t, "name", None) == "git_commit"][0]
+        git_add = [t for t in tools if getattr(t, "name", None) == "git_add"][0]
         # Init repo
         git_init({})
         # Create and commit on main
@@ -97,8 +102,8 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
     def test_command_history(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         tools = component.build_toolkit()
-        git_init = [t for t in tools if getattr(t, 'name', None) == "git_init"][0]
-        git_command_history = [t for t in tools if getattr(t, 'name', None) == "git_command_history"][0]
+        git_init = [t for t in tools if getattr(t, "name", None) == "git_init"][0]
+        git_command_history = [t for t in tools if getattr(t, "name", None) == "git_command_history"][0]
         git_init({})
         history = git_command_history({})
         assert "git init" in history
