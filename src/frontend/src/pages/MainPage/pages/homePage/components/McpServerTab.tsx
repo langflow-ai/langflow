@@ -7,6 +7,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import useAuthStore from "@/stores/authStore";
@@ -29,6 +30,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const { data: flowsMCP } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  const { mutate: patchInstallMCP } = usePatchInstallMCP({
+    project_id: projectId,
+  });
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
@@ -163,6 +167,20 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         </div>
         <div className="w-2/3 pl-4">
           <div className="overflow-hidden rounded-lg border border-border">
+            <div className="flex flex-row gap-2 p-2">
+              <Button
+                size="sm"
+                onClick={() => patchInstallMCP({ client: "cursor" })}
+              >
+                Install on Cursor
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => patchInstallMCP({ client: "claude" })}
+              >
+                Install on Claude
+              </Button>
+            </div>
             <SyntaxHighlighter
               style={syntaxHighlighterStyle}
               CodeTag={({ children }) => (
