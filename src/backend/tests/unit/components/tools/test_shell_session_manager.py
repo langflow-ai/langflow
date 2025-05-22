@@ -1,11 +1,11 @@
-import pytest
-from unittest.mock import patch, MagicMock
-import platform
 import os
+import platform
 
-from langflow.components.tools.shell_session_manager import ShellSessionManager
-from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 import pytest
+from langflow.components.tools.shell_session_manager import ShellSessionManager
+
+from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
 
 class TestShellSessionManager(ComponentTestBaseWithoutClient):
     @pytest.fixture
@@ -67,7 +67,9 @@ class TestShellSessionManager(ComponentTestBaseWithoutClient):
         run_result = run_command({"session_id": session_name, "command": cmd})
         assert "Command sent" in run_result or "Warning" in run_result
         # Give the shell a moment to process
-        import time; time.sleep(0.5)
+        import time
+
+        time.sleep(0.5)
         output = get_session_output({"session_id": session_name, "read_all": True})
         assert "HelloTest" in output or "No new output" in output or "terminated" in output
         close_shell_session({"session_id": session_name})
