@@ -37,7 +37,7 @@ test(
         timeout: 3000,
       },
     );
-    await page.getByTestId("handle-apirequest-shownode-urls-left").click();
+    await page.getByTestId("handle-apirequest-shownode-url-left").click();
 
     await page.waitForTimeout(500);
 
