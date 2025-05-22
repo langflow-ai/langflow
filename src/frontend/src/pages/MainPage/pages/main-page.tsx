@@ -1,6 +1,7 @@
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
+import CustomEmptyPageCommunity from "@/customization/components/custom-empty-page";
 import CustomLoader from "@/customization/components/custom-loader";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
@@ -11,7 +12,6 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
 import EmptyPageCommunity from "./empty-page";
-import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
   const [openModal, setOpenModal] = useState(false);
@@ -40,14 +40,14 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: "Folder deleted successfully.",
+            title: "Project deleted successfully.",
           });
           navigate("/all");
         },
         onError: (err) => {
           console.error(err);
           setErrorData({
-            title: "Error deleting folder.",
+            title: "Error deleting project.",
           });
         },
       },
@@ -81,9 +81,7 @@ export default function CollectionPage(): JSX.Element {
             {flows?.length !== examples?.length || folders?.length > 1 ? (
               <Outlet />
             ) : (
-              // <EmptyPage setOpenModal={setOpenModal} />
-
-              <EmptyPageCommunity setOpenModal={setOpenModal} />
+              <CustomEmptyPageCommunity setOpenModal={setOpenModal} />
             )}
           </div>
         ) : (

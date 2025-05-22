@@ -14,7 +14,7 @@ on:
       release_type:
         required: true
         type: string
-        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
+        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base', 'main-all', 'nightly-main-all'."
       pre_release:
         required: false
         type: boolean
@@ -35,7 +35,7 @@ on:
         required: false
         type: string
       release_type:
-        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
+        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base', 'main-all', 'nightly-main-all'."
         required: true
         type: string
       pre_release:
@@ -88,7 +88,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ inputs.release_type }}" == "main" && "${{ inputs.main_version }}" == '' ]]; then
+          if [[ ("${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-all") && "${{ inputs.main_version }}" == '' ]]; then
             echo "Must specify a main version for main release type."
             exit 1
           fi
@@ -98,7 +98,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ inputs.release_type }}" == "nightly-main" && "${{ inputs.main_version }}" == '' ]]; then
+          if [[ ("${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all") && "${{ inputs.main_version }}" == '' ]]; then
             echo "Must specify a main version for nightly-main release type."
             exit 1
           fi
@@ -108,7 +108,7 @@ jobs:
             echo "base version=${{ inputs.base_version }}"
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             version=${{ inputs.main_version }}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
@@ -128,7 +128,7 @@ jobs:
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
-        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main') }}
+        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main' || inputs.release_type == 'main-all' || inputs.release_type == 'nightly-main-all') }}
         id: get-version-main
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
@@ -146,7 +146,7 @@ jobs:
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             nightly_suffix="-nightly"
           fi
 
@@ -170,6 +170,11 @@ jobs:
               # LANGFLOW-MAIN RELEASE
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            elif [[ "${{ inputs.release_type }}" == "main-all" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
+              # LANGFLOW-MAIN (ALL OPTIONAL DEPS) RELEASE
+              echo "docker_tags=langflowai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
