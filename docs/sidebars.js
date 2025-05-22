@@ -141,6 +141,11 @@ module.exports = {
           label: "Docker"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-caddyfile",
+          label: "Deploy Langflow on a remote server"
+        },
+        {
           type: "category",
           label: "Kubernetes",
           items: [
