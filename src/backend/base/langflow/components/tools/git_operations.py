@@ -91,6 +91,15 @@ class GitOperations(Component):
     def build_toolkit(self) -> Tool:
         @tool
         def git_init(directory_path: str = ".") -> str:
+            """Initialize a new Git repository.
+            
+            Args:
+                directory_path: Path to directory relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             repo_path = self._resolve_path(directory_path)
             if not os.path.exists(repo_path):
                 os.makedirs(repo_path, exist_ok=True)
@@ -100,12 +109,32 @@ class GitOperations(Component):
         
         @tool
         def git_status(repo_path: str = ".") -> str:
+            """Show the working tree status.
+            
+            Args:
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Git status output
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             return self._run_git_command(["status"], repo_path)
         
         @tool
         def git_add(paths: List[str] = None, all_files: bool = False, repo_path: str = ".") -> str:
+            """Add file contents to the index.
+            
+            Args:
+                paths: List of file paths to add (relative to repo)
+                all_files: If True, add all files (equivalent to git add .)
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             if all_files:
@@ -117,6 +146,16 @@ class GitOperations(Component):
         
         @tool
         def git_commit(message: str, repo_path: str = ".") -> str:
+            """Record changes to the repository.
+            
+            Args:
+                message: Commit message
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             user_email = subprocess.run(
@@ -141,6 +180,17 @@ class GitOperations(Component):
         
         @tool
         def git_clone(repository_url: str, directory_path: Optional[str] = None, depth: Optional[int] = None) -> str:
+            """Clone a repository into a new directory.
+            
+            Args:
+                repository_url: URL of the repository to clone
+                directory_path: Directory to clone into (relative to workspace)
+                depth: Create a shallow clone with the specified depth
+            
+            Returns:
+                Result of the operation
+            """
+
             command = ["clone"]
             if depth is not None:
                 command.extend(["--depth", str(depth)])
@@ -152,6 +202,17 @@ class GitOperations(Component):
         
         @tool
         def git_pull(repo_path: str = ".", remote: str = "origin", branch: Optional[str] = None) -> str:
+            """Fetch from and integrate with another repository or a local branch.
+            
+            Args:
+                repo_path: Path to repository relative to workspace (default: workspace root)
+                remote: Remote repository name
+                branch: Branch name to pull (default: current branch)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             command = ["pull", remote]
@@ -161,6 +222,17 @@ class GitOperations(Component):
         
         @tool
         def git_push(repo_path: str = ".", remote: str = "origin", branch: Optional[str] = None) -> str:
+            """Update remote refs along with associated objects.
+            
+            Args:
+                repo_path: Path to repository relative to workspace (default: workspace root)
+                remote: Remote repository name
+                branch: Branch name to push (default: current branch)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             command = ["push", remote]
@@ -170,6 +242,17 @@ class GitOperations(Component):
         
         @tool
         def git_branch(new_branch: Optional[str] = None, list_branches: bool = False, repo_path: str = ".") -> str:
+            """List, create, or delete branches.
+            
+            Args:
+                new_branch: Create a new branch with this name
+                list_branches: List all branches if True
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             if list_branches:
@@ -181,6 +264,17 @@ class GitOperations(Component):
         
         @tool
         def git_checkout(branch_name: str, repo_path: str = ".", create_branch: bool = False) -> str:
+            """Switch branches or restore working tree files.
+            
+            Args:
+                branch_name: Branch to checkout
+                repo_path: Path to repository relative to workspace (default: workspace root)
+                create_branch: Create branch if it doesn't exist (-b flag)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             command = ["checkout"]
@@ -191,6 +285,17 @@ class GitOperations(Component):
         
         @tool
         def git_merge(source_branch: str, repo_path: str = ".", commit_message: Optional[str] = None) -> str:
+            """Merge a source branch into the current branch.
+            
+            Args:
+                source_branch: The name of the branch whose changes are to be merged into the current branch
+                repo_path: Path to repository relative to workspace (default: workspace root)
+                commit_message: If a merge commit is created (not a fast-forward), use this message
+            
+            Returns:
+                Result of the operation, including information about conflicts if they occur
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             command = ["merge"]
@@ -204,6 +309,17 @@ class GitOperations(Component):
         
         @tool
         def git_log(max_count: Optional[int] = None, repo_path: str = ".", pretty_format: str = "oneline") -> str:
+            """Show commit logs.
+            
+            Args:
+                max_count: Limit the number of commits to show
+                repo_path: Path to repository relative to workspace (default: workspace root)
+                pretty_format: Format for displaying commits (oneline, short, medium, full, etc.)
+            
+            Returns:
+                Git log output
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             command = ["log", f"--pretty={pretty_format}"]
@@ -213,6 +329,17 @@ class GitOperations(Component):
         
         @tool
         def git_diff(files: List[str] = None, staged: bool = False, repo_path: str = ".") -> str:
+            """Show changes between commits, commit and working tree, etc.
+            
+            Args:
+                files: List of files to show diff for
+                staged: Show staged changes only
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Git diff output
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             command = ["diff"]
@@ -225,6 +352,18 @@ class GitOperations(Component):
         @tool
         def git_remote(operation: str = "show", remote_name: Optional[str] = None, 
                        remote_url: Optional[str] = None, repo_path: str = ".") -> str:
+            """Manage set of tracked repositories.
+            
+            Args:
+                operation: Remote operation (show, add, remove)
+                remote_name: Name of the remote
+                remote_url: URL for the remote (needed for 'add' operation)
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             if operation == "show":
@@ -244,6 +383,18 @@ class GitOperations(Component):
         @tool
         def git_reset(file_paths: List[str] = None, mode: str = "mixed", 
                       commit: str = "HEAD", repo_path: str = ".") -> str:
+            """Reset current HEAD to the specified state.
+            
+            Args:
+                file_paths: List of file paths to reset
+                mode: Reset mode (soft, mixed, hard)
+                commit: Commit to reset to (default: HEAD)
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             if not self._is_git_repo(repo_path):
                 return f"Error: Not a Git repository: {repo_path}"
             valid_modes = ["soft", "mixed", "hard"]
@@ -260,6 +411,18 @@ class GitOperations(Component):
         @tool
         def git_config(key: str, value: Optional[str] = None, 
                        global_config: bool = False, repo_path: str = ".") -> str:
+            """Get and set repository or global options.
+            
+            Args:
+                key: Configuration key
+                value: Configuration value (if setting)
+                global_config: Use global config if True
+                repo_path: Path to repository relative to workspace (default: workspace root)
+            
+            Returns:
+                Result of the operation
+            """
+
             command = ["config"]
             if global_config:
                 command.append("--global")
@@ -270,6 +433,12 @@ class GitOperations(Component):
         
         @tool
         def git_command_history() -> str:
+            """View the history of executed Git commands.
+            
+            Returns:
+                List of previously executed Git commands
+            """
+
             if not self.command_history:
                 return "No Git commands have been executed yet."
             history = "\n".join([f"{i+1}. {cmd}" for i, cmd in enumerate(self.command_history)])
