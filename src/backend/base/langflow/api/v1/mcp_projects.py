@@ -2,8 +2,11 @@ import asyncio
 import base64
 import json
 import logging
+import os
+import platform
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
@@ -554,3 +557,80 @@ async def update_project_mcp_settings(
         msg = f"Error updating project MCP settings: {e!s}"
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/{project_id}/install", dependencies=[Depends(get_current_user)])
+async def install_mcp_config(
+    project_id: UUID,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    client: str = "cursor",  # or "claude"
+):
+    """Install MCP server configuration for Cursor or Claude."""
+    try:
+        # Verify project exists and user has access
+        db_service = get_db_service()
+        async with db_service.with_session() as session:
+            project = (
+                await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+            ).first()
+
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+        # Get settings service to build the SSE URL
+        settings_service = get_settings_service()
+        host = getattr(settings_service.settings, "host", "localhost")
+        port = getattr(settings_service.settings, "port", 3000)
+        base_url = f"http://{host}:{port}".rstrip("/")
+        sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
+
+        # Create the MCP configuration
+        mcp_config = {
+            "mcpServers": {
+                f"lf-{project.name.lower().replace(' ', '_')[:11]}": {"command": "uvx", "args": ["mcp-proxy", sse_url]}
+            }
+        }
+
+        # Determine the config file path based on the client and OS
+        if client.lower() == "cursor":
+            config_path = Path.home() / ".cursor" / "mcp.json"
+        elif client.lower() == "claude":
+            if platform.system() == "Darwin":  # macOS
+                config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+            elif platform.system() == "Windows":
+                config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported operating system for Claude configuration")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported client")
+
+        # Create parent directories if they don't exist
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Read existing config if it exists
+        existing_config = {}
+        if config_path.exists():
+            try:
+                with Path.open(config_path) as f:
+                    existing_config = json.load(f)
+            except json.JSONDecodeError:
+                # If file exists but is invalid JSON, start fresh
+                existing_config = {"mcpServers": {}}
+
+        # Merge new config with existing config
+        if "mcpServers" not in existing_config:
+            existing_config["mcpServers"] = {}
+        existing_config["mcpServers"].update(mcp_config["mcpServers"])
+
+        # Write the updated config
+        with Path.open(config_path, "w") as f:
+            json.dump(existing_config, f, indent=2)
+
+    except Exception as e:
+        msg = f"Error installing MCP configuration: {e!s}"
+        logger.exception(msg)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        message = f"Successfully installed MCP configuration for {client}"
+        logger.info(message)
+        return {"message": message}
