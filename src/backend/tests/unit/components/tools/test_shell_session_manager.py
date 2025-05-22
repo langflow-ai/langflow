@@ -7,8 +7,6 @@ from langflow.components.tools.shell_session_manager import ShellSessionManager
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 import pytest
 
-@pytest.mark.skip(reason="Skipping due to BlockingError in CI environment.")
-
 class TestShellSessionManager(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
