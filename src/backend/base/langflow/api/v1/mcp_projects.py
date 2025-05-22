@@ -27,7 +27,7 @@ from langflow.api.v1.mcp import (
     handle_mcp_errors,
     with_db_session,
 )
-from langflow.api.v1.schemas import InputValueRequest, MCPSettings
+from langflow.api.v1.schemas import InputValueRequest, MCPInstallRequest, MCPSettings
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user, get_current_user
@@ -562,8 +562,8 @@ async def update_project_mcp_settings(
 @router.post("/{project_id}/install", dependencies=[Depends(get_current_user)])
 async def install_mcp_config(
     project_id: UUID,
+    body: MCPInstallRequest,
     current_user: Annotated[User, Depends(get_current_active_user)],
-    client: str = "cursor",  # or "claude"
 ):
     """Install MCP server configuration for Cursor or Claude."""
     try:
@@ -592,9 +592,9 @@ async def install_mcp_config(
         }
 
         # Determine the config file path based on the client and OS
-        if client.lower() == "cursor":
+        if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
-        elif client.lower() == "claude":
+        elif body.client.lower() == "claude":
             if platform.system() == "Darwin":  # macOS
                 config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
             elif platform.system() == "Windows":
@@ -631,6 +631,6 @@ async def install_mcp_config(
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        message = f"Successfully installed MCP configuration for {client}"
+        message = f"Successfully installed MCP configuration for {body.client}"
         logger.info(message)
         return {"message": message}
