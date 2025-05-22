@@ -568,7 +568,7 @@ function GenericNode({
               </div>
               {!showHiddenOutputs && shownOutputs && (
                 <MemoizedNodeOutputs
-                  outputs={shownOutputs}
+                  outputs={showHiddenOutputs ? hiddenOutputs : shownOutputs}
                   keyPrefix="shown"
                   data={data}
                   types={types}
