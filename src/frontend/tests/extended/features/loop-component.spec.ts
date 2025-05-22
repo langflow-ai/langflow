@@ -107,7 +107,7 @@ test(
     // Loop Item -> Update Data
 
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-item-right")
+      .getByTestId("handle-loopcomponent-shownode-item-right")
       .first()
       .click();
     await page
@@ -121,13 +121,13 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-data or dataframe-left")
+      .getByTestId("handle-loopcomponent-shownode-data or dataframe-left")
       .first()
       .click();
 
     // Loop Done -> Parse Data
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-done-right")
+      .getByTestId("handle-loopcomponent-shownode-done-right")
       .first()
       .click();
     await page
@@ -149,7 +149,7 @@ test(
     //Loop to File
 
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-item-left")
+      .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
       .click();
     await page.getByTestId("handle-file-shownode-data-right").first().click();
@@ -214,7 +214,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-basicloopcomponent-shownode-item-left")
+      .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
       .click();
 
