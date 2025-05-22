@@ -49,6 +49,28 @@ const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
 const MemoizedNodeOutputs = memo(NodeOutputs);
 
+const HiddenOutputsButton = memo(
+  ({
+    showHiddenOutputs,
+    onClick,
+  }: {
+    showHiddenOutputs: boolean;
+    onClick: () => void;
+  }) => (
+    <Button
+      unstyled
+      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      onClick={onClick}
+    >
+      <ForwardedIconComponent
+        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
+        strokeWidth={ICON_STROKE_WIDTH}
+        className="icon-size text-placeholder-foreground group-hover:text-foreground"
+      />
+    </Button>
+  ),
+);
+
 function GenericNode({
   data,
   selected,
@@ -486,7 +508,7 @@ function GenericNode({
                     showHiddenOutputs={showHiddenOutputs}
                   />
                   <MemoizedNodeOutputs
-                    outputs={data.node?.outputs ?? []}
+                    outputs={shownOutputs ?? []}
                     key="render-outputs"
                     data={data}
                     types={types}
@@ -563,14 +585,25 @@ function GenericNode({
                   handleSelectOutput={handleSelectOutput}
                 />
               )}
-              {/* <div
+              <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
                 <div className="block">
-                  {renderOutputs(hiddenOutputs, "hidden")}
+                  <MemoizedNodeOutputs
+                    outputs={data.node!.outputs}
+                    key="hidden"
+                    data={data}
+                    types={types}
+                    selected={selected ?? false}
+                    showNode={showNode}
+                    isToolMode={isToolMode}
+                    showHiddenOutputs={showHiddenOutputs}
+                    selectedOutput={selectedOutput}
+                    handleSelectOutput={handleSelectOutput}
+                  />
                 </div>
-              </div> */}
-              {/* {hiddenOutputs && hiddenOutputs.length > 0 && (
+              </div>
+              {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
                   content={
                     showHiddenOutputs
@@ -593,7 +626,7 @@ function GenericNode({
                     />
                   </div>
                 </ShadTooltip>
-              )} */}
+              )}
             </>
           </div>
         )}
