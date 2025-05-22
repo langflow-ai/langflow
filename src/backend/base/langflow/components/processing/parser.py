@@ -64,7 +64,6 @@ class ParserComponent(Component):
         Output(
             display_name="Parsed Text",
             name="parsed_text",
-            info="Formatted text output.",
             method="parse_combined_text",
         ),
     ]

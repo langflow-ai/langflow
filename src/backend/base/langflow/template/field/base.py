@@ -179,6 +179,8 @@ class OutputOptions(BaseModel):
 
 
 class Output(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     types: list[str] = Field(default=[])
     """List of output types for the field."""
 

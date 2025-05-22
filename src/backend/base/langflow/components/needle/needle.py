@@ -42,7 +42,7 @@ class NeedleComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="Result", name="result", type_="Message", method="run")]
+    outputs = [Output(display_name="Result", name="result", method="run")]
 
     def run(self) -> Message:
         # Extract query and top_k

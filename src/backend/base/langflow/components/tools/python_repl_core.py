@@ -38,7 +38,6 @@ class PythonREPLComponent(Component):
         Output(
             display_name="Results",
             name="results",
-            type_=Data,
             method="run_python_repl",
         ),
     ]

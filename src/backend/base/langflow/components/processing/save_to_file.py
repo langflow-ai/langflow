@@ -76,7 +76,6 @@ class SaveToFileComponent(Component):
             name="confirmation",
             display_name="Confirmation",
             method="save_to_file",
-            info="Confirmation message after saving the file.",
         ),
     ]
 
