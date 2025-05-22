@@ -16,10 +16,14 @@ if TYPE_CHECKING:
 class SQLComponent(ComponentWithCache):
     """A sql component."""
 
-    display_name = "SQL Query"
-    description = "Execute SQL Query"
+    display_name = "SQL Database"
+    description = (
+        "Executes SQL queries on any SQLAlchemy-compatible database and "
+        "returns the result as a structured dataframe."
+    )
     icon = "database"
     name = "SQLComponent"
+    metadata = {"keywords": ["sql", "database", "query", "db", "fetch"]}
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -54,7 +58,7 @@ class SQLComponent(ComponentWithCache):
     ]
 
     outputs = [
-        Output(display_name="Query Results", name="sql_query_results", method="sql_query_results"),
+        Output(display_name="Result Table", name="run_sql_query", method="run_sql_query"),
     ]
 
     def build_component(
@@ -90,7 +94,7 @@ class SQLComponent(ComponentWithCache):
             self.log(msg)
             raise ValueError(msg) from e
 
-    def sql_query_results(self) -> DataFrame:
+    def run_sql_query(self) -> DataFrame:
         result = self.__execute_query()
         df_result = DataFrame(result)
         self.status = df_result
