@@ -11,6 +11,8 @@ On the [Publish pane](/concepts-publish), the **Embed into site** tab displays c
 
 The chat widget is implemented as a web component called `langflow-chat` and is loaded from a CDN. For more information, see the [langflow-embedded-chat repository](https://github.com/langflow-ai/langflow-embedded-chat).
 
+For a sandbox example, see the [Langflow embedded chat CodeSandbox](https://codesandbox.io/p/sandbox/langflow-embedded-chat-example-dv9zpx).
+
 This example includes the minimum required props for using the chat widget in your HTML code, which are `host_url` and `flow_id`.
 The `host_url` value must be `HTTPS`, and may not include a `/` after the URL.
 The `flow_id` value is found in your Langflow URL.
@@ -79,13 +81,7 @@ Sending a message to Langflow without a **Chat Input** still triggers the flow, 
 
 ## Embed the chat widget with React
 
-To embed the Chat Widget using React, add this `<script>` tag to the React `index.html` file inside a `<body>`tag.
-
-```javascript
-<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
-```
-
-Optionally, you can dynamically load the script into your site.
+To use the chat widget in your React application, create a component that loads the widget script and renders the chat interface:
 
 1. Declare your web component and encapsulate it in a React component.
 
@@ -160,45 +156,79 @@ For example, add it here:
 
 <ChatWidget className="my-chat-widget" />
 
-In `index.tsx`, point `host_url` at your Langflow server and `flow_id` at your flow , and you should have a working chat widget.
+This widget won't work as-is.
+In `index.tsx`, point `host_url` at your Langflow server and `flow_id` at your flow, and you should have a working chat widget.
 
 ## Embed the chat widget with Angular
 
-To use the chat widget in Angular, add this `<script>` tag to the Angular `index.html` file inside a `<body>` tag.
+To use the chat widget in your [Angular](https://angular.dev/overview) application, create a component that loads the widget script and renders the chat interface.
 
-```javascript
-<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
-```
+Angular requires you to explicitly allow custom web components like `langflow-chat` in components, so you must add the `<langflow-chat>` element to your Angular template and configure Angular to recognize it.  Add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration to enable this.
 
-When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add `CUSTOM_ELEMENTS_SCHEMA` to the module's `@NgModule.schemas`.
-`CUSTOM_ELEMENTS_SCHEMA` is a built-in schema that allows custom elements in your Angular templates, and suppresses warnings related to unknown elements like `langflow-chat`.
+To add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration:
 
 1. Open the module file `.module.ts` where you want to add the `langflow-chat` web component.
 2. Import `CUSTOM_ELEMENTS_SCHEMA` at the top of the `.module.ts` file:
 
 `import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';`
 
-3. Add `CUSTOM_ELEMENTS_SCHEMA` to the 'schemas' array inside the '@NgModule' decorator:
+3. Add `CUSTOM_ELEMENTS_SCHEMA` to the `schemas` array inside the `@NgModule` decorator:
 
 ```javascript
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+
 @NgModule({
   declarations: [
-    // ... Other components and directives ...
+    AppComponent
   ],
   imports: [
-    // ... Other imported modules ...
+    BrowserModule
   ],
-  schemas: [
-    CUSTOM_ELEMENTS_SCHEMA  // Add the CUSTOM_ELEMENTS_SCHEMA here
-  ]
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  providers: [],
+  bootstrap: [AppComponent]
 })
-export class YourModule { }
+export class AppModule { }
 ```
 
-4. In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `langflow-chat` tag to include the chat widget in your component's view:
+4. Add the chat widget to your component's template by including the `langflow-chat` element in your component's `.component.ts` file:
+
+For style properties that accept `JSON` objects like `chat_window_style` and `bot_message_style`, use Angular's property binding syntax `[propertyName]` to pass them as JavaScript objects.
 
 ```javascript
-<langflow-chat  chat_inputs='{"your_key":"value"}'  chat_input_field="your_chat_key"  flow_id="your_flow_id"  host_url="langflow_url"></langflow-chat>
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  template: `
+    <div class="container">
+      <h1>Langflow Chat Test</h1>
+      <langflow-chat
+        host_url="https://c822-73-64-93-151.ngrok-free.app"
+        flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+        [chat_window_style]='{"backgroundColor": "#ffffff"}'
+        [bot_message_style]='{"color": "#000000"}'
+        [user_message_style]='{"color": "#000000"}'
+        window_title="Chat with us"
+        placeholder="Type your message..."
+        height="600"
+        width="400"
+        chat_position="bottom-right"
+      ></langflow-chat>
+    </div>
+  `,
+  styles: [`
+    .container {
+      padding: 20px;
+      text-align: center;
+    }
+  `]
+})
+export class AppComponent {
+  title = 'Langflow Chat Test';
+}
 ```
 
 ### Chat widget configuration
