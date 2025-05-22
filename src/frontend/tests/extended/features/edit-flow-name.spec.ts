@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 test(
   "user should be able to edit flow name by clicking on the header or on the main page",
-  { tag: ["@release"] },
+  { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     const randomName = Math.random().toString(36).substring(2, 15);
     const randomName2 = Math.random().toString(36).substring(2, 15);
@@ -14,6 +14,7 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
     await page.getByTestId("input-flow-name").click();
+    await page.waitForTimeout(1000);
 
     await page.getByTestId("input-flow-name").fill(randomName);
 

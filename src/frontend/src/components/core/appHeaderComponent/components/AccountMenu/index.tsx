@@ -7,6 +7,7 @@ import {
   TWITTER_URL,
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
@@ -50,13 +51,13 @@ export const AccountMenu = () => {
             className="h-6 w-6 rounded-lg focus-visible:outline-0"
             data-testid="user-profile-settings"
           >
-            <ProfileIcon />
+            <CustomProfileIcon />
           </div>
         </HeaderMenuToggle>
         <HeaderMenuItems position="right" classNameSize="w-[272px]">
           <div className="divide-y divide-foreground/10">
             <div>
-              <div className="h-[46px] items-center px-4 pt-3">
+              <div className="h-[44px] items-center px-4 pt-3">
                 <div className="flex items-center justify-between">
                   <span
                     data-testid="menu_version_button"
@@ -148,7 +149,7 @@ export const AccountMenu = () => {
                 >
                   <ForwardedIconComponent
                     strokeWidth={2}
-                    name="TwitterXIcon"
+                    name="TwitterX"
                     className="h-4 w-4"
                   />
                   X
@@ -156,7 +157,7 @@ export const AccountMenu = () => {
               </HeaderMenuItemLink>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-1 text-sm">
+            <div className="flex items-center justify-between px-4 py-[6.5px] text-sm">
               <span className="">Theme</span>
               <div className="relative top-[1px] float-right">
                 <ThemeButtons />

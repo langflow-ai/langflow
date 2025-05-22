@@ -68,7 +68,7 @@ export default function Dropdown({
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
-    if (value && !validOptions.includes(value)) {
+    if (value && !validOptions.includes(value) && combobox) {
       return [...validOptions, value];
     }
     return validOptions;
@@ -156,17 +156,21 @@ export default function Dropdown({
     // Update filteredOptions with the search results
     setFilteredOptions(filtered);
 
-    // Update filteredMetadata to match the filtered options
+    // Create a new metadata array that directly maps to filtered options
     if (optionsMetaData) {
-      const newMetadata = filtered
-        .filter((option) => validOptions.includes(option)) // Only map metadata for valid options
-        .map((option) => {
-          const originalIndex = validOptions.indexOf(option);
-          return optionsMetaData[originalIndex];
-        });
+      // Create a map of option -> metadata for quick lookup
+      const metadataMap: Record<string, any> = {};
+      validOptions.forEach((option, index) => {
+        if (optionsMetaData[index]) {
+          metadataMap[option] = optionsMetaData[index];
+        }
+      });
+
+      // Map each filtered option to its metadata (or undefined for custom values)
+      const newMetadata = filtered.map((option) => metadataMap[option]);
       setFilteredMetadata(newMetadata);
     } else {
-      setFilteredMetadata(optionsMetaData);
+      setFilteredMetadata(undefined);
     }
   };
 
@@ -176,6 +180,7 @@ export default function Dropdown({
 
     await mutateTemplate(
       value,
+      nodeId,
       nodeClass!,
       handleNodeClass,
       postTemplateValue,
@@ -188,9 +193,9 @@ export default function Dropdown({
   };
 
   const formatTooltipContent = (option: string, index: number) => {
-    if (!optionsMetaData?.[index]) return option;
+    if (!filteredMetadata?.[index]) return option;
 
-    const metadata = optionsMetaData[index];
+    const metadata = filteredMetadata[index];
     const metadataEntries = Object.entries(metadata)
       .filter(([key, value]) => value !== null && key !== "icon")
       .map(([key, value]) => {
@@ -221,12 +226,30 @@ export default function Dropdown({
       );
 
       // If there are custom values, preserve them when resetting filtered options
-      if (customValuesInFiltered.length > 0) {
+      if (customValuesInFiltered.length > 0 && combobox) {
         setFilteredOptions([...validOptions, ...customValuesInFiltered]);
+
+        // Reset filteredMetadata to match the new filteredOptions
+        if (optionsMetaData) {
+          const metadataMap: Record<string, any> = {};
+          validOptions.forEach((option, index) => {
+            if (optionsMetaData[index]) {
+              metadataMap[option] = optionsMetaData[index];
+            }
+          });
+
+          const newMetadata = [...validOptions, ...customValuesInFiltered].map(
+            (option) => metadataMap[option],
+          );
+          setFilteredMetadata(newMetadata);
+        }
       } else {
         setFilteredOptions(validOptions);
+        setFilteredMetadata(optionsMetaData);
       }
-      setCustomValue("");
+    }
+    if (!combobox && value && !validOptions.includes(value)) {
+      onSelect("", undefined, true);
     }
   }, [open, validOptions]);
 
@@ -257,6 +280,21 @@ export default function Dropdown({
     </Button>
   );
 
+  const renderSelectedIcon = () => {
+    const selectedIndex = filteredOptions.findIndex(
+      (option) => option === value,
+    );
+    const iconMetadata =
+      selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
+
+    return iconMetadata ? (
+      <ForwardedIconComponent
+        name={iconMetadata}
+        className="h-4 w-4 flex-shrink-0"
+      />
+    ) : null;
+  };
+
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
@@ -284,18 +322,7 @@ export default function Dropdown({
             className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
-            {optionsMetaData?.[
-              filteredOptions.findIndex((option) => option === value)
-            ]?.icon && (
-              <ForwardedIconComponent
-                name={
-                  optionsMetaData?.[
-                    filteredOptions.findIndex((option) => option === value)
-                  ]?.icon
-                }
-                className="h-4 w-4 flex-shrink-0"
-              />
-            )}
+            {value && <>{renderSelectedIcon()}</>}
             <span className="truncate">
               {disabled ? (
                 RECEIVING_INPUT_VALUE

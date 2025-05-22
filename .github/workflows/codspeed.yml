@@ -42,6 +42,7 @@ jobs:
                 --ignore=src/backend/tests/integration \
                 --codspeed \
                 -m "not api_key_required" \
-                -n auto
+                -n auto \
+                --timeout 600
       - name: Minimize uv cache
         run: uv cache prune --ci

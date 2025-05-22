@@ -196,45 +196,6 @@ export default function StoreCardComponent({
         <CardFooter>
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
-              {/* {playground && (
-                <Button
-                  disabled={loadingPlayground || !authorized}
-                  key={data.id}
-                  tabIndex={-1}
-                  variant="outline"
-                  size="sm"
-                  className="z-50 gap-2 whitespace-nowrap"
-                  data-testid={"playground-flow-button-" + data.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setLoadingPlayground(true);
-                    getFlowData().then((res) => {
-                      if (!hasPlayground(res)) {
-                        setErrorData({
-                          title: "Error",
-                          list: ["This flow doesn't have a playground."],
-                        });
-                        setLoadingPlayground(false);
-                        return;
-                      }
-                      setCurrentFlow(res);
-                      setOpenPlayground(true);
-                      setLoadingPlayground(false);
-                    });
-                  }}
-                >
-                  {!loadingPlayground ? (
-                    <IconComponent
-                      name="BotMessageSquareIcon"
-                      className="h-4 w-4 select-none"
-                    />
-                  ) : (
-                    <Loading className="h-4 w-4 text-medium-indigo" />
-                  )}
-                  Playground
-                </Button>
-              )} */}
               <div className="flex gap-0.5">
                 <ShadTooltip
                   content={authorized ? "Like" : "Please review your API key."}
@@ -305,16 +266,6 @@ export default function StoreCardComponent({
           </div>
         </CardFooter>
       </Card>
-      {/* {openPlayground && (
-        <IOModal
-          key={data.id}
-          cleanOnClose={true}
-          open={openPlayground}
-          setOpen={setOpenPlayground}
-        >
-          <></>
-        </IOModal>
-      )} */}
     </>
   );
 }
