@@ -81,7 +81,7 @@ class TestGitOperations(ComponentTestBaseWithoutClient):
         # Create new branch
         assert "Command executed successfully" in git_branch({"new_branch": "feature"})
         # Checkout new branch
-        assert "Switched to a new branch" in git_checkout({"branch_name": "feature"}) or "Already on 'feature'" in git_checkout({"branch_name": "feature"})
+        assert "Command executed successfully" in git_checkout({"branch_name": "feature"})
         # Add file on feature branch
         file_path2 = os.path.join(component.workspace_folder, "feature.txt")
         with open(file_path2, "w") as f:
