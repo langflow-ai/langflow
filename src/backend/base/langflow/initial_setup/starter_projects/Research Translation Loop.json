@@ -1778,7 +1778,7 @@
   "id": "105a54e1-198e-468e-8bb2-3a037f4d595a",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Research Translation Loop (2)",
+  "name": "Research Translation Loop",
   "tags": [
     "chatbots",
     "content-generation"
