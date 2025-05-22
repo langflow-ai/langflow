@@ -184,52 +184,6 @@
             "output_types": []
           },
           "targetHandle": {
-            "fieldName": "data",
-            "id": "LoopComponent-0aBsp",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__ArXivComponent-sSqo4{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-sSqo4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-0aBsp{œfieldNameœ:œdataœ,œidœ:œLoopComponent-0aBspœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "ArXivComponent-sSqo4",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-sSqo4œ, œnameœ: œdataœ, œoutput_typesœ: []}",
-        "target": "LoopComponent-0aBsp",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-0aBspœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "parser",
-            "id": "parser-lOwhH",
-            "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "AnthropicModel-VobAp",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__parser-lOwhH{œdataTypeœ:œparserœ,œidœ:œparser-lOwhHœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-VobAp{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-VobApœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "parser-lOwhH",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-lOwhHœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-VobAp",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-VobApœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
             "dataType": "LoopComponent",
             "id": "LoopComponent-9BK8B",
             "name": "item",
