@@ -32,14 +32,14 @@ export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
 
 - Export the `project-id` in your terminal.
-  To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) endpoint for a list of projects.
-
+To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) endpoint for a list of projects.
 <Tabs>
 
   <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
+  "$LANGFLOW_URL/api/v1/projects/" \
   "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
@@ -50,7 +50,7 @@ curl -X GET \
 [
   {
     "name": "My Projects",
-    "description": "Manage your own flows. Download and upload projects.",
+    "description": "Manage your own projects. Download and upload projects.",
     "id": "1415de42-8f01-4f36-bf34-539f23e47466",
     "parent_id": null
   }
@@ -59,8 +59,9 @@ curl -X GET \
   </TabItem>
 </Tabs>
 Export the `project-id` as an environment variable.
+Export the `project-id` as an environment variable.
 ```bash
-export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
+export project_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
 
 - Export the Langflow API key as an environment variable.
@@ -1122,6 +1123,7 @@ curl -X PATCH \
   "description": "string",
   "data": {},
   "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "endpoint_name": "my_new_endpoint_name",
   "locked": true
 }'
@@ -1146,6 +1148,7 @@ curl -X PATCH \
   "locked": true,
   "id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
   "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
   "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }
 ```
@@ -1210,6 +1213,7 @@ curl -X POST \
       "locked": false,
       "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     },
     {
       "name": "string",
@@ -1227,6 +1231,7 @@ curl -X POST \
       ],
       "locked": false,
       "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
       "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     }
   ]
@@ -1284,6 +1289,8 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
+To specify a target project for the flow, include the query parameter `project_id`.
+The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](#read-projects) endpoint for a list of available projects.
 To specify a target project for the flow, include the query parameter `project_id`.
 The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](#read-projects) endpoint for a list of available projects.
 
@@ -1377,7 +1384,7 @@ curl -X GET \
 [
   {
     "name": "My Projects",
-    "description": "Manage your own flows. Download and upload projects.",
+    "description": "Manage your own projects. Download and upload projects.",
     "id": "1415de42-8f01-4f36-bf34-539f23e47466",
     "parent_id": null
   }
@@ -1397,7 +1404,6 @@ Create a new project.
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/projects/" \
-  -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
   "name": "new_project_name",
@@ -1464,8 +1470,8 @@ curl -X GET \
 ```json
 [
   {
-    "name": "My projects",
-    "description": "Manage your own flows. Download and upload projects.",
+    "name": "My Projects",
+    "description": "Manage your own projects. Download and upload projects.",
     "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "parent_id": null
   }
@@ -1490,7 +1496,6 @@ If you send the same values multiple times, the update is still processed, even 
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/projects/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
-  -H "Content-Type: application/json" \
   -d '{
   "name": "string",
   "description": "string",

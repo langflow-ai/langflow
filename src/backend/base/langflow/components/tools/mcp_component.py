@@ -1,4 +1,5 @@
 import re
+import shutil
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -16,7 +17,7 @@ from langflow.inputs.inputs import InputTypes
 from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
-from langflow.schema import Message
+from langflow.schema import DataFrame
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
@@ -107,6 +108,7 @@ class MCPToolsComponent(Component):
             is_list=True,
             show=True,
             tool_mode=False,
+            advanced=True,
         ),
         MultilineInput(
             name="sse_url",
@@ -138,6 +140,7 @@ class MCPToolsComponent(Component):
                 },
             ],
             value=[],
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -172,9 +175,18 @@ class MCPToolsComponent(Component):
         if mode == "Stdio" and not command:
             msg = "Command is required for Stdio mode"
             raise ValueError(msg)
+        if mode == "Stdio" and command:
+            self._validate_node_installation(command)
         if mode == "SSE" and not url:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
+
+    def _validate_node_installation(self, command: str) -> str:
+        """Validate the npx command."""
+        if "npx" in command and not shutil.which("node"):
+            msg = "Node.js is not installed. Please install Node.js to use npx commands."
+            raise ValueError(msg)
+        return command
 
     def _process_headers(self, headers: Any) -> dict:
         """Process the headers input into a valid dictionary.
@@ -397,7 +409,7 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-    async def build_output(self) -> Message:
+    async def build_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
             await self.update_tools()
@@ -414,8 +426,12 @@ class MCPToolsComponent(Component):
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
 
-                return Message(text=output.content[len(output.content) - 1].text)
-            return Message(text="You must select a tool", error=True)
+                tool_content = []
+                for item in output.content:
+                    item_dict = item.model_dump()
+                    tool_content.append(item_dict)
+                return DataFrame(data=tool_content)
+            return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
             logger.exception(msg)
@@ -446,7 +462,12 @@ class MCPToolsComponent(Component):
 
             if mode == "Stdio":
                 if not self.stdio_client.session:
-                    self.tools = await self.stdio_client.connect_to_server(command, env)
+                    try:
+                        self.tools = await self.stdio_client.connect_to_server(command, env)
+                    except ValueError as e:
+                        msg = f"Error connecting to MCP server: {e}"
+                        logger.exception(msg)
+                        raise ValueError(msg) from e
             elif mode == "SSE" and not self.sse_client.session:
                 try:
                     self.tools = await self.sse_client.connect_to_server(url, headers)
@@ -499,6 +520,7 @@ class MCPToolsComponent(Component):
                         func=create_tool_func(tool.name, args_schema, client.session),
                         coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
                         tags=[tool.name],
+                        metadata={},
                     )
                     tool_list.append(tool_obj)
                     self._tool_cache[tool.name] = tool_obj
@@ -526,4 +548,3 @@ class MCPToolsComponent(Component):
             msg = "SSE URL is not set"
             raise ValueError(msg)
         return await self.update_tools()
-        # return self.tools

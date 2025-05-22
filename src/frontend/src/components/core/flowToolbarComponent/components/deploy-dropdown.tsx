@@ -15,6 +15,7 @@ import {
   ENABLE_PUBLISH,
   ENABLE_WIDGET,
 } from "@/customization/feature-flags";
+import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import NvidiaR2xModal from "@/modals/nvidiaR2xModal";
@@ -126,7 +127,7 @@ export default function PublishDropdown() {
           <CustomLink
             className={cn("flex-1")}
             to={`/mcp/folder/${folderId}`}
-            target="_blank"
+            target={customMcpOpen()}
           >
             <DropdownMenuItem
               className="deploy-dropdown-item group"
