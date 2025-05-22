@@ -1,18 +1,28 @@
 import { TweaksComponent } from "@/components/core/codeTabsComponent/components/tweaksComponent";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAuthStore from "@/stores/authStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import { isEndpointNameValid } from "@/utils/utils";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { ReactNode, useEffect, useState } from "react";
+import { cloneDeep } from "lodash";
+import { ChangeEvent, ReactNode, useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../components/common/genericIconComponent";
 import { useTweaksStore } from "../../stores/tweaksStore";
 import BaseModal from "../baseModal";
 import APITabsComponent from "./codeTabs/code-tabs";
+
+const MAX_LENGTH = 20;
+const MIN_LENGTH = 1;
 
 export default function ApiModal({
   children,
@@ -33,9 +43,56 @@ export default function ApiModal({
       : useState(false);
   const newInitialSetup = useTweaksStore((state) => state.newInitialSetup);
 
+  const flowEndpointName = useFlowStore(
+    useShallow((state) => state.currentFlow?.endpoint_name),
+  );
+
+  const [endpointName, setEndpointName] = useState(flowEndpointName ?? "");
+  const [validEndpointName, setValidEndpointName] = useState(true);
+
+  const handleEndpointNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    // Validate the endpoint name
+    // use this regex r'^[a-zA-Z0-9_-]+$'
+    const isValid = isEndpointNameValid(event.target.value, MAX_LENGTH);
+    setValidEndpointName(isValid);
+
+    // Only update if valid and meets minimum length (if set)
+    if (isValid && value.length >= MIN_LENGTH) {
+      setEndpointName!(value);
+    } else if (value.length === 0) {
+      // Always allow empty endpoint name (it's optional)
+      setEndpointName!("");
+    }
+  };
+
   useEffect(() => {
     if (open) newInitialSetup(nodes);
   }, [open]);
+
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const saveFlow = useSaveFlow();
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+
+  function handleSave(): void {
+    const newFlow = cloneDeep(useFlowStore.getState().currentFlow);
+    if (!newFlow) return;
+    newFlow.endpoint_name =
+      endpointName && endpointName.length > 0 ? endpointName : null;
+
+    if (autoSaving) {
+      saveFlow(newFlow);
+    } else {
+      setCurrentFlow(newFlow);
+    }
+  }
+
+  useEffect(() => {
+    if (!openTweaks && endpointName !== flowEndpointName) handleSave();
+    else if (openTweaks) {
+      setEndpointName(flowEndpointName ?? "");
+    }
+  }, [openTweaks]);
 
   return (
     <>
@@ -131,7 +188,33 @@ export default function ApiModal({
           />
           <span className="pl-2">Tweaks</span>
         </BaseModal.Header>
-        <BaseModal.Content overflowHidden>
+        <BaseModal.Content overflowHidden className="flex flex-col gap-4">
+          {true && (
+            <Label>
+              <div className="edit-flow-arrangement mt-2">
+                <span className="shrink-0 text-mmd font-medium">
+                  Endpoint Name
+                </span>
+                {!validEndpointName && (
+                  <span className="edit-flow-span">
+                    Use only letters, numbers, hyphens, and underscores (
+                    {MAX_LENGTH} characters max).
+                  </span>
+                )}
+              </div>
+              <Input
+                className="nopan nodelete nodrag noflow mt-2 font-normal"
+                onChange={handleEndpointNameChange}
+                type="text"
+                name="endpoint_name"
+                value={endpointName ?? ""}
+                placeholder="An alternative name to run the endpoint"
+                maxLength={MAX_LENGTH}
+                minLength={MIN_LENGTH}
+                id="endpoint_name"
+              />
+            </Label>
+          )}
           <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
             <TweaksComponent open={openTweaks} />
           </div>
