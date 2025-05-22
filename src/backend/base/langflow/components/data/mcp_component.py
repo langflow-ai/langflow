@@ -17,6 +17,7 @@ from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
@@ -418,7 +419,9 @@ class MCPToolsComponent(Component):
                 kwargs = {}
                 for arg in tool_args:
                     value = getattr(self, arg.name, None)
-                    if value:
+                    if isinstance(value, Message):
+                        kwargs[arg.name] = value.text
+                    elif value:
                         kwargs[arg.name] = value
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)

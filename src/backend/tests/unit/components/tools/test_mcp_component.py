@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.components.data.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -99,8 +100,9 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         # Test tool options are updated
         assert "options" in updated_config["tool"]
 
+    @pytest.mark.parametrize("input_value", ["test value", Message(text="test value")])
     @patch("langflow.components.data.mcp_component.create_tool_coroutine")
-    async def test_build_output(self, mock_create_coroutine, component_class, default_kwargs, mock_tool):
+    async def test_build_output(self, mock_create_coroutine, component_class, default_kwargs, mock_tool, input_value):
         """Test building output with a tool."""
         component = component_class(**default_kwargs)
         component.tool = "test_tool"
@@ -120,7 +122,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         component._tool_cache = {"test_tool": mock_structured_tool}
 
         # Set the test parameter value
-        component.test_param = "test value"
+        component.test_param = input_value
 
         # Mock get_inputs_for_all_tools to return our mock input
         mock_input = MagicMock()
