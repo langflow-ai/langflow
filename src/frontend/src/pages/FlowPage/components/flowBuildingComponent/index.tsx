@@ -15,13 +15,15 @@ import {
   DISMISS_BUTTON_VARIANTS,
   RETRY_BUTTON_VARIANTS,
   STOP_BUTTON_VARIANTS,
-  TIME_VARIANTS,
+  getTimeVariants,
 } from "./helpers/visual-variants";
 
 export default function FlowBuildingComponent() {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const flowBuildStatus = useFlowStore((state) => state.flowBuildStatus);
   const buildInfo = useFlowStore((state) => state.buildInfo);
+  const errorButtonsRef = useRef<HTMLDivElement>(null);
+  const stopButtonRef = useRef<HTMLDivElement>(null);
   const setBuildInfo = useFlowStore((state) => state.setBuildInfo);
   const [duration, setDuration] = useState(0);
   const [dismissed, setDismissed] = useState(false);
@@ -161,17 +163,12 @@ export default function FlowBuildingComponent() {
                     </AnimatePresence>
                     <div className="relative flex items-center gap-4">
                       <motion.div
-                        variants={TIME_VARIANTS}
-                        animate={
-                          buildInfo?.error
-                            ? "double"
-                            : buildInfo?.success
-                              ? "none"
-                              : "single"
-                        }
+                        variants={getTimeVariants(
+                          buildInfo?.error ? errorButtonsRef : stopButtonRef,
+                        )}
+                        animate={!buildInfo?.success ? "double" : "single"}
                         transition={{
                           duration: 0.2,
-                          delay: 0.05,
                           ease: "easeOut",
                         }}
                         className="absolute right-0 font-mono text-xs"
@@ -179,59 +176,64 @@ export default function FlowBuildingComponent() {
                         {humanizedTime}
                       </motion.div>
                       <AnimatePresence mode="sync">
-                        {!buildInfo?.success &&
-                          (buildInfo?.error ? (
-                            <motion.div
-                              key="error-buttons"
-                              className="absolute right-0 flex items-center gap-2"
-                            >
+                        {!buildInfo?.success && (
+                          <div className="absolute right-0">
+                            {buildInfo?.error ? (
                               <motion.div
-                                variants={RETRY_BUTTON_VARIANTS}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                                transition={{ duration: 0.2 }}
+                                key="error-buttons"
+                                ref={errorButtonsRef}
+                                className="flex items-center gap-2"
                               >
-                                <Button size="sm" onClick={handleRetry}>
-                                  Retry
-                                </Button>
+                                <motion.div
+                                  variants={RETRY_BUTTON_VARIANTS}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <Button size="sm" onClick={handleRetry}>
+                                    Retry
+                                  </Button>
+                                </motion.div>
+                                <motion.div
+                                  variants={DISMISS_BUTTON_VARIANTS}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-primary"
+                                    onClick={handleDismiss}
+                                  >
+                                    Dismiss
+                                  </Button>
+                                </motion.div>
                               </motion.div>
+                            ) : (
                               <motion.div
-                                variants={DISMISS_BUTTON_VARIANTS}
+                                key="stop-button"
+                                variants={STOP_BUTTON_VARIANTS}
+                                ref={stopButtonRef}
                                 initial="hidden"
                                 animate="visible"
+                                className=""
                                 exit="exit"
                                 transition={{ duration: 0.2 }}
                               >
                                 <Button
+                                  data-testid="stop_building_button"
                                   size="sm"
-                                  variant="outline"
-                                  className="text-primary"
-                                  onClick={handleDismiss}
+                                  onClick={handleStop}
                                 >
-                                  Dismiss
+                                  Stop
                                 </Button>
                               </motion.div>
-                            </motion.div>
-                          ) : (
-                            <motion.div
-                              key="stop-button"
-                              variants={STOP_BUTTON_VARIANTS}
-                              initial="hidden"
-                              animate="visible"
-                              className="absolute right-0"
-                              exit="exit"
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Button
-                                data-testid="stop_building_button"
-                                size="sm"
-                                onClick={handleStop}
-                              >
-                                Stop
-                              </Button>
-                            </motion.div>
-                          ))}
+                            )}
+                          </div>
+                        )}
                       </AnimatePresence>
                     </div>
                   </div>
