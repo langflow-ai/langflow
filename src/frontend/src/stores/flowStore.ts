@@ -230,6 +230,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes,
       edges: newEdges,
       flowState: undefined,
+      buildInfo: null,
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
