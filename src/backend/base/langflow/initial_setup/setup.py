@@ -149,6 +149,8 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
 
 def scape_json_parse(json_string: str) -> dict:
+    if json_string is None:
+        return {}
     if isinstance(json_string, dict):
         return json_string
     parsed_string = json_string.replace("œ", '"')
