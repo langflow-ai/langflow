@@ -26,7 +26,7 @@ export function DotBackgroundDemo({
       />
       <div
         className={cn(
-          "absolute inset-0 bg-gradient-to-b from-white/10 via-white/50 to-white dark:from-background/30 dark:via-background/80 dark:to-background",
+          "absolute inset-0 bg-gradient-to-b from-background/0 via-background/50 to-background",
           containerClassName,
         )}
       />
