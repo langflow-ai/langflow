@@ -7,7 +7,6 @@ from langflow.components.search import WikidataComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 
-
 # Import the base test class
 from tests.base import ComponentTestBaseWithoutClient
 

@@ -81,7 +81,6 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
         assert len(result) == 1
         assert result[0].text == "Test content"
 
-
     def test_wikipedia_error_handling(self, component_class):
         component = component_class()
         # Mock _build_wrapper to raise exception
