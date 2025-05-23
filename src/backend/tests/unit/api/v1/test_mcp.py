@@ -49,17 +49,10 @@ def mock_current_user_ctx(mock_user):
         yield mock
 
 
-# Test the HEAD /sse endpoint (checks server availability)
-async def test_mcp_sse_head_endpoint(client: AsyncClient):
-    """Test HEAD /sse endpoint returns 200 OK."""
-    response = await client.head("api/v1/mcp/sse")
-    assert response.status_code == status.HTTP_200_OK
-
-
-# Test the HEAD /sse endpoint without authentication
-async def test_mcp_sse_head_endpoint_no_auth(client: AsyncClient):
-    """Test HEAD /sse endpoint without authentication returns 200 OK (HEAD requests don't require auth)."""
-    response = await client.head("api/v1/mcp/sse")
+# Test the GET /sse endpoint (checks server availability)
+async def test_mcp_sse_get_endpoint(client: AsyncClient):
+    """Test GET /sse endpoint returns 200 OK."""
+    response = await client.get("api/v1/mcp/sse")
     assert response.status_code == status.HTTP_200_OK
 
 
