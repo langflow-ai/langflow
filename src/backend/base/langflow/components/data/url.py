@@ -1,5 +1,6 @@
 import re
 
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
@@ -123,6 +124,38 @@ class URLComponent(Component):
             advanced=True,
             input_types=["DataFrame"],
         ),
+        BoolInput(
+            name="filter_text_html",
+            display_name="Filter Text/HTML",
+            info="If enabled, filters out text/css content type from the results.",
+            value=True,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="continue_on_failure",
+            display_name="Continue on Failure",
+            info="If enabled, continues crawling even if some requests fail.",
+            value=True,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="check_response_status",
+            display_name="Check Response Status",
+            info="If enabled, checks the response status of the request.",
+            value=False,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="autoset_encoding",
+            display_name="Autoset Encoding",
+            info="If enabled, automatically sets the encoding of the request.",
+            value=True,
+            required=False,
+            advanced=True,
+        )
     ]
 
     outputs = [
@@ -155,7 +188,7 @@ class URLComponent(Component):
         """
         url = url.strip()
         if not url.startswith(("http://", "https://")):
-            url = "http://" + url
+            url = "https://" + url
 
         if not self.validate_url(url):
             msg = f"Invalid URL: {url}"
@@ -183,6 +216,12 @@ class URLComponent(Component):
             extractor=extractor,
             timeout=self.timeout,
             headers=headers_dict,
+            check_response_status=self.check_response_status,
+            continue_on_failure=self.continue_on_failure,
+            base_url=url,  # Add base_url to ensure consistent domain crawling
+            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection
+            exclude_dirs=[],  # Allow customization of excluded directories
+            link_regex=None,  # Allow customization of link filtering
         )
 
     def fetch_url_contents(self) -> list[dict]:
@@ -227,7 +266,7 @@ class URLComponent(Component):
             # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
             data = [
                 {
-                    "text": doc.page_content,
+                    "text": safe_convert(doc.page_content, clean_data=True),
                     "url": doc.metadata.pop("source", ""),
                     "title": doc.metadata.pop("title", ""),
                     "description": doc.metadata.pop("description", ""),
@@ -235,29 +274,17 @@ class URLComponent(Component):
                     "language": doc.metadata.pop("language", ""),
                 }
                 for doc in all_docs
+                if not self.filter_text_html
+                or (self.filter_text_html and "text/html" in doc.metadata.get("content_type"))
             ]
         except Exception as e:
             error_msg = e.message if hasattr(e, "message") else e
             msg = f"Error loading documents: {error_msg!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
-
-        self.status = data
         return data
 
-    def fetch_content_text(self) -> Message:
-        """Load documents and return their text content."""
-        data = self.fetch_content()
-        result_string = data_to_text("{text}", data)
-        self.status = result_string
-
-        # Clean up the result string
-        result_string = safe_convert(result_string, clean_data=True)
-
-        return Message(text=result_string)
 
     def fetch_content(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
-        data_frame = DataFrame(self.fetch_url_contents())
-        self.status = data_frame
-        return data_frame
+        return DataFrame(data=self.fetch_url_contents())
