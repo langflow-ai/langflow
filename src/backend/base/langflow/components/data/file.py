@@ -1,5 +1,6 @@
 import asyncio
 import os
+from pathlib import Path
 
 from platformdirs import user_cache_dir
 
@@ -59,7 +60,7 @@ class FileComponent(BaseFileComponent):
             """Processes a single file and returns its Data object."""
             try:
                 # Skip macOS-specific hidden files
-                if os.path.basename(file_path).startswith("._"):
+                if Path(file_path).name.startswith("._"):
                     return None
 
                 # Try to get original_filename from the BaseFile's data
@@ -96,12 +97,19 @@ class FileComponent(BaseFileComponent):
                                 file_record = result.first()
                                 if file_record:
                                     # Append the extension from the path
-                                    extension = os.path.splitext(file_record.path)[1]
+                                    extension = Path(file_record.path).suffix
                                     return file_record.name + extension
                             return None
 
-                        original_filename = asyncio.run(get_filename())
-                    except Exception:
+                        # Handle potential event loop issues
+                        try:
+                            asyncio.get_running_loop()
+                            # If we're already in an async context, we can't use asyncio.run()
+                            original_filename = None
+                        except RuntimeError:
+                            # No running loop, safe to use asyncio.run()
+                            original_filename = asyncio.run(get_filename())
+                    except OSError as _:
                         pass
 
                 result = parse_text_file_to_data(
@@ -109,16 +117,16 @@ class FileComponent(BaseFileComponent):
                 )
                 if result and result.data:
                     return result
-            except FileNotFoundError as e:
-                msg = f"File not found: {file_path}. Error: {e}"
+            except FileNotFoundError as _:
                 if not silent_errors:
                     raise
                 return None
             except Exception as e:
-                msg = f"Unexpected error processing {file_path}: {e}"
                 if not silent_errors:
+                    msg = f"Unexpected error processing {file_path}: {e}"
                     raise ValueError(msg) from e
                 return None
+            return None
 
         if not file_list:
             msg = "No files to process."

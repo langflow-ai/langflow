@@ -136,7 +136,12 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, *, silent_errors: bool, original_filename: str = None) -> Data | None:
+def parse_text_file_to_data(
+    file_path: str,
+    *,
+    silent_errors: bool,
+    original_filename: str | None = None,
+) -> Data | None:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -180,7 +185,8 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool, original_fil
                 original_filename = "_".join(parent_dir.split("_")[1:])
         elif "/" in str(path):
             parts = str(path).split("/")
-            if len(parts) >= 2:
+            min_parts_for_filename_extraction = 2
+            if len(parts) >= min_parts_for_filename_extraction:
                 original_filename = parts[-1]
                 if re.match(
                     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]+$", original_filename
