@@ -463,7 +463,14 @@
             "icon": "OpenAI",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1599,7 +1606,14 @@
             "icon": "OpenAI",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

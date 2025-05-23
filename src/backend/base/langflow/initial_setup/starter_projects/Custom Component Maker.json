@@ -1399,7 +1399,14 @@
             "icon": "Anthropic",
             "key": "AnthropicModel",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
