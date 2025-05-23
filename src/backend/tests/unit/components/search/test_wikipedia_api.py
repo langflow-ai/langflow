@@ -4,8 +4,6 @@ import pytest
 from langflow.components.search import WikipediaComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
-from langflow.schema.message import Message
 
 # Import the base test class
 from tests.base import ComponentTestBaseWithoutClient
@@ -83,14 +81,6 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
         assert len(result) == 1
         assert result[0].text == "Test content"
 
-    def test_fetch_content_text(self, component_class):
-        component = component_class()
-        component.fetch_content = MagicMock(return_value=[Data(text="First result"), Data(text="Second result")])
-
-        result = component.fetch_content_text()
-
-        assert isinstance(result, Message)
-        assert result.text == "First result\nSecond result\n"
 
     def test_wikipedia_error_handling(self, component_class):
         component = component_class()

@@ -12,7 +12,6 @@ from .python_repl import PythonREPLToolComponent
 from .python_repl_core import PythonREPLComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
-from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia_api import WikipediaAPIComponent
@@ -38,7 +37,6 @@ __all__ = [
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SerpAPIComponent",
-    "SerpComponent",
     "WikidataAPIComponent",
     "WikipediaAPIComponent",
     "YfinanceToolComponent",

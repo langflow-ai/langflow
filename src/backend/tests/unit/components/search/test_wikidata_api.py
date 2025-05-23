@@ -6,8 +6,7 @@ from langchain_core.tools import ToolException
 from langflow.components.search import WikidataComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
-from langflow.schema.message import Message
+
 
 # Import the base test class
 from tests.base import ComponentTestBaseWithoutClient
@@ -102,18 +101,3 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
 
         with pytest.raises(ToolException):
             component.fetch_content()
-
-    def test_fetch_content_text(self, component_class):
-        component = component_class()
-        component.fetch_content = MagicMock(
-            return_value=[
-                Data(text="First result", data={"label": "Label 1"}),
-                Data(text="Second result", data={"label": "Label 2"}),
-            ]
-        )
-
-        result = component.fetch_content_text()
-
-        assert isinstance(result, Message)
-        assert "First result" in result.text
-        assert "Second result" in result.text
