@@ -20,6 +20,7 @@ class UpdateDataComponent(Component):
     name: str = "UpdateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
     icon = "FolderSync"
+    legacy = True
 
     inputs = [
         DataInput(

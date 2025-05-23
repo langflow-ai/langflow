@@ -10,6 +10,7 @@ class RegexExtractorComponent(Component):
     display_name = "Regex Extractor"
     description = "Extract patterns from text using regular expressions."
     icon = "regex"
+    legacy = True
 
     inputs = [
         MessageTextInput(
