@@ -95,8 +95,9 @@ test(
         // Select first action
         await page
           .locator('input[data-ref="eInput"]')
-          .nth(rowsCount + 1)
-          .click();
+          .last()
+          .scrollIntoViewIfNeeded();
+        await page.locator('input[data-ref="eInput"]').last().click();
         await page.waitForTimeout(1000);
 
         await page
@@ -107,7 +108,7 @@ test(
 
         const isLastChecked = await page
           .locator('input[data-ref="eInput"]')
-          .nth(rowsCount + 1)
+          .last()
           .isChecked();
 
         expect(isLastChecked).toBeTruthy();
