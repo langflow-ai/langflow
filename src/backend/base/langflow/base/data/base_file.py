@@ -531,19 +531,19 @@ class BaseFileComponent(Component, ABC):
                         cache_root = user_cache_dir("langflow", "langflow")
                         relative_path = os.path.relpath(str(sub_path), start=cache_root)
 
-                        async def get_filename():
+                        async def get_filename(db, relative_path):
                             async with db.with_session() as session:
                                 stmt = select(UserFile).where(UserFile.path == relative_path)
                                 result = await session.exec(stmt)
                                 file_record = result.first()
                                 if file_record:
                                     # Append the extension from the path
-                                    extension = os.path.splitext(file_record.path)[1]
+                                    extension = Path(file_record.path).suffix
                                     return file_record.name + extension
                             return None
 
-                        original_filename = asyncio.run(get_filename())
-                    except Exception:
+                        original_filename = asyncio.run(get_filename(db, relative_path))
+                    except (RuntimeError, ImportError, AttributeError):
                         original_filename = sub_path.name
 
                     new_data = Data(
@@ -678,15 +678,15 @@ class BaseFileComponent(Component, ABC):
                     file_record = result.first()
                     if file_record:
                         # Append the extension from the path
-                        extension = os.path.splitext(file_record.path)[1]
+                        extension = Path(file_record.path).suffix
                         return file_record.name + extension
                 return None
 
             original_filename = asyncio.run(get_filename())
-            if not original_filename:
-                # Fallback to the UUID-based filename if database lookup fails
-                return os.path.basename(file_path)
-            return original_filename
-        except Exception:
+            if original_filename:
+                return original_filename
+            # Fallback to the UUID-based filename if database lookup fails
+            return Path(file_path).name
+        except (OSError, RuntimeError, ImportError, AttributeError):
             # Fallback to the UUID-based filename if there's an error
-            return os.path.basename(file_path)
+            return Path(file_path).name
