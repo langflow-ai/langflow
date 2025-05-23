@@ -10,6 +10,7 @@ import {
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
+import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
@@ -27,12 +28,21 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const { data: flowsMCP } = useGetFlowsMCP({ projectId });
-  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
-  const { mutate: patchInstallMCP } = usePatchInstallMCP({
-    project_id: projectId,
-  });
+  const {
+    mutate: patchFlowsMCP,
+    isPending: isPatchingFlowsMCP,
+    isSuccess: isInstalledCursor,
+  } = usePatchFlowsMCP({ project_id: projectId });
+  const {
+    mutate: patchInstallMCP,
+    isPending: isPatchingInstallMCP,
+    isSuccess: isInstalledClaude,
+  } = usePatchInstallMCP({ project_id: projectId });
+
+  const [selectedMode, setSelectedMode] = useState("Auto install");
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
@@ -116,6 +126,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       });
   };
 
+  const [installedCursor, setInstalledCursor] = useState(false);
+  const [installedClaude, setInstalledClaude] = useState(false);
+  const [loadingMCP, setLoadingMCP] = useState("");
+
   return (
     <div>
       <div className="pb-2 text-sm font-medium" data-testid="mcp-server-title">
@@ -165,82 +179,170 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             />
           </div>
         </div>
-        <div className="w-2/3 pl-4">
-          <div className="overflow-hidden rounded-lg border border-border">
-            <div className="flex flex-row gap-2 p-2">
-              <Button
-                size="sm"
-                onClick={() => patchInstallMCP({ client: "cursor" })}
-              >
-                Install on Cursor
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => patchInstallMCP({ client: "claude" })}
-              >
-                Install on Claude
-              </Button>
-            </div>
-            <SyntaxHighlighter
-              style={syntaxHighlighterStyle}
-              CodeTag={({ children }) => (
-                <div className="relative bg-background text-[13px]">
-                  <div className="absolute right-4 top-4 flex items-center gap-6">
-                    {!isAutoLogin && (
-                      <Button
-                        unstyled
-                        className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-                        disabled={apiKey !== ""}
-                        loading={isGeneratingApiKey}
-                        onClick={generateApiKey}
-                      >
-                        <ForwardedIconComponent
-                          name={"key"}
-                          className="h-4 w-4"
-                          aria-hidden="true"
-                        />
-                        <span>
-                          {apiKey === ""
-                            ? "Generate API key"
-                            : "API key generated"}
-                        </span>
-                      </Button>
-                    )}
-                    <Button
-                      unstyled
-                      size="icon"
-                      className={cn(
-                        "h-4 w-4 text-muted-foreground hover:text-foreground",
-                      )}
-                      onClick={copyToClipboard}
-                    >
-                      <ForwardedIconComponent
-                        name={isCopied ? "check" : "copy"}
-                        className="h-4 w-4"
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </div>
-                  <div className="overflow-x-auto p-4">{children}</div>
-                </div>
+        <div className="flex w-2/3 flex-col gap-4 pl-4">
+          <div className="flex flex-col">
+            <div className="flex flex-row justify-start border-b border-border">
+              {[{ name: "Auto install" }, { name: "JSON" }].map(
+                (item, index) => (
+                  <Button
+                    unstyled
+                    key={item.name}
+                    className={`flex h-8 flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent font-medium ${
+                      selectedMode === item.name
+                        ? "border-b-2 border-black dark:border-b-white"
+                        : "text-muted-foreground hover:text-foreground"
+                    } px-3 py-2 text-[13px]`}
+                    onClick={() => setSelectedMode(item.name)}
+                  >
+                    {item.name}
+                  </Button>
+                ),
               )}
-              language="json"
-            >
-              {MCP_SERVER_JSON}
-            </SyntaxHighlighter>
+            </div>
           </div>
-          <div className="p-2 text-mmd text-muted-foreground">
-            Add this config to your client of choice. Need help? See the{" "}
-            <a
-              href={MCP_SERVER_TUTORIAL_LINK}
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent-pink-foreground"
-            >
-              setup guide
-            </a>
-            .
-          </div>
+          {selectedMode === "JSON" && (
+            <>
+              <div className="overflow-hidden rounded-lg border border-border">
+                <SyntaxHighlighter
+                  style={syntaxHighlighterStyle}
+                  CodeTag={({ children }) => (
+                    <div className="relative bg-background text-[13px]">
+                      <div className="absolute right-4 top-4 flex items-center gap-6">
+                        {!isAutoLogin && (
+                          <Button
+                            unstyled
+                            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+                            disabled={apiKey !== ""}
+                            loading={isGeneratingApiKey}
+                            onClick={generateApiKey}
+                          >
+                            <ForwardedIconComponent
+                              name={"key"}
+                              className="h-4 w-4"
+                              aria-hidden="true"
+                            />
+                            <span>
+                              {apiKey === ""
+                                ? "Generate API key"
+                                : "API key generated"}
+                            </span>
+                          </Button>
+                        )}
+                        <Button
+                          unstyled
+                          size="icon"
+                          className={cn(
+                            "h-4 w-4 text-muted-foreground hover:text-foreground",
+                          )}
+                          onClick={copyToClipboard}
+                        >
+                          <ForwardedIconComponent
+                            name={isCopied ? "check" : "copy"}
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
+                        </Button>
+                      </div>
+                      <div className="overflow-x-auto p-4">{children}</div>
+                    </div>
+                  )}
+                  language="json"
+                >
+                  {MCP_SERVER_JSON}
+                </SyntaxHighlighter>
+              </div>
+              <div className="px-2 text-mmd text-muted-foreground">
+                Add this config to your client of choice. Need help? See the{" "}
+                <a
+                  href={MCP_SERVER_TUTORIAL_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent-pink-foreground"
+                >
+                  setup guide
+                </a>
+                .
+              </div>
+            </>
+          )}
+          {selectedMode === "Auto install" && (
+            <div className="p-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm font-medium">
+                    <ForwardedIconComponent
+                      name="Cursor"
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    />
+                    Cursor
+                  </div>
+                  <Button
+                    size="iconMd"
+                    variant="secondary"
+                    loading={loadingMCP === "cursor"}
+                    onClick={() => {
+                      setLoadingMCP("cursor");
+                      patchInstallMCP(
+                        { client: "cursor" },
+                        {
+                          onSuccess: () => {
+                            setSuccessData({
+                              title:
+                                "MCP Server installed successfully on Cursor",
+                            });
+                            setInstalledCursor(true);
+                            setLoadingMCP("");
+                          },
+                        },
+                      );
+                    }}
+                  >
+                    <ForwardedIconComponent
+                      name={installedCursor ? "Check" : "Plus"}
+                      className="h-4 w-4"
+                    />
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm font-medium">
+                    <ForwardedIconComponent
+                      name="Claude"
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    />
+                    Claude
+                  </div>
+                  <Button
+                    size="iconMd"
+                    variant="secondary"
+                    loading={loadingMCP === "claude"}
+                    onClick={() => {
+                      setLoadingMCP("claude");
+                      patchInstallMCP(
+                        { client: "claude" },
+                        {
+                          onSuccess: () => {
+                            setSuccessData({
+                              title:
+                                "MCP Server installed successfully on Claude",
+                            });
+                            setLoadingMCP("");
+                            setInstalledClaude(true);
+                          },
+                        },
+                      );
+                    }}
+                  >
+                    <ForwardedIconComponent
+                      name={installedClaude ? "Check" : "Plus"}
+                      className="h-4 w-4"
+                    />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
