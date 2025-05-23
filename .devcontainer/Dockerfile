@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     less \
     net-tools \
     sudo \
+    libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create the vscode user and group with the expected UID and GID (1000)
