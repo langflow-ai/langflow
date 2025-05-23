@@ -65,6 +65,7 @@ class MCPToolsComponent(Component):
     tools: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
+    _prompt_cache: dict = {}  # Cache for prompts
     default_keys: list[str] = [
         "code",
         "_type",
@@ -411,7 +412,10 @@ class MCPToolsComponent(Component):
             raise ValueError(msg) from e
 
     async def build_prompt_output(self) -> Message:
-        return Message()
+        if self.prompt_name != "":
+            prompt = self._prompt_cache[self.prompt_name]
+            return Message(text=prompt)
+        return Message(error=True, text="You must select a prompt")
 
     async def build_tool_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
@@ -468,6 +472,11 @@ class MCPToolsComponent(Component):
                 if not self.stdio_client.session:
                     try:
                         self.tools = await self.stdio_client.connect_to_server(command, env)
+                        prompts = await self.stdio_client.session.list_prompts()
+                        print(f"prompts: {prompts}")
+                        for prompt in prompts:
+                            print(f"prompt: {prompt}")
+                            #self._prompt_cache[prompt[1].name] = prompt
                     except ValueError as e:
                         msg = f"Error connecting to MCP server: {e}"
                         logger.exception(msg)
