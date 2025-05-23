@@ -11,12 +11,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page.waitForSelector('[data-testid="toolsDuckDuckGo Search"]', {
+    await page.waitForSelector('[data-testid="searchDuckDuckGo Search"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("toolsDuckDuckGo Search")
+      .getByTestId("searchDuckDuckGo Search")
       .hover()
       .then(async () => {
         await page
@@ -44,7 +44,7 @@ test(
         ) ?? false;
 
       await page
-        .getByTestId("output-inspection-data-duckduckgosearchcomponent")
+        .getByTestId("output-inspection-dataframe-duckduckgosearchcomponent")
         .first()
         .click();
 

@@ -8,10 +8,10 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.custom import Component
+from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 
 class YahooFinanceMethod(Enum):
@@ -77,21 +77,11 @@ to access financial data and market information from Yahoo Finance."""
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Text", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
-    def run_model(self) -> list[Data]:
-        return self.fetch_content()
-
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = ""
-        for item in data:
-            result_string += item.text + "\n"
-        self.status = result_string
-        return Message(text=result_string)
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
 
     def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:
         try:
@@ -142,11 +132,6 @@ to access financial data and market information from Yahoo Finance."""
 
         return data_list
 
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Yahoo search results to a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the search results.
-        """
+    def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return DataFrame(data)
+        return data_to_dataframe(data)

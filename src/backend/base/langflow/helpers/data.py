@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
 
@@ -139,3 +139,17 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
 
     formated_messages = [template.format(data=message.model_dump(), **message.model_dump()) for message in messages_]
     return "\n".join(formated_messages)
+
+
+def data_to_dataframe(data: Data | list[Data]) -> DataFrame:
+    """Converts a Data object or a list of Data objects to a DataFrame.
+
+    Args:
+        data (Data | list[Data]): The Data object or list of Data objects to convert.
+
+    Returns:
+        DataFrame: The converted DataFrame.
+    """
+    if isinstance(data, Data):
+        return DataFrame([data.data])
+    return DataFrame(data=[d.data for d in data])

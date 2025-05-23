@@ -5,6 +5,7 @@ from xml.etree.ElementTree import Element
 from defusedxml.ElementTree import fromstring
 
 from langflow.custom import Component
+from langflow.helpers.data import data_to_dataframe
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data, DataFrame
 
@@ -37,8 +38,7 @@ class ArXivComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="search_papers"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="search_papers_dataframe"),
     ]
 
     def build_query_url(self) -> str:
@@ -105,6 +105,9 @@ class ArXivComponent(Component):
         cat = element.find("arxiv:primary_category", ns)
         return cat.get("term") if cat is not None else None
 
+    def run_model(self) -> DataFrame:
+        return self.search_papers_dataframe()
+
     def search_papers(self) -> list[Data]:
         """Search arXiv and return results."""
         try:
@@ -150,13 +153,11 @@ class ArXivComponent(Component):
         else:
             return results
 
-    def as_dataframe(self) -> DataFrame:
+    def search_papers_dataframe(self) -> DataFrame:
         """Convert the Arxiv search results to a DataFrame.
 
         Returns:
             DataFrame: A DataFrame containing the search results.
         """
         data = self.search_papers()
-        if isinstance(data, list):
-            return DataFrame(data=[d.data for d in data])
-        return DataFrame(data=[data.data])
+        return data_to_dataframe(data)

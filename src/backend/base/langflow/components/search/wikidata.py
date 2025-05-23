@@ -3,10 +3,9 @@ from httpx import HTTPError
 from langchain_core.tools import ToolException
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
+from langflow.helpers.data import data_to_dataframe
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
-from langflow.schema.message import Message
+from langflow.schema import Data, DataFrame
 
 
 class WikidataComponent(Component):
@@ -25,9 +24,11 @@ class WikidataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Message", name="text", method="fetch_content_text"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
+
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
 
     def fetch_content(self) -> list[Data]:
         try:
@@ -79,8 +80,6 @@ class WikidataComponent(Component):
         else:
             return data
 
-    def fetch_content_text(self) -> Message:
+    def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        result_string = data_to_text("{text}", data)
-        self.status = result_string
-        return Message(text=result_string)
+        return data_to_dataframe(data)

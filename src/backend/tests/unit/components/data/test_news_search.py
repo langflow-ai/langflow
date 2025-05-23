@@ -50,21 +50,21 @@ class TestNewsSearchComponent(ComponentTestBaseWithoutClient):
             component = NewsSearchComponent(query="OpenAI")
             result = component.search_news()
             assert isinstance(result, DataFrame)
-            df = result
-            assert len(df) == 2
-            assert list(df.columns) == ["title", "link", "published", "summary"]
-            assert df.iloc[0]["title"] == "Test News 1"
-            assert df.iloc[1]["title"] == "Test News 2"
+            news_results_df = result
+            assert len(news_results_df) == 2
+            assert list(news_results_df.columns) == ["title", "link", "published", "summary"]
+            assert news_results_df.iloc[0]["title"] == "Test News 1"
+            assert news_results_df.iloc[1]["title"] == "Test News 2"
 
     def test_news_search_error(self):
         with patch("requests.get", side_effect=requests.RequestException("Network error")):
             component = NewsSearchComponent(query="OpenAI")
             result = component.search_news()
             assert isinstance(result, DataFrame)
-            df = result
-            assert len(df) == 1
-            assert df.iloc[0]["title"] == "Error"
-            assert "Network error" in df.iloc[0]["summary"]
+            news_results_df = result
+            assert len(news_results_df) == 1
+            assert news_results_df.iloc[0]["title"] == "Error"
+            assert "Network error" in news_results_df.iloc[0]["summary"]
 
     def test_empty_news_results(self):
         # Mock empty RSS feed
@@ -83,6 +83,6 @@ class TestNewsSearchComponent(ComponentTestBaseWithoutClient):
             component = NewsSearchComponent(query="OpenAI")
             result = component.search_news()
             assert isinstance(result, DataFrame)
-            df = result
-            assert len(df) == 1
-            assert df.iloc[0]["title"] == "No articles found"
+            news_results_df = result
+            assert len(news_results_df) == 1
+            assert news_results_df.iloc[0]["title"] == "No articles found"
