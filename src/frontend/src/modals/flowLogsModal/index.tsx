@@ -3,7 +3,6 @@ import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { FlowSettingsPropsType } from "@/types/components";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
@@ -11,10 +10,12 @@ import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
-  open,
-  setOpen,
-}: FlowSettingsPropsType): JSX.Element {
+  children,
+}: {
+  children: React.ReactNode;
+}): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const [open, setOpen] = useState(false);
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -60,6 +61,7 @@ export default function FlowLogsModal({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header description="Inspect component executions.">
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
