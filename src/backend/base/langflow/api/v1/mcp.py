@@ -26,7 +26,6 @@ from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
 from langflow.services.deps import (
-    get_db_service,
     get_settings_service,
     get_storage_service,
     session_scope,
@@ -96,7 +95,6 @@ async def handle_list_prompts():
 async def handle_list_resources():
     resources = []
     try:
-        db_service = get_db_service()
         storage_service = get_storage_service()
         settings_service = get_settings_service()
 
@@ -106,7 +104,7 @@ async def handle_list_resources():
 
         base_url = f"http://{host}:{port}".rstrip("/")
 
-        async with db_service.with_session() as session:
+        async with session_scope() as session:
             flows = (await session.exec(select(Flow))).all()
 
             for flow in flows:
@@ -176,8 +174,7 @@ async def handle_read_resource(uri: str) -> bytes:
 async def handle_list_tools():
     tools = []
     try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
+        async with session_scope() as session:
             flows = (await session.exec(select(Flow))).all()
 
             for flow in flows:
