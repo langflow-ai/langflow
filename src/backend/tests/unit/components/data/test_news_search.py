@@ -85,4 +85,4 @@ class TestNewsSearchComponent(ComponentTestBaseWithoutClient):
             assert isinstance(result, DataFrame)
             df = result
             assert len(df) == 1
-            assert df.iloc[0]["title"] == "No articles found" 
+            assert df.iloc[0]["title"] == "No articles found"
