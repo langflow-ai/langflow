@@ -131,8 +131,8 @@ export default function InputFileComponent({
                 file_path: isList ? filePaths : filePaths[0],
                 original_filename: isList ? fileNames : fileNames[0],
                 data: {
-                  original_filename: isList ? fileNames : fileNames[0]
-                }
+                  original_filename: isList ? fileNames : fileNames[0],
+                },
               });
             }
           })
@@ -235,7 +235,8 @@ export default function InputFileComponent({
                               (file) =>
                                 files.find((f) => f.path === file)?.name,
                             )
-                          : (files.find((f) => f.path == newSelectedFiles[0])?.name ?? ""),
+                          : (files.find((f) => f.path == newSelectedFiles[0])
+                              ?.name ?? ""),
                       });
                     }}
                   />
@@ -257,7 +258,8 @@ export default function InputFileComponent({
                         ? selectedFiles.map(
                             (file) => files.find((f) => f.path === file)?.name,
                           )
-                        : (files.find((f) => f.path == selectedFiles[0])?.name ?? ""),
+                        : (files.find((f) => f.path == selectedFiles[0])
+                            ?.name ?? ""),
                     });
                   }}
                   disabled={isDisabled}
