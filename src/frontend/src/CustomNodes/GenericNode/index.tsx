@@ -30,7 +30,6 @@ import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
-import NodeStatus from "./components/NodeStatus";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
@@ -415,37 +414,31 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap p-4 leading-5",
+            "grid text-wrap leading-5",
             showNode ? "border-b" : "relative",
-            hasDescription && "gap-3",
           )}
         >
           <div
             data-testid={"div-generic-node"}
-            className={
-              !showNode
-                ? ""
-                : "generic-node-div-title justify-between rounded-t-lg"
-            }
+            className={cn(
+              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
+            )}
           >
             <div
-              className={"generic-node-title-arrangement"}
+              className="flex-max-width items-center overflow-hidden"
               data-testid="generic-node-title-arrangement"
             >
               <MemoizedNodeIcon
                 dataType={data.type}
-                showNode={showNode}
                 icon={data.node?.icon}
                 isGroup={!!data.node?.flow}
               />
-              <div className="generic-node-tooltip-div truncate">
+              <div className="ml-3 flex flex-1 overflow-hidden">
                 <MemoizedNodeName
                   display_name={data.node?.display_name}
                   nodeId={data.id}
                   selected={selected}
                   showNode={showNode}
-                  validationStatus={validationStatus}
-                  isOutdated={isOutdated}
                   beta={data.node?.beta || false}
                   editNameDescription={editNameDescription}
                   toggleEditNameDescription={toggleEditNameDescription}
@@ -453,9 +446,9 @@ function GenericNode({
                 />
               </div>
             </div>
-            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
-              {!showNode && (
-                <>
+            {!showNode && (
+              <>
+                <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
                   <MemoizedRenderInputParameters
                     data={data}
                     types={types}
@@ -474,9 +467,9 @@ function GenericNode({
                     isToolMode={isToolMode}
                     showHiddenOutputs={showHiddenOutputs}
                   />
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
             <MemoizedNodeStatus
               data={data}
               frozen={data.node?.frozen}
@@ -493,8 +486,8 @@ function GenericNode({
               getValidationStatus={getValidationStatus}
             />
           </div>
-          {showNode && (
-            <div>
+          {showNode && (hasDescription || editNameDescription) && (
+            <div className="px-4 pb-3">
               <MemoizedNodeDescription
                 description={data.node?.description}
                 mdClassName={"dark:prose-invert"}

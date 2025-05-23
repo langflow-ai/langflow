@@ -85,7 +85,7 @@ export function ContentBlockDisplay({
                   name={headerIcon}
                   className={cn(
                     "h-4 w-4",
-                    state !== "partial" && "text-status-green",
+                    state !== "partial" && "text-accent-emerald-foreground",
                   )}
                   strokeWidth={1.5}
                 />

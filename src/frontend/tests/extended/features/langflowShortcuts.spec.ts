@@ -26,7 +26,7 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
+    await page.getByTestId("fit_view").click();
 
     await adjustScreenView(page);
     await page.getByTestId("generic-node-title-arrangement").click();
