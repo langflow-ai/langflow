@@ -303,6 +303,8 @@ export type InputProps = {
   description: string | null;
   endpointName?: string | null;
   maxLength?: number;
+  descriptionMaxLength?: number;
+  minLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
   setEndpointName?: (endpointName: string) => void;
@@ -736,7 +738,6 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
-  details?: boolean;
   flowData?: FlowType;
 };
 

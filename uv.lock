@@ -2251,15 +2251,16 @@ wheels = [
 
 [[package]]
 name = "fastapi-pagination"
-version = "0.12.34"
+version = "0.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "fastapi" },
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/4d/6e695098ce33b3394cf26b335ca4ec6407f9421cfdf9ad6a38775580db21/fastapi_pagination-0.12.34.tar.gz", hash = "sha256:05ee8c0bc572072160f7f30900bfd87869e1880c87bc5797922fec2e49e65f11", size = 26901, upload-time = "2024-12-21T15:38:25.842Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/9c/a00e8916ca700fe7278cc4861e6958bcbd174a1157b3b4133c583dc5576c/fastapi_pagination-0.13.1.tar.gz", hash = "sha256:f7ca4f4bdcd1a82eb8ee6e5788d9c158e913bba2e013c261946267ee9d79143a", size = 542600, upload-time = "2025-04-24T16:51:30.813Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/f3/a0a1e7efd88dba07743665d1f6f88008c9a1e174458581ecaa53b8699a7c/fastapi_pagination-0.12.34-py3-none-any.whl", hash = "sha256:089d1078aae1784395b4dbd923d0c8246641ddcc291c5ec6d92a30edb92ecbdd", size = 43308, upload-time = "2024-12-21T15:38:23.493Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/16/c27cd97f9030215533447855c7169c407bd2a362c5e3239de35a8fb40265/fastapi_pagination-0.13.1-py3-none-any.whl", hash = "sha256:36eebcc7dd388d64c095dafbf02838c462e73180115ad8b72f6d2d5baadb6c62", size = 49636, upload-time = "2025-04-24T16:51:29.504Z" },
 ]
 
 [[package]]
@@ -2560,6 +2561,20 @@ wheels = [
 ]
 
 [[package]]
+name = "gassist"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama" },
+    { name = "flask" },
+    { name = "flask-cors" },
+    { name = "tqdm" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/2e/f79632d7300874f7f0e60b61a6ab22455a245e1556116a1729542a77b0da/gassist-0.0.1-py3-none-any.whl", hash = "sha256:bb0fac74b453153a6c74b2db40a14fdde7879cbc10ec692ed170e576c8e2b6aa", size = 23819, upload-time = "2025-05-09T18:22:23.609Z" },
+]
+
+[[package]]
 name = "geomet"
 version = "0.2.1.post1"
 source = { registry = "https://pypi.org/simple" }
@@ -2689,6 +2704,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/92/ce/6cc6e30b66c147128d7662cf4909fe038b81792d2617a748dfe4ee0ae98a/geventhttpclient-2.3.3-pp310-pypy310_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:447fc2d49a41449684154c12c03ab80176a413e9810d974363a061b71bdbf5a0", size = 58540, upload-time = "2024-11-24T11:42:19.324Z" },
     { url = "https://files.pythonhosted.org/packages/7e/f4/5214ea44055c82d92adaaaddb19d2791addd3ce60af863aec03384e7c88a/geventhttpclient-2.3.3-pp310-pypy310_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4598c2aa14c866a10a07a2944e2c212f53d0c337ce211336ad68ae8243646216", size = 54445, upload-time = "2024-11-24T11:42:20.749Z" },
     { url = "https://files.pythonhosted.org/packages/06/1d/f65b4ac42cce6cef707ace606bbdc1142aa0f3863ad16fa615004b9461d7/geventhttpclient-2.3.3-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:69d2bd7ab7f94a6c73325f4b88fd07b0d5f4865672ed7a519f2d896949353761", size = 48838, upload-time = "2024-11-24T11:42:21.903Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/35/fd3d2f22aac238c314e4db0317634288f4c9f01b3aa0c6f36e2584b7ad2c/geventhttpclient-2.3.3-pp311-pypy311_pp73-macosx_10_15_x86_64.whl", hash = "sha256:45a3f7e3531dd2650f5bb840ed11ce77d0eeb45d0f4c9cd6985eb805e17490e6", size = 51477, upload-time = "2025-05-15T15:09:33.849Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/4c/f64bb9cda9474c8e70a59a7aebe928e7044aaa660b81492bc783b53ea6e7/geventhttpclient-2.3.3-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:73b427e0ea8c2750ee05980196893287bfc9f2a155a282c0f248b472ea7ae3e7", size = 50731, upload-time = "2025-05-15T15:09:35.787Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/88/0a3e18cb7d73fe4110e6b75aa43361722a309276dc7cb6461594ea4f490b/geventhttpclient-2.3.3-pp311-pypy311_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c2959ef84271e4fa646c3dbaad9e6f2912bf54dcdfefa5999c2ef7c927d92127", size = 55171, upload-time = "2025-05-15T15:09:37.173Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/26/057600ba3ef9e2ca5fe9527dec4d29695cf986185b862b2947f3cc8d97b7/geventhttpclient-2.3.3-pp311-pypy311_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0a800fcb8e53a8f4a7c02b4b403d2325a16cad63a877e57bd603aa50bf0e475b", size = 59515, upload-time = "2025-05-15T15:09:38.604Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/e5/8e2fe8f3e976f11859e325b2151a7eea49677e8898229215fa8c788fe539/geventhttpclient-2.3.3-pp311-pypy311_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:528321e9aab686435ba09cc6ff90f12e577ace79762f74831ec2265eeab624a8", size = 55416, upload-time = "2025-05-15T15:09:39.553Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/68/ddfe93ab3142b16f84c31996ed01b76a32fe7e2df37104b456c1d68e3de9/geventhttpclient-2.3.3-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:034be44ff3318359e3c678cb5c4ed13efd69aeb558f2981a32bd3e3fb5355700", size = 49659, upload-time = "2025-05-15T15:09:40.993Z" },
 ]
 
 [[package]]
@@ -4562,7 +4583,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.4.1"
+version = "1.4.2"
 source = { editable = "." }
 dependencies = [
     { name = "ag2" },
@@ -4587,6 +4608,7 @@ dependencies = [
     { name = "fake-useragent" },
     { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "fastavro", version = "1.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
@@ -4660,6 +4682,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["aiosqlite"] },
     { name = "sseclient-py" },
     { name = "supabase" },
+    { name = "twelvelabs" },
     { name = "types-cachetools" },
     { name = "upstash-vector" },
     { name = "uv" },
@@ -4778,6 +4801,7 @@ requires-dist = [
     { name = "fastavro", marker = "python_full_version < '3.13'", specifier = "==1.9.7" },
     { name = "fastavro", marker = "python_full_version >= '3.13'", specifier = ">=1.9.8" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
+    { name = "gassist", marker = "sys_platform == 'win32'", specifier = ">=0.0.1" },
     { name = "gitpython", specifier = "==3.1.43" },
     { name = "google-api-python-client", specifier = "==2.154.0" },
     { name = "google-search-results", specifier = ">=2.4.1,<3.0.0" },
@@ -4857,6 +4881,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'" },
     { name = "sseclient-py", specifier = "==1.8.0" },
     { name = "supabase", specifier = "==2.6.0" },
+    { name = "twelvelabs", specifier = ">=0.4.7" },
     { name = "types-cachetools", specifier = "==5.5.0.20240820" },
     { name = "upstash-vector", specifier = "==0.6.0" },
     { name = "uv", specifier = ">=0.5.7" },
@@ -4920,7 +4945,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.4.1"
+version = "0.4.2"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -5082,7 +5107,7 @@ requires-dist = [
     { name = "elevenlabs", specifier = ">=1.54.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
     { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
-    { name = "fastapi-pagination", specifier = ">=0.12.29,<1.0.0" },
+    { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
     { name = "filelock", specifier = ">=3.15.4,<4.0.0" },
     { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
     { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
@@ -10137,6 +10162,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/aa/b9/6e3ecf9617ab778e2ca3fb1ed1dfb6a739d8ca6d8d9ce09c34a080bd6ab5/trustcall-0.0.38.tar.gz", hash = "sha256:318d451737d88188254c468ae813d16b7c7b1d19da17d402a52629a0198f4646", size = 35973, upload-time = "2025-03-06T05:00:11.721Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/50/1e/36dafe25a5edbfab01f92561e99da14c42d4575d5a628369137098af149f/trustcall-0.0.38-py3-none-any.whl", hash = "sha256:90d5441f792059a6d5a08f90d306818363be7aa0f096002e30cfbcceee706351", size = 26554, upload-time = "2025-03-06T05:00:09.881Z" },
+]
+
+[[package]]
+name = "twelvelabs"
+version = "0.4.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/58/d2/0fbd7d147d28af2a5319cd34ec08029eb7e5c5276c347d8f3a63e0837202/twelvelabs-0.4.7.tar.gz", hash = "sha256:95abfddb287b986286cbd78fea3b7e0560cd003c2c0fd7296a2e1f4d322d84d8", size = 28764, upload-time = "2025-04-15T04:13:14.169Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/53/6fe197b3281c346150fc5cffffa63d234408c3ce5b78b506df855b897554/twelvelabs-0.4.7-py3-none-any.whl", hash = "sha256:08b88f724169dcadc8499fffc4ccd447c2c9a855b0c1d1ff2e97d72a43006af1", size = 32241, upload-time = "2025-04-15T04:13:12.924Z" },
 ]
 
 [[package]]

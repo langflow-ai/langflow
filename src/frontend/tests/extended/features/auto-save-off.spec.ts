@@ -47,21 +47,6 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    expect(await page.getByText("Saved").last().isVisible()).toBeTruthy();
-
-    await page
-      .getByText("Saved")
-      .first()
-      .hover()
-      .then(async () => {
-        await expect(
-          page.getByText("Auto-saving is disabled").nth(0),
-        ).toBeVisible({ timeout: 5000 });
-        await expect(
-          page.getByText("Enable auto-saving to avoid losing progress.").nth(0),
-        ).toBeVisible({ timeout: 3000 });
-      });
-
     expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 
     await page.waitForSelector("text=loading", {
@@ -136,7 +121,7 @@ test(
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA")).toBeVisible({
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
       timeout: 5000,
     });
 

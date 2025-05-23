@@ -17,6 +17,10 @@ class NVIDIAModelComponent(LCModelComponent):
     icon = "NVIDIA"
 
     try:
+        import warnings
+
+        # Suppresses repeated warnings about NIM key in langchain_nvidia_ai_endpoints==0.3.8
+        warnings.filterwarnings("ignore", category=UserWarning, module="langchain_nvidia_ai_endpoints._common")
         from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
         all_models = ChatNVIDIA().get_available_models()

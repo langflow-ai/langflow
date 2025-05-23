@@ -321,18 +321,6 @@
   .generic-node-div {
     @apply flex flex-col justify-center bg-background transition-all;
   }
-  .generic-node-div-title {
-    @apply flex flex-1 items-center gap-2 overflow-hidden;
-  }
-  .generic-node-title-arrangement {
-    @apply flex-max-width items-center truncate;
-  }
-  .generic-node-icon {
-    @apply h-12 w-12 rounded;
-  }
-  .generic-node-tooltip-div {
-    @apply ml-2 flex w-full truncate;
-  }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
   }
@@ -546,7 +534,7 @@
     @apply flex justify-between;
   }
   .edit-flow-span {
-    @apply ml-10 animate-pulse text-status-red;
+    @apply ml-8 text-mmd font-normal text-status-red;
   }
 
   .float-component-pointer {
@@ -561,12 +549,6 @@
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
 
-  .header-menu-bar-display-2 {
-    @apply flex cursor-pointer items-center gap-2;
-  }
-  .header-menu-flow-name-2 {
-    @apply flex-1;
-  }
   .header-menu-flow-name {
     @apply flex-1 truncate;
   }
@@ -1189,23 +1171,7 @@
   }
 
   .button-run-bg {
-    @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
-  }
-
-  .play-button-icon {
-    @apply h-4 w-4 transition-all group-hover/node:opacity-100;
-  }
-
-  .lucide-icon {
-    @apply h-5 w-5;
-  }
-
-  .bg-lucide-icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-md bg-muted p-[6px];
-  }
-
-  .integration-icon {
-    @apply h-8 w-8 rounded-md;
+    @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm bg-transparent hover:bg-muted;
   }
 
   .show-node-icon {
@@ -1289,7 +1255,7 @@
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
   }
 
-  .no-focus-visible{
+  .no-focus-visible {
     @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
     --tw-ring-offset-width: none !important;
     --tw-ring-shadow: none !important;
