@@ -73,7 +73,7 @@ const response = await client.flow(flowId).run(input);
 ```
 
 3. This example uses the minimum values for sending a message and running your flow on a Langflow server, with no API keys.
-Replace `BASE_URL` and `flowId` with values from your deployment.
+Replace `baseUrl` and `flowId` with values from your deployment.
 The `input` string is the message you're sending to your flow.
 <Tabs>
 <TabItem value="TypeScript" label="TypeScript" default>
@@ -153,19 +153,19 @@ for await (const event of response) {
 }
 ```
 4. Run the completed TypeScript application to call your server with `tweaks` and `session_id`, and stream the response back.
-
+Replace `baseUrl` and `flowId` with values from your deployment.
 <Tabs>
 <TabItem value="TypeScript" label="TypeScript" default>
 
 ```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 
-const baseUrl = "http://127.0.0.1:7861";
+const baseUrl = "http://127.0.0.1:7860";
 const client = new LangflowClient({ baseUrl });
 
 async function runFlow() {
-    const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf"; // Replace with your actual flow ID
-    const input = "Is anyone there?"; // Replace with your actual input
+    const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
+    const input = "Is anyone there?";
     const tweaks = { model_name: "gpt-4o-mini" };
     const session_id = "test-session";
 
