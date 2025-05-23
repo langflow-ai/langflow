@@ -1,6 +1,5 @@
 import re
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
@@ -8,9 +7,9 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.data import data_to_text, safe_convert
+from langflow.helpers.data import safe_convert
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
-from langflow.schema import DataFrame, Message
+from langflow.schema import DataFrame
 from langflow.services.deps import get_settings_service
 
 # Constants
@@ -155,7 +154,7 @@ class URLComponent(Component):
             value=True,
             required=False,
             advanced=True,
-        )
+        ),
     ]
 
     outputs = [
@@ -283,7 +282,6 @@ class URLComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
         return data
-
 
     def fetch_content(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
