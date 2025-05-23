@@ -43,6 +43,12 @@ class ChatOllamaComponent(LCModelComponent):
             refresh_button=True,
             real_time_refresh=True,
         ),
+        MessageTextInput(
+            name="external_model_name",
+            display_name="External Model Name",
+            info="Provide an external model name to override the dropdown selection.",
+            value="",
+        ),
         SliderInput(
             name="temperature",
             display_name="Temperature",
@@ -155,10 +161,18 @@ class ChatOllamaComponent(LCModelComponent):
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
 
+        # Determine which model name to use
+        # If external_model_name is provided and not empty, use it
+        model_to_use = (
+            self.external_model_name
+            if hasattr(self, "external_model_name") and self.external_model_name
+            else self.model_name
+        )
+
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": self.base_url,
-            "model": self.model_name,
+            "model": model_to_use,
             "mirostat": mirostat_value,
             "format": self.format,
             "metadata": self.metadata,
