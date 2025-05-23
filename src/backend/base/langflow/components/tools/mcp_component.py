@@ -476,7 +476,7 @@ class MCPToolsComponent(Component):
                         print(f"prompts: {prompts}")
                         for prompt in prompts:
                             print(f"prompt: {prompt}")
-                            #self._prompt_cache[prompt[1].name] = prompt
+                            # self._prompt_cache[prompt[1].name] = prompt
                     except ValueError as e:
                         msg = f"Error connecting to MCP server: {e}"
                         logger.exception(msg)
