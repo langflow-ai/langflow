@@ -27,6 +27,7 @@ export default function InputFileComponent({
   disabled,
   fileTypes,
   isList,
+  tempFile = true,
   editNode = false,
   id,
 }: InputProps<string, FileComponentType>): JSX.Element {
