@@ -12,7 +12,6 @@ from .python_repl import PythonREPLToolComponent
 from .python_repl_core import PythonREPLComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
-from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
 from .tavily_extract import TavilyExtractComponent
 from .tavily_search import TavilySearchComponent
@@ -41,7 +40,6 @@ __all__ = [
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SerpAPIComponent",
-    "SerpComponent",
     "TavilyExtractComponent",
     "TavilySearchComponent",
     "TavilySearchToolComponent",
