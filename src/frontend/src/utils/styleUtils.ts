@@ -229,8 +229,10 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   {
     display_name: "Googlecalendar",
     name: "googlecalendar",
@@ -327,6 +329,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
   //Integration Icons
+  Outlook: "Outlook",
   AIML: "AI/ML",
   AgentQL: "AgentQL",
   AirbyteJSONLoader: "Airbyte",
