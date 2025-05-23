@@ -185,8 +185,7 @@ runFlow().catch(console.error);
 </TabItem>
 <TabItem value="Response" label="Response">
 
-```json
-// this response is abbreviated for clarity
+```text
 {
   event: 'add_message',
   data: {
@@ -216,22 +215,45 @@ runFlow().catch(console.error);
     duration: null
   }
 }
-
-
 {
   event: 'token',
   data: {
-    chunk: '',
+    chunk: 'Absolutely',
     id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
-    timestamp: '2025-05-23 15:52:49 UTC'
+    timestamp: '2025-05-23 15:52:48 UTC'
   }
 }
+{
+  event: 'token',
+  data: {
+    chunk: ',',
+    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+    timestamp: '2025-05-23 15:52:48 UTC'
+  }
+}
+{
+  event: 'token',
+  data: {
+    chunk: " I'm",
+    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+    timestamp: '2025-05-23 15:52:48 UTC'
+  }
+}
+{
+  event: 'token',
+  data: {
+    chunk: ' here',
+    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+    timestamp: '2025-05-23 15:52:48 UTC'
+  }
+}
+
+// this response is abbreviated
 
 {
   event: 'end',
   data: { result: { session_id: 'test-session', outputs: [Array] } }
 }
 ```
-
 </TabItem>
 </Tabs>
