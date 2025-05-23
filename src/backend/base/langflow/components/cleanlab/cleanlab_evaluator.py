@@ -1,17 +1,17 @@
+from cleanlab_tlm import TLM
+
 from langflow.custom import Component
 from langflow.io import (
+    DropdownInput,
     MessageTextInput,
     Output,
     SecretStrInput,
-    DropdownInput,
 )
 from langflow.schema.message import Message
-from cleanlab_tlm import TLM
 
 
 class CleanlabEvaluator(Component):
-    """
-    A component that evaluates the trustworthiness of LLM responses using Cleanlab.
+    """A component that evaluates the trustworthiness of LLM responses using Cleanlab.
 
     This component takes a prompt and response pair, along with optional system instructions,
     and uses Cleanlab's evaluation algorithms to generate a trust score and explanation.
@@ -68,12 +68,27 @@ class CleanlabEvaluator(Component):
             name="model",
             display_name="Cleanlab Evaluation Model",
             options=[
-                "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o4-mini", "o3",
-                "gpt-4.5-preview", "gpt-4o-mini", "gpt-4o", "o3-mini", "o1", "o1-mini",
-                "gpt-4", "gpt-3.5-turbo-16k",
-                "claude-3.7-sonnet", "claude-3.5-sonnet-v2", "claude-3.5-sonnet",
-                "claude-3.5-haiku", "claude-3-haiku",
-                "nova-micro", "nova-lite", "nova-pro"
+                "gpt-4.1",
+                "gpt-4.1-mini",
+                "gpt-4.1-nano",
+                "o4-mini",
+                "o3",
+                "gpt-4.5-preview",
+                "gpt-4o-mini",
+                "gpt-4o",
+                "o3-mini",
+                "o1",
+                "o1-mini",
+                "gpt-4",
+                "gpt-3.5-turbo-16k",
+                "claude-3.7-sonnet",
+                "claude-3.5-sonnet-v2",
+                "claude-3.5-sonnet",
+                "claude-3.5-haiku",
+                "claude-3-haiku",
+                "nova-micro",
+                "nova-lite",
+                "nova-pro",
             ],
             info="The model Cleanlab uses to evaluate the response. This does NOT need to be the same model that generated the response.",
             value="gpt-4o-mini",
@@ -118,7 +133,7 @@ class CleanlabEvaluator(Component):
         result = self._evaluate_once()
         explanation = result.get("log", {}).get("explanation", "No explanation returned.")
         return Message(text=explanation)
-    
+
     def pass_response(self) -> Message:
         self.status = "Passing through response."
         return Message(text=self.response)

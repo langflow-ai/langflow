@@ -1,29 +1,29 @@
+from cleanlab_tlm import TrustworthyRAG, get_default_evals
+
 from langflow.custom import Component
 from langflow.io import (
+    BoolInput,
+    DropdownInput,
     MessageTextInput,
     Output,
     SecretStrInput,
-    DropdownInput,
-    BoolInput,
 )
 from langflow.schema.message import Message
-from cleanlab_tlm import TrustworthyRAG, get_default_evals
 
 
 class CleanlabRAGEvaluator(Component):
-    """
-    A component that evaluates the quality of RAG (Retrieval-Augmented Generation) outputs using Cleanlab.
-    
+    """A component that evaluates the quality of RAG (Retrieval-Augmented Generation) outputs using Cleanlab.
+
     This component takes a query, retrieved context, and generated response from a RAG pipeline,
     and uses Cleanlab's evaluation algorithms to assess various aspects of the RAG system's performance.
-    
+
     The component can evaluate:
     - Overall trustworthiness of the LLM generated response
     - Context sufficiency (whether the retrieved context contains information needed to answer the query)
     - Response groundedness (whether the response is supported directly by the context)
     - Response helpfulness (whether the response effectively addresses the user's query)
     - Query ease (whether the user query seems easy for an AI system to properly handle, useful to diagnose queries that are: complex, vague, tricky, or disgruntled-sounding)
-    
+
     Outputs:
         - Trust Score: A score between 0-1 corresponding to the trustworthiness of the response. A higher score indicates a higher confidence that the response is correct/good.
         - Explanation: An LLM generated explanation of the trustworthiness assessment
@@ -34,6 +34,7 @@ class CleanlabRAGEvaluator(Component):
 
     More details on the evaluation metrics can be found here: https://help.cleanlab.ai/tlm/use-cases/tlm_rag/
     """
+
     display_name = "Cleanlab RAG Evaluator"
     description = "Evaluates context, query, and response from a RAG pipeline using Cleanlab and outputs trust metrics."
     icon = "Cleanlab"
@@ -50,12 +51,27 @@ class CleanlabRAGEvaluator(Component):
             name="model",
             display_name="Cleanlab Evaluation Model",
             options=[
-                "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o4-mini", "o3",
-                "gpt-4.5-preview", "gpt-4o-mini", "gpt-4o", "o3-mini", "o1", "o1-mini",
-                "gpt-4", "gpt-3.5-turbo-16k",
-                "claude-3.7-sonnet", "claude-3.5-sonnet-v2", "claude-3.5-sonnet",
-                "claude-3.5-haiku", "claude-3-haiku",
-                "nova-micro", "nova-lite", "nova-pro"
+                "gpt-4.1",
+                "gpt-4.1-mini",
+                "gpt-4.1-nano",
+                "o4-mini",
+                "o3",
+                "gpt-4.5-preview",
+                "gpt-4o-mini",
+                "gpt-4o",
+                "o3-mini",
+                "o1",
+                "o1-mini",
+                "gpt-4",
+                "gpt-3.5-turbo-16k",
+                "claude-3.7-sonnet",
+                "claude-3.5-sonnet-v2",
+                "claude-3.5-sonnet",
+                "claude-3.5-haiku",
+                "claude-3-haiku",
+                "nova-micro",
+                "nova-lite",
+                "nova-pro",
             ],
             info="The model Cleanlab uses to evaluate the context, query, and response. This does NOT need to be the same model that generated the response.",
             value="gpt-4o-mini",
@@ -120,7 +136,12 @@ class CleanlabRAGEvaluator(Component):
         Output(display_name="Trust Score", name="trust_score", method="get_trust_score", types=["number"]),
         Output(display_name="Explanation", name="trust_explanation", method="get_trust_explanation", types=["Message"]),
         Output(display_name="Other Evals", name="other_scores", method="get_other_scores", types=["Data"]),
-        Output(display_name="Evaluation Summary", name="evaluation_summary", method="get_evaluation_summary", types=["Message"]),
+        Output(
+            display_name="Evaluation Summary",
+            name="evaluation_summary",
+            method="get_evaluation_summary",
+            types=["Message"],
+        ),
     ]
 
     def _evaluate_once(self):
@@ -156,7 +177,7 @@ class CleanlabRAGEvaluator(Component):
                 self.status = "Evaluation complete."
 
             except Exception as e:
-                self.status = f"Evaluation failed: {str(e)}"
+                self.status = f"Evaluation failed: {e!s}"
                 self._cached_result = {}
         return self._cached_result
 
@@ -184,11 +205,7 @@ class CleanlabRAGEvaluator(Component):
             "query_ease": self.run_query_ease,
         }
 
-        filtered_scores = {
-            key: result[key]["score"]
-            for key, include in selected.items()
-            if include and key in result
-        }
+        filtered_scores = {key: result[key]["score"] for key, include in selected.items() if include and key in result}
 
         self.status = f"{len(filtered_scores)} other evals returned."
         return filtered_scores
@@ -210,19 +227,13 @@ class CleanlabRAGEvaluator(Component):
             "query_ease": self.run_query_ease,
         }
 
-        other_scores = {
-            key: result[key]["score"]
-            for key, include in selected.items()
-            if include and key in result
-        }
+        other_scores = {key: result[key]["score"] for key, include in selected.items() if include and key in result}
 
         metrics = f"Trustworthiness: {trust:.3f}"
         if trust_exp:
             metrics += f"\nExplanation: {trust_exp}"
         if other_scores:
-            metrics += "\n" + "\n".join(
-                f"{k.replace('_', ' ').title()}: {v:.3f}" for k, v in other_scores.items()
-            )
+            metrics += "\n" + "\n".join(f"{k.replace('_', ' ').title()}: {v:.3f}" for k, v in other_scores.items())
 
         summary = (
             f"Query:\n{query_text}\n"

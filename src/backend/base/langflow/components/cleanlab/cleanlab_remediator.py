@@ -1,20 +1,11 @@
 from langflow.custom import Component
-from langflow.io import (
-    MessageTextInput,
-    PromptInput,
-    Output,
-    BoolInput,
-    HandleInput,
-    FloatInput
-)
-from langflow.template import Input
-from langflow.schema.message import Message
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import BoolInput, FloatInput, HandleInput, MessageTextInput, Output, PromptInput
+from langflow.schema.message import Message
 
 
 class CleanlabRemediator(Component):
-    """
-    A component that remediates potentially untrustworthy LLM responses based on trust scores computed by the Cleanlab Evaluator.
+    """A component that remediates potentially untrustworthy LLM responses based on trust scores computed by the Cleanlab Evaluator.
 
     This component takes a response and its associated trust score,
     and applies remediation strategies based on configurable thresholds and settings.
@@ -38,7 +29,7 @@ class CleanlabRemediator(Component):
     This component is typically used downstream of CleanlabEvaluator or CleanlabRagValidator
     to take appropriate action on low-trust responses and inform users accordingly.
     """
-    
+
     display_name = "Cleanlab Remediator"
     description = "Remediates an untrustworthy response based on trust score from the Cleanlab Evaluator, score threshold, and message handling settings."
     icon = "Cleanlab"
@@ -95,18 +86,23 @@ class CleanlabRemediator(Component):
     ]
 
     outputs = [
-        Output(display_name="Remediated Message", name="remediated_response", method="remediate_response", types=["Message"]),
+        Output(
+            display_name="Remediated Message",
+            name="remediated_response",
+            method="remediate_response",
+            types=["Message"],
+        ),
     ]
-    
+
     def remediate_response(self) -> Message:
         if self.score >= self.threshold:
             self.status = f"Score {self.score:.2f} ≥ threshold {self.threshold:.2f} → accepted"
             return Message(
                 text=f"{self.response}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Trust Score:** {self.score:.2f}"
             )
-    
+
         self.status = f"Score {self.score:.2f} < threshold {self.threshold:.2f} → flagged"
-    
+
         if self.show_untrustworthy_response:
             parts = [
                 self.response,
@@ -117,5 +113,5 @@ class CleanlabRemediator(Component):
             if self.explanation:
                 parts.append(f"**Explanation:** {self.explanation}")
             return Message(text="\n\n".join(parts))
-    
+
         return Message(text=self.fallback_text)
