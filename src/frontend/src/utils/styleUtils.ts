@@ -271,6 +271,7 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
 ];
 
 export const categoryIcons: Record<string, string> = {

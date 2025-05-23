@@ -44,6 +44,8 @@ export const lazyIconsMapping = {
     import("@/icons/Cassandra").then((mod) => ({ default: mod.CassandraIcon })),
   Chroma: () =>
     import("@/icons/ChromaIcon").then((mod) => ({ default: mod.ChromaIcon })),
+  Cleanlab: () =>
+    import("@/icons/Cleanlab").then((mod) => ({ default: mod.CleanlabIcon })),
   Clickhouse: () =>
     import("@/icons/Clickhouse").then((mod) => ({
       default: mod.ClickhouseIcon,
