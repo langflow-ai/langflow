@@ -241,10 +241,6 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     expect(
       await page
         .getByTestId("output-inspection-combined text-groupnode")
