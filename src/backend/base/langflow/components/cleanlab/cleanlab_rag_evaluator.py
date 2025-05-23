@@ -116,8 +116,9 @@ class CleanlabRAGEvaluator(Component):
     ]
 
     outputs = [
+        Output(display_name="Response", name="response_passthrough", method="pass_response", types=["Message"]),
         Output(display_name="Trust Score", name="trust_score", method="get_trust_score", types=["number"]),
-        Output(display_name="Trust Explanation", name="trust_explanation", method="get_trust_explanation", types=["Message"]),
+        Output(display_name="Explanation", name="trust_explanation", method="get_trust_explanation", types=["Message"]),
         Output(display_name="Other Evals", name="other_scores", method="get_other_scores", types=["Data"]),
         Output(display_name="Evaluation Summary", name="evaluation_summary", method="get_evaluation_summary", types=["Message"]),
     ]
@@ -158,6 +159,10 @@ class CleanlabRAGEvaluator(Component):
                 self.status = f"Evaluation failed: {str(e)}"
                 self._cached_result = {}
         return self._cached_result
+
+    def pass_response(self) -> Message:
+        self.status = "Passing through response."
+        return Message(text=self.response)
 
     def get_trust_score(self) -> float:
         score = self._evaluate_once().get("trustworthiness", {}).get("score", 0.0)

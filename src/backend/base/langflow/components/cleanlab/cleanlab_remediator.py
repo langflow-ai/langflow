@@ -1,9 +1,11 @@
 from langflow.custom import Component
 from langflow.io import (
     MessageTextInput,
+    PromptInput,
     Output,
     BoolInput,
     HandleInput,
+    FloatInput
 )
 from langflow.template import Input
 from langflow.schema.message import Message
@@ -13,27 +15,30 @@ from langflow.field_typing.range_spec import RangeSpec
 class CleanlabRemediator(Component):
     """
     A component that remediates potentially untrustworthy LLM responses based on trust scores computed by the Cleanlab Evaluator.
-    
+
     This component takes a response and its associated trust score,
     and applies remediation strategies based on configurable thresholds and settings.
-    
-    The component can:
-    - Pass through trustworthy responses that meet a minimum trust score threshold
-    - Add warning messages to responses that fall below the threshold
-    - Replace untrustworthy responses with a fallback message
-    
-    Outputs:
-        - Remediated Message: The original response, modified response with warnings, 
-          or fallback message depending on the trust score and configuration settings
 
-          The remediated message is determined by the following rules:
-          - If the trust score is above or equal to the threshold, the original response is returned.
-          - If the trust score is below the threshold:
-            - If the show untrustworthy response option is enabled, the original response is returned with a warning message.
-            - If the show untrustworthy response option is disabled, the fallback message is returned.
-    
-    This component works well in conjunction with the CleanlabEvaluator or CleanlabRAGEvaluator to create a complete trust evaluation and remediation pipeline.
+    Inputs:
+        - response (MessageTextInput): The original LLM-generated response to be evaluated and possibly remediated. The CleanlabEvaluator passes this response through.
+        - score (HandleInput): The trust score output from CleanlabEvaluator (expected to be a float between 0 and 1).
+        - explanation (MessageTextInput): Optional textual explanation for the trust score, to be included in the output.
+        - threshold (Input[float]): Minimum trust score required to accept the response. If the score is lower, the response is remediated.
+        - show_untrustworthy_response (BoolInput): If true, returns the original response with a warning; if false, returns fallback text.
+        - untrustworthy_warning_text (PromptInput): Text warning to append to responses deemed untrustworthy (when showing them).
+        - fallback_text (PromptInput): Replacement message returned if the response is untrustworthy and should be hidden.
+
+    Outputs:
+        - remediated_response (Message): Either:
+            • the original response,
+            • the original response with appended warning, or
+            • the fallback response,
+          depending on the trust score and configuration.
+
+    This component is typically used downstream of CleanlabEvaluator or CleanlabRagValidator
+    to take appropriate action on low-trust responses and inform users accordingly.
     """
+    
     display_name = "Cleanlab Remediator"
     description = "Remediates an untrustworthy response based on trust score from the Cleanlab Evaluator, score threshold, and message handling settings."
     icon = "Cleanlab"
@@ -59,7 +64,7 @@ class CleanlabRemediator(Component):
             info="The explanation from the Cleanlab Evaluator.",
             required=False,
         ),
-        Input(
+        FloatInput(
             name="threshold",
             display_name="Threshold",
             field_type="float",
@@ -75,13 +80,13 @@ class CleanlabRemediator(Component):
             info="If enabled, and the trust score is below the threshold, the original response is shown with the added warning. If disabled, and the trust score is below the threshold, the fallback answer is returned.",
             value=True,
         ),
-        MessageTextInput(
+        PromptInput(
             name="untrustworthy_warning_text",
             display_name="Warning for Untrustworthy Response",
             info="Warning to append to the response if Show Untrustworthy Response is enabled and trust score is below the threshold.",
             value="⚠️ WARNING: The following response is potentially untrustworthy.",
         ),
-        MessageTextInput(
+        PromptInput(
             name="fallback_text",
             display_name="Fallback Answer",
             info="Response returned if the trust score is below the threshold and 'Show Untrustworthy Response' is disabled.",
@@ -92,23 +97,25 @@ class CleanlabRemediator(Component):
     outputs = [
         Output(display_name="Remediated Message", name="remediated_response", method="remediate_response", types=["Message"]),
     ]
-
+    
     def remediate_response(self) -> Message:
         if self.score >= self.threshold:
             self.status = f"Score {self.score:.2f} ≥ threshold {self.threshold:.2f} → accepted"
-            return Message(text=f"{self.response}\n\n-----------------------------------------------\nTrust Score: {self.score:.2f}")
-
+            return Message(
+                text=f"{self.response}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Trust Score:** {self.score:.2f}"
+            )
+    
         self.status = f"Score {self.score:.2f} < threshold {self.threshold:.2f} → flagged"
-
+    
         if self.show_untrustworthy_response:
-            sections = [
+            parts = [
                 self.response,
-                "\n-----------------------------------------------\n",
-                self.untrustworthy_warning_text,
-                f"\nTrust Score: {self.score:.2f}\n",
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                f"**{self.untrustworthy_warning_text.strip()}**",
+                f"**Trust Score:** {self.score:.2f}",
             ]
             if self.explanation:
-                sections.append(f"Explanation: {self.explanation}")
-            return Message(text="\n".join(sections))
-
+                parts.append(f"**Explanation:** {self.explanation}")
+            return Message(text="\n\n".join(parts))
+    
         return Message(text=self.fallback_text)
