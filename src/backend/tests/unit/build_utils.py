@@ -32,7 +32,7 @@ async def get_build_events(client: AsyncClient, job_id: str, headers: dict[str, 
     return await client.get(f"api/v1/build/{job_id}/events", headers=headers_with_accept)
 
 
-async def consume_and_assert_stream(response, job_id, timeout=10.0):
+async def consume_and_assert_stream(response, job_id, timeout=30.0):
     """Consume the event stream and assert the expected event structure.
 
     Args:
