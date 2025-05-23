@@ -181,23 +181,26 @@
             "dataType": "MessagetoData",
             "id": "MessagetoData-jYebP",
             "name": "data",
-            "output_types": []
+            "output_types": [
+              "Data"
+            ]
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-0aBsp",
+            "id": "LoopComponent-9BK8B",
             "inputTypes": [
-              "Data"
+              "Data",
+              "DataFrame"
             ],
             "type": "other"
           }
         },
         "id": "xy-edge__ArXivComponent-sSqo4{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-sSqo4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-0aBsp{œfieldNameœ:œdataœ,œidœ:œLoopComponent-0aBspœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ArXivComponent-sSqo4",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-sSqo4œ, œnameœ: œdataœ, œoutput_typesœ: []}",
-        "target": "LoopComponent-0aBsp",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-0aBspœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "MessagetoData-jYebP",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-jYebPœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-9BK8B",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-9BK8Bœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -212,7 +215,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-VobAp",
+            "id": "AnthropicModel-G2MkR",
             "inputTypes": [
               "Message"
             ],
@@ -223,7 +226,7 @@
         "selected": false,
         "source": "parser-lOwhH",
         "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-lOwhHœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-VobAp",
+        "target": "AnthropicModel-G2MkR",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-VobApœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
