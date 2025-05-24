@@ -1,6 +1,6 @@
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management/use-post-upload-file";
 import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import FileManagerModal from "@/modals/fileManagerModal";
@@ -52,7 +52,7 @@ export default function InputFileComponent({
     return fileTypes.includes(fileExtension || "");
   }
 
-  const { mutateAsync, isPending } = usePostUploadFile();
+  const { mutateAsync, isPending } = usePostUploadFileV2();
 
   const handleButtonClick = (): void => {
     createFileUpload({ multiple: isList, accept: fileTypes?.join(",") }).then(
@@ -90,7 +90,7 @@ export default function InputFileComponent({
               new Promise<{ file_name: string; file_path: string } | null>(
                 async (resolve) => {
                   const data = await mutateAsync(
-                    { file, id: currentFlowId },
+                    { file },
                     {
                       onError: (error) => {
                         console.error(CONSOLE_ERROR_MSG);
@@ -103,15 +103,14 @@ export default function InputFileComponent({
                     },
                   );
                   resolve({
-                    file_name: file.name,
-                    file_path: data.file_path,
+                    file_name: data.name,
+                    file_path: data.path,
                   });
                 },
               ),
           ),
         )
           .then((results) => {
-            console.log(results);
             // Filter out any failed uploads
             const successfulUploads = results.filter(
               (r): r is { file_name: string; file_path: string } => r !== null,
@@ -130,6 +129,10 @@ export default function InputFileComponent({
               handleOnNewValue({
                 value: isList ? fileNames : fileNames[0],
                 file_path: isList ? filePaths : filePaths[0],
+                original_filename: isList ? fileNames : fileNames[0],
+                data: {
+                  original_filename: isList ? fileNames : fileNames[0],
+                },
               });
             }
           })
@@ -160,7 +163,7 @@ export default function InputFileComponent({
   ).filter((value) => value !== "");
 
   useEffect(() => {
-    if (files !== undefined && !tempFile) {
+    if (files !== undefined) {
       if (isList) {
         if (
           Array.isArray(value) &&
@@ -191,6 +194,11 @@ export default function InputFileComponent({
               ?.filter((f) => selectedFiles.includes(f.path))
               .map((f) => f.path) ?? [])
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
+        original_filename: isList
+          ? (files
+              ?.filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.name) ?? [])
+          : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
       });
     }
   }, [files, value, file_path]);
@@ -199,7 +207,7 @@ export default function InputFileComponent({
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
-          {ENABLE_FILE_MANAGEMENT && !tempFile ? (
+          {ENABLE_FILE_MANAGEMENT ? (
             files && (
               <div className="relative flex w-full flex-col gap-2">
                 <div className="nopan nowheel flex max-h-44 flex-col overflow-y-auto">
@@ -222,6 +230,13 @@ export default function InputFileComponent({
                         file_path: isList
                           ? newSelectedFiles
                           : (newSelectedFiles[0] ?? ""),
+                        original_filename: isList
+                          ? newSelectedFiles.map(
+                              (file) =>
+                                files.find((f) => f.path === file)?.name,
+                            )
+                          : (files.find((f) => f.path == newSelectedFiles[0])
+                              ?.name ?? ""),
                       });
                     }}
                   />
@@ -239,13 +254,19 @@ export default function InputFileComponent({
                       file_path: isList
                         ? selectedFiles
                         : (selectedFiles[0] ?? ""),
+                      original_filename: isList
+                        ? selectedFiles.map(
+                            (file) => files.find((f) => f.path === file)?.name,
+                          )
+                        : (files.find((f) => f.path == selectedFiles[0])
+                            ?.name ?? ""),
                     });
                   }}
                   disabled={isDisabled}
                   types={fileTypes}
                   isList={isList}
                 >
-                  {(selectedFiles.length === 0 || isList) && (
+                  {
                     <div data-testid="input-file-component" className="w-full">
                       <Button
                         disabled={isDisabled}
@@ -272,7 +293,7 @@ export default function InputFileComponent({
                         )}
                       </Button>
                     </div>
-                  )}
+                  }
                 </FileManagerModal>
               </div>
             )

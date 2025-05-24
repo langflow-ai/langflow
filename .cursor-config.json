@@ -1,0 +1,39 @@
+{
+    "preferences": {
+        "code_style": {
+            "indentation": "spaces",
+            "spaces_per_tab": 4,
+            "max_line_length": 88,
+            "quote_style": "double"
+        },
+        "documentation": {
+            "require_docstrings": true,
+            "docstring_style": "google"
+        },
+        "testing": {
+            "require_tests": true,
+            "test_coverage_threshold": 80
+        },
+        "git": {
+            "commit_message_style": "conventional",
+            "require_clean_working_directory": true
+        },
+        "code_review": {
+            "require_review": true,
+            "review_style": "thorough"
+        },
+        "communication": {
+            "explain_changes": true,
+            "provide_context": true,
+            "suggest_alternatives": true
+        }
+    },
+    "project_specific": {
+        "python_version": "3.11",
+        "package_manager": "uv",
+        "linting": {
+            "tools": ["ruff", "mypy"],
+            "strict_mode": true
+        }
+    }
+} 
