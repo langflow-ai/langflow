@@ -24,6 +24,11 @@ on:
         required: true
         type: boolean
         default: false
+      build_docker_main_all:
+        description: "Build Docker Image for Langflow with all optional dependencies"
+        required: true
+        type: boolean
+        default: false
       build_docker_ep:
         description: "Build Docker Image for Langflow with Entrypoint"
         required: false
@@ -212,8 +217,8 @@ jobs:
     secrets: inherit
 
   call_docker_build_main_all:
-    name: Call Docker Build Workflow for Langflow
-    if: inputs.build_docker_main == true
+    name: Call Docker Build Workflow for Langflow All
+    if: inputs.build_docker_main_all == true
     needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
