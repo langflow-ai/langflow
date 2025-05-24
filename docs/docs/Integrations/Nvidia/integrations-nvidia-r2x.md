@@ -15,7 +15,8 @@ The **NVIDIA R2X** pane lists the connection values for your deployment:
 * **Port number**: The default Langflow port is `7860`.
 * **Endpoint URL**: The default address is `/api/v1/ws/flow_as_tool/FLOW_ID`.
 
-Optionally, to generate an API key for NVIDIA R2X to connect to your server, click **Create API Key**.
+2. Optionally, to generate a Langflow API key, click **Create API Key**.
+If you already have a Langflow API key, use it in the next step.
 
-3. Copy the connection values from Langflow to your NVIDIA R2X application.
+3. Copy the connection values from the **NVIDIA R2X** pane in Langflow to your NVIDIA R2X application.
 Your flow is now available to your R2X avatar as a tool.
