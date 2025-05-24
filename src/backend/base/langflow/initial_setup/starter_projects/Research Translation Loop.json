@@ -236,17 +236,16 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-9BK8B",
             "name": "item",
-            "output_types": [
-              "Data"
-            ]
-          }
+            "output_types": []
+          },
+          "targetHandle": {}
         },
         "id": "xy-edge__MessagetoData-jYebP{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-jYebPœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "MessagetoData-jYebP",
-        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-jYebPœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œitemœ, œoutput_typesœ: []}",
         "target": "LoopComponent-9BK8B",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
+        "targetHandle": "{}"
       }
     ],
     "nodes": [
