@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.components.tools.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.schema import Message
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -133,6 +134,38 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             assert output.iloc[0]["text"] == "Test response"
             # Verify the mocks were called correctly
             mock_get_inputs.assert_called_once_with(component.tools)
+            mock_structured_tool.coroutine.assert_called_once_with(test_param="test value")
+
+    @patch("langflow.components.tools.mcp_component.create_tool_coroutine")
+    async def test_build_output_with_message(self, mock_create_coroutine, component_class, default_kwargs, mock_tool):
+        """Test building output with a tool receiving Message input."""
+        component = component_class(**default_kwargs)
+        component.tool = "test_tool"
+        component.tools = [mock_tool]
+
+        # Mock the coroutine response
+        mock_response = AsyncMock()
+        mock_response.content = [MagicMock(text="Test response")]
+        mock_create_coroutine.return_value = AsyncMock(return_value=mock_response)
+
+        # Create a mock tool and add it to the cache
+        mock_structured_tool = MagicMock()
+        mock_structured_tool.coroutine = mock_create_coroutine.return_value
+        component._tool_cache = {"test_tool": mock_structured_tool}
+
+        # Set the test parameter value
+        component.test_param = Message(text="test value")
+
+        # Mock get_inputs_for_all_tools to return our mock input
+        mock_input = MagicMock()
+        mock_input.name = "test_param"
+        with patch.object(component, "get_inputs_for_all_tools") as mock_get_inputs:
+            mock_get_inputs.return_value = {"test_tool": [mock_input]}
+            output = await component.build_output()
+
+            assert output.text == "Test response"
+
+            # Verify the tool is called with the unwrapped text from the Message
             mock_structured_tool.coroutine.assert_called_once_with(test_param="test value")
 
     async def test_get_inputs_for_all_tools(self, component_class, default_kwargs, mock_tool):
