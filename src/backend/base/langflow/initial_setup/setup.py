@@ -279,96 +279,78 @@ def update_edges_with_latest_component_versions(project_data):
 
     # Process each edge in the project
     for edge in project_data_copy.get("edges", []):
-        try:
-            # Extract and parse source and target handles
-            source_handle = edge.get("data", {}).get("sourceHandle")
-            if source_handle is None:
-                logger.warning(f"Missing sourceHandle in edge: {edge.get('id')}")
-                continue
+        # Extract and parse source and target handles
+        source_handle = edge.get("data", {}).get("sourceHandle")
+        source_handle = scape_json_parse(source_handle)
+        target_handle = edge.get("data", {}).get("targetHandle")
+        target_handle = scape_json_parse(target_handle)
 
-            source_handle = scape_json_parse(source_handle)
-            target_handle = edge.get("data", {}).get("targetHandle")
-            if target_handle is None:
-                logger.warning(f"Missing targetHandle in edge: {edge.get('id')}")
-                continue
+        # Find the corresponding source and target nodes
+        source_node = next(
+            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
+            None,
+        )
+        target_node = next(
+            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
+            None,
+        )
 
-            target_handle = scape_json_parse(target_handle)
+        # Try to reconcile missing nodes by type
+        if source_node is None and source_handle and "dataType" in source_handle:
+            node_type = source_handle.get("dataType")
+            if node_type_map.get(node_type):
+                # Use the first node of matching type as replacement
+                new_node_id = node_type_map[node_type][0]
+                logger.info(f"Reconciling missing source node: replacing {edge.get('source')} with {new_node_id}")
 
-            # Find the corresponding source and target nodes
-            source_node = next(
-                (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
-                None,
-            )
-            target_node = next(
-                (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
-                None,
-            )
+                # Update edge source
+                edge["source"] = new_node_id
 
-            # Try to reconcile missing nodes by type
-            if source_node is None and source_handle and "dataType" in source_handle:
-                node_type = source_handle.get("dataType")
+                # Update source handle ID
+                source_handle["id"] = new_node_id
+
+                # Find the new source node
+                source_node = next(
+                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                    None,
+                )
+
+                # Update edge ID (complex as it contains encoded handles)
+                # This is a simplified approach - in production you'd need to parse and rebuild the ID
+                old_id_prefix = edge.get("id", "").split("{")[0]
+                if old_id_prefix:
+                    new_id_prefix = old_id_prefix.replace(edge.get("source"), new_node_id)
+                    edge["id"] = edge.get("id", "").replace(old_id_prefix, new_id_prefix)
+
+        if target_node is None and target_handle and "id" in target_handle:
+            # Extract node type from target handle ID (e.g., "AstraDBGraph-jr8pY" -> "AstraDBGraph")
+            id_parts = target_handle.get("id", "").split("-")
+            if len(id_parts) > 0:
+                node_type = id_parts[0]
                 if node_type_map.get(node_type):
                     # Use the first node of matching type as replacement
                     new_node_id = node_type_map[node_type][0]
-                    logger.info(f"Reconciling missing source node: replacing {edge.get('source')} with {new_node_id}")
+                    logger.info(f"Reconciling missing target node: replacing {edge.get('target')} with {new_node_id}")
 
-                    # Update edge source
-                    edge["source"] = new_node_id
+                    # Update edge target
+                    edge["target"] = new_node_id
 
-                    # Update source handle ID
-                    source_handle["id"] = new_node_id
+                    # Update target handle ID
+                    target_handle["id"] = new_node_id
 
-                    # Find the new source node
-                    source_node = next(
+                    # Find the new target node
+                    target_node = next(
                         (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
                         None,
                     )
 
-                    # Update edge ID (complex as it contains encoded handles)
-                    # This is a simplified approach - in production you'd need to parse and rebuild the ID
-                    old_id_prefix = edge.get("id", "").split("{")[0]
-                    if old_id_prefix:
-                        new_id_prefix = old_id_prefix.replace(edge.get("source"), new_node_id)
-                        edge["id"] = edge.get("id", "").replace(old_id_prefix, new_id_prefix)
+                    # Update edge ID (simplified approach)
+                    old_id_suffix = edge.get("id", "").split("}-")[1] if "}-" in edge.get("id", "") else ""
+                    if old_id_suffix:
+                        new_id_suffix = old_id_suffix.replace(edge.get("target"), new_node_id)
+                        edge["id"] = edge.get("id", "").replace(old_id_suffix, new_id_suffix)
 
-            if target_node is None and target_handle and "id" in target_handle:
-                # Extract node type from target handle ID (e.g., "AstraDBGraph-jr8pY" -> "AstraDBGraph")
-                id_parts = target_handle.get("id", "").split("-")
-                if len(id_parts) > 0:
-                    node_type = id_parts[0]
-                    if node_type_map.get(node_type):
-                        # Use the first node of matching type as replacement
-                        new_node_id = node_type_map[node_type][0]
-                        logger.info(
-                            f"Reconciling missing target node: replacing {edge.get('target')} with {new_node_id}"
-                        )
-
-                        # Update edge target
-                        edge["target"] = new_node_id
-
-                        # Update target handle ID
-                        target_handle["id"] = new_node_id
-
-                        # Find the new target node
-                        target_node = next(
-                            (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
-                            None,
-                        )
-
-                        # Update edge ID (simplified approach)
-                        old_id_suffix = edge.get("id", "").split("}-")[1] if "}-" in edge.get("id", "") else ""
-                        if old_id_suffix:
-                            new_id_suffix = old_id_suffix.replace(edge.get("target"), new_node_id)
-                            edge["id"] = edge.get("id", "").replace(old_id_suffix, new_id_suffix)
-
-            if source_node is None or target_node is None:
-                logger.warning(
-                    f"Could not reconcile nodes for edge {edge.get('id')}. "
-                    f"Source node found: {source_node is not None}, "
-                    f"Target node found: {target_node is not None}"
-                )
-                continue
-
+        if source_node and target_node:
             # Extract node data for easier access
             source_node_data = source_node.get("data", {}).get("node", {})
             target_node_data = target_node.get("data", {}).get("node", {})
@@ -476,10 +458,9 @@ def update_edges_with_latest_component_versions(project_data):
                 if "data" in edge:
                     edge["data"]["targetHandle"] = target_handle
 
-        except (json.JSONDecodeError, TypeError) as e:
-            msg = f"Error processing edge {edge.get('id')}: {e!s}"
-            logger.error(msg)
-            continue
+        else:
+            # Log an error if source or target node is not found after reconciliation attempt
+            logger.error(f"Source or target node not found for edge: {edge}")
 
     # Log all the changes that were made
     log_node_changes(edge_changes_log)
