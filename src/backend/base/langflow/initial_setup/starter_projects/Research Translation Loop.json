@@ -181,9 +181,7 @@
             "dataType": "MessagetoData",
             "id": "MessagetoData-jYebP",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "dataType": "LoopComponent",
