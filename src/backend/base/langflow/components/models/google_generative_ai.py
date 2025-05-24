@@ -140,7 +140,6 @@ class GoogleGenerativeAIComponent(LCModelComponent):
                         logger.exception(f"Error getting model names: {e}")
                         ids = GOOGLE_GENERATIVE_AI_MODELS
                 build_config["model_name"]["options"] = ids
-                build_config["model_name"]["value"] = ids[0]
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e
