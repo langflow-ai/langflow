@@ -310,6 +310,7 @@ test(
       .fill("You're Sad! 🥲");
     await page.getByTestId("showignored_message").last().click();
     await page.getByText("Close").last().click();
+
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
       .nth(0)
@@ -318,6 +319,12 @@ test(
       .getByTestId("handle-pass-shownode-ignored message-left")
       .nth(1)
       .click();
+
+    await page.getByTestId("dropdown-output-conditionalrouter").click();
+    await page
+      .getByTestId("dropdown-item-output-conditionalrouter-false")
+      .click();
+
     await page
       .getByTestId("handle-conditionalrouter-shownode-false-right")
       .nth(0)

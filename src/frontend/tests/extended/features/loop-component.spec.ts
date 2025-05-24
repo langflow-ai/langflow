@@ -87,6 +87,16 @@ test(
         targetPosition: { x: 720, y: 400 },
       });
 
+    await page.getByTestId("dropdown-output-parsedata").nth(1).click();
+    await page.getByTestId("dropdown-item-output-parsedata-data list").click();
+
+    await page.getByTestId("handle-parsedata-shownode-data list-right").click();
+
+    const loopItemInput = await page
+      .getByTestId("handle-loopcomponent-shownode-item-left")
+      .first()
+      .click();
+
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
