@@ -251,9 +251,26 @@ module.exports = {
           type: "category",
           label: "NVIDIA",
           items: [
-            "Integrations/Nvidia/integrations-nvidia-ingest",
-            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-            "Integrations/Nvidia/integrations-nvidia-system-assist",
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-ingest",
+              label: "NVIDIA Ingest",
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+              label: "NVIDIA NIM on WSL2",
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-system-assist",
+              label: "NVIDIA System Assist",
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-r2x",
+              label: "NVIDIA R2X",
+            },
           ],
         },
       ],
