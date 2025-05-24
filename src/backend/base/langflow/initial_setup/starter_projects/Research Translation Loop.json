@@ -186,66 +186,20 @@
             ]
           },
           "targetHandle": {
-            "fieldName": "data",
-            "id": "LoopComponent-9BK8B",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__ArXivComponent-sSqo4{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-sSqo4œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-0aBsp{œfieldNameœ:œdataœ,œidœ:œLoopComponent-0aBspœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "MessagetoData-jYebP",
-        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-jYebPœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-9BK8B",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-9BK8Bœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "parser",
-            "id": "parser-lOwhH",
-            "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "AnthropicModel-G2MkR",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__parser-lOwhH{œdataTypeœ:œparserœ,œidœ:œparser-lOwhHœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-VobAp{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-VobApœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "parser-lOwhH",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-lOwhHœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-G2MkR",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-VobApœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
             "dataType": "LoopComponent",
             "id": "LoopComponent-9BK8B",
             "name": "item",
-            "output_types": []
-          },
-          "targetHandle": {}
+            "output_types": [
+              "Data"
+            ]
+          }
         },
         "id": "xy-edge__MessagetoData-jYebP{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-jYebPœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-9BK8B{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-9BK8Bœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "MessagetoData-jYebP",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œitemœ, œoutput_typesœ: []}",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-jYebPœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-9BK8B",
-        "targetHandle": "{}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-9BK8Bœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       }
     ],
     "nodes": [
