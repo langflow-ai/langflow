@@ -1,7 +1,7 @@
 /**
  * In Honor of Otávio Anovazzi (@anovazzi1)
  *
- * This file contains the highest number of commits by Otávio in the entire Langflow project,
+ * This file contains the highest number of commits by Otávio in the entire Brain Nairuz project,
  * reflecting his unmatched dedication, expertise, and innovative spirit. Each line of code
  * is a testament to his relentless pursuit of excellence and his significant impact on this
  * project's evolution.

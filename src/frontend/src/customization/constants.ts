@@ -1,2 +1,2 @@
-//Langflow Desktop Base URL
+//Brain Nairuz Desktop Base URL
 export const baseURL = "";

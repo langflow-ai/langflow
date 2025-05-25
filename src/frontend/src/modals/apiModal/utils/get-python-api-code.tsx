@@ -31,7 +31,7 @@ import warnings
 try:
     from langflow.load import upload_file
 except ImportError:
-    warnings.warn("Langflow provides a function to help you upload files to the flow. Please install langflow to use it.")
+    warnings.warn("Brain Nairuz provides a function to help you upload files to the flow. Please install langflow to use it.")
     upload_file = None
 
 BASE_API_URL = "${window.location.protocol}//${window.location.host}"
@@ -95,7 +95,7 @@ def main():
 
     if args.upload_file:
         if not upload_file:
-            raise ImportError("Langflow is not installed. Please install it to use the upload_file function.")
+            raise ImportError("Brain Nairuz is not installed. Please install it to use the upload_file function.")
         elif not args.components:
             raise ValueError("You need to provide the components to upload the file to.")
         tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=args.endpoint, components=[args.components], tweaks=tweaks)

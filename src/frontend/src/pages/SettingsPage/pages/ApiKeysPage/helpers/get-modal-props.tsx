@@ -1,7 +1,7 @@
 export const getModalPropsApiKey = () => {
   const modalProps = {
     title: "Create API Key",
-    description: "Create a secret API Key to use Langflow API.",
+    description: "Create a secret API Key to use Brain Nairuz API.",
     inputPlaceholder: "My API Key",
     buttonText: "Generate API Key",
     generatedKeyMessage: (

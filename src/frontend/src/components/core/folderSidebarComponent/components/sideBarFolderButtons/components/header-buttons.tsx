@@ -21,7 +21,7 @@ export const HeaderButtons = ({
   addNewFolder: () => void;
 }) => {
   const userData = useAuthStore((state) => state.userData);
-  const userDismissedDialog = userData?.optins?.dialog_dismissed;
+  const userDismissedDialog = true; //userData?.optins?.dialog_dismissed;
   const isGithubStarred = userData?.optins?.github_starred;
   const isDiscordJoined = userData?.optins?.discord_clicked;
   const [isDismissedDialog, setIsDismissedDialog] =

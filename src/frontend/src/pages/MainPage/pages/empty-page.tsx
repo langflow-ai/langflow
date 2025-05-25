@@ -15,7 +15,7 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
-const EMPTY_PAGE_TITLE = "Welcome to Langflow";
+const EMPTY_PAGE_TITLE = "Welcome to Brain Nairuz";
 const EMPTY_PAGE_DESCRIPTION = "Your new favorite way to ship Agents";
 const EMPTY_PAGE_GITHUB_DESCRIPTION =
   "Follow development, star the repo, and shape the future.";
@@ -70,7 +70,7 @@ export const EmptyPageCommunity = ({
               <div className="z-50 dark:hidden">
                 <img
                   src={logoLightPng}
-                  alt="Langflow Logo Light"
+                  alt="Brain Nairuz Logo Light"
                   data-testid="empty_page_logo_light"
                   className="relative top-3"
                 />
@@ -78,7 +78,7 @@ export const EmptyPageCommunity = ({
               <div className="z-50 hidden dark:block">
                 <img
                   src={logoDarkPng}
-                  alt="Langflow Logo Dark"
+                  alt="Brain Nairuz Logo Dark"
                   data-testid="empty_page_logo_dark"
                   className="relative top-3"
                 />

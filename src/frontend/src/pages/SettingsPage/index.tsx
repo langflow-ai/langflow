@@ -80,7 +80,7 @@ export default function SettingsPage(): JSX.Element {
     <PageLayout
       backTo={"/"}
       title="Settings"
-      description="Manage the general settings for Langflow."
+      description="Manage the general settings for Brain Nairuz."
     >
       <SidebarProvider width="15rem" defaultOpen={false}>
         <SideBarButtonsComponent items={sidebarNavItems} />

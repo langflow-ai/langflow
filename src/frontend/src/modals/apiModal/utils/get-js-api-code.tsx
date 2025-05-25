@@ -48,7 +48,7 @@ export default function getJsApiCode({
 `;
 }
 /**
- * Generates JavaScript code for making API calls to a Langflow endpoint.
+ * Generates JavaScript code for making API calls to a Brain Nairuz endpoint.
  *
  * @param {Object} params - The parameters for generating the API code
  * @param {string} params.flowId - The ID of the flow to run

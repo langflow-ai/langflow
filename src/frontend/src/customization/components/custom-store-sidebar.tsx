@@ -3,7 +3,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 export const CustomStoreSidebar = () => {
   return [
     {
-      title: "Langflow API Keys",
+      title: "Brain Nairuz API Keys",
       href: "/settings/api-keys",
       icon: (
         <ForwardedIconComponent
@@ -13,7 +13,7 @@ export const CustomStoreSidebar = () => {
       ),
     },
     {
-      title: "Langflow Store",
+      title: "Brain Nairuz Store",
       href: "/settings/store",
       icon: (
         <ForwardedIconComponent
