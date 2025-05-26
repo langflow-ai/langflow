@@ -1,13 +1,12 @@
-import {
-  BROKEN_EDGES_WARNING,
-  componentsToIgnoreUpdate,
-} from "@/constants/constants";
+import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
+import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
   track,
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
@@ -19,10 +18,6 @@ import {
 } from "@xyflow/react";
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
-import {
-  FLOW_BUILD_SUCCESS_ALERT,
-  MISSED_ERROR_ALERT,
-} from "../constants/alerts_constants";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
@@ -33,7 +28,11 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
+import {
+  ComponentsToUpdateType,
+  FlowStoreType,
+  VertexLayerElementType,
+} from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
@@ -88,24 +87,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ componentsToUpdate: newChange });
   },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes: string[] = [];
+    let outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    for (let i = 0; i < nodes.length; i++) {
-      let node = nodes[i];
+    nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const currentCode = templates[node.data?.type]?.template?.code?.value;
-        const thisNodesCode = node.data?.node!.template?.code?.value;
-        if (
-          currentCode &&
-          thisNodesCode &&
-          currentCode !== thisNodesCode &&
-          !node.data?.node?.edited &&
-          !componentsToIgnoreUpdate.includes(node.data?.type)
-        ) {
-          outdatedNodes.push(node.id);
-        }
+        const codeValidity = checkCodeValidity(node.data, templates);
+        if (codeValidity && codeValidity.outdated)
+          outdatedNodes.push({
+            id: node.id,
+            icon: node.data.node?.icon,
+            display_name: node.data.node?.display_name,
+            outdated: codeValidity.outdated,
+            breakingChange: codeValidity.breakingChange,
+            userEdited: codeValidity.userEdited,
+          });
       }
-    }
+    });
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
@@ -223,11 +220,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    set({
+      dismissedNodes: JSON.parse(
+        localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
+      ) as string[],
+    });
     unselectAllNodesEdges(nodes, edges);
     set({
       nodes,
       edges: newEdges,
       flowState: undefined,
+      buildInfo: null,
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
@@ -591,6 +594,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     });
   },
+  pastBuildFlowParams: null,
+  buildInfo: null,
+  setBuildInfo: (buildInfo: { error?: string[]; success?: boolean } | null) => {
+    set({ buildInfo });
+  },
   buildFlow: async ({
     startNodeId,
     stopNodeId,
@@ -610,27 +618,44 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => {
+    set({
+      pastBuildFlowParams: {
+        startNodeId,
+        stopNodeId,
+        input_value,
+        files,
+        silent,
+        session,
+        stream,
+        eventDelivery,
+      },
+      buildInfo: null,
+    });
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
+    set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
-    const setNoticeData = useAlertStore.getState().setNoticeData;
 
     const edges = get().edges;
     let error = false;
+    let errors: string[] = [];
     for (const edge of edges) {
-      const errors = validateEdge(edge, get().nodes, edges);
-      if (errors.length > 0) {
+      const errorsEdge = validateEdge(edge, get().nodes, edges);
+      if (errorsEdge.length > 0) {
         error = true;
-        setErrorData({
+        errors.push(errorsEdge.join("\n"));
+        useAlertStore.getState().addNotificationToHistory({
           title: MISSED_ERROR_ALERT,
-          list: errors,
+          type: "error",
+          list: errorsEdge,
         });
       }
     }
     if (error) {
       get().setIsBuilding(false);
+      get().setBuildInfo({ error: errors, success: false });
       throw new Error("Invalid components");
     }
 
@@ -642,8 +667,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
-        setErrorData({
+        get().setBuildInfo({ error: errors, success: false });
+        useAlertStore.getState().addNotificationToHistory({
           title: MISSED_ERROR_ALERT,
+          type: "error",
           list: errors,
         });
         get().setIsBuilding(false);
@@ -661,10 +688,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     ) {
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
-        get().updateBuildStatus(
-          vertexBuildData.inactivated_vertices,
-          BuildStatus.INACTIVE,
-        );
+        if (vertexBuildData.inactivated_vertices.length > 0) {
+          get().updateBuildStatus(
+            vertexBuildData.inactivated_vertices,
+            BuildStatus.INACTIVE,
+          );
+        }
       }
 
       if (vertexBuildData.next_vertices_ids) {
@@ -749,8 +778,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         { ...vertexBuildData, run_id: runId },
         vertexBuildData.id,
       );
-
-      useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+      if (status !== BuildStatus.ERROR) {
+        get().updateBuildStatus([vertexBuildData.id], status);
+      }
     }
     await buildFlowVerticesWithFallback({
       session,
@@ -759,23 +789,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      onGetOrderSuccess: () => {
-        if (!silent) {
-          setNoticeData({ title: "Running components" });
-        }
-      },
+      onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
         if (!silent) {
           if (allNodesValid) {
-            setSuccessData({
-              title: nodeId
-                ? `${
-                    get().nodes.find((node) => node.id === nodeId)?.data.node
-                      ?.display_name
-                  } built successfully`
-                : FLOW_BUILD_SUCCESS_ALERT,
-            });
+            get().setBuildInfo({ success: true });
           }
         }
         get().updateEdgesRunningByNodes(
@@ -803,7 +822,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           get().nodes.map((n) => n.id),
           false,
         );
-        setErrorData({ list, title });
+        get().setBuildInfo({ error: list, success: false });
+        useAlertStore.getState().addNotificationToHistory({
+          title: title,
+          type: "error",
+          list: list,
+        });
         get().setIsBuilding(false);
         get().buildController.abort();
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
@@ -986,11 +1010,33 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       lastCopiedSelection: null,
       verticesBuild: null,
       flowBuildStatus: {},
+      buildInfo: null,
       isBuilding: false,
       isPending: true,
       positionDictionary: {},
       componentsToUpdate: [],
     });
+  },
+  dismissedNodes: [],
+  addDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodes, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
+  },
+  removeDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = get().dismissedNodes.filter(
+      (node) => !dismissedNodes.includes(node),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
   },
 }));
 

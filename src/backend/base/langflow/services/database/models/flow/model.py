@@ -35,6 +35,9 @@ class AccessTypeEnum(str, Enum):
 
 
 class FlowBase(SQLModel):
+    # Supresses warnings during migrations
+    __mapper_args__ = {"confirm_deleted_rows": False}
+
     name: str = Field(index=True)
     description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
@@ -261,6 +264,7 @@ class FlowUpdate(SQLModel):
     folder_id: UUID | None = None
     endpoint_name: str | None = None
     mcp_enabled: bool | None = None
+    locked: bool | None = None
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None

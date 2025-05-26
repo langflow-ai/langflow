@@ -7,8 +7,8 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
-import { PROXY_TARGET } from "@/customization/config-constants";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
@@ -61,23 +61,22 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = `${PROXY_TARGET}/api/v1/mcp/project/${projectId}/sse`;
+  const apiUrl = customGetMCPUrl(projectId);
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "${apiUrl}"${
+        "mcp-proxy",${
           isAutoLogin
             ? ""
-            : `,
-        "--header",
-        "x-api-key:${apiKey || "YOUR_API_KEY"}"`
+            : `
+        "--headers",
+        "x-api-key",
+        "${apiKey || "YOUR_API_KEY"}",`
         }
+        "${apiUrl}"
       ]
     }
   }
@@ -115,13 +114,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   return (
     <div>
-      <div
-        className="text-md -mt-2 pb-2 font-bold"
-        data-testid="mcp-server-title"
-      >
+      <div className="pb-2 text-sm font-medium" data-testid="mcp-server-title">
         MCP Server
       </div>
-      <div className="pb-4 text-sm text-muted-foreground">
+      <div className="pb-4 text-mmd text-muted-foreground">
         Access your Project's flows as Actions within a MCP Server. Learn more
         in our
         <a
@@ -141,7 +137,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP actions."
               side="right"
             >
-              <div className="flex items-center text-sm font-medium hover:cursor-help">
+              <div className="flex items-center text-mmd font-medium hover:cursor-help">
                 Flows/Actions
                 <ForwardedIconComponent
                   name="info"
@@ -215,7 +211,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               {MCP_SERVER_JSON}
             </SyntaxHighlighter>
           </div>
-          <div className="p-2 text-sm text-muted-foreground">
+          <div className="p-2 text-mmd text-muted-foreground">
             Add this config to your client of choice. Need help? See the{" "}
             <a
               href={MCP_SERVER_TUTORIAL_LINK}
