@@ -194,9 +194,7 @@ class LLMRouterComponent(Component):
         if langflow_model_name.startswith("models/"):
             name_without_prefix = langflow_model_name[len("models/") :]
             potential_names_to_check.append(name_without_prefix)
-            potential_names_to_check.append(
-                self._simplify_model_name(name_without_prefix)
-            )
+            potential_names_to_check.append(self._simplify_model_name(name_without_prefix))
 
         elif langflow_model_name.startswith("community_models/"):
             name_without_prefix = langflow_model_name[len("community_models/") :]
@@ -234,9 +232,11 @@ class LLMRouterComponent(Component):
         api_model_id = self._get_api_model_id_for_langflow_model(langflow_model_name)
 
         if not api_model_id or api_model_id not in self._models_api_cache:
-            self.log(
-                f"No cached API data found for Langflow model '{langflow_model_name}' (mapped API ID: {api_model_id}). Returning basic info."
+            log_msg = (
+                f"No cached API data found for Langflow model '{langflow_model_name}' "
+                f"(mapped API ID: {api_model_id}). Returning basic info."
             )
+            self.log(log_msg)
             return {
                 "id": langflow_model_name,
                 "name": langflow_model_name,
@@ -379,9 +379,11 @@ Return ONLY the index number:"""
 - Number of Models Considered: {len(self.models)}
 - Specifications Source: {specs_source}"""
 
-            self.log(
-                f"DECISION by Judge LLM: Selected model index {selected_index} -> Langflow Name: '{self._selected_model_name}', API ID: '{self._selected_api_model_id}'"
+            log_msg = (
+                f"DECISION by Judge LLM: Selected model index {selected_index} -> "
+                f"Langflow Name: '{self._selected_model_name}', API ID: '{self._selected_api_model_id}'"
             )
+            self.log(log_msg)
 
             self.status = f"Generating response with: {self._selected_model_name}"
             input_message_obj = Message(text=self.input_value)
@@ -406,9 +408,8 @@ Return ONLY the index number:"""
                 chosen_model_instance = self.models[0]
                 self._selected_model_name = get_model_name(chosen_model_instance)
                 if self._selected_model_name:
-                    self._selected_api_model_id = (
-                        self._get_api_model_id_for_langflow_model(self._selected_model_name) or self._selected_model_name
-                    )
+                    mapped_id = self._get_api_model_id_for_langflow_model(self._selected_model_name)
+                    self._selected_api_model_id = mapped_id or self._selected_model_name
                 else:
                     self._selected_api_model_id = "fallback_model"
                 self._routing_decision = f"""Fallback Decision:
@@ -451,10 +452,11 @@ Return ONLY the index number:"""
             if 0 <= selected_index < len(self.models):
                 self.log(f"Judge LLM selected index: {selected_index}")
                 return selected_index, self.models[selected_index]
-            self.log(
-                f"Judge LLM selected index {selected_index} is out of bounds (0-{len(self.models) - 1}). Defaulting to index 0.",
-                "warning",
+            log_msg = (
+                f"Judge LLM selected index {selected_index} is out of bounds "
+                f"(0-{len(self.models) - 1}). Defaulting to index 0."
             )
+            self.log(log_msg, "warning")
             return 0, self.models[0]
 
         except ValueError:
@@ -463,10 +465,8 @@ Return ONLY the index number:"""
                 "warning",
             )
             return 0, self.models[0]
-        except Exception as e:
-            self.log(
-                f"Unexpected error parsing judge response '{response_content}': {e!s}. Defaulting to index 0.", "error"
-            )
+        except (AttributeError, IndexError) as e:
+            self.log(f"Error parsing judge response '{response_content}': {e!s}. Defaulting to index 0.", "error")
             return 0, self.models[0]
 
     def get_selected_model_info(self) -> list[Data]:
