@@ -38,17 +38,17 @@ const operatingSystemTabs = [
   {
     name: "macoslinux",
     title: "macOS/Linux",
-    icon: "Apple",
+    icon: "FaApple",
   },
   {
     name: "windows",
     title: "Windows",
-    icon: "Windows",
+    icon: "FaWindows",
   },
   {
     name: "wsl",
     title: "WSL",
-    icon: "Linux",
+    icon: "FaLinux",
   },
 ];
 
@@ -247,10 +247,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 >
                   <TabsList>
                     {operatingSystemTabs.map((tab, index) => (
-                      <TabsTrigger key={index} value={tab.name}>
+                      <TabsTrigger
+                        className="flex items-center gap-2"
+                        key={index}
+                        value={tab.name}
+                      >
                         <ForwardedIconComponent
                           name={tab.icon}
-                          className="h-4 w-4"
                           aria-hidden="true"
                         />
                         {tab.title}
