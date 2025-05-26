@@ -21,7 +21,7 @@ export const usePatchInstallMCP: useMutationFunctionType<
   PatchInstallMCPBody,
   PatchInstallMCPResponse
 > = (params, options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   async function patchInstallMCP(body: PatchInstallMCPBody): Promise<any> {
     const res = await api.post(
@@ -35,7 +35,15 @@ export const usePatchInstallMCP: useMutationFunctionType<
     PatchInstallMCPResponse,
     any,
     PatchInstallMCPBody
-  > = mutate(["usePatchInstallMCP"], patchInstallMCP, options);
+  > = mutate(["usePatchInstallMCP"], patchInstallMCP, {
+    ...options,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({
+        queryKey: ["useGetInstalledMCP", params.project_id],
+      });
+      options?.onSuccess?.(data, variables, context);
+    },
+  });
 
   return mutation;
 };
