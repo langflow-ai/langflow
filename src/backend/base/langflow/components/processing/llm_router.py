@@ -1,3 +1,5 @@
+import asyncio
+import http  # Added for HTTPStatus
 import json
 from typing import Any
 
@@ -15,6 +17,10 @@ class LLMRouterComponent(Component):
     display_name = "LLM Router"
     description = "Routes the input to the most appropriate LLM based on OpenRouter model specifications"
     icon = "git-branch"
+
+    # Constants for magic values
+    MAX_DESCRIPTION_LENGTH = 500
+    QUERY_PREVIEW_MAX_LENGTH = 1000
 
     inputs = [
         HandleInput(
@@ -49,7 +55,10 @@ class LLMRouterComponent(Component):
             name="use_openrouter_specs",
             display_name="Use OpenRouter Specs",
             value=True,
-            info="Fetch model specifications from OpenRouter API for enhanced routing decisions. If false, only model names will be used.",
+            info=(
+                "Fetch model specifications from OpenRouter API for enhanced routing decisions. "
+                "If false, only model names will be used."
+            ),
             advanced=True,
         ),
         IntInput(
@@ -85,11 +94,11 @@ class LLMRouterComponent(Component):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._selected_model_name: str | None = None  # Langflow name of the selected model
-        self._selected_api_model_id: str | None = None  # OpenRouter API ID of the selected model
+        self._selected_model_name: str | None = None
+        self._selected_api_model_id: str | None = None
         self._routing_decision: str = ""
-        self._models_api_cache: dict[str, dict[str, Any]] = {}  # Cache for full API data, key by API model ID
-        self._model_name_to_api_id: dict[str, str] = {}  # Maps various name forms to API model ID
+        self._models_api_cache: dict[str, dict[str, Any]] = {}
+        self._model_name_to_api_id: dict[str, str] = {}
 
     def _simplify_model_name(self, name: str) -> str:
         """Simplify model name for matching by lowercasing and removing non-alphanumerics."""
@@ -97,7 +106,7 @@ class LLMRouterComponent(Component):
 
     async def _fetch_openrouter_models_data(self) -> None:
         """Fetch all models from OpenRouter API and cache them along with name mappings."""
-        if self._models_api_cache and self._model_name_to_api_id:  # Already cached
+        if self._models_api_cache and self._model_name_to_api_id:
             return
 
         if not self.use_openrouter_specs:
@@ -107,109 +116,115 @@ class LLMRouterComponent(Component):
         try:
             self.status = "Fetching OpenRouter model specifications..."
             self.log("Fetching all model specifications from OpenRouter API: https://openrouter.ai/api/v1/models")
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-                async with session.get("https://openrouter.ai/api/v1/models") as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        models_list = data.get("data", [])
+            async with (
+                aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session,
+                session.get("https://openrouter.ai/api/v1/models") as response,
+            ):
+                if response.status == http.HTTPStatus.OK:
+                    data = await response.json()
+                    models_list = data.get("data", [])
 
-                        _models_api_cache_temp = {}
-                        _model_name_to_api_id_temp = {}
+                    _models_api_cache_temp = {}
+                    _model_name_to_api_id_temp = {}
 
-                        for model_data in models_list:
-                            api_model_id = model_data.get("id")
-                            if not api_model_id:
-                                continue
+                    for model_data in models_list:
+                        api_model_id = model_data.get("id")
+                        if not api_model_id:
+                            continue
 
-                            _models_api_cache_temp[api_model_id] = model_data
+                        _models_api_cache_temp[api_model_id] = model_data
+                        _model_name_to_api_id_temp[api_model_id] = api_model_id
 
-                            # Map API ID to itself for direct lookup
-                            _model_name_to_api_id_temp[api_model_id] = api_model_id
+                        api_model_name = model_data.get("name")
+                        if api_model_name:
+                            _model_name_to_api_id_temp[api_model_name] = api_model_id
+                            simplified_api_name = self._simplify_model_name(api_model_name)
+                            _model_name_to_api_id_temp[simplified_api_name] = api_model_id
 
-                            # Map API name to API ID
-                            api_model_name = model_data.get("name")
-                            if api_model_name:
-                                _model_name_to_api_id_temp[api_model_name] = api_model_id
-                                _model_name_to_api_id_temp[self._simplify_model_name(api_model_name)] = api_model_id
+                        hugging_face_id = model_data.get("hugging_face_id")
+                        if hugging_face_id:
+                            _model_name_to_api_id_temp[hugging_face_id] = api_model_id
+                            simplified_hf_id = self._simplify_model_name(hugging_face_id)
+                            _model_name_to_api_id_temp[simplified_hf_id] = api_model_id
 
-                            # Map Hugging Face ID (if present) to API ID
-                            hugging_face_id = model_data.get("hugging_face_id")
-                            if hugging_face_id:
-                                _model_name_to_api_id_temp[hugging_face_id] = api_model_id
-                                _model_name_to_api_id_temp[self._simplify_model_name(hugging_face_id)] = api_model_id
+                        if "/" in api_model_id:
+                            try:
+                                model_name_part_of_id = api_model_id.split("/", 1)[1]
+                                if model_name_part_of_id:
+                                    _model_name_to_api_id_temp[model_name_part_of_id] = api_model_id
+                                    simplified_part_id = self._simplify_model_name(model_name_part_of_id)
+                                    _model_name_to_api_id_temp[simplified_part_id] = api_model_id
+                            except IndexError:
+                                pass  # Should not happen if '/' is present
 
-                            # Add mappings for model name part of the API ID (e.g., "gemma-7b" from "google/gemma-7b")
-                            if "/" in api_model_id:
-                                try:
-                                    model_name_part_of_id = api_model_id.split("/", 1)[1]
-                                    if model_name_part_of_id:  # Ensure it's not empty after split
-                                        _model_name_to_api_id_temp[model_name_part_of_id] = api_model_id
-                                        _model_name_to_api_id_temp[self._simplify_model_name(model_name_part_of_id)] = (
-                                            api_model_id
-                                        )
-                                except IndexError:
-                                    # Handle cases where split might not work as expected, though '/' check should prevent this
-                                    pass
-
-                        self._models_api_cache = _models_api_cache_temp
-                        self._model_name_to_api_id = _model_name_to_api_id_temp
-                        self.log(
-                            f"Successfully fetched and cached {len(self._models_api_cache)} model specifications from OpenRouter."
-                        )
-                    else:
-                        self.log(f"Failed to fetch OpenRouter models: HTTP {response.status} - {await response.text()}")
-                        self._models_api_cache = {}
-                        self._model_name_to_api_id = {}
-        except Exception as e:
-            self.log(f"Error fetching OpenRouter models: {e!s}")
+                    self._models_api_cache = _models_api_cache_temp
+                    self._model_name_to_api_id = _model_name_to_api_id_temp
+                    log_msg = (
+                        f"Successfully fetched and cached {len(self._models_api_cache)} "
+                        f"model specifications from OpenRouter."
+                    )
+                    self.log(log_msg)
+                else:
+                    err_text = await response.text()
+                    self.log(f"Failed to fetch OpenRouter models: HTTP {response.status} - {err_text}")
+                    self._models_api_cache = {}
+                    self._model_name_to_api_id = {}
+        except aiohttp.ClientError as e:
+            self.log(f"AIOHTTP ClientError fetching OpenRouter models: {e!s}", "error")
+            self._models_api_cache = {}
+            self._model_name_to_api_id = {}
+        except asyncio.TimeoutError:
+            self.log("Timeout fetching OpenRouter model specifications.", "error")
+            self._models_api_cache = {}
+            self._model_name_to_api_id = {}
+        except json.JSONDecodeError as e:
+            self.log(f"JSON decode error fetching OpenRouter models: {e!s}", "error")
             self._models_api_cache = {}
             self._model_name_to_api_id = {}
         finally:
-            self.status = ""  # Clear status after fetching
+            self.status = ""
 
     def _get_api_model_id_for_langflow_model(self, langflow_model_name: str) -> str | None:
         """Attempt to find the OpenRouter API ID for a given Langflow model name."""
         if not langflow_model_name:
             return None
 
-        potential_names_to_check = [
-            langflow_model_name,  # Original name
-            self._simplify_model_name(langflow_model_name),  # Simplified original name
-        ]
+        potential_names_to_check = [langflow_model_name, self._simplify_model_name(langflow_model_name)]
 
-        # Check for "models/" prefix
         if langflow_model_name.startswith("models/"):
             name_without_prefix = langflow_model_name[len("models/") :]
-            potential_names_to_check.append(name_without_prefix)  # Name without prefix
+            potential_names_to_check.append(name_without_prefix)
             potential_names_to_check.append(
                 self._simplify_model_name(name_without_prefix)
-            )  # Simplified name without prefix
+            )
 
-        # Check for "community_models/" prefix (another common pattern)
         elif langflow_model_name.startswith("community_models/"):
             name_without_prefix = langflow_model_name[len("community_models/") :]
             potential_names_to_check.append(name_without_prefix)
-            potential_names_to_check.append(self._simplify_model_name(name_without_prefix))
+            simplified_no_prefix = self._simplify_model_name(name_without_prefix)
+            potential_names_to_check.append(simplified_no_prefix)
 
-        # Deduplicate the list while preserving order for consistent lookup
-        # (though order here might not be critical as we stop on first match)
-        # Using dict.fromkeys for simple deduplication
+        elif langflow_model_name.startswith("community_models/"):
+            name_without_prefix = langflow_model_name[len("community_models/") :]
+            potential_names_to_check.append(name_without_prefix)
+            simplified_no_prefix_comm = self._simplify_model_name(name_without_prefix)
+            potential_names_to_check.append(simplified_no_prefix_comm)
+
         unique_names_to_check = list(dict.fromkeys(potential_names_to_check))
 
         for name_variant in unique_names_to_check:
             if name_variant in self._model_name_to_api_id:
-                # self.log(f"Mapped Langflow model '{langflow_model_name}' to API ID '{self._model_name_to_api_id[name_variant]}' using variant '{name_variant}'")
                 return self._model_name_to_api_id[name_variant]
 
         self.log(
-            f"Could not map Langflow model name '{langflow_model_name}' (tried variants: {unique_names_to_check}) to an OpenRouter API ID."
+            f"Could not map Langflow model name '{langflow_model_name}' "
+            f"(tried variants: {unique_names_to_check}) to an OpenRouter API ID."
         )
         return None
 
     def _get_model_specs_dict(self, langflow_model_name: str) -> dict[str, Any]:
         """Get a dictionary of relevant model specifications for a given Langflow model name."""
         if not self.use_openrouter_specs or not self._models_api_cache:
-            # If not using specs or cache is empty, return basic info
             return {
                 "id": langflow_model_name,
                 "name": langflow_model_name,
@@ -229,22 +244,24 @@ class LLMRouterComponent(Component):
             }
 
         model_data = self._models_api_cache[api_model_id]
-
-        # Extract relevant information for the judge LLM
-        # Prioritize top_provider for context_length and max_completion_tokens if available
         top_provider_data = model_data.get("top_provider", {})
-
         architecture_data = model_data.get("architecture", {})
         pricing_data = model_data.get("pricing", {})
+        description = model_data.get("description", "No description available")
+        truncated_description = (
+            description[: self.MAX_DESCRIPTION_LENGTH - 3] + "..."
+            if len(description) > self.MAX_DESCRIPTION_LENGTH
+            else description
+        )
 
         specs = {
             "id": model_data.get("id"),
             "name": model_data.get("name"),
-            "description": model_data.get("description", "No description available")[:500]
-            + "...",  # Truncate long descriptions
+            "description": truncated_description,
             "context_length": top_provider_data.get("context_length") or model_data.get("context_length"),
-            "max_completion_tokens": top_provider_data.get("max_completion_tokens")
-            or model_data.get("max_completion_tokens"),
+            "max_completion_tokens": (
+                top_provider_data.get("max_completion_tokens") or model_data.get("max_completion_tokens")
+            ),
             "tokenizer": architecture_data.get("tokenizer"),
             "input_modalities": architecture_data.get("input_modalities", []),
             "output_modalities": architecture_data.get("output_modalities", []),
@@ -253,13 +270,14 @@ class LLMRouterComponent(Component):
             "is_moderated": top_provider_data.get("is_moderated"),
             "supported_parameters": model_data.get("supported_parameters", []),
         }
-        return {k: v for k, v in specs.items() if v is not None}  # Remove None values
+        return {k: v for k, v in specs.items() if v is not None}
 
     def _create_system_prompt(self) -> str:
         """Create system prompt for the judge LLM."""
-        # Removed optimization-specific guidance from here, will be in user message
         return """\
-You are an expert AI model selection specialist. Your task is to analyze the user's input query, their optimization preference, and a list of available models with their specifications, then select the most appropriate model.
+You are an expert AI model selection specialist. Your task is to analyze the user's input query,
+their optimization preference, and a list of available models with their specifications,
+then select the most appropriate model.
 
 Each model will be presented as a JSON object with its capabilities and characteristics.
 
@@ -283,12 +301,12 @@ If no model seems suitable, pick the first model in the list (index 0) as a fall
             self.log(f"Validation Error: {error_msg}", "error")
             raise ValueError(error_msg)
 
+        successful_result: Message | None = None
         try:
             self.log(f"Starting model routing with {len(self.models)} available Langflow models.")
             self.log(f"Optimization preference: {self.optimization}")
             self.log(f"Input length: {len(self.input_value)} characters")
 
-            # Fetch OpenRouter models data if enabled and not already cached
             if self.use_openrouter_specs and not self._models_api_cache:
                 await self._fetch_openrouter_models_data()
 
@@ -314,18 +332,22 @@ If no model seems suitable, pick the first model in the list (index 0) as a fall
                     f"Prepared specs for Langflow model {i} ('{langflow_model_name}'): {spec_dict.get('name', 'N/A')}"
                 )
 
-            # Estimate token usage for the input for context
-            estimated_tokens = len(self.input_value.split()) * 1.3  # Rough estimation
+            estimated_tokens = len(self.input_value.split()) * 1.3
             self.log(f"Estimated input tokens: {int(estimated_tokens)}")
 
-            user_message_content = f"""User Query: "{self.input_value[:1000]}{"..." if len(self.input_value) > 1000 else ""}"
+            query_preview = self.input_value[: self.QUERY_PREVIEW_MAX_LENGTH]
+            if len(self.input_value) > self.QUERY_PREVIEW_MAX_LENGTH:
+                query_preview += "..."
+
+            user_message_content = f"""User Query: "{query_preview}"
 Optimization Preference: {self.optimization}
 Estimated Input Tokens: ~{int(estimated_tokens)}
 
 Available Models (JSON list):
 {json.dumps(model_specs_for_judge, indent=2)}
 
-Based on the user query, optimization preference, and the detailed model specifications, select the index of the most appropriate model.
+Based on the user query, optimization preference, and the detailed model specifications,
+select the index of the most appropriate model.
 Return ONLY the index number:"""
 
             user_message = {"role": "user", "content": user_message_content}
@@ -333,18 +355,21 @@ Return ONLY the index number:"""
             self.log("Requesting model selection from judge LLM...")
             self.status = "Judge LLM analyzing options..."
 
-            # The judge_llm.ainvoke is expected to be an async method
             response = await self.judge_llm.ainvoke([system_message, user_message])
-
-            # Parse response
             selected_index, chosen_model_instance = self._parse_judge_response(response.content.strip())
+            self._selected_model_name = get_model_name(chosen_model_instance)
+            if self._selected_model_name:
+                self._selected_api_model_id = (
+                    self._get_api_model_id_for_langflow_model(self._selected_model_name) or self._selected_model_name
+                )
+            else:
+                self._selected_api_model_id = "unknown_model"
 
-            self._selected_model_name = get_model_name(chosen_model_instance)  # Langflow name
-            # Attempt to get the API ID for more precise logging/info if available
-            self._selected_api_model_id = (
-                self._get_api_model_id_for_langflow_model(self._selected_model_name) or self._selected_model_name
+            specs_source = (
+                "OpenRouter API"
+                if self.use_openrouter_specs and self._models_api_cache
+                else "Basic (Langflow model names only)"
             )
-
             self._routing_decision = f"""Model Selection Decision:
 - Selected Model Index: {selected_index}
 - Selected Langflow Model Name: {self._selected_model_name}
@@ -352,7 +377,7 @@ Return ONLY the index number:"""
 - Optimization Preference: {self.optimization}
 - Input Query Length: {len(self.input_value)} characters (~{int(estimated_tokens)} tokens)
 - Number of Models Considered: {len(self.models)}
-- Specifications Source: {"OpenRouter API" if self.use_openrouter_specs and self._models_api_cache else "Basic (Langflow model names only)"}"""
+- Specifications Source: {specs_source}"""
 
             self.log(
                 f"DECISION by Judge LLM: Selected model index {selected_index} -> Langflow Name: '{self._selected_model_name}', API ID: '{self._selected_api_model_id}'"
@@ -361,35 +386,31 @@ Return ONLY the index number:"""
             self.status = f"Generating response with: {self._selected_model_name}"
             input_message_obj = Message(text=self.input_value)
 
-            # Assuming get_chat_result is sync based on persistent TypeErrors with await
             raw_result = get_chat_result(
                 runnable=chosen_model_instance,
                 input_value=input_message_obj,
             )
-            # Ensure result is Message object
-            if not isinstance(raw_result, Message):
-                result = Message(text=str(raw_result))
-            else:
-                result = raw_result
+            result = Message(text=str(raw_result)) if not isinstance(raw_result, Message) else raw_result
 
             self.status = f"Successfully routed to: {self._selected_model_name}"
-            return result
+            successful_result = result
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError, KeyError, RuntimeError) as e:
             error_msg = f"Routing error: {type(e).__name__} - {e!s}"
             self.log(f"{error_msg}", "error")
-            # Use self.log with exc_info for detailed traceback
-            self.log("Detailed routing error:", level="error", exc_info=e)
+            self.log("Detailed routing error occurred. Check logs for details.", "error")
             self.status = error_msg
 
             if self.fallback_to_first and self.models:
                 self.log("Activating fallback to first model due to error.", "warning")
                 chosen_model_instance = self.models[0]
                 self._selected_model_name = get_model_name(chosen_model_instance)
-                self._selected_api_model_id = (
-                    self._get_api_model_id_for_langflow_model(self._selected_model_name) or self._selected_model_name
-                )
-
+                if self._selected_model_name:
+                    self._selected_api_model_id = (
+                        self._get_api_model_id_for_langflow_model(self._selected_model_name) or self._selected_model_name
+                    )
+                else:
+                    self._selected_api_model_id = "fallback_model"
                 self._routing_decision = f"""Fallback Decision:
 - Error During Routing: {error_msg}
 - Fallback Model Langflow Name: {self._selected_model_name}
@@ -399,26 +420,29 @@ Return ONLY the index number:"""
                 self.status = f"Fallback: Using {self._selected_model_name}"
                 input_message_obj = Message(text=self.input_value)
 
-                # Assuming get_chat_result is sync for fallback as well
                 raw_fallback_result = get_chat_result(
                     runnable=chosen_model_instance,
                     input_value=input_message_obj,
                 )
                 if not isinstance(raw_fallback_result, Message):
-                    fallback_result = Message(text=str(raw_fallback_result))
+                    successful_result = Message(text=str(raw_fallback_result))
                 else:
-                    fallback_result = raw_fallback_result
-                return fallback_result
-            self.log("No fallback model available or fallback disabled. Raising error.", "error")
-            raise
+                    successful_result = raw_fallback_result
+            else:
+                self.log("No fallback model available or fallback disabled. Raising error.", "error")
+                raise
+
+        if successful_result is None:
+            error_message = "Unexpected state in route_to_model: No result produced."
+            self.log(f"Error: {error_message}", "error")
+            raise RuntimeError(error_message)
+        return successful_result
 
     def _parse_judge_response(self, response_content: str) -> tuple[int, Any]:
         """Parse the judge's response to extract model index."""
         try:
-            # Remove any leading/trailing whitespace and non-numeric characters
-            # Sometimes models might return "Index: 0" or "0."
             cleaned_response = "".join(filter(str.isdigit, response_content.strip()))
-            if not cleaned_response:  # Handle cases where response is purely non-numeric
+            if not cleaned_response:
                 self.log(f"Judge LLM response was non-numeric: '{response_content}'. Defaulting to index 0.", "warning")
                 return 0, self.models[0]
 
@@ -433,13 +457,13 @@ Return ONLY the index number:"""
             )
             return 0, self.models[0]
 
-        except ValueError:  # Catches int conversion errors
+        except ValueError:
             self.log(
                 f"Could not parse judge LLM response to integer: '{response_content}'. Defaulting to index 0.",
                 "warning",
             )
             return 0, self.models[0]
-        except Exception as e:  # Catch any other parsing errors
+        except Exception as e:
             self.log(
                 f"Unexpected error parsing judge response '{response_content}': {e!s}. Defaulting to index 0.", "error"
             )
@@ -448,34 +472,26 @@ Return ONLY the index number:"""
     def get_selected_model_info(self) -> list[Data]:
         """Return detailed information about the selected model as a list of Data objects."""
         if self._selected_model_name:
-            # Use the Langflow name to get specs, which internally maps to API ID if available
             specs_dict = self._get_model_specs_dict(self._selected_model_name)
-
-            # Add the Langflow name to the dict if it's not already the primary ID/name
             if "langflow_name" not in specs_dict:
                 specs_dict["langflow_model_name_used_for_lookup"] = self._selected_model_name
-
-            # Also add the resolved API ID if different from the dict's ID
             if self._selected_api_model_id and specs_dict.get("id") != self._selected_api_model_id:
                 specs_dict["resolved_api_model_id"] = self._selected_api_model_id
-
-            # Return as a list containing a single Data object
             data_output = [Data(data=specs_dict)]
-            self.status = data_output  # Set status for this specific output
+            self.status = data_output
             return data_output
 
-        # If no model selected, return a list with a Data object containing an info message
         data_output = [Data(data={"info": "No model selected yet - run the router first."})]
-        self.status = data_output  # Set status for this specific output
+        self.status = data_output
         return data_output
 
     def get_routing_decision(self) -> Message:
         """Return the comprehensive routing decision explanation."""
         if self._routing_decision:
             message_output = Message(text=f"{self._routing_decision}")
-            self.status = message_output  # Set status for this specific output
+            self.status = message_output
             return message_output
 
         message_output = Message(text="No routing decision made yet - run the router first.")
-        self.status = message_output  # Set status for this specific output
+        self.status = message_output
         return message_output
