@@ -13,21 +13,21 @@ from langflow.logging import logger
 class ComposioYoutubeAPIComponent(ComposioBaseComponent):
     display_name: str = "Youtube"
     description: str = "Youtube API"
-    icon = "Youtube"
+    icon = "YouTube"
     documentation: str = "https://docs.composio.dev"
     app_name = "youtube"
 
     _actions_data: dict = {
         "YOUTUBE_GET_CHANNEL_ID_BY_HANDLE": {
-            "display_name": "Get Channel Id by Handle",
+            "display_name": "Get Channel ID by Handle",
             "action_fields": ["YOUTUBE_GET_CHANNEL_ID_BY_HANDLE_channel_handle"],
         },
         "YOUTUBE_LIST_CAPTION_TRACK": {
-            "display_name": "List caption track",
+            "display_name": "List Caption Track",
             "action_fields": ["YOUTUBE_LIST_CAPTION_TRACK_part", "YOUTUBE_LIST_CAPTION_TRACK_videoId"],
         },
         "YOUTUBE_LIST_CHANNEL_VIDEOS": {
-            "display_name": "List channel videos",
+            "display_name": "List Channel Videos",
             "action_fields": [
                 "YOUTUBE_LIST_CHANNEL_VIDEOS_channelId",
                 "YOUTUBE_LIST_CHANNEL_VIDEOS_maxResults",
@@ -36,7 +36,7 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             ],
         },
         "YOUTUBE_LIST_USER_PLAYLISTS": {
-            "display_name": "List user playlists",
+            "display_name": "List User Playlists",
             "action_fields": [
                 "YOUTUBE_LIST_USER_PLAYLISTS_maxResults",
                 "YOUTUBE_LIST_USER_PLAYLISTS_pageToken",
@@ -44,7 +44,7 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             ],
         },
         "YOUTUBE_LIST_USER_SUBSCRIPTIONS": {
-            "display_name": "List user subscriptions",
+            "display_name": "List User Subscriptions",
             "action_fields": [
                 "YOUTUBE_LIST_USER_SUBSCRIPTIONS_maxResults",
                 "YOUTUBE_LIST_USER_SUBSCRIPTIONS_pageToken",
@@ -52,11 +52,11 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             ],
         },
         "YOUTUBE_LOAD_CAPTIONS": {
-            "display_name": "Load captions",
+            "display_name": "Load Captions",
             "action_fields": ["YOUTUBE_LOAD_CAPTIONS_id", "YOUTUBE_LOAD_CAPTIONS_tfmt"],
         },
         "YOUTUBE_SEARCH_YOU_TUBE": {
-            "display_name": "Search you tube",
+            "display_name": "Search YouTube",
             "action_fields": [
                 "YOUTUBE_SEARCH_YOU_TUBE_maxResults",
                 "YOUTUBE_SEARCH_YOU_TUBE_pageToken",
@@ -66,15 +66,15 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             ],
         },
         "YOUTUBE_SUBSCRIBE_CHANNEL": {
-            "display_name": "Subscribe channel",
+            "display_name": "Subscribe Channel",
             "action_fields": ["YOUTUBE_SUBSCRIBE_CHANNEL_channelId"],
         },
         "YOUTUBE_UPDATE_THUMBNAIL": {
-            "display_name": "Update thumbnail",
+            "display_name": "Update Thumbnail",
             "action_fields": ["YOUTUBE_UPDATE_THUMBNAIL_thumbnailUrl", "YOUTUBE_UPDATE_THUMBNAIL_videoId"],
         },
         "YOUTUBE_UPDATE_VIDEO": {
-            "display_name": "Update video",
+            "display_name": "Update Video",
             "action_fields": [
                 "YOUTUBE_UPDATE_VIDEO_categoryId",
                 "YOUTUBE_UPDATE_VIDEO_description",
@@ -85,7 +85,7 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             ],
         },
         "YOUTUBE_UPLOAD_VIDEO": {
-            "display_name": "Upload video",
+            "display_name": "Upload Video",
             "action_fields": [
                 "YOUTUBE_UPLOAD_VIDEO_categoryId",
                 "YOUTUBE_UPLOAD_VIDEO_description",
@@ -96,7 +96,7 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             ],
         },
         "YOUTUBE_VIDEO_DETAILS": {
-            "display_name": "Video details",
+            "display_name": "Video Details",
             "action_fields": ["YOUTUBE_VIDEO_DETAILS_id", "YOUTUBE_VIDEO_DETAILS_part"],
         },
     }
@@ -104,8 +104,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
     _list_variables = {"YOUTUBE_UPDATE_VIDEO_tags", "YOUTUBE_UPLOAD_VIDEO_tags"}
 
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
-
-    _bool_variables = {}
 
     inputs = [
         *ComposioBaseComponent._base_inputs,
@@ -385,9 +383,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                     if field in self._list_variables and value:
                         value = [item.strip() for item in value.split(",")]
 
-                    if field in self._bool_variables:
-                        value = bool(value)
-
                     param_name = field.replace(action_key + "_", "")
 
                     params[param_name] = value
@@ -400,10 +395,9 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                 return {"error": result.get("error", "No response")}
 
             result_data = result.get("data", [])
-            # Get the first key from the data dict dynamically instead of hardcoding "response_data"
             if result_data and isinstance(result_data, dict):
                 return result_data[next(iter(result_data))]
-            return result_data
+            return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
