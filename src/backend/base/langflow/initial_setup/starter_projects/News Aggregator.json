@@ -1017,6 +1017,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "watsonxAI",
                   "Custom"
                 ],
                 "options_metadata": [
