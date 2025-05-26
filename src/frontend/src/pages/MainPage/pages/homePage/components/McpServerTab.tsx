@@ -20,6 +20,19 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
 
+const autoInstallers = [
+  {
+    name: "cursor",
+    title: "Cursor",
+    icon: "Cursor",
+  },
+  {
+    name: "claude",
+    title: "Claude",
+    icon: "Claude",
+  },
+];
+
 const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
@@ -31,16 +44,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const { data: flowsMCP } = useGetFlowsMCP({ projectId });
-  const {
-    mutate: patchFlowsMCP,
-    isPending: isPatchingFlowsMCP,
-    isSuccess: isInstalledCursor,
-  } = usePatchFlowsMCP({ project_id: projectId });
-  const {
-    mutate: patchInstallMCP,
-    isPending: isPatchingInstallMCP,
-    isSuccess: isInstalledClaude,
-  } = usePatchInstallMCP({ project_id: projectId });
+  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  const { mutate: patchInstallMCP } = usePatchInstallMCP({
+    project_id: projectId,
+  });
 
   const [selectedMode, setSelectedMode] = useState("Auto install");
 
@@ -126,9 +133,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       });
   };
 
-  const [installedCursor, setInstalledCursor] = useState(false);
-  const [installedClaude, setInstalledClaude] = useState(false);
-  const [loadingMCP, setLoadingMCP] = useState("");
+  const [installedMCP, setInstalledMCP] = useState<string[]>([]);
+  const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
   return (
     <div>
@@ -148,8 +154,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           Projects as MCP Servers guide.
         </a>
       </div>
-      <div className="flex flex-row">
-        <div className="w-1/3">
+      <div className="flex flex-col justify-between gap-8 xl:flex-row">
+        <div className="w-full xl:w-2/5">
           <div className="flex flex-row justify-between">
             <ShadTooltip
               content="Flows in this project can be exposed as callable MCP actions."
@@ -179,7 +185,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             />
           </div>
         </div>
-        <div className="flex w-2/3 flex-col gap-4 pl-4">
+        <div className="flex flex-1 flex-col gap-4">
           <div className="flex flex-col">
             <div className="flex flex-row justify-start border-b border-border">
               {[{ name: "Auto install" }, { name: "JSON" }].map(
@@ -187,7 +193,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   <Button
                     unstyled
                     key={item.name}
-                    className={`flex h-8 flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent font-medium ${
+                    className={`flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${
                       selectedMode === item.name
                         ? "border-b-2 border-black dark:border-b-white"
                         : "text-muted-foreground hover:text-foreground"
@@ -266,81 +272,50 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             </>
           )}
           {selectedMode === "Auto install" && (
-            <div className="p-4">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              {autoInstallers.map((installer) => (
+                <Button
+                  variant="ghost"
+                  className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
+                  disabled={installedMCP.includes(installer.name)}
+                  loading={loadingMCP.includes(installer.name)}
+                  onClick={() => {
+                    setLoadingMCP([...loadingMCP, installer.name]);
+                    patchInstallMCP(
+                      { client: installer.name },
+                      {
+                        onSuccess: () => {
+                          setSuccessData({
+                            title: `MCP Server installed successfully on ${installer.title}`,
+                          });
+                          setInstalledMCP([...installedMCP, installer.name]);
+                          setLoadingMCP(
+                            loadingMCP.filter(
+                              (name) => name !== installer.name,
+                            ),
+                          );
+                        },
+                      },
+                    );
+                  }}
+                >
                   <div className="flex items-center gap-4 text-sm font-medium">
                     <ForwardedIconComponent
-                      name="Cursor"
-                      className="h-5 w-5"
+                      name={installer.icon}
+                      className={cn("h-5 w-5")}
                       aria-hidden="true"
                     />
-                    Cursor
+                    {installer.title}
                   </div>
-                  <Button
-                    size="iconMd"
-                    variant="secondary"
-                    loading={loadingMCP === "cursor"}
-                    onClick={() => {
-                      setLoadingMCP("cursor");
-                      patchInstallMCP(
-                        { client: "cursor" },
-                        {
-                          onSuccess: () => {
-                            setSuccessData({
-                              title:
-                                "MCP Server installed successfully on Cursor",
-                            });
-                            setInstalledCursor(true);
-                            setLoadingMCP("");
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    <ForwardedIconComponent
-                      name={installedCursor ? "Check" : "Plus"}
-                      className="h-4 w-4"
-                    />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm font-medium">
-                    <ForwardedIconComponent
-                      name="Claude"
-                      className="h-5 w-5"
-                      aria-hidden="true"
-                    />
-                    Claude
-                  </div>
-                  <Button
-                    size="iconMd"
-                    variant="secondary"
-                    loading={loadingMCP === "claude"}
-                    onClick={() => {
-                      setLoadingMCP("claude");
-                      patchInstallMCP(
-                        { client: "claude" },
-                        {
-                          onSuccess: () => {
-                            setSuccessData({
-                              title:
-                                "MCP Server installed successfully on Claude",
-                            });
-                            setLoadingMCP("");
-                            setInstalledClaude(true);
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    <ForwardedIconComponent
-                      name={installedClaude ? "Check" : "Plus"}
-                      className="h-4 w-4"
-                    />
-                  </Button>
-                </div>
-              </div>
+
+                  <ForwardedIconComponent
+                    name={
+                      installedMCP.includes(installer.name) ? "Check" : "Plus"
+                    }
+                    className="h-4 w-4"
+                  />
+                </Button>
+              ))}
             </div>
           )}
         </div>
