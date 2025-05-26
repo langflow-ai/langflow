@@ -338,7 +338,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   onClick={() => {
                     setLoadingMCP([...loadingMCP, installer.name]);
                     patchInstallMCP(
-                      { client: installer.name },
+                      {
+                        client: installer.name,
+                      },
                       {
                         onSuccess: () => {
                           setSuccessData({

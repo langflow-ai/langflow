@@ -584,20 +584,55 @@ async def install_mcp_config(
         base_url = f"http://{host}:{port}".rstrip("/")
         sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
 
+        # Determine command and args based on operating system
+        os_type = platform.system()
+        command = "uvx"
+        args = ["mcp-proxy", sse_url]
+
+        # Check if running on WSL (will appear as Linux but with Microsoft in release info)
+        is_wsl = False
+        if os_type == "Linux" and "microsoft" in platform.uname().release.lower():
+            logger.info("WSL detected, using Windows-specific configuration")
+            is_wsl = True
+
+            # If we're in WSL and the host is localhost, we might need to adjust the URL
+            # so Windows applications can reach the WSL service
+            if host == "localhost" or host == "127.0.0.1":
+                try:
+                    # Try to get the WSL IP address for host.docker.internal or similar access
+                    import subprocess
+
+                    # This might vary depending on WSL version and configuration
+                    result = subprocess.run(["hostname", "-I"], capture_output=True, text=True, check=False)
+                    if result.returncode == 0 and result.stdout.strip():
+                        wsl_ip = result.stdout.strip().split()[0]  # Get first IP address
+                        logger.info(f"Using WSL IP for external access: {wsl_ip}")
+                        # Replace the localhost with the WSL IP in the URL
+                        sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
+                except Exception as e:
+                    logger.warning(f"Failed to get WSL IP address: {e}. Using default URL.")
+
+        if os_type == "Windows":
+            command = "cmd"
+            args = ["/c", "uvx", "mcp-proxy", sse_url]
+            logger.info("Windows detected, using cmd command")
+        elif is_wsl:
+            # For WSL, we keep the default uvx command as we're on Linux
+            logger.info(f"WSL environment detected, using URL: {sse_url}")
+        # Keep the default for macOS and standard Linux
+
         # Create the MCP configuration
         mcp_config = {
-            "mcpServers": {
-                f"lf-{project.name.lower().replace(' ', '_')[:11]}": {"command": "uvx", "args": ["mcp-proxy", sse_url]}
-            }
+            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:11]}": {"command": command, "args": args}}
         }
 
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
         elif body.client.lower() == "claude":
-            if platform.system() == "Darwin":  # macOS
+            if os_type == "Darwin":  # macOS
                 config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-            elif platform.system() == "Windows":
+            elif os_type == "Windows":
                 config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
             else:
                 raise HTTPException(status_code=400, detail="Unsupported operating system for Claude configuration")
