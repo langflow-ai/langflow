@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING, Any
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from loguru import logger
+from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
-from opentelemetry.trace import Span, SpanKind, Status, StatusCode, use_span
+from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from typing_extensions import override
 
@@ -30,17 +31,6 @@ if TYPE_CHECKING:
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
-
-# Map trace_type to valid OpenTelemetry span kinds
-trace_type_mapping = {
-    "llm": SpanKind.CLIENT,
-    "embedding": SpanKind.CLIENT,
-    "chain": SpanKind.INTERNAL,
-    "agent": SpanKind.INTERNAL,
-    "tool": SpanKind.CLIENT,
-    "retriever": SpanKind.CLIENT,
-    "prompt": SpanKind.INTERNAL,
-}
 
 
 class TraceloopTracer(BaseTracer):
@@ -63,8 +53,6 @@ class TraceloopTracer(BaseTracer):
         self.chat_output_value = ""
         self.session_id = session_id
 
-        otel_span_kind = trace_type_mapping.get(self.trace_type, SpanKind.INTERNAL)
-
         try:
             self._ready = self.setup_traceloop()
             if not self._ready:
@@ -78,9 +66,8 @@ class TraceloopTracer(BaseTracer):
                 name=self.flow_id,
                 start_time=self._get_current_timestamp(),
             )
-
-            self.root_span.set_attribute("session.id", self.session_id or self.flow_id)
-            self.root_span.set_attribute("span.kind", otel_span_kind.name.lower())
+            self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.session_id or self.flow_id)
+            self.root_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, self.trace_type)
             self.root_span.set_attribute("langflow.project.name", self.project_name)
             self.root_span.set_attribute("langflow.flow.name", self.flow_name)
             self.root_span.set_attribute("langflow.flow.id", self.flow_id)
@@ -151,7 +138,7 @@ class TraceloopTracer(BaseTracer):
         except ImportError:
             logger.exception(
                 "Could not import LangChainInstrumentor."
-                "Please install it with `pip install opentelemetry-instrumentation-langchain`."
+                "Please install it with `pip install openinference-instrumentation-langchain`."
             )
             return False
 
@@ -178,24 +165,28 @@ class TraceloopTracer(BaseTracer):
             start_time=self._get_current_timestamp(),
         )
 
-        # Map trace types to OpenTelemetry span kinds
         if trace_type == "prompt":
-            child_span.set_attribute("span.kind", SpanKind.INTERNAL)
+            child_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, "chain")
         else:
-            otel_span_kind = trace_type_mapping.get(trace_type, SpanKind.INTERNAL)
-            child_span.set_attribute("span.kind", otel_span_kind.name.lower())
+            child_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, trace_type)
 
         processed_inputs = self._convert_to_traceloop_types(inputs) if inputs else {}
         if processed_inputs:
-            # OpenTelemetry doesn't have a standard INPUT_VALUE, so use custom attributes
-            child_span.set_attribute("input.value", self._safe_json_dumps(processed_inputs))
-            child_span.set_attribute("input.mime_type", "application/json")
+            child_span.set_attribute(SpanAttributes.INPUT_VALUE, self._safe_json_dumps(processed_inputs))
+            child_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, OpenInferenceMimeTypeValues.JSON.value)
 
         processed_metadata = self._convert_to_traceloop_types(metadata) if metadata else {}
         if processed_metadata:
             for key, value in processed_metadata.items():
-                # Use custom metadata attributes
-                child_span.set_attribute(f"metadata.{key}", value)
+                child_span.set_attribute(f"{SpanAttributes.METADATA}.{key}", value)
+
+        component_name = trace_id.split("-")[0]
+        if component_name == "ChatInput":
+            self.chat_input_value = processed_inputs["input_value"]
+        elif component_name == "ChatOutput":
+            self.chat_output_value = processed_inputs["input_value"]
+
+        self.child_spans[trace_id] = child_span
 
     @override
     def end_trace(
@@ -214,8 +205,8 @@ class TraceloopTracer(BaseTracer):
 
         processed_outputs = self._convert_to_traceloop_types(outputs) if outputs else {}
         if processed_outputs:
-            child_span.set_attribute("output.value", self._safe_json_dumps(processed_outputs))
-            child_span.set_attribute("output.mime_type", "application/json")
+            child_span.set_attribute(SpanAttributes.OUTPUT_VALUE, self._safe_json_dumps(processed_outputs))
+            child_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, OpenInferenceMimeTypeValues.JSON.value)
 
         logs_dicts = [log if isinstance(log, dict) else log.model_dump() for log in logs]
         processed_logs = self._convert_to_traceloop_types({log.get("name"): log for log in logs_dicts}) if logs else {}
@@ -239,27 +230,27 @@ class TraceloopTracer(BaseTracer):
             return
 
         if self.root_span:
-            self.root_span.set_attribute("input.value", self.chat_input_value)
-            self.root_span.set_attribute("input.mime_type", "text/plain")
-            self.root_span.set_attribute("output.value", self.chat_output_value)
-            self.root_span.set_attribute("output.mime_type", "text/plain")
+            self.root_span.set_attribute(SpanAttributes.INPUT_VALUE, self.chat_input_value)
+            self.root_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, OpenInferenceMimeTypeValues.TEXT.value)
+            self.root_span.set_attribute(SpanAttributes.OUTPUT_VALUE, self.chat_output_value)
+            self.root_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, OpenInferenceMimeTypeValues.TEXT.value)
 
             processed_metadata = self._convert_to_traceloop_types(metadata) if metadata else {}
             if processed_metadata:
                 for key, value in processed_metadata.items():
-                    self.root_span.set_attribute(f"metadata.{key}", value)
+                    self.root_span.set_attribute(f"{SpanAttributes.METADATA}.{key}", value)
 
             self._set_span_status(self.root_span, error)
             self.root_span.end()
 
         try:
-            from opentelemetry.instrumentation.langchain import LangchainInstrumentor
+            from openinference.instrumentation.langchain import LangChainInstrumentor
 
-            LangchainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
+            LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
         except ImportError:
             logger.exception(
-                "Could not import LangchainInstrumentor."
-                "Please install it with `pip install opentelemetry-instrumentation-langchain`."
+                "Could not import LangChainInstrumentor."
+                "Please install it with `pip install openinference-instrumentation-langchain`."
             )
 
     def _convert_to_traceloop_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:

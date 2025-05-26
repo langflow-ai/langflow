@@ -52,6 +52,11 @@ def _get_opik_tracer():
 
     return OpikTracer
 
+def _get_traceloop_tracer():
+    from langflow.services.tracing.traceloop import TraceloopTracer
+
+    return TraceloopTracer
+
 
 def _get_traceloop_tracer():
     from langflow.services.tracing.traceloop import TraceloopTracer
