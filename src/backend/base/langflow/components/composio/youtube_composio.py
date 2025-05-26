@@ -399,7 +399,11 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             if not result.get("successful"):
                 return {"error": result.get("error", "No response")}
 
-            return result.get("data", []).get("response_data", [])
+            result_data = result.get("data", [])
+            # Get the first key from the data dict dynamically instead of hardcoding "response_data"
+            if result_data and isinstance(result_data, dict):
+                return result_data[next(iter(result_data))]
+            return result_data
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
