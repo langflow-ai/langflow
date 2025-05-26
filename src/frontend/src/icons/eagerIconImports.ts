@@ -90,6 +90,7 @@ import { SearchHybridIcon } from "@/icons/SearchHybrid";
 import { SearchLexicalIcon } from "@/icons/SearchLexical";
 import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SearxIcon } from "@/icons/Searx";
+import { SentenceTransformersIcon } from "@/icons/SentenceTransformers";
 import { SerperIcon } from "@/icons/Serper";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { ShareIcon } from "@/icons/Share";
@@ -110,6 +111,7 @@ import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
 import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
+
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
@@ -203,6 +205,7 @@ export const eagerIconsMapping = {
   SearchHybrid: SearchHybridIcon,
   SearchVector: SearchVectorIcon,
   Searx: SearxIcon,
+  SentenceTransformers: SentenceTransformersIcon,
   SerpSearch: SerpSearchIcon,
   Serper: SerperIcon,
   Share: ShareIcon,

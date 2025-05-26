@@ -213,6 +213,8 @@ export const lazyIconsMapping = {
     })),
   Searx: () =>
     import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
+  SentenceTransformers: () =>
+    import("@/icons/SentenceTransformers").then((mod) => ({ default: mod.SentenceTransformersIcon })),
   SerpSearch: () =>
     import("@/icons/SerpSearch").then((mod) => ({
       default: mod.SerpSearchIcon,
