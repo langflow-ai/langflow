@@ -2,10 +2,10 @@ import httpx
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
+from langflow.helpers.data import data_to_dataframe
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
-from langflow.schema.message import Message
+from langflow.schema.dataframe import DataFrame
 
 
 class TavilySearchComponent(Component):
@@ -108,8 +108,7 @@ class TavilySearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Text", name="text", method="fetch_content_text"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def fetch_content(self) -> list[Data]:
@@ -208,8 +207,6 @@ class TavilySearchComponent(Component):
             self.status = data_results
             return data_results
 
-    def fetch_content_text(self) -> Message:
+    def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        result_string = data_to_text("{text}", data)
-        self.status = result_string
-        return Message(text=result_string)
+        return data_to_dataframe(data)

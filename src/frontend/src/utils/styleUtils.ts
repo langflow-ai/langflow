@@ -272,6 +272,7 @@ export const SIDEBAR_BUNDLES = [
     icon: "HomeAssistant",
   },
   { display_name: "Search", name: "search", icon: "Search" },
+  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
 ];
 
 export const categoryIcons: Record<string, string> = {
