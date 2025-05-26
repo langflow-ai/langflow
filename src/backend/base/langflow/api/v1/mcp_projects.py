@@ -634,3 +634,63 @@ async def install_mcp_config(
         message = f"Successfully installed MCP configuration for {body.client}"
         logger.info(message)
         return {"message": message}
+
+
+@router.get("/{project_id}/installed", dependencies=[Depends(get_current_user)])
+async def check_installed_mcp_servers(
+    project_id: UUID,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Check if MCP server configuration is installed for this project in Cursor or Claude."""
+    try:
+        # Verify project exists and user has access
+        db_service = get_db_service()
+        async with db_service.with_session() as session:
+            project = (
+                await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+            ).first()
+
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+        # Project server name pattern
+        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[:11]}"
+
+        # Check configurations for different clients
+        results = []
+
+        # Check Cursor configuration
+        cursor_config_path = Path.home() / ".cursor" / "mcp.json"
+        if cursor_config_path.exists():
+            try:
+                with Path.open(cursor_config_path) as f:
+                    cursor_config = json.load(f)
+                    if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
+                        results.append("cursor")
+            except json.JSONDecodeError:
+                pass
+
+        # Check Claude configuration
+        claude_config_path = None
+        if platform.system() == "Darwin":  # macOS
+            claude_config_path = (
+                Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+            )
+        elif platform.system() == "Windows":
+            claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+
+        if claude_config_path and claude_config_path.exists():
+            try:
+                with Path.open(claude_config_path) as f:
+                    claude_config = json.load(f)
+                    if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
+                        results.append("claude")
+            except json.JSONDecodeError:
+                pass
+
+        return results
+
+    except Exception as e:
+        msg = f"Error checking MCP configuration: {e!s}"
+        logger.exception(msg)
+        raise HTTPException(status_code=500, detail=str(e)) from e
