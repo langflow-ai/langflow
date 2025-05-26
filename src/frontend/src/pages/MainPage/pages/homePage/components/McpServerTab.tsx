@@ -2,6 +2,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { createApiKey } from "@/controllers/API";
 import {
   useGetFlowsMCP,
@@ -15,7 +16,7 @@ import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
-import { cn } from "@/utils/utils";
+import { cn, getOS } from "@/utils/utils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
@@ -30,6 +31,24 @@ const autoInstallers = [
     name: "claude",
     title: "Claude",
     icon: "Claude",
+  },
+];
+
+const operatingSystemTabs = [
+  {
+    name: "macoslinux",
+    title: "macOS/Linux",
+    icon: "Apple",
+  },
+  {
+    name: "windows",
+    title: "Windows",
+    icon: "Windows",
+  },
+  {
+    name: "wsl",
+    title: "WSL",
+    icon: "Linux",
   },
 ];
 
@@ -50,6 +69,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   });
 
   const [selectedMode, setSelectedMode] = useState("Auto install");
+  const [selectedPlatform, setSelectedPlatform] = useState(
+    operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
+      ?.name,
+  );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
@@ -87,9 +110,18 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
-      "command": "uvx",
+      "command": "${selectedPlatform === "windows" ? "cmd" : selectedPlatform === "wsl" ? "wsl" : "uvx"}",
       "args": [
-        "mcp-proxy",${
+        ${
+          selectedPlatform === `windows`
+            ? `"/c",
+        "uvx",
+        `
+            : selectedPlatform === "wsl"
+              ? `"uvx",
+        `
+              : ""
+        }"mcp-proxy",${
           isAutoLogin
             ? ""
             : `
@@ -185,7 +217,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             />
           </div>
         </div>
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           <div className="flex flex-col">
             <div className="flex flex-row justify-start border-b border-border">
               {[{ name: "Auto install" }, { name: "JSON" }].map(
@@ -200,7 +232,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     } px-3 py-2 text-[13px]`}
                     onClick={() => setSelectedMode(item.name)}
                   >
-                    {item.name}
+                    <span>{item.name}</span>
                   </Button>
                 ),
               )}
@@ -208,54 +240,73 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
           {selectedMode === "JSON" && (
             <>
-              <div className="overflow-hidden rounded-lg border border-border">
-                <SyntaxHighlighter
-                  style={syntaxHighlighterStyle}
-                  CodeTag={({ children }) => (
-                    <div className="relative bg-background text-[13px]">
-                      <div className="absolute right-4 top-4 flex items-center gap-6">
-                        {!isAutoLogin && (
+              <div className="flex flex-col gap-4">
+                <Tabs
+                  value={selectedPlatform}
+                  onValueChange={setSelectedPlatform}
+                >
+                  <TabsList>
+                    {operatingSystemTabs.map((tab, index) => (
+                      <TabsTrigger key={index} value={tab.name}>
+                        <ForwardedIconComponent
+                          name={tab.icon}
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        />
+                        {tab.title}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <SyntaxHighlighter
+                    style={syntaxHighlighterStyle}
+                    CodeTag={({ children }) => (
+                      <div className="relative bg-background text-[13px]">
+                        <div className="absolute right-4 top-4 flex items-center gap-6">
+                          {!isAutoLogin && (
+                            <Button
+                              unstyled
+                              className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+                              disabled={apiKey !== ""}
+                              loading={isGeneratingApiKey}
+                              onClick={generateApiKey}
+                            >
+                              <ForwardedIconComponent
+                                name={"key"}
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                              />
+                              <span>
+                                {apiKey === ""
+                                  ? "Generate API key"
+                                  : "API key generated"}
+                              </span>
+                            </Button>
+                          )}
                           <Button
                             unstyled
-                            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-                            disabled={apiKey !== ""}
-                            loading={isGeneratingApiKey}
-                            onClick={generateApiKey}
+                            size="icon"
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground hover:text-foreground",
+                            )}
+                            onClick={copyToClipboard}
                           >
                             <ForwardedIconComponent
-                              name={"key"}
+                              name={isCopied ? "check" : "copy"}
                               className="h-4 w-4"
                               aria-hidden="true"
                             />
-                            <span>
-                              {apiKey === ""
-                                ? "Generate API key"
-                                : "API key generated"}
-                            </span>
                           </Button>
-                        )}
-                        <Button
-                          unstyled
-                          size="icon"
-                          className={cn(
-                            "h-4 w-4 text-muted-foreground hover:text-foreground",
-                          )}
-                          onClick={copyToClipboard}
-                        >
-                          <ForwardedIconComponent
-                            name={isCopied ? "check" : "copy"}
-                            className="h-4 w-4"
-                            aria-hidden="true"
-                          />
-                        </Button>
+                        </div>
+                        <div className="overflow-x-auto p-4">{children}</div>
                       </div>
-                      <div className="overflow-x-auto p-4">{children}</div>
-                    </div>
-                  )}
-                  language="json"
-                >
-                  {MCP_SERVER_JSON}
-                </SyntaxHighlighter>
+                    )}
+                    language="json"
+                  >
+                    {MCP_SERVER_JSON}
+                  </SyntaxHighlighter>
+                </div>
               </div>
               <div className="px-2 text-mmd text-muted-foreground">
                 Add this config to your client of choice. Need help? See the{" "}
