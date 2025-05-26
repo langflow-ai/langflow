@@ -18,9 +18,72 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
-import { useState } from "react";
+import { memo, ReactNode, useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
-import SyntaxHighlighter from "react-syntax-highlighter";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+
+// Define interface for MemoizedCodeTag props
+interface MemoizedCodeTagProps {
+  children: ReactNode;
+  isCopied: boolean;
+  copyToClipboard: () => void;
+  isAutoLogin: boolean | null;
+  apiKey: string;
+  isGeneratingApiKey: boolean;
+  generateApiKey: () => void;
+}
+
+// Memoized CodeTag to prevent re-renders when parent components re-render
+const MemoizedCodeTag = memo(
+  ({
+    children,
+    isCopied,
+    copyToClipboard,
+    isAutoLogin,
+    apiKey,
+    isGeneratingApiKey,
+    generateApiKey,
+  }: MemoizedCodeTagProps) => (
+    <div className="relative bg-background text-[13px]">
+      <div className="absolute right-4 top-4 flex items-center gap-6">
+        {!isAutoLogin && (
+          <Button
+            unstyled
+            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+            disabled={apiKey !== ""}
+            loading={isGeneratingApiKey}
+            onClick={generateApiKey}
+          >
+            <ForwardedIconComponent
+              name={"key"}
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
+            <span>
+              {apiKey === "" ? "Generate API key" : "API key generated"}
+            </span>
+          </Button>
+        )}
+        <Button
+          unstyled
+          size="icon"
+          className={cn("h-4 w-4 text-muted-foreground hover:text-foreground")}
+          onClick={copyToClipboard}
+        >
+          <ForwardedIconComponent
+            name={isCopied ? "check" : "copy"}
+            className="h-4 w-4"
+            aria-hidden="true"
+          />
+        </Button>
+      </div>
+      <div className="overflow-x-auto p-4">
+        <span>{children}</span>
+      </div>
+    </div>
+  ),
+);
+MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
 const autoInstallers = [
   {
@@ -121,7 +184,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+              ? `"wsl",
         `
               : ""
         }"mcp-proxy",${
@@ -144,7 +207,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const MCP_SERVER_DEPLOY_TUTORIAL_LINK =
     "https://docs.langflow.org/mcp-server#deploy-your-server-externally";
 
-  const copyToClipboard = () => {
+  const copyToClipboard = useCallback(() => {
     navigator.clipboard
       .writeText(MCP_SERVER_JSON)
       .then(() => {
@@ -154,9 +217,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         }, 1000);
       })
       .catch((err) => console.error("Failed to copy text: ", err));
-  };
+  }, [MCP_SERVER_JSON]);
 
-  const generateApiKey = () => {
+  const generateApiKey = useCallback(() => {
     setIsGeneratingApiKey(true);
     createApiKey(`MCP Server ${folderName}`)
       .then((res) => {
@@ -166,7 +229,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       .finally(() => {
         setIsGeneratingApiKey(false);
       });
-  };
+  }, [folderName]);
 
   const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
@@ -267,45 +330,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   <SyntaxHighlighter
                     style={syntaxHighlighterStyle}
                     CodeTag={({ children }) => (
-                      <div className="relative bg-background text-[13px]">
-                        <div className="absolute right-4 top-4 flex items-center gap-6">
-                          {!isAutoLogin && (
-                            <Button
-                              unstyled
-                              className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-                              disabled={apiKey !== ""}
-                              loading={isGeneratingApiKey}
-                              onClick={generateApiKey}
-                            >
-                              <ForwardedIconComponent
-                                name={"key"}
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                              />
-                              <span>
-                                {apiKey === ""
-                                  ? "Generate API key"
-                                  : "API key generated"}
-                              </span>
-                            </Button>
-                          )}
-                          <Button
-                            unstyled
-                            size="icon"
-                            className={cn(
-                              "h-4 w-4 text-muted-foreground hover:text-foreground",
-                            )}
-                            onClick={copyToClipboard}
-                          >
-                            <ForwardedIconComponent
-                              name={isCopied ? "check" : "copy"}
-                              className="h-4 w-4"
-                              aria-hidden="true"
-                            />
-                          </Button>
-                        </div>
-                        <div className="overflow-x-auto p-4">{children}</div>
-                      </div>
+                      <MemoizedCodeTag
+                        isCopied={isCopied}
+                        copyToClipboard={copyToClipboard}
+                        isAutoLogin={isAutoLogin}
+                        apiKey={apiKey}
+                        isGeneratingApiKey={isGeneratingApiKey}
+                        generateApiKey={generateApiKey}
+                      >
+                        {children}
+                      </MemoizedCodeTag>
                     )}
                     language="json"
                   >
