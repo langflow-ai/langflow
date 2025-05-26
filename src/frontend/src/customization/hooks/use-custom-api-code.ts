@@ -2,6 +2,7 @@ import {
   getCurlRunCode,
   getCurlWebhookCode,
 } from "@/modals/apiModal/utils/get-curl-code";
+import getGolangCode from "@/modals/apiModal/utils/get-golang-code";
 import getJsApiCode from "@/modals/apiModal/utils/get-js-api-code";
 import getPythonApiCode from "@/modals/apiModal/utils/get-python-api-code";
 import getPythonCode from "@/modals/apiModal/utils/get-python-code";
@@ -14,6 +15,7 @@ export function useCustomAPICode() {
     getJsApiCode,
     getPythonApiCode,
     getPythonCode,
+    getGolangCode,
     getWidgetCode,
   };
 }
