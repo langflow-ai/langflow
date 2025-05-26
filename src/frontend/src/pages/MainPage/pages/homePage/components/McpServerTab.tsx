@@ -8,6 +8,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
@@ -67,6 +68,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
   });
+
+  const { data: installedMCP } = useGetInstalledMCP({ projectId });
 
   const [selectedMode, setSelectedMode] = useState("Auto install");
   const [selectedPlatform, setSelectedPlatform] = useState(
@@ -165,7 +168,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       });
   };
 
-  const [installedMCP, setInstalledMCP] = useState<string[]>([]);
   const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
   return (
@@ -331,7 +333,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 <Button
                   variant="ghost"
                   className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
-                  disabled={installedMCP.includes(installer.name)}
+                  disabled={installedMCP?.includes(installer.name)}
                   loading={loadingMCP.includes(installer.name)}
                   onClick={() => {
                     setLoadingMCP([...loadingMCP, installer.name]);
@@ -342,7 +344,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                           setSuccessData({
                             title: `MCP Server installed successfully on ${installer.title}`,
                           });
-                          setInstalledMCP([...installedMCP, installer.name]);
                           setLoadingMCP(
                             loadingMCP.filter(
                               (name) => name !== installer.name,
@@ -364,7 +365,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
                   <ForwardedIconComponent
                     name={
-                      installedMCP.includes(installer.name) ? "Check" : "Plus"
+                      installedMCP?.includes(installer.name) ? "Check" : "Plus"
                     }
                     className="h-4 w-4"
                   />
