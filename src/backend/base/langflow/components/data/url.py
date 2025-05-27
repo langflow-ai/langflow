@@ -266,15 +266,13 @@ class URLComponent(Component):
             data = [
                 {
                     "text": safe_convert(doc.page_content, clean_data=True),
-                    "url": doc.metadata.pop("source", ""),
-                    "title": doc.metadata.pop("title", ""),
-                    "description": doc.metadata.pop("description", ""),
-                    "content_type": doc.metadata.pop("content_type", ""),
-                    "language": doc.metadata.pop("language", ""),
+                    "url": doc.metadata.get("source", ""),
+                    "title": doc.metadata.get("title", ""),
+                    "description": doc.metadata.get("description", ""),
+                    "content_type": doc.metadata.get("content_type", ""),
+                    "language": doc.metadata.get("language", "")
                 }
                 for doc in all_docs
-                if not self.filter_text_html
-                or (self.filter_text_html and "text/html" in doc.metadata.get("content_type"))
             ]
         except Exception as e:
             error_msg = e.message if hasattr(e, "message") else e
