@@ -2,8 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.tools import ToolException
-from langflow.components.tools import YfinanceComponent
-from langflow.components.tools.yahoo import YahooFinanceMethod
+from langflow.components.search.yahoo import YahooFinanceMethod, YfinanceComponent
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
 
@@ -38,7 +37,7 @@ class TestYfinanceComponent:
         for input_name in expected_inputs:
             assert input_name in input_names
 
-    @patch("langflow.components.tools.yahoo.yf.Ticker")
+    @patch("langflow.components.search.yahoo.yf.Ticker")
     def test_fetch_info(self, mock_ticker, component_class, default_kwargs):
         component = component_class(**default_kwargs)
 
@@ -53,7 +52,7 @@ class TestYfinanceComponent:
         assert len(result) == 1
         assert "Apple Inc." in result[0].text
 
-    @patch("langflow.components.tools.yahoo.yf.Ticker")
+    @patch("langflow.components.search.yahoo.yf.Ticker")
     def test_fetch_news(self, mock_ticker, component_class):
         component = component_class(symbol="AAPL", method=YahooFinanceMethod.GET_NEWS, num_news=2)
 

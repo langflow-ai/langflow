@@ -34,13 +34,6 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page
-      .getByText("built successfully")
-      .last()
-      .click({
-        timeout: 30000 * 3,
-      });
-
     await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
       timeout: 30000,
     });

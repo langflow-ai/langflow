@@ -142,6 +142,11 @@ module.exports = {
           label: "Docker"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-caddyfile",
+          label: "Deploy Langflow on a remote server"
+        },
+        {
           type: "category",
           label: "Kubernetes",
           items: [
@@ -249,6 +254,7 @@ module.exports = {
           items: [
             "Integrations/Nvidia/integrations-nvidia-ingest",
             "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+            "Integrations/Nvidia/integrations-nvidia-system-assist",
           ],
         },
       ],

@@ -1,10 +1,10 @@
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.custom import Component
+from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 
 class WikipediaComponent(Component):
@@ -27,24 +27,11 @@ class WikipediaComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
     ]
 
-    def fetch_content(self) -> list[Data]:
-        wrapper = self._build_wrapper()
-        docs = wrapper.load(self.input_value)
-        data = [Data.from_document(doc) for doc in docs]
-        self.status = data
-        return data
-
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = ""
-        for item in data:
-            result_string += item.text + "\n"
-        self.status = result_string
-        return Message(text=result_string)
+    def run_model(self) -> DataFrame:
+        return self.fetch_content_dataframe()
 
     def _build_wrapper(self) -> WikipediaAPIWrapper:
         return WikipediaAPIWrapper(
@@ -54,11 +41,13 @@ class WikipediaComponent(Component):
             doc_content_chars_max=self.doc_content_chars_max,
         )
 
-    def as_dataframe(self) -> DataFrame:
-        """Convert the Wikipedia results to a DataFrame.
+    def fetch_content(self) -> list[Data]:
+        wrapper = self._build_wrapper()
+        docs = wrapper.load(self.input_value)
+        data = [Data.from_document(doc) for doc in docs]
+        self.status = data
+        return data
 
-        Returns:
-            DataFrame: A DataFrame containing the Wikipedia results.
-        """
+    def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return DataFrame(data)
+        return data_to_dataframe(data)
