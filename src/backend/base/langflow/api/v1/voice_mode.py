@@ -230,7 +230,7 @@ class TTSConfig:
                         },
                     }
                 ],
-                "tool_choice": "required",  # force tool call to only run the agentic flow and not answer directly for only one response
+                "tool_choice": "required",
                 "include": [],
             },
         }
@@ -755,8 +755,6 @@ async def flow_as_tool_websocket(
             return
 
         url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
-        if not url:
-            raise ValueError("Missing Litellm realtime URL environment variable")
         headers = {
             "api-key": openai_key,
             "OpenAI-Beta": "realtime=v1",
@@ -1206,8 +1204,6 @@ async def flow_tts_websocket(
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
         url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
-        if not url:
-            raise ValueError("Missing Litellm realtime URL environment variable")
         headers = {
             "api-key": openai_key,
             "OpenAI-Beta": "realtime=v1",
