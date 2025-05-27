@@ -16,6 +16,5 @@ async def test_simple_no_llm():
     graph.add_component_edge(flow_input, ("message", "var1"), prompt)
     graph.add_component_edge(prompt, ("prompt", "input_value"), flow_output)
     outputs = await run_flow(graph, run_input="hello!")
-
     assert isinstance(outputs["message"], Message)
-    assert outputs["message"].text.startswith("```json\n")
+    assert outputs["message"].text == "This is the message: hello!"

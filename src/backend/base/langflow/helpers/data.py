@@ -159,11 +159,12 @@ def _serialize_data(data: Data) -> str:
     # Serialize with orjson, enabling pretty printing with indentation
     json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
     # Convert bytes to string and wrap in Markdown code blocks
-    return "```json\n" + json_bytes.decode("utf-8") + "\n```"
+    return json_bytes.decode("utf-8")
 
 
 def safe_convert(data: Any, *, clean_data: bool = False) -> str:
     """Safely convert input data to string."""
+    unclean_str: str | None = ""
     try:
         if isinstance(data, str):
             unclean_str = data
