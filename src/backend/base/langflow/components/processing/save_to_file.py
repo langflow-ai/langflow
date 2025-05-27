@@ -171,11 +171,7 @@ class SaveToFileComponent(Component):
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
             path.write_text(
-                orjson.dumps(
-                    jsonable_encoder(data.data),
-                    option=orjson.OPT_INDENT_2
-                ).decode("utf-8"),
-                encoding="utf-8"
+                orjson.dumps(jsonable_encoder(data.data), option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8"
             )
         elif fmt == "markdown":
             path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
