@@ -170,7 +170,8 @@ dev = [
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
-    "elevenlabs>=1.52.0",
+    'elevenlabs==1.58.1; python_version == "3.12"',
+    'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
 ]
