@@ -1,9 +1,11 @@
 import re
 from abc import abstractmethod
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
+from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
@@ -159,12 +161,13 @@ class LCAgentComponent(Component):
             session_id=session_id,
         )
         try:
+            event_stream = self._get_event_stream(
+                runnable,
+                input_dict,
+                {"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+            )
             result = await process_agent_events(
-                runnable.astream_events(
-                    input_dict,
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
-                    version="v2",
-                ),
+                event_stream,
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
             )
@@ -186,6 +189,31 @@ class LCAgentComponent(Component):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+    def _get_event_stream(
+        self,
+        runnable: Runnable | AgentExecutor,
+        input_dict: dict,
+        config: dict,
+    ) -> AsyncIterator[dict]:
+        """Return an async iterator of events, falling back to token streaming if needed."""
+        if hasattr(runnable, "astream_events"):
+            return runnable.astream_events(input_dict, config=config, version="v2")
+
+        async def _fallback() -> AsyncIterator[dict]:
+            if hasattr(runnable, "astream"):
+                async for chunk in runnable.astream(input_dict):
+                    content = getattr(chunk, "content", str(chunk))
+                    yield {"event": "on_chat_model_stream", "data": {"chunk": AIMessageChunk(content=content)}}
+            elif hasattr(runnable, "stream"):
+                for chunk in runnable.stream(input_dict):
+                    content = getattr(chunk, "content", str(chunk))
+                    yield {"event": "on_chat_model_stream", "data": {"chunk": AIMessageChunk(content=content)}}
+            else:
+                result = await runnable.ainvoke(input_dict)
+                yield {"event": "on_chain_end", "data": {"chunk": {"output": result}}}
+
+        return _fallback()
 
     def validate_tool_names(self) -> None:
         """Validate tool names to ensure they match the required pattern."""
