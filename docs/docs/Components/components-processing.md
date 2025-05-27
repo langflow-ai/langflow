@@ -610,6 +610,7 @@ This component dynamically updates or appends data with specified fields.
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
 :::
 
 This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
@@ -621,16 +622,16 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Objects to which Metadata should be added |
+| input_value | Input | Objects to which Metadata should be added. |
 | text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
-| metadata | Metadata | Metadata to add to each object |
-| remove_fields | Fields to Remove | Metadata fields to remove |
+| metadata | Metadata | Metadata to add to each object. |
+| remove_fields | Fields to Remove | Metadata fields to remove. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of Input objects, each with added metadata |
+| data | Data | List of Input objects, each with added metadata. |
 
 </details>
 
@@ -740,6 +741,7 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
 :::
 
 This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
@@ -766,6 +768,7 @@ This component filters a [Data](/concepts-objects#data-object) object based on a
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
 :::
 
 The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
