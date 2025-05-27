@@ -218,6 +218,20 @@ class TTSConfig:
                     "silence_duration_ms": SILENCE_DURATION_MS,
                 },
                 "input_audio_noise_reduction": {"type": "near_field"},
+                "tools": [{
+                    "name": "execute_flow",
+                    "type": "function",
+                    "description": "Execute the flow with the given input",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "input": {"type": "string", "description": "The input to send to the flow"}
+                        },
+                        "required": ["input"]
+                    }
+                }],
+                "tool_choice": "required",   # force tool call to only run the agentic flow and not answer directly for only one response
+
                 "include": [],
             },
         }
@@ -741,9 +755,11 @@ async def flow_as_tool_websocket(
             logger.error(f"Failed to load flow: {e}")
             return
 
-        url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
+        url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
+        if not url:
+            raise ValueError("Missing Litellm realtime URL environment variable")
         headers = {
-            "Authorization": f"Bearer {openai_key}",
+            "api-key": openai_key,
             "OpenAI-Beta": "realtime=v1",
         }
 
@@ -1190,9 +1206,11 @@ async def flow_tts_websocket(
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
-        url = "wss://api.openai.com/v1/realtime?intent=transcription"
+        url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
+        if not url:
+            raise ValueError("Missing Litellm realtime URL environment variable")
         headers = {
-            "Authorization": f"Bearer {openai_key}",
+            "api-key": openai_key,
             "OpenAI-Beta": "realtime=v1",
         }
 
@@ -1201,9 +1219,10 @@ async def flow_tts_websocket(
             openai_writer_task = asyncio.create_task(openai_writer())
             client_writer_task = asyncio.create_task(client_writer())
 
-            tts_realtime_session = tts_config.get_session_dict()
-
-            openai_send(tts_realtime_session)
+            openai_send({
+                "type": "session.update",
+                "session": tts_config.default_tts_session["session"]  
+            })
 
             async def forward_to_openai() -> None:
                 try:
