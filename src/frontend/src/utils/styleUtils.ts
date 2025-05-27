@@ -243,7 +243,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
-    name: "astra_assistants",
+    name: "datastax",
     icon: "AstraDB",
   },
   { display_name: "Olivya", name: "olivya", icon: "Olivya" },
@@ -265,11 +265,13 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  { display_name: "Twelve Labs", name: "twelvelabs", icon: "TwelveLabs" },
   {
     display_name: "Home Assistant",
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Search", name: "search", icon: "Search" },
 ];
 
 export const categoryIcons: Record<string, string> = {

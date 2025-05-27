@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from langflow.components.data.sql_executor import SQLComponent
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import DataFrame, Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -89,11 +89,11 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "Error:" in result.text
         assert "Query: SELECT * FROM non_existent_table" in result.text
 
-    def test_build_dataframe(self, component_class: type[SQLComponent], default_kwargs):
+    def test_run_sql_query(self, component_class: type[SQLComponent], default_kwargs):
         """Test building a DataFrame from a SQL query."""
         component = component_class(**default_kwargs)
 
-        result = component.build_dataframe()
+        result = component.run_sql_query()
 
         assert isinstance(result, DataFrame)
         assert len(result) == 1
@@ -101,15 +101,3 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "name" in result.columns
         assert result.iloc[0]["id"] == 1
         assert result.iloc[0]["name"] == "name_test"
-
-    def test_build_data(self, component_class: type[SQLComponent], default_kwargs):
-        """Test building a Data object from a SQL query."""
-        component = component_class(**default_kwargs)
-
-        result = component.build_data()
-
-        assert isinstance(result, Data)
-        assert "result" in result.data
-        assert len(result.data["result"]) == 1
-        assert result.data["result"][0]["id"] == 1
-        assert result.data["result"][0]["name"] == "name_test"

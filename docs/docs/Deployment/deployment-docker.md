@@ -9,7 +9,7 @@ Three options are available:
 
 * The [Quickstart](#quickstart) option starts a Docker container with default values.
 * The [Docker compose](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
-* The [Package your flow as a docker image](#package-your-flow-as-a-Docker-image) option demonstrates packaging an existing flow with a Dockerfile.
+* The [Package your flow as a docker image](#package-your-flow-as-a-docker-image) option demonstrates packaging an existing flow with a Dockerfile.
 
 For more information on configuring the Docker image, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image-with-your-own-code).
 

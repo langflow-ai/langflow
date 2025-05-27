@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
+import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useAlertStore from "@/stores/alertStore";
@@ -84,15 +85,13 @@ export default function PublishDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="default"
-            className="!h-8 !w-[95px] font-medium"
+            variant="ghost"
+            size="md"
+            className="!px-2.5 font-medium"
             data-testid="publish-button"
           >
-            Publish
-            <IconComponent
-              name="ChevronDown"
-              className="icon-size font-medium"
-            />
+            Share
+            <IconComponent name="ChevronDown" className="!h-5 !w-5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -120,7 +119,7 @@ export default function PublishDropdown() {
           <CustomLink
             className={cn("flex-1")}
             to={`/mcp/folder/${folderId}`}
-            target="_blank"
+            target={customMcpOpen()}
           >
             <DropdownMenuItem
               className="deploy-dropdown-item group"
