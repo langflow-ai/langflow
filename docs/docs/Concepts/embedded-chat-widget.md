@@ -19,15 +19,15 @@ The `flow_id` value is found in your Langflow URL.
 For a Langflow server running the [Basic prompting flow](/starter-projects-basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to this:
 ```html
 <html>
-<head>
-  <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
-</head>
-<body>
-  <langflow-chat
-    host_url="https://c822-73-64-93-151.ngrok-free.app"
-    flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
-  ></langflow-chat>
-</body>
+  <head>
+    <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+  </head>
+  <body>
+    <langflow-chat
+      host_url="https://c822-73-64-93-151.ngrok-free.app"
+      flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+    ></langflow-chat>
+  </body>
 </html>
 ```
 
@@ -61,17 +61,18 @@ To add some styling to the chat widget, customize its elements with JSON:
 
 To add a custom [session ID](/session-id) value and an API key for authentication to your Langflow server:
 ```html
-<head>
+<html>
+  <head>
     <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
-</head>
-<body>
-  <langflow-chat
-    host_url="https://c822-73-64-93-151.ngrok-free.app"
-    flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
-    api_key="YOUR_API_KEY"
-    session_id="YOUR_SESSION_ID"
-  ></langflow-chat>
-</body>
+  </head>
+  <body>
+    <langflow-chat
+      host_url="https://c822-73-64-93-151.ngrok-free.app"
+      flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+      api_key="YOUR_API_KEY"
+      session_id="YOUR_SESSION_ID"
+    ></langflow-chat>
+  </body>
 </html>
 ```
 
