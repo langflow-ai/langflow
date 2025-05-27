@@ -218,7 +218,7 @@ jobs:
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for Langflow All
-    if: inputs.build_docker_main_all == true
+    if: inputs.build_docker_main == true
     needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
