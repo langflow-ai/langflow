@@ -108,7 +108,7 @@ jobs:
             echo "base version=${{ inputs.base_version }}"
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             version=${{ inputs.main_version }}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
@@ -175,7 +175,7 @@ jobs:
               # LANGFLOW-MAIN (ALL OPTIONAL DEPS) RELEASE
               echo "docker_tags=langflowai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push_with_extras.Dockerfile" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
               exit 1
