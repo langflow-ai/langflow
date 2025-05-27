@@ -4,7 +4,6 @@ import { ParameterRenderComponent } from "@/components/core/parameterRenderCompo
 import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
-import { useTweaksStore } from "@/stores/tweaksStore";
 import { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
 import { CustomCellRendererProps } from "ag-grid-react";
@@ -14,14 +13,10 @@ export default function TableNodeCellRender({
   value: { nodeId, parameterId, isTweaks },
 }: CustomCellRendererProps) {
   const edges = useFlowStore((state) => state.edges);
-  const node = isTweaks
-    ? useTweaksStore((state) => state.getNode(nodeId))
-    : useFlowStore((state) => state.getNode(nodeId));
+  const node = useFlowStore((state) => state.getNode(nodeId));
   const parameter = node?.data?.node?.template?.[parameterId];
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const isAuth = useAuthStore((state) => state.isAuthenticated);
-
-  const setNode = useTweaksStore((state) => state.setNode);
 
   const disabled = isTargetHandleConnected(
     edges,
@@ -34,12 +29,12 @@ export default function TableNodeCellRender({
     node: node?.data.node as APIClassType,
     nodeId,
     name: parameterId,
-    setNode: isTweaks ? setNode : undefined,
+    setNode: isTweaks ? () => {} : undefined,
   });
 
   const { handleNodeClass } = useHandleNodeClass(
     nodeId,
-    isTweaks ? setNode : undefined,
+    isTweaks ? () => {} : undefined,
   );
 
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
