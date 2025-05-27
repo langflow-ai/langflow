@@ -9,7 +9,10 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.ollama_constants import URL_LIST
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+from langflow.io import (
+    BoolInput, DictInput, DropdownInput, FloatInput, IntInput,
+    MessageTextInput, SliderInput, TabInput
+)
 from langflow.logging import logger
 
 HTTP_STATUS_OK = 200
@@ -29,171 +32,340 @@ class ChatOllamaComponent(LCModelComponent):
     TOOL_CALLING_CAPABILITY = "tools"
 
     inputs = [
-        MessageTextInput(
-            name="base_url",
-            display_name="Base URL",
-            info="Endpoint of the Ollama API.",
-            value="",
-        ),
-        DropdownInput(
-            name="model_name",
-            display_name="Model Name",
-            options=[],
-            info="Refer to https://ollama.com/library for more models.",
-            refresh_button=True,
-            real_time_refresh=True,
-        ),
-        SliderInput(
-            name="temperature",
-            display_name="Temperature",
-            value=0.1,
-            range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
-        ),
+        MessageTextInput(name="base_url", display_name="Base URL", info="Endpoint of the Ollama API."),
+        DropdownInput(name="model_name", display_name="Model Name", options=[],
+                      info="Refer to https://ollama.com/library for more models.", refresh_button=True,required=True,
+                      real_time_refresh=True),
+        SliderInput(name="temperature", display_name="Temperature", value=0.1,
+                    range_spec=RangeSpec(min=0, max=1, step=0.01), advanced=True),
+        MessageTextInput(name="format", display_name="Format", info="Specify the format of the output (e.g., json).",
+                         advanced=True),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
-        DropdownInput(
-            name="mirostat",
-            display_name="Mirostat",
-            options=["Disabled", "Mirostat", "Mirostat 2.0"],
-            info="Enable/disable Mirostat sampling for controlling perplexity.",
-            value="Disabled",
-            advanced=True,
-            real_time_refresh=True,
-        ),
-        FloatInput(
+        TabInput(name="mirostat", display_name="Mirostat Mode", options=["Disabled", "Mirostat", "Mirostat 2.0"],
+                 value="Disabled", info="Enable/disable Mirostat sampling for controlling perplexity.",
+                 real_time_refresh=True),
+                 
+        SliderInput(
             name="mirostat_eta",
             display_name="Mirostat Eta",
-            info="Learning rate for Mirostat algorithm. (Default: 0.1)",
-            advanced=True,
+            value=0.1,
+            range_spec=RangeSpec(min=0.05, max=0.3, step=0.01),
+            show=False,
+            info="Learning rate for Mirostat algorithm"
         ),
-        FloatInput(
+
+        SliderInput(
             name="mirostat_tau",
             display_name="Mirostat Tau",
-            info="Controls the balance between coherence and diversity of the output. (Default: 5.0)",
-            advanced=True,
+            value=5.0,
+            range_spec=RangeSpec(min=2.0, max=6.0, step=0.5),
+            show=False,
+            info="Controls the balance between coherence and diversity"
         ),
-        IntInput(
-            name="num_ctx",
-            display_name="Context Window Size",
-            info="Size of the context window for generating tokens. (Default: 2048)",
+
+        IntInput(name="num_ctx", display_name="Context Window Size",
+                 info="Size of the context window for generating tokens. (Default: 2048)", advanced=True),
+        IntInput(name="num_gpu", display_name="Number of GPUs",
+                 info="Number of GPUs to use. (Default: 1 on macOS, 0 to disable)", advanced=True),
+        IntInput(name="num_thread", display_name="Number of Threads",
+                 info="Number of threads to use during computation.", advanced=True),
+        IntInput(name="repeat_last_n", display_name="Repeat Last N",
+                 info="How far back the model looks to prevent repetition. (Default: 64)", advanced=True),
+        FloatInput(name="repeat_penalty", display_name="Repeat Penalty",
+                   info="Penalty for repetitions. (Default: 1.1)", advanced=True),
+        
+        SliderInput(
+            name="tfs_z",
+            display_name="TFS Z",
+            value=1.0,
+            range_spec=RangeSpec(min=1.0, max=5.0, step=0.1),
             advanced=True,
+            info="Tail free sampling value, where higher values reduce low-probability tokens"
         ),
-        IntInput(
-            name="num_gpu",
-            display_name="Number of GPUs",
-            info="Number of GPUs to use for computation. (Default: 1 on macOS, 0 to disable)",
-            advanced=True,
-        ),
-        IntInput(
-            name="num_thread",
-            display_name="Number of Threads",
-            info="Number of threads to use during computation. (Default: detected for optimal performance)",
-            advanced=True,
-        ),
-        IntInput(
-            name="repeat_last_n",
-            display_name="Repeat Last N",
-            info="How far back the model looks to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)",
-            advanced=True,
-        ),
-        FloatInput(
-            name="repeat_penalty",
-            display_name="Repeat Penalty",
-            info="Penalty for repetitions in generated text. (Default: 1.1)",
-            advanced=True,
-        ),
-        FloatInput(name="tfs_z", display_name="TFS Z", info="Tail free sampling value. (Default: 1)", advanced=True),
+
+        
+        
         IntInput(name="timeout", display_name="Timeout", info="Timeout for the request stream.", advanced=True),
-        IntInput(
-            name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
-        ),
-        FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
-        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text.", advanced=True),
-        MessageTextInput(
-            name="tags",
-            display_name="Tags",
-            info="Comma-separated list of tags to add to the run trace.",
+        IntInput(name="top_k", display_name="Top K", info="Limits token selection to top K.", advanced=True),
+        
+        
+        SliderInput(
+            name="top_p",
+            display_name="Top P",
+            value=0.9,
+            range_spec=RangeSpec(min=0.0, max=1.0, step=0.01),
             advanced=True,
+            info="Nucleus sampling threshold: lower = more focused, higher = more random"
         ),
-        MessageTextInput(
-            name="stop_tokens",
-            display_name="Stop Tokens",
-            info="Comma-separated list of tokens to signal the model to stop generating text.",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="system", display_name="System", info="System to use for generating text.", advanced=True
-        ),
-        BoolInput(
-            name="tool_model_enabled",
-            display_name="Tool Model Enabled",
-            info="Whether to enable tool calling in the model.",
-            value=True,
+        
+        TabInput(
+            name="keep_alive_mode",
+            display_name="Keep Alive Mode",
+            options=["Timed", "Forever", "Unload Immediately"],
+            value="Timed",
             real_time_refresh=True,
+            info="How long to keep the model in memory"
         ),
-        MessageTextInput(
-            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
+
+        IntInput(
+            name="keep_alive_value",
+            display_name="Duration Value",
+            value=5,
+            info="Value for keep-alive duration",
+            show=True
         ),
+        TabInput(
+            name="keep_alive_unit",
+            display_name="Duration Unit",
+            options=["seconds", "minutes", "hours"],
+            value="minutes",
+            show=True
+        ),
+
+        
+        IntInput(
+            name="num_keep",
+            display_name="Num Keep",
+            info="Number of tokens to retain (e.g., system prompt)",
+            value=4,
+            advanced=True,
+        ),
+        
+        IntInput(
+            name="num_predict",
+            display_name="Num Predict",
+            info="Max tokens to generate (-1: unlimited, -2: remaining context)",
+            value=-1,
+            advanced=True,
+        ),
+        
+        IntInput(
+            name="seed",
+            display_name="Seed",
+            info="Random seed for reproducibility (-1: random)",
+            value=-1,
+            advanced=True,
+        ),
+        
+        FloatInput(
+            name="min_p",
+            display_name="Min P",
+            info="Minimum probability filtering threshold",
+            value=0.0,
+            advanced=True,
+        ),
+        
+        FloatInput(
+            name="typical_p",
+            display_name="Typical P",
+            info="Typical sampling threshold (1.0 disables it)",
+            value=1.0,
+            advanced=True,
+        ),
+        
+        FloatInput(
+            name="presence_penalty",
+            display_name="Presence Penalty",
+            info="Penalty for using previously appeared words",
+            value=0.0,
+            advanced=True,
+        ),
+        
+        FloatInput(
+            name="frequency_penalty",
+            display_name="Frequency Penalty",
+            info="Penalty for frequent words",
+            value=0.0,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="penalize_newline",
+            display_name="Penalize Newline",
+            info="Apply penalty to newline tokens",
+            value=True,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="truncate",
+            display_name="Truncate Prompt",
+            info="Trim the beginning of the prompt if it exceeds context length",
+            value=True,
+            advanced=True,
+        ),
+        
+        IntInput(
+            name="num_batch",
+            display_name="Num Batch",
+            info="Number of tokens processed per batch",
+            value=512,
+            advanced=True,
+        ),
+        
+        IntInput(
+            name="main_gpu",
+            display_name="Main GPU Index",
+            info="Index of the main GPU in multi-GPU setups",
+            value=0,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="use_mmap",
+            display_name="Use Mmap",
+            info="Whether to use memory-mapped file I/O",
+            value=True,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="use_mlock",
+            display_name="Use Mlock",
+            info="Lock mapped memory into RAM",
+            value=False,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="low_vram",
+            display_name="Low VRAM Mode",
+            info="Minimize VRAM usage",
+            value=False,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="f16_kv",
+            display_name="FP16 KV Cache",
+            info="Store key-value cache in FP16 for memory savings",
+            value=True,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="logits_all",
+            display_name="Logits All",
+            info="Return logits for all tokens",
+            value=False,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="vocab_only",
+            display_name="Vocab Only",
+            info="Only load vocabulary without model weights",
+            value=False,
+            advanced=True,
+        ),
+        
+        BoolInput(
+            name="cache_prompt",
+            display_name="Cache Prompt",
+            info="Enable prompt caching for faster responses",
+            value=True,
+            advanced=True,
+        ),
+
+        
+
+        BoolInput(name="verbose", display_name="Verbose", info="Print out response text.", advanced=True),
+        MessageTextInput(name="tags", display_name="Tags", info="Comma-separated tags.", advanced=True),
+        MessageTextInput(name="stop_tokens", display_name="Stop Tokens",
+                         info="Comma-separated list of stop tokens.", advanced=True),
+        MessageTextInput(name="system", display_name="System", info="System prompt.", advanced=True),
+        BoolInput(name="tool_model_enabled", display_name="Tool Model Enabled",
+                  info="Enable tool calling support.", value=True, real_time_refresh=True),
+        MessageTextInput(name="template", display_name="Template", info="Template to use for text generation.",
+                         advanced=True),
         *LCModelComponent._base_inputs,
     ]
 
-    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+
+    def build_model(self) -> LanguageModel:# type: ignore[type-var]
         # Mapping mirostat settings to their corresponding values
-        mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
+        mirostat_map = {"Mirostat": 1, "Mirostat 2.0": 2}
+        mirostat_val = mirostat_map.get(self.mirostat, 0)
+        mirostat_eta = self.mirostat_eta if mirostat_val else None
+        mirostat_tau = self.mirostat_tau if mirostat_val else None
 
-        # Default to 0 for 'Disabled'
-        mirostat_value = mirostat_options.get(self.mirostat, 0)
-
-        # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
-        if mirostat_value == 0:
-            mirostat_eta = None
-            mirostat_tau = None
+        # Keep Alive 
+        if self.keep_alive_mode == "Forever":
+            keep_alive = "-1"
+        elif self.keep_alive_mode == "Unload Immediately":
+            keep_alive = "0"
         else:
-            mirostat_eta = self.mirostat_eta
-            mirostat_tau = self.mirostat_tau
+            unit = self.keep_alive_unit[0]  # 's', 'm', 'h'
+            keep_alive = f"{self.keep_alive_value}{unit}"
+            
+        """
+        Attempt to cast `value` to `cast_type`. Return None if casting fails.
+        This avoids runtime errors when optional fields are left blank.
+        """
 
-        # Mapping system settings to their corresponding values
-        llm_params = {
+        def safe_cast(value, cast_type):
+            try:
+                return cast_type(value)
+            except (ValueError, TypeError):
+                return None
+                
+        # Mapping system settings to their corresponding values        
+
+        params = {
             "base_url": self.base_url,
             "model": self.model_name,
-            "mirostat": mirostat_value,
+            "mirostat": mirostat_val,
             "format": self.format,
             "metadata": self.metadata,
             "tags": self.tags.split(",") if self.tags else None,
             "mirostat_eta": mirostat_eta,
             "mirostat_tau": mirostat_tau,
-            "num_ctx": self.num_ctx or None,
-            "num_gpu": self.num_gpu or None,
-            "num_thread": self.num_thread or None,
-            "repeat_last_n": self.repeat_last_n or None,
-            "repeat_penalty": self.repeat_penalty or None,
-            "temperature": self.temperature or None,
+            "num_ctx": safe_cast(self.num_ctx, int),
+            "num_gpu": safe_cast(self.num_gpu, int),
+            "num_thread": safe_cast(self.num_thread, int),
+            "repeat_last_n": safe_cast(self.repeat_last_n, int),
+            "repeat_penalty": safe_cast(self.repeat_penalty, float),
+            "temperature": self.temperature,
             "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
             "system": self.system,
-            "tfs_z": self.tfs_z or None,
-            "timeout": self.timeout or None,
-            "top_k": self.top_k or None,
-            "top_p": self.top_p or None,
+            "tfs_z": self.tfs_z,
+            "timeout": safe_cast(self.timeout, int),
+            "top_k": safe_cast(self.top_k, int),
+            "top_p": self.top_p,
             "verbose": self.verbose,
             "template": self.template,
+            "keep_alive": keep_alive,
+            "num_keep": safe_cast(self.num_keep, int),
+            "num_predict": safe_cast(self.num_predict, int),
+            "seed": safe_cast(self.seed, int),
+            "min_p": self.min_p,
+            "typical_p": self.typical_p,
+            "presence_penalty": self.presence_penalty,
+            "frequency_penalty": self.frequency_penalty,
+            "penalize_newline": self.penalize_newline,
+            "truncate": self.truncate,
+            "num_batch": safe_cast(self.num_batch, int),
+            "main_gpu": safe_cast(self.main_gpu, int),
+            "use_mmap": self.use_mmap,
+            "use_mlock": self.use_mlock,
+            "low_vram": self.low_vram,
+            "f16_kv": self.f16_kv,
+            "logits_all": self.logits_all,
+            "vocab_only": self.vocab_only,
+            "cache_prompt": self.cache_prompt,
         }
-
+        
         # Remove parameters with None values
-        llm_params = {k: v for k, v in llm_params.items() if v is not None}
+
+        params = {k: v for k, v in params.items() if v is not None}
 
         try:
-            output = ChatOllama(**llm_params)
+            return ChatOllama(**params)
         except Exception as e:
-            msg = (
-                "Unable to connect to the Ollama API. ",
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
-            )
-            raise ValueError(msg) from e
+            raise ValueError("Could not initialize Ollama LLM.") from e
 
-        return output
+
+
 
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
@@ -204,68 +376,48 @@ class ChatOllamaComponent(LCModelComponent):
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
-            if field_value == "Disabled":
-                build_config["mirostat_eta"]["advanced"] = True
-                build_config["mirostat_tau"]["advanced"] = True
+            show = field_value != "Disabled"
+            build_config["mirostat_eta"].update({"show": show})
+            build_config["mirostat_tau"].update({"show": show})
+            if field_value == "Mirostat 2.0":
+                build_config["mirostat_eta"]["value"] = 0.2
+                build_config["mirostat_tau"]["value"] = 10
+            elif field_value == "Mirostat":
+                build_config["mirostat_eta"]["value"] = 0.1
+                build_config["mirostat_tau"]["value"] = 5
+            else:
                 build_config["mirostat_eta"]["value"] = None
                 build_config["mirostat_tau"]["value"] = None
 
-            else:
-                build_config["mirostat_eta"]["advanced"] = False
-                build_config["mirostat_tau"]["advanced"] = False
-
-                if field_value == "Mirostat 2.0":
-                    build_config["mirostat_eta"]["value"] = 0.2
-                    build_config["mirostat_tau"]["value"] = 10
-                else:
-                    build_config["mirostat_eta"]["value"] = 0.1
-                    build_config["mirostat_tau"]["value"] = 5
-
         if field_name in {"base_url", "model_name"}:
-            if build_config["base_url"].get("load_from_db", False):
-                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
-            else:
-                base_url_value = build_config["base_url"].get("value", "")
-
-            if not await self.is_valid_ollama_url(base_url_value):
-                # Check if any URL in the list is valid
-                valid_url = ""
-                check_urls = URL_LIST
-                if self.base_url:
-                    check_urls = [self.base_url, *URL_LIST]
-                for url in check_urls:
+            base_url = build_config["base_url"].get("value")
+            if not await self.is_valid_ollama_url(base_url):
+                for url in [self.base_url] + URL_LIST:
                     if await self.is_valid_ollama_url(url):
-                        valid_url = url
+                        build_config["base_url"]["value"] = url
                         break
-                if valid_url != "":
-                    build_config["base_url"]["value"] = valid_url
                 else:
-                    msg = "No valid Ollama URL found."
-                    raise ValueError(msg)
+                    raise ValueError("No valid Ollama URL found.")
+                    
+                    
+        if field_name == "keep_alive_mode":
+            timed = field_value == "Timed"
+            build_config["keep_alive_value"].update({"show": timed})
+            build_config["keep_alive_unit"].update({"show": timed})
+
+
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
-            if await self.is_valid_ollama_url(self.base_url):
-                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_models(self.base_url, tool_model_enabled)
-            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
-                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_models(
-                    build_config["base_url"].get("value", ""), tool_model_enabled
-                )
+            url = self.base_url or build_config["base_url"].get("value", "")
+            if await self.is_valid_ollama_url(url):
+                enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
+                build_config["model_name"]["options"] = await self.get_models(url, enabled)
             else:
                 build_config["model_name"]["options"] = []
-        if field_name == "keep_alive_flag":
-            if field_value == "Keep":
-                build_config["keep_alive"]["value"] = "-1"
-                build_config["keep_alive"]["advanced"] = True
-            elif field_value == "Immediately":
-                build_config["keep_alive"]["value"] = "0"
-                build_config["keep_alive"]["advanced"] = True
-            else:
-                build_config["keep_alive"]["advanced"] = False
 
         return build_config
 
-    async def get_models(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
+    async def get_models(self, base_url: str, tool_model_enabled: bool = False) -> list[str]:
+        
         """Fetches a list of models from the Ollama API that do not have the "embedding" capability.
 
         Args:
@@ -281,47 +433,28 @@ class ChatOllamaComponent(LCModelComponent):
             ValueError: If there is an issue with the API request or response, or if the model
                 names cannot be retrieved.
         """
+        
         try:
-            # Normalize the base URL to avoid the repeated "/" at the end
-            base_url = base_url_value.rstrip("/") + "/"
-
-            # Ollama REST API to return models
-            tags_url = urljoin(base_url, "api/tags")
-
-            # Ollama REST API to return model capabilities
-            show_url = urljoin(base_url, "api/show")
+            tags_url = urljoin(base_url.rstrip("/"), "/api/tags")
+            show_url = urljoin(base_url.rstrip("/"), "/api/show")
 
             async with httpx.AsyncClient() as client:
+                tags_res = await client.get(tags_url)
+                tags_res.raise_for_status()
+                models = tags_res.json().get(self.JSON_MODELS_KEY, [])
                 # Fetch available models
-                tags_response = await client.get(tags_url)
-                tags_response.raise_for_status()
-                models = tags_response.json()
-                if asyncio.iscoroutine(models):
-                    models = await models
-                logger.debug(f"Available models: {models}")
-
+                valid_models = []
+                
                 # Filter models that are NOT embedding models
-                model_ids = []
-                for model in models[self.JSON_MODELS_KEY]:
-                    model_name = model[self.JSON_NAME_KEY]
-                    logger.debug(f"Checking model: {model_name}")
+                for model in models:
+                    name = model.get(self.JSON_NAME_KEY)
+                    show_res = await client.post(show_url, json={"model": name})
+                    show_res.raise_for_status()
+                    capabilities = show_res.json().get(self.JSON_CAPABILITIES_KEY, [])
+                    if self.DESIRED_CAPABILITY in capabilities:
+                        if not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities:
+                            valid_models.append(name)
 
-                    payload = {"model": model_name}
-                    show_response = await client.post(show_url, json=payload)
-                    show_response.raise_for_status()
-                    json_data = show_response.json()
-                    if asyncio.iscoroutine(json_data):
-                        json_data = await json_data
-                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
-                    logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
-
-                    if self.DESIRED_CAPABILITY in capabilities and (
-                        not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
-                    ):
-                        model_ids.append(model_name)
-
-        except (httpx.RequestError, ValueError) as e:
-            msg = "Could not get model names from Ollama."
-            raise ValueError(msg) from e
-
-        return model_ids
+                return valid_models
+        except Exception as e:
+            raise ValueError("Could not get model names from Ollama.") from e
