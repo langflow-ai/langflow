@@ -12,8 +12,9 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
-import ApiModal from "@/modals/apiModal/new-api-modal";
+import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
+import ExportModal from "@/modals/exportModal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -39,6 +40,7 @@ export default function PublishDropdown() {
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openApiModal, setOpenApiModal] = useState(false);
+  const [openExportModal, setOpenExportModal] = useState(false);
 
   const handlePublishedSwitch = async (checked: boolean) => {
     mutateAsync(
@@ -87,7 +89,7 @@ export default function PublishDropdown() {
           <Button
             variant="ghost"
             size="md"
-            className="!px-2.5 font-medium"
+            className="!px-2.5 font-normal"
             data-testid="publish-button"
           >
             Share
@@ -114,6 +116,18 @@ export default function PublishDropdown() {
                 className={`${groupStyle} icon-size mr-2`}
               />
               <span>API access</span>
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => setOpenExportModal(true)}
+          >
+            <div className="group-hover:bg-accent">
+              <IconComponent
+                name="Download"
+                className={`${groupStyle} icon-size mr-2`}
+              />
+              <span>Export</span>
             </div>
           </DropdownMenuItem>
           <CustomLink
@@ -229,6 +243,7 @@ export default function PublishDropdown() {
         tweaksBuildedObject={{}}
         activeTweaks={false}
       ></EmbedModal>
+      <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
     </>
   );
 }
