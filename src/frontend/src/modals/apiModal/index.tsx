@@ -41,7 +41,6 @@ export default function ApiModal({
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
       : useState(false);
-  const newInitialSetup = useTweaksStore((state) => state.newInitialSetup);
 
   const flowEndpointName = useFlowStore(
     useShallow((state) => state.currentFlow?.endpoint_name),
@@ -65,10 +64,6 @@ export default function ApiModal({
       setEndpointName!("");
     }
   };
-
-  useEffect(() => {
-    if (open) newInitialSetup(nodes);
-  }, [open]);
 
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const saveFlow = useSaveFlow();
