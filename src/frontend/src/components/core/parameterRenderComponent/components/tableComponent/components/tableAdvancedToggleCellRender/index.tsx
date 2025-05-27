@@ -16,6 +16,8 @@ export default function TableAdvancedToggleCellRender({
     : useFlowStore((state) => state.getNode(nodeId));
   const parameter = node?.data?.node?.template?.[parameterId];
 
+  const setNode = useTweaksStore((state) => state.setNode);
+
   const disabled = isTargetHandleConnected(
     edges,
     parameterId,
@@ -27,7 +29,7 @@ export default function TableAdvancedToggleCellRender({
     node: node?.data.node as APIClassType,
     nodeId,
     name: parameterId,
-    setNode: isTweaks ? useTweaksStore((state) => state.setNode) : undefined,
+    setNode: isTweaks ? setNode : undefined,
   });
 
   return (
