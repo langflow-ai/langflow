@@ -2,7 +2,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.tools.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.components.data.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -99,7 +99,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         # Test tool options are updated
         assert "options" in updated_config["tool"]
 
-    @patch("langflow.components.tools.mcp_component.create_tool_coroutine")
+    @patch("langflow.components.data.mcp_component.create_tool_coroutine")
     async def test_build_output(self, mock_create_coroutine, component_class, default_kwargs, mock_tool):
         """Test building output with a tool."""
         component = component_class(**default_kwargs)

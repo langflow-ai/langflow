@@ -15,12 +15,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp connection");
 
-    await page.waitForSelector('[data-testid="toolsMCP Connection"]', {
+    await page.waitForSelector('[data-testid="dataMCP Connection"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("toolsMCP Connection")
+      .getByTestId("dataMCP Connection")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
