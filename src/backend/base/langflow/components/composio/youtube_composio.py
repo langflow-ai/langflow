@@ -73,17 +73,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             "display_name": "Update Thumbnail",
             "action_fields": ["YOUTUBE_UPDATE_THUMBNAIL_thumbnailUrl", "YOUTUBE_UPDATE_THUMBNAIL_videoId"],
         },
-        "YOUTUBE_UPDATE_VIDEO": {
-            "display_name": "Update Video",
-            "action_fields": [
-                "YOUTUBE_UPDATE_VIDEO_categoryId",
-                "YOUTUBE_UPDATE_VIDEO_description",
-                "YOUTUBE_UPDATE_VIDEO_privacyStatus",
-                "YOUTUBE_UPDATE_VIDEO_tags",
-                "YOUTUBE_UPDATE_VIDEO_title",
-                "YOUTUBE_UPDATE_VIDEO_videoId",
-            ],
-        },
         "YOUTUBE_UPLOAD_VIDEO": {
             "display_name": "Upload Video",
             "action_fields": [
