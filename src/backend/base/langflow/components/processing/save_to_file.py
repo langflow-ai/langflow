@@ -2,8 +2,10 @@ import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
+import orjson
 import pandas as pd
 from fastapi import UploadFile
+from fastapi.encoders import jsonable_encoder
 
 from langflow.api.v2.files import upload_user_file
 from langflow.custom import Component
@@ -168,7 +170,13 @@ class SaveToFileComponent(Component):
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            path.write_text(json.dumps(data.data, indent=2), encoding="utf-8")
+            path.write_text(
+                orjson.dumps(
+                    jsonable_encoder(data.data),
+                    option=orjson.OPT_INDENT_2
+                ).decode("utf-8"),
+                encoding="utf-8"
+            )
         elif fmt == "markdown":
             path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
         else:
