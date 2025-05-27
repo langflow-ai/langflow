@@ -91,8 +91,8 @@ export default function PublishDropdown() {
         </DropdownMenuTrigger>
         <DropdownMenuContent
           forceMount
-          sideOffset={10}
-          alignOffset={-10}
+          sideOffset={7}
+          alignOffset={-2}
           align="end"
           className="w-full"
         >
