@@ -60,8 +60,13 @@ class URLComponent(Component):
                 "Note: This is about link traversal, not URL path depth."
             ),
             value=DEFAULT_MAX_DEPTH,
-            range_spec=RangeSpec(min=1, max=10, step=1),
+            range_spec=RangeSpec(min=1, max=5, step=1),
             required=False,
+            min_label=" ",
+            max_label=" ",
+            min_label_icon="None",
+            max_label_icon="None",
+            # slider_input=True
         ),
         BoolInput(
             name="prevent_outside",
