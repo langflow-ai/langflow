@@ -211,7 +211,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
-  
+
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Chains", name: "chains", icon: "Link" },
@@ -229,7 +229,11 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "LanguageModels", name: "languagemodels", icon: "BrainCircuit" },
+  {
+    display_name: "LanguageModels",
+    name: "languagemodels",
+    icon: "BrainCircuit",
+  },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
