@@ -106,13 +106,6 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             "display_name": "Remove Label From Linear Issue",
             "action_fields": ["LINEAR_REMOVE_ISSUE_LABEL_issue_id", "LINEAR_REMOVE_ISSUE_LABEL_label_id"],
         },
-        "LINEAR_RUN_QUERY_OR_MUTATION": {
-            "display_name": "Run Query Or Mutation",
-            "action_fields": [
-                "LINEAR_RUN_QUERY_OR_MUTATION_query_or_mutation",
-                "LINEAR_RUN_QUERY_OR_MUTATION_variables",
-            ],
-        },
         "LINEAR_UPDATE_ISSUE": {
             "display_name": "Update Issue",
             "action_fields": [
