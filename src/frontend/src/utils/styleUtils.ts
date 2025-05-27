@@ -231,6 +231,7 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "GitHub", name: "github", icon: "Github" },
   {
     display_name: "Googlecalendar",
     name: "googlecalendar",
@@ -271,6 +272,8 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Search", name: "search", icon: "Search" },
+  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
 ];
 
 export const categoryIcons: Record<string, string> = {
