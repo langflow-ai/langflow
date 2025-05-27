@@ -231,11 +231,11 @@ export class AppComponent {
 }
 ```
 
-### Chat widget configuration
+## Chat widget configuration
 
 Use the widget API to customize your chat widget.
 
-Props with the type `JSON` need to be passed as stringified JSONs, with the format \{"key":"value"\}.
+Props with the type `JSON` need to be passed as stringified JSON, with the format \{"key":"value"\}.
 
 All props and their types are listed in [index.tsx](https://github.com/langflow-ai/langflow-embedded-chat/blob/main/src/index.tsx).
 
@@ -244,11 +244,11 @@ All props and their types are listed in [index.tsx](https://github.com/langflow-
 | flow_id              | String  | Required. Identifier for the flow associated with the component. |
 | host_url             | String  | Required. URL of the host for communication with the chat component. |
 | api_key              | String  | X-API-Key header to send to Langflow. |
-| additional_headers   | JSON    | Additional headers to be sent to Langflow server. |
+| additional_headers   | JSON    | Additional headers to be sent to the Langflow server. |
 | session_id           | String  | Custom session id to override the random session id. |
 | height               | Number  | Height of the chat window in pixels. |
 | width                | Number  | Width of the chat window in pixels. |
-| chat_position        | String  | Position of chat window (e.g., top-right, bottom-left). |
+| chat_position        | String  | Position of chat window (such as `top-right` or `bottom-left`). |
 | start_open           | Boolean | Whether the chat window should be open by default. |
 | chat_window_style    | JSON    | Overall chat window appearance. |
 | chat_trigger_style   | JSON    | Chat trigger button styling. |
