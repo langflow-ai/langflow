@@ -44,6 +44,13 @@ test(
     const newValue = clipboardContent2;
     expect(oldValue).not.toBe(newValue);
     expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.getByText("Basic Prompting").first().click();
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
+    expect(
+      await page.getByText("Input Schema (1)", { exact: true }).isVisible(),
+    );
   },
 );
 
