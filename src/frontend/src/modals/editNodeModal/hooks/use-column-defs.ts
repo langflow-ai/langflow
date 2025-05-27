@@ -1,5 +1,6 @@
 import TableAdvancedToggleCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAdvancedToggleCellRender";
 import TableNodeCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableNodeCellRender";
+import { cn } from "@/utils/utils";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 
@@ -61,7 +62,10 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: cn(
+          "no-border",
+          isTweaks && "pointer-events-none opacity-70",
+        ),
       },
     ];
     if (!hideVisibility) {
