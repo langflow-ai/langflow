@@ -2,6 +2,7 @@ import { AllNodeType } from "@/types/flow";
 
 export type TweaksStoreType = {
   nodes: AllNodeType[];
+  currentFlowId: string;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
     skipSave?: boolean,
@@ -11,7 +12,7 @@ export type TweaksStoreType = {
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
   ) => void;
   getNode: (id: string) => AllNodeType | undefined;
-  newInitialSetup: (nodes: AllNodeType[]) => void;
+  initialSetup: (nodes: AllNodeType[], flowId: string) => void;
   updateTweaks: () => void;
   tweaks: {
     [key: string]: {

@@ -1,6 +1,7 @@
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
 import { AllNodeType, NodeDataType } from "@/types/flow";
+import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import { create } from "zustand";
 import { TweaksStoreType } from "../types/zustand/tweaks";
 import useFlowStore from "./flowStore";
@@ -36,9 +37,13 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
   },
-  newInitialSetup: (nodes: AllNodeType[]) => {
+  currentFlowId: "",
+  initialSetup: (nodes: AllNodeType[], flowId: string) => {
     useFlowStore.getState().unselectAll();
-    const tweaks = get().tweaks;
+    set({
+      currentFlowId: flowId,
+    });
+    const tweaks = JSON.parse(getLocalStorage(`lf_tweaks_${flowId}`) || "{}");
     set({
       nodes: getNodesWithDefaultValue(nodes, tweaks),
     });
@@ -47,6 +52,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   updateTweaks: () => {
     const nodes = get().nodes;
     const tweak = {};
+    const flowId = get().currentFlowId;
     nodes.forEach((node) => {
       const nodeTemplate = node.data?.node?.template;
       if (nodeTemplate && node.type === "genericNode") {
@@ -64,6 +70,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
         }
       }
     });
+    setLocalStorage(`lf_tweaks_${flowId}`, JSON.stringify(tweak));
     set({
       tweaks: tweak,
     });
