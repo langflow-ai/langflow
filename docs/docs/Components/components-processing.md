@@ -90,17 +90,17 @@ John Smith
 
 This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
 
-| Operation | Required Inputs | Description |
+| Operation | Required Inputs | Info |
 |-----------|----------------|-------------|
-| Add Column | new_column_name, new_column_value | Adds a new column with a constant value |
-| Drop Column | column_name | Removes a specified column |
-| Filter | column_name, filter_value | Filters rows based on column value |
-| Head | num_rows | Returns first n rows |
-| Rename Column | column_name, new_column_name | Renames an existing column |
-| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column |
-| Select Columns | columns_to_select | Selects specific columns |
-| Sort | column_name, ascending | Sorts DataFrame by column |
-| Tail | num_rows | Returns last n rows |
+| Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
+| Drop Column | column_name | Removes a specified column. |
+| Filter | column_name, filter_value | Filters rows based on column value. |
+| Head | num_rows | Returns first `n` rows. |
+| Rename Column | column_name, new_column_name | Renames an existing column. |
+| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
+| Select Columns | columns_to_select | Selects specific columns. |
+| Sort | column_name, ascending | Sorts DataFrame by column. |
+| Tail | num_rows | Returns last `n` rows. |
 
 <details>
 <summary>Parameters</summary>
@@ -134,6 +134,7 @@ This component can perform the following operations on Pandas [DataFrame](https:
 This component performs operations on [Data](/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
 
 1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data Operations** component's input.
+All operations in the component require at least one [Data](/concepts-objects#data-object) input.
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
 Replace `YOUR_FLOW_ID` with your flow ID.
@@ -179,9 +180,10 @@ To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
 
 ### Operations
 
-The component supports the following operations:
+The component supports the following operations.
+All operations in the **Data operations** component require at least one [Data](/concepts-objects#data-object) input.
 
-| Operation | Required Inputs | Description |
+| Operation | Required Inputs | Info |
 |-----------|----------------|-------------|
 | Select Keys | `select_keys_input` | Selects specific keys from the data. |
 | Literal Eval | None | Evaluates string values as Python literals. |
