@@ -4,6 +4,7 @@ from .directory import DirectoryComponent
 from .file import FileComponent
 from .json_to_data import JSONToDataComponent
 from .mcp_component import MCPToolsComponent
+from .news_search import NewsSearchComponent
 from .rss import RSSReaderComponent
 from .sql_executor import SQLComponent
 from .url import URLComponent
@@ -17,6 +18,7 @@ __all__ = [
     "FileComponent",
     "JSONToDataComponent",
     "MCPToolsComponent",
+    "NewsSearchComponent",
     "RSSReaderComponent",
     "SQLComponent",
     "URLComponent",

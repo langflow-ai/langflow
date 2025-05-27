@@ -51,7 +51,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             model="ollama-model",
             mirostat=0,
             format="json",
-            metadata={},
+            metadata={"keywords": ["model", "llm", "language model", "large language model"]},
             num_ctx=2048,
             num_gpu=1,
             num_thread=4,
