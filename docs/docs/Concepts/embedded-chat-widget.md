@@ -13,10 +13,10 @@ The chat widget is implemented as a web component called `langflow-chat` and is 
 
 For a sandbox example, see the [Langflow embedded chat CodeSandbox](https://codesandbox.io/p/sandbox/langflow-embedded-chat-example-dv9zpx).
 
-The following example includes the minimum required inputs- called [props](https://react.dev/learn/passing-props-to-a-component) in React- for using the chat widget in your HTML code, which are `host_url` and `flow_id`.
+The following example includes the minimum required inputs, called [props](https://react.dev/learn/passing-props-to-a-component) in React, for using the chat widget in your HTML code, which are `host_url` and `flow_id`.
 The `host_url` value must be `HTTPS`, and may not include a `/` after the URL.
 The `flow_id` value is found in your Langflow URL.
-For a Langflow server running the [Basic prompting flow](/starter-projects-basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to this:
+For a Langflow server running the [Basic prompting flow](/starter-projects-basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to the following:
 ```html
 <html>
   <head>
@@ -31,7 +31,7 @@ For a Langflow server running the [Basic prompting flow](/starter-projects-basic
 </html>
 ```
 
-When embedded within HTML, this code becomes a responsive chatbot, powered by the basic prompting flow.
+When this code is embedded within HTML, it becomes a responsive chatbot, powered by the basic prompting flow.
 
 ![Default chat widget](/img/chat-widget-default.png)
 
@@ -109,7 +109,7 @@ export default function ChatWidget({ className }) {
 2. Place the component anywhere in your code to display the chat widget.
 
 For example, in this docset, the React widget component is located at `docs > src > components > ChatWidget > index.tsx`.
-`index.tsx` includes a script to load the chat widget code from CDN, and initialize the `ChatWidget` component with props pointing to a Langflow server.
+`index.tsx` includes a script to load the chat widget code from CDN and initialize the `ChatWidget` component with props pointing to a Langflow server.
 ```javascript
 import React, { useEffect } from 'react';
 
@@ -164,9 +164,9 @@ In `index.tsx`, point `host_url` at your Langflow server and `flow_id` at your f
 
 To use the chat widget in your [Angular](https://angular.dev/overview) application, create a component that loads the widget script and renders the chat interface.
 
-Angular requires you to explicitly allow custom web components like `langflow-chat` in components, so you must add the `<langflow-chat>` element to your Angular template and configure Angular to recognize it.  Add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration to enable this.
+Angular requires you to explicitly allow custom web components like `langflow-chat` in components, so you must add the `<langflow-chat>` element to your Angular template and configure Angular to recognize it. Add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration to enable this.
 
-To add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration:
+To add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration, do the following:
 
 1. Open the module file `.module.ts` where you want to add the `langflow-chat` web component.
 2. Import `CUSTOM_ELEMENTS_SCHEMA` at the top of the `.module.ts` file:
@@ -249,7 +249,7 @@ All props and their types are listed in [index.tsx](https://github.com/langflow-
 | session_id           | String  | Custom session id to override the random session id. |
 | height               | Number  | Height of the chat window in pixels. |
 | width                | Number  | Width of the chat window in pixels. |
-| chat_position        | String  | Position of chat window (such as `top-right` or `bottom-left`). |
+| chat_position        | String  | Position of chat window, such as `top-right` or `bottom-left`. |
 | start_open           | Boolean | Whether the chat window should be open by default. |
 | chat_window_style    | JSON    | Overall chat window appearance. |
 | chat_trigger_style   | JSON    | Chat trigger button styling. |
@@ -268,5 +268,5 @@ All props and their types are listed in [index.tsx](https://github.com/langflow-
 | input_type           | String  | Input type for chat messages. |
 | output_type          | String  | Output type for chat messages. |
 | output_component     | String  | Output ID when multiple outputs are present. |
-| chat_output_key      | String  | Which output to display if multiple available. |
+| chat_output_key      | String  | Which output to display if multiple outputs are available. |
 | tweaks               | JSON    | Additional custom adjustments for the flow. |
