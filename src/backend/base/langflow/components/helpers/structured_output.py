@@ -13,7 +13,6 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
 
 
