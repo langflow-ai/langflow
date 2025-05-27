@@ -175,7 +175,7 @@ jobs:
               # LANGFLOW-MAIN (ALL OPTIONAL DEPS) RELEASE
               echo "docker_tags=langflowai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push_with_extras.Dockerfile" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
               exit 1

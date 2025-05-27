@@ -212,7 +212,7 @@ jobs:
     secrets: inherit
 
   call_docker_build_main_all:
-    name: Call Docker Build Workflow for Langflow
+    name: Call Docker Build Workflow for langflow-all
     if: inputs.build_docker_main == true
     needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
