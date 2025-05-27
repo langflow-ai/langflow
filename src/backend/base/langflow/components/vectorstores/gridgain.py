@@ -31,7 +31,7 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
         StrInput(
             name="cache_name",
             display_name="Cache Name",
-            info="Name of the GridGain cache where vectors will be stored. Will be created if it doesn't exist.",
+            info="Name of the GridGain cache where vectors will be stored. Cache Will be created if it doesn't exist.",
             required=True,
         ),
         StrInput(name="host", display_name="Host", info="GridGain server hostname or IP address", required=True),
