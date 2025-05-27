@@ -6,6 +6,7 @@ import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 import { CustomCellRendererProps } from "ag-grid-react";
 import { useMemo } from "react";
 
@@ -49,7 +50,12 @@ export default function TableNodeCellRender({
 
   return (
     parameter && (
-      <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll">
+      <div
+        className={cn(
+          "group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll",
+          isTweaks && "pointer-events-none opacity-70",
+        )}
+      >
         <ParameterRenderComponent
           nodeId={nodeId}
           handleOnNewValue={handleOnNewValue}
