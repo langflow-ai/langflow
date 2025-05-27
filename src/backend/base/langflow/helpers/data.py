@@ -159,19 +159,18 @@ def _serialize_data(data: Data) -> str:
     # Serialize with orjson, enabling pretty printing with indentation
     json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
     # Convert bytes to string and wrap in Markdown code blocks
-    return json_bytes.decode("utf-8")
+    return "```json\n" + json_bytes.decode("utf-8") + "\n```"
 
 
 def safe_convert(data: Any, *, clean_data: bool = False) -> str:
     """Safely convert input data to string."""
-    unclean_str: str | None = ""
     try:
         if isinstance(data, str):
-            unclean_str = data
+            return clean_string(data)
         if isinstance(data, Message):
-            unclean_str = data.get_text()
+            return data.get_text()
         if isinstance(data, Data):
-            unclean_str = _serialize_data(data)
+            return clean_string(_serialize_data(data))
         if isinstance(data, DataFrame):
             if clean_data:
                 # Remove empty rows
@@ -183,17 +182,11 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
 
             # Replace pipe characters to avoid markdown table issues
             processed_data = data.replace(r"\|", r"\\|", regex=True)
-
             processed_data = processed_data.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
 
             return processed_data.to_markdown(index=False)
 
-        # Convert and return the string
-        clean_str = str(unclean_str)
-        if not clean_data:
-            return clean_str
-
-        return clean_string(clean_str)
+        return clean_string(str(data))
     except (ValueError, TypeError, AttributeError) as e:
         msg = f"Error converting data: {e!s}"
         raise ValueError(msg) from e

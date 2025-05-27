@@ -1,6 +1,9 @@
 from collections.abc import Generator
 from typing import Any
 
+import orjson
+from fastapi.encoders import jsonable_encoder
+
 from langflow.base.io.chat import ChatComponent
 from langflow.helpers.data import safe_convert
 from langflow.inputs import BoolInput
@@ -154,6 +157,38 @@ class ChatOutput(ChatComponent):
 
         self.status = message
         return message
+
+    def _validate_input(self) -> None:
+        """Validate the input data and raise ValueError if invalid."""
+        if self.input_value is None:
+            msg = "Input data cannot be None"
+            raise ValueError(msg)
+        if isinstance(self.input_value, list) and not all(
+            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value
+        ):
+            invalid_types = [
+                type(item).__name__
+                for item in self.input_value
+                if not isinstance(item, Message | Data | DataFrame | str)
+            ]
+            msg = f"Expected Data or DataFrame or Message or str, got {invalid_types}"
+            raise TypeError(msg)
+        if not isinstance(
+            self.input_value,
+            Message | Data | DataFrame | str | list | Generator | type(None),
+        ):
+            type_name = type(self.input_value).__name__
+            msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
+            raise TypeError(msg)
+
+    def _serialize_data(self, data: Data) -> str:
+        """Serialize Data object to JSON string."""
+        # Convert data.data to JSON-serializable format
+        serializable_data = jsonable_encoder(data.data)
+        # Serialize with orjson, enabling pretty printing with indentation
+        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
+        # Convert bytes to string and wrap in Markdown code blocks
+        return "```json\n" + json_bytes.decode("utf-8") + "\n```"
 
     def _validate_input(self) -> None:
         """Validate the input data and raise ValueError if invalid."""
