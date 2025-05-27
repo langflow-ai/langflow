@@ -105,7 +105,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
 
         # Execute component
         result = component.fetch_content()
-        print (result)
+        print(result)
 
     def test_url_component_format_options(self, mock_recursive_loader):
         """Test URLComponent with different format options."""
@@ -185,9 +185,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         # Test no documents found
         mock_recursive_loader.side_effect = None
         mock_recursive_loader.return_value = []
-        with pytest.raises(
-            ValueError, match="Error loading documents:"
-        ):
+        with pytest.raises(ValueError, match="Error loading documents:"):
             component.fetch_content()
 
     def test_url_component_ensure_url(self):

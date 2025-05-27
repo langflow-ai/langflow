@@ -270,7 +270,7 @@ class URLComponent(Component):
                     "title": doc.metadata.get("title", ""),
                     "description": doc.metadata.get("description", ""),
                     "content_type": doc.metadata.get("content_type", ""),
-                    "language": doc.metadata.get("language", "")
+                    "language": doc.metadata.get("language", ""),
                 }
                 for doc in all_docs
             ]
