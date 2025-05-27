@@ -196,3 +196,17 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
     except (ValueError, TypeError, AttributeError) as e:
         msg = f"Error converting data: {e!s}"
         raise ValueError(msg) from e
+
+
+def data_to_dataframe(data: Data | list[Data]) -> DataFrame:
+    """Converts a Data object or a list of Data objects to a DataFrame.
+
+    Args:
+        data (Data | list[Data]): The Data object or list of Data objects to convert.
+
+    Returns:
+        DataFrame: The converted DataFrame.
+    """
+    if isinstance(data, Data):
+        return DataFrame([data.data])
+    return DataFrame(data=[d.data for d in data])
