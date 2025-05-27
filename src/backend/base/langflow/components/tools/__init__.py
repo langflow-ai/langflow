@@ -31,7 +31,6 @@ __all__ = [
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SerpAPIComponent",
-    "SerpComponent",
     "WikidataAPIComponent",
     "WikipediaAPIComponent",
     "YfinanceToolComponent",
