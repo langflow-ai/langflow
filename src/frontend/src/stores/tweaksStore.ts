@@ -38,8 +38,9 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   },
   newInitialSetup: (nodes: AllNodeType[]) => {
     useFlowStore.getState().unselectAll();
+    const tweaks = get().tweaks;
     set({
-      nodes: getNodesWithDefaultValue(nodes),
+      nodes: getNodesWithDefaultValue(nodes, tweaks),
     });
     get().updateTweaks();
   },
