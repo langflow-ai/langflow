@@ -4,7 +4,7 @@ from langflow.components.data import URLComponent
 from langflow.components.inputs import TextInputComponent
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
-from langflow.components.processing import ParseDataComponent
+from langflow.components.processing import ParserComponent
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 
@@ -23,8 +23,8 @@ Blog:
 """)
     url_component = URLComponent()
     url_component.set(urls=["https://langflow.org/", "https://docs.langflow.org/"])
-    parse_data_component = ParseDataComponent()
-    parse_data_component.set(data=url_component.fetch_content)
+    parse_data_component = ParserComponent()
+    parse_data_component.set(input_data=url_component.fetch_content)
 
     text_input = TextInputComponent(_display_name="Instructions")
     text_input.set(
@@ -36,7 +36,7 @@ Blog:
     prompt_component.set(
         template=template,
         instructions=text_input.text_response,
-        references=parse_data_component.parse_data,
+        references=parse_data_component.parse_combined_text,
     )
 
     openai_component = OpenAIModelComponent()
