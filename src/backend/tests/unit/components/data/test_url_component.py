@@ -105,7 +105,24 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
 
         # Execute component
         result = component.fetch_content()
-        print(result)
+
+        # Verify results
+        assert isinstance(result, DataFrame)
+        assert len(result) == 4
+
+        # Verify first URL content
+        first_row = result.iloc[0]
+        assert first_row["text"] == "Content from first URL"
+        assert first_row["url"] == "https://example1.com"
+        assert first_row["title"] == "First Page"
+        assert first_row["description"] == "First Description"
+
+        # Verify second URL content
+        second_row = result.iloc[1]
+        assert second_row["text"] == "Content from second URL"
+        assert second_row["url"] == "https://example2.com"
+        assert second_row["title"] == "Second Page"
+        assert second_row["description"] == "Second Description"
 
     def test_url_component_format_options(self, mock_recursive_loader):
         """Test URLComponent with different format options."""
