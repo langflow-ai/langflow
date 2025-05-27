@@ -1,9 +1,9 @@
 from langflow.components.crewai.crewai import CrewAIAgentComponent
 from langflow.components.crewai.hierarchical_crew import HierarchicalCrewComponent
 from langflow.components.crewai.hierarchical_task import HierarchicalTaskComponent
-from langflow.components.inputs import ChatInput
+from langflow.components.io import ChatInput
 from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
+from langflow.components.io import ChatOutput
 from langflow.components.prompts import PromptComponent
 from langflow.components.tools import SearchAPIComponent, YfinanceToolComponent
 from langflow.graph import Graph

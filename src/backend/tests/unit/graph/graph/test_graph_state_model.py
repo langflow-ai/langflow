@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.inputs import ChatInput
+from langflow.components.io import ChatInput
 from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
+from langflow.components.io import ChatOutput
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
