@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Vdvzc",
+            "id": "ChatInput-buyiB",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-chjSc",
+            "id": "Agent-BxJm3",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Vdvzc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Vdvzcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-chjSc{œfieldNameœ:œinput_valueœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-buyiB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-buyiBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-BxJm3{œfieldNameœ:œinput_valueœ,œidœ:œAgent-BxJm3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Vdvzc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Vdvzcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-chjSc",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-buyiB",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-buyiBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-BxJm3",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-BxJm3œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-chjSc",
+            "id": "Agent-BxJm3",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-fXi9i",
+            "id": "ChatOutput-pZ2AW",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,45 +52,46 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-chjSc{œdataTypeœ:œAgentœ,œidœ:œAgent-chjScœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-fXi9i{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fXi9iœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-BxJm3{œdataTypeœ:œAgentœ,œidœ:œAgent-BxJm3œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-pZ2AW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pZ2AWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-chjSc",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-chjScœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-fXi9i",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-fXi9iœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-BxJm3",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-BxJm3œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-pZ2AW",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-pZ2AWœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ComposioAPI",
-            "id": "ComposioAPI-4heel",
-            "name": "tools",
+            "dataType": "GmailAPI",
+            "id": "GmailAPI-J65iP",
+            "name": "component_as_tool",
             "output_types": [
               "Tool"
             ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-chjSc",
+            "id": "Agent-BxJm3",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ComposioAPI-4heel{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-4heelœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-chjSc{œfieldNameœ:œtoolsœ,œidœ:œAgent-chjScœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__GmailAPI-J65iP{œdataTypeœ:œGmailAPIœ,œidœ:œGmailAPI-J65iPœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-BxJm3{œfieldNameœ:œtoolsœ,œidœ:œAgent-BxJm3œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ComposioAPI-4heel",
-        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-4heelœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-chjSc",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-chjScœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "GmailAPI-J65iP",
+        "sourceHandle": "{œdataTypeœ: œGmailAPIœ, œidœ: œGmailAPI-J65iPœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-BxJm3",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-BxJm3œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Agent-chjSc",
+          "id": "Agent-BxJm3",
           "node": {
             "base_classes": [
               "Message"
@@ -135,7 +136,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -144,6 +145,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -239,7 +241,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -247,7 +249,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -265,7 +267,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -744,7 +746,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-chjSc",
+        "id": "Agent-BxJm3",
         "measured": {
           "height": 624,
           "width": 320
@@ -758,7 +760,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-Vdvzc",
+          "id": "ChatInput-buyiB",
           "node": {
             "base_classes": [
               "Message"
@@ -786,7 +788,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1056,7 +1058,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Vdvzc",
+        "id": "ChatInput-buyiB",
         "measured": {
           "height": 66,
           "width": 192
@@ -1070,7 +1072,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-fXi9i",
+          "id": "ChatOutput-pZ2AW",
           "node": {
             "base_classes": [
               "Message"
@@ -1098,7 +1100,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.4.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1201,7 +1203,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                return self._serialize_data(data)\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1368,7 +1370,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-fXi9i",
+        "id": "ChatOutput-pZ2AW",
         "measured": {
           "height": 66,
           "width": 192
@@ -1382,9 +1384,9 @@
       },
       {
         "data": {
-          "id": "note-FzaUv",
+          "id": "note-3eTkz",
           "node": {
-            "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the Tool Name field\n   - Follow the Gmail authentication link\n   - Verify that authentication status shows as successful\n\n3. Select an Action\n   - GMAIL_SEND_EMAIL: Send emails directly\n   - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select other actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
+            "description": "## Gmail Agent\nThis flow uses Gmail through a Composio component to send emails, create drafts, and more.\n\n### Prerequisites\n\n- [Composio API key](https://app.composio.dev)\n- [OpenAI API key](https://platform.openai.com)\n\n### Instructions\n\n1. In the **Gmail** component, enter your **Composio API key**, and then click the **Connect** button.\n\n2. In the **Agent** component, enter your **OpenAI API key**.\n\n3. In the **Gmail** component, select an action you want the component to perform on behalf of your Agent. For example:\n   - GMAIL_SEND_EMAIL: Send emails directly.\n   - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails.\n   - Select other actions based on your needs.\n\n4. Open the **Playground**, and then prompt the agent. \n  For example:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1393,43 +1395,68 @@
         },
         "dragging": false,
         "height": 842,
-        "id": "note-FzaUv",
+        "id": "note-3eTkz",
         "measured": {
           "height": 842,
           "width": 395
         },
         "position": {
-          "x": -699.0352178208514,
-          "y": -87.30330362954265
+          "x": -629.2808858297883,
+          "y": -65.2144318323727
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "type": "noteNode",
         "width": 394
       },
       {
         "data": {
-          "id": "ComposioAPI-4heel",
+          "id": "GmailAPI-J65iP",
           "node": {
             "base_classes": [
-              "Tool"
+              "DataFrame"
             ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Use Composio toolset to run actions with your agent",
-            "display_name": "Composio Tools",
+            "display_name": "Gmail",
             "documentation": "https://docs.composio.dev",
             "edited": false,
             "field_order": [
               "entity_id",
               "api_key",
-              "tool_name",
-              "actions"
+              "auth_link",
+              "action",
+              "recipient_email",
+              "subject",
+              "body",
+              "cc",
+              "bcc",
+              "is_html",
+              "gmail_user_id",
+              "max_results",
+              "message_id",
+              "thread_id",
+              "query",
+              "message_body",
+              "label_name",
+              "label_id",
+              "label_ids",
+              "label_list_visibility",
+              "message_list_visibility",
+              "page_token",
+              "include_spam_trash",
+              "format",
+              "resource_name",
+              "person_fields",
+              "attachment_id",
+              "file_name",
+              "attachment"
             ],
             "frozen": false,
-            "icon": "Composio",
+            "icon": "Google",
             "legacy": false,
+            "lf_version": "1.4.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1437,10 +1464,10 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Tools",
+                "display_name": "Toolset",
                 "hidden": null,
-                "method": "build_tool",
-                "name": "tools",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
                 "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
@@ -1454,21 +1481,21 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "actions": {
+              "action": {
                 "_input_type": "SortableListInput",
                 "advanced": false,
-                "display_name": "Actions",
+                "display_name": "Action",
                 "dynamic": false,
                 "helper_text": "Please connect before selecting actions.",
                 "helper_text_metadata": {
-                  "icon": "OctagonAlert",
                   "variant": "destructive"
                 },
-                "info": "The actions to use",
+                "info": "",
                 "limit": 1,
-                "name": "actions",
+                "name": "action",
                 "options": [],
                 "placeholder": "Select action",
+                "real_time_refresh": true,
                 "required": false,
                 "search_category": [],
                 "show": false,
@@ -1476,14 +1503,14 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "sortableList",
-                "value": ""
+                "value": "disabled"
               },
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
                 "display_name": "Composio API Key",
                 "dynamic": false,
-                "info": "Refer to https://docs.composio.dev/faq/api_key/api_key",
+                "info": "",
                 "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
@@ -1494,7 +1521,150 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "COMPOSIO_API_KEY"
+                "value": ""
+              },
+              "attachment": {
+                "_input_type": "FileInput",
+                "advanced": false,
+                "display_name": "Add Attachment",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "txt",
+                  "doc",
+                  "docx",
+                  "xls",
+                  "xlsx",
+                  "pdf",
+                  "png",
+                  "jpg",
+                  "jpeg",
+                  "gif",
+                  "zip",
+                  "rar",
+                  "ppt",
+                  "pptx"
+                ],
+                "file_path": "",
+                "info": "Add an attachment",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "attachment",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "temp_file": false,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "file",
+                "value": ""
+              },
+              "attachment_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Attachment ID",
+                "dynamic": false,
+                "info": "Id of the attachment",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "attachment_id",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "auth_link": {
+                "_input_type": "AuthInput",
+                "advanced": false,
+                "auth_tooltip": "Connect",
+                "dynamic": false,
+                "info": "",
+                "name": "auth_link",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "auth",
+                "value": "https://backend.composio.dev/s/eEwvitm7"
+              },
+              "bcc": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "BCC",
+                "dynamic": false,
+                "info": "Email addresses to BCC (Blind Carbon Copy) in the email, separated by commas",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "bcc",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "body": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Body",
+                "dynamic": false,
+                "info": "Content of the email",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "body",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "cc": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "CC",
+                "dynamic": false,
+                "info": "Email addresses to CC (Carbon Copy) in the email, separated by commas",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "cc",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1512,7 +1682,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nfrom composio import Action, App\n\n# Third-party imports\nfrom composio_langchain import ComposioToolSet\nfrom langchain_core.tools import Tool\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import (\n    ConnectionInput,\n    MessageTextInput,\n    SecretStrInput,\n    SortableListInput,\n)\nfrom langflow.io import Output\n\n# TODO: We get the list from the API but we need to filter it\nenabled_tools = [\"confluence\", \"discord\", \"dropbox\", \"github\", \"gmail\", \"linkedin\", \"notion\", \"slack\", \"youtube\"]\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        ConnectionInput(\n            name=\"tool_name\",\n            display_name=\"Tool Name\",\n            placeholder=\"Select a tool...\",\n            button_metadata={\"icon\": \"unplug\", \"variant\": \"destructive\"},\n            options=[],\n            search_category=[],\n            value=\"\",\n            connection_link=\"\",\n            info=\"The name of the tool to use\",\n            real_time_refresh=True,\n        ),\n        SortableListInput(\n            name=\"actions\",\n            display_name=\"Actions\",\n            placeholder=\"Select action\",\n            helper_text=\"Please connect before selecting actions.\",\n            helper_text_metadata={\"icon\": \"OctagonAlert\", \"variant\": \"destructive\"},\n            options=[],\n            value=\"\",\n            info=\"The actions to use\",\n            limit=1,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def sanitize_action_name(self, action_name: str) -> str:\n        # TODO: Maybe restore\n        return action_name\n\n        # We want to use title case, and replace underscores with spaces\n        sanitized_name = action_name.replace(\"_\", \" \").title()\n\n        # Now we want to remove everything from and including the first dot\n        return sanitized_name.replace(self.tool_name.title() + \" \", \"\")\n\n    def desanitize_action_name(self, action_name: str) -> str:\n        # TODO: Maybe restore\n        return action_name\n\n        # We want to reverse what we did above\n        unsanitized_name = action_name.replace(\" \", \"_\").upper()\n\n        # Append the tool_name to it at the beginning, followed by a dot, in all CAPS\n        return f\"{self.tool_name.upper()}_{unsanitized_name}\"\n\n    def validate_tool(self, build_config: dict, field_value: Any, connected_app_names: list) -> dict:\n        # Get the index of the selected tool in the list of options\n        selected_tool_index = next(\n            (\n                ind\n                for ind, tool in enumerate(build_config[\"tool_name\"][\"options\"])\n                if tool[\"name\"] == field_value\n                or (\"validate\" in field_value and tool[\"name\"] == field_value[\"validate\"])\n            ),\n            None,\n        )\n\n        # Set the link to be the text 'validated'\n        build_config[\"tool_name\"][\"options\"][selected_tool_index][\"link\"] = \"validated\"\n\n        # Set the helper text and helper text metadata field of the actions now\n        build_config[\"actions\"][\"helper_text\"] = \"\"\n        build_config[\"actions\"][\"helper_text_metadata\"] = {\"icon\": \"Check\", \"variant\": \"success\"}\n\n        # Get the list of actions available\n        all_actions = list(Action.all())\n        authenticated_actions = sorted(\n            [\n                action\n                for action in all_actions\n                if action.app.lower() in list(connected_app_names) and action.app.lower() == self.tool_name.lower()\n            ],\n            key=lambda x: x.name,\n        )\n\n        # Return the list of action names\n        build_config[\"actions\"][\"options\"] = [\n            {\n                \"name\": self.sanitize_action_name(action.name),\n            }\n            for action in authenticated_actions\n        ]\n\n        # Lastly, we need to show the actions field\n        build_config[\"actions\"][\"show\"] = True\n\n        return build_config\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        # If the list of tools is not available, always update it\n        if field_name == \"api_key\" or (self.api_key and not build_config[\"tool_name\"][\"options\"]):\n            if field_name == \"api_key\" and not field_value:\n                # Reset the list of tools\n                build_config[\"tool_name\"][\"options\"] = []\n                build_config[\"tool_name\"][\"value\"] = \"\"\n\n                # Reset the list of actions\n                build_config[\"actions\"][\"show\"] = False\n                build_config[\"actions\"][\"options\"] = []\n                build_config[\"actions\"][\"value\"] = \"\"\n\n                return build_config\n\n            # TODO: Re-enable dynamic tool list\n            # Initialize the Composio ToolSet with your API key\n            # toolset = ComposioToolSet(api_key=self.api_key)\n\n            # Get the entity (e.g., \"default\" for your user)\n            # entity = toolset.get_entity(self.entity_id)\n\n            # Get all available apps\n            # all_apps = entity.client.apps.get()\n\n            # Build an object with name, icon, link\n            build_config[\"tool_name\"][\"options\"] = [\n                {\n                    \"name\": app.title(),  # TODO: Switch to app.name\n                    \"icon\": app,  # TODO: Switch to app.name\n                    \"link\": (\n                        build_config[\"tool_name\"][\"options\"][ind][\"link\"]\n                        if build_config[\"tool_name\"][\"options\"]\n                        else \"\"\n                    ),\n                }\n                # for app in sorted(all_apps, key=lambda x: x.name)\n                for ind, app in enumerate(enabled_tools)\n            ]\n\n            return build_config\n\n        # Handle the click of the Tool Name connect button\n        if field_name == \"tool_name\" and field_value:\n            # Get the list of apps (tools) we have connected\n            toolset = ComposioToolSet(api_key=self.api_key)\n            connected_apps = [app for app in toolset.get_connected_accounts() if app.status == \"ACTIVE\"]\n\n            # Get the unique list of appName from the connected apps\n            connected_app_names = [app.appName.lower() for app in connected_apps]\n\n            # Clear out the list of selected actions\n            build_config[\"actions\"][\"show\"] = True\n            build_config[\"actions\"][\"options\"] = []\n            build_config[\"actions\"][\"value\"] = \"\"\n\n            # Clear out any helper text\n            build_config[\"tool_name\"][\"helper_text\"] = \"\"\n            build_config[\"tool_name\"][\"helper_text_metadata\"] = {}\n\n            # If it's a dictionary, we need to do validation\n            if isinstance(field_value, dict):\n                # If the current field value is a dictionary, it means the user has selected a tool\n                if \"validate\" not in field_value:\n                    return build_config\n\n                # Check if the selected tool is connected\n                check_app = field_value[\"validate\"].lower()\n\n                # If the tool selected is NOT what we are validating, return the build config\n                if check_app != self.tool_name.lower():\n                    # Set the helper text and helper text metadata field of the actions now\n                    build_config[\"actions\"][\"helper_text\"] = \"Please connect before selecting actions.\"\n                    build_config[\"actions\"][\"helper_text_metadata\"] = {\n                        \"icon\": \"OctagonAlert\",\n                        \"variant\": \"destructive\",\n                    }\n\n                    return build_config\n\n                # Check if the tool is already validated\n                if check_app not in connected_app_names:\n                    return build_config\n\n                # Validate the selected tool\n                return self.validate_tool(build_config, field_value, connected_app_names)\n\n            # Check if the tool is already validated\n            if field_value.lower() in connected_app_names:\n                return self.validate_tool(build_config, field_value, connected_app_names)\n\n            # Get the entity (e.g., \"default\" for your user)\n            entity = toolset.get_entity(id=self.entity_id)\n\n            # Set the metadata for the actions\n            build_config[\"actions\"][\"helper_text_metadata\"] = {\"icon\": \"OctagonAlert\", \"variant\": \"destructive\"}\n\n            # Get the index of the selected tool in the list of options\n            selected_tool_index = next(\n                (ind for ind, tool in enumerate(build_config[\"tool_name\"][\"options\"]) if tool[\"name\"] == field_value),\n                None,\n            )\n\n            # Initiate a GitHub connection and get the redirect URL\n            try:\n                connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))\n            except Exception as _:  # noqa: BLE001\n                # Indicate that there was an error connecting to the tool\n                build_config[\"tool_name\"][\"options\"][selected_tool_index][\"link\"] = \"error\"\n                build_config[\"tool_name\"][\"helper_text\"] = f\"Error connecting to {field_value}\"\n                build_config[\"tool_name\"][\"helper_text_metadata\"] = {\n                    \"icon\": \"OctagonAlert\",\n                    \"variant\": \"destructive\",\n                }\n\n                return build_config\n\n            # Print the direct HTTP link for authentication\n            build_config[\"tool_name\"][\"options\"][selected_tool_index][\"link\"] = connection_request.redirectUrl\n\n            # Set the helper text and helper text metadata field of the actions now\n            build_config[\"actions\"][\"helper_text\"] = \"Please connect before selecting actions.\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(\n            actions=[self.desanitize_action_name(action[\"name\"]) for action in self.actions]\n        )\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)\n        except ValueError as e:\n            self.log(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
+                "value": "import json\nfrom typing import Any\n\nfrom composio import Action\n\nfrom langflow.base.composio.composio_base import ComposioBaseComponent\nfrom langflow.inputs import (\n    BoolInput,\n    FileInput,\n    IntInput,\n    MessageTextInput,\n)\nfrom langflow.logging import logger\n\n\nclass ComposioGmailAPIComponent(ComposioBaseComponent):\n    \"\"\"Gmail API component for interacting with Gmail services.\"\"\"\n\n    display_name: str = \"Gmail\"\n    name = \"GmailAPI\"\n    icon = \"Google\"\n    documentation: str = \"https://docs.composio.dev\"\n    app_name = \"gmail\"\n\n    # Gmail-specific actions\n    _actions_data: dict = {\n        \"GMAIL_SEND_EMAIL\": {\n            \"display_name\": \"Send Email\",\n            \"action_fields\": [\n                \"recipient_email\",\n                \"subject\",\n                \"body\",\n                \"cc\",\n                \"bcc\",\n                \"is_html\",\n                \"gmail_user_id\",\n                \"attachment\",\n            ],\n        },\n        \"GMAIL_FETCH_EMAILS\": {\n            \"display_name\": \"Fetch Emails\",\n            \"action_fields\": [\n                \"gmail_user_id\",\n                \"max_results\",\n                \"query\",\n                \"page_token\",\n                \"label_ids\",\n                \"include_spam_trash\",\n            ],\n            \"get_result_field\": True,\n            \"result_field\": \"messages\",\n        },\n        \"GMAIL_GET_PROFILE\": {\n            \"display_name\": \"Get User Profile\",\n            \"action_fields\": [\"gmail_user_id\"],\n        },\n        \"GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID\": {\n            \"display_name\": \"Get Email By ID\",\n            \"action_fields\": [\"message_id\", \"gmail_user_id\", \"format\"],\n            \"get_result_field\": False,\n        },\n        \"GMAIL_CREATE_EMAIL_DRAFT\": {\n            \"display_name\": \"Create Draft Email\",\n            \"action_fields\": [\n                \"recipient_email\",\n                \"subject\",\n                \"body\",\n                \"cc\",\n                \"bcc\",\n                \"is_html\",\n                \"attachment\",\n                \"gmail_user_id\",\n            ],\n        },\n        \"GMAIL_FETCH_MESSAGE_BY_THREAD_ID\": {\n            \"display_name\": \"Get Message By Thread ID\",\n            \"action_fields\": [\"thread_id\", \"page_token\", \"gmail_user_id\"],\n            \"get_result_field\": False,\n        },\n        \"GMAIL_LIST_THREADS\": {\n            \"display_name\": \"List Email Threads\",\n            \"action_fields\": [\"max_results\", \"query\", \"gmail_user_id\", \"page_token\"],\n            \"get_result_field\": True,\n            \"result_field\": \"threads\",\n        },\n        \"GMAIL_REPLY_TO_THREAD\": {\n            \"display_name\": \"Reply To Thread\",\n            \"action_fields\": [\"thread_id\", \"message_body\", \"recipient_email\", \"gmail_user_id\", \"cc\", \"bcc\", \"is_html\"],\n        },\n        \"GMAIL_LIST_LABELS\": {\n            \"display_name\": \"List Email Labels\",\n            \"action_fields\": [\"gmail_user_id\"],\n            \"get_result_field\": True,\n            \"result_field\": \"labels\",\n        },\n        \"GMAIL_CREATE_LABEL\": {\n            \"display_name\": \"Create Email Label\",\n            \"action_fields\": [\"label_name\", \"label_list_visibility\", \"message_list_visibility\", \"gmail_user_id\"],\n        },\n        \"GMAIL_GET_PEOPLE\": {\n            \"display_name\": \"Get Contacts\",\n            \"action_fields\": [\"resource_name\", \"person_fields\"],\n            \"get_result_field\": True,\n            \"result_field\": \"people_data\",\n        },\n        \"GMAIL_REMOVE_LABEL\": {\n            \"display_name\": \"Delete Email Label\",\n            \"action_fields\": [\"label_id\", \"gmail_user_id\"],\n            \"get_result_field\": False,\n        },\n        \"GMAIL_GET_ATTACHMENT\": {\n            \"display_name\": \"Get Attachment\",\n            \"action_fields\": [\"message_id\", \"attachment_id\", \"file_name\", \"gmail_user_id\"],\n        },\n    }\n    _all_fields = {field for action_data in _actions_data.values() for field in action_data[\"action_fields\"]}\n    _bool_variables = {\"is_html\", \"include_spam_trash\"}\n\n    # Combine base inputs with Gmail-specific inputs\n    inputs = [\n        *ComposioBaseComponent._base_inputs,\n        # Email composition fields\n        MessageTextInput(\n            name=\"recipient_email\",\n            display_name=\"Recipient Email\",\n            info=\"Email address of the recipient\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"subject\",\n            display_name=\"Subject\",\n            info=\"Subject of the email\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"body\",\n            display_name=\"Body\",\n            required=True,\n            info=\"Content of the email\",\n            show=False,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"cc\",\n            display_name=\"CC\",\n            info=\"Email addresses to CC (Carbon Copy) in the email, separated by commas\",\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"bcc\",\n            display_name=\"BCC\",\n            info=\"Email addresses to BCC (Blind Carbon Copy) in the email, separated by commas\",\n            show=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"is_html\",\n            display_name=\"Is HTML\",\n            info=\"Specify whether the email body contains HTML content (true/false)\",\n            show=False,\n            value=False,\n            advanced=True,\n        ),\n        # Email retrieval and management fields\n        MessageTextInput(\n            name=\"gmail_user_id\",\n            display_name=\"User ID\",\n            info=\"The user's email address or 'me' for the authenticated user\",\n            show=False,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            required=True,\n            info=\"Maximum number of emails to be returned\",\n            show=False,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"message_id\",\n            display_name=\"Message ID\",\n            info=\"The ID of the specific email message\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"thread_id\",\n            display_name=\"Thread ID\",\n            info=\"The ID of the email thread\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Query\",\n            info=\"Search query to filter emails (e.g., 'from:someone@email.com' or 'subject:hello')\",\n            show=False,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"message_body\",\n            display_name=\"Message Body\",\n            info=\"The body content of the message to be sent\",\n            show=False,\n            advanced=True,\n        ),\n        # Label management fields\n        MessageTextInput(\n            name=\"label_name\",\n            display_name=\"Label Name\",\n            info=\"Name of the Gmail label to create, modify, or filter by\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"label_id\",\n            display_name=\"Label ID\",\n            info=\"The ID of the Gmail label\",\n            show=False,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"label_ids\",\n            display_name=\"Label Ids\",\n            info=\"Comma-separated list of label IDs to filter messages\",\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"label_list_visibility\",\n            display_name=\"Label List Visibility\",\n            info=\"The visibility of the label in the label list in the Gmail web interface\",\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"message_list_visibility\",\n            display_name=\"Message List Visibility\",\n            info=\"The visibility of the label in the message list in the Gmail web interface\",\n            show=False,\n            advanced=True,\n        ),\n        # Pagination and filtering\n        MessageTextInput(\n            name=\"page_token\",\n            display_name=\"Page Token\",\n            info=\"Token for retrieving the next page of results\",\n            show=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_spam_trash\",\n            display_name=\"Include messages from Spam/Trash\",\n            info=\"Include messages from SPAM and TRASH in the results\",\n            show=False,\n            value=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"format\",\n            display_name=\"Format\",\n            info=\"The format to return the message in. Possible values: minimal, full, raw, metadata\",\n            show=False,\n            advanced=True,\n        ),\n        # Contact management fields\n        MessageTextInput(\n            name=\"resource_name\",\n            display_name=\"Resource Name\",\n            info=\"The resource name of the person to provide information about\",\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"person_fields\",\n            display_name=\"Person fields\",\n            info=\"Fields to return for the person. Multiple fields can be specified by separating them with commas\",\n            show=False,\n            advanced=True,\n        ),\n        # Attachment handling\n        MessageTextInput(\n            name=\"attachment_id\",\n            display_name=\"Attachment ID\",\n            info=\"Id of the attachment\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"file_name\",\n            display_name=\"File name\",\n            info=\"File name of the attachment file\",\n            show=False,\n            required=True,\n            advanced=False,\n        ),\n        FileInput(\n            name=\"attachment\",\n            display_name=\"Add Attachment\",\n            file_types=[\n                \"csv\",\n                \"txt\",\n                \"doc\",\n                \"docx\",\n                \"xls\",\n                \"xlsx\",\n                \"pdf\",\n                \"png\",\n                \"jpg\",\n                \"jpeg\",\n                \"gif\",\n                \"zip\",\n                \"rar\",\n                \"ppt\",\n                \"pptx\",\n            ],\n            info=\"Add an attachment\",\n            show=False,\n        ),\n    ]\n\n    def execute_action(self):\n        \"\"\"Execute action and return response as Message.\"\"\"\n        toolset = self._build_wrapper()\n\n        try:\n            self._build_action_maps()\n            # Get the display name from the action list\n            display_name = self.action[0][\"name\"] if isinstance(self.action, list) and self.action else self.action\n            # Use the display_to_key_map to get the action key\n            action_key = self._display_to_key_map.get(display_name)\n            if not action_key:\n                msg = f\"Invalid action: {display_name}\"\n                raise ValueError(msg)\n\n            enum_name = getattr(Action, action_key)\n            params = {}\n            if action_key in self._actions_data:\n                for field in self._actions_data[action_key][\"action_fields\"]:\n                    value = getattr(self, field)\n\n                    if value is None or value == \"\":\n                        continue\n\n                    if field in [\"cc\", \"bcc\", \"label_ids\"] and value:\n                        value = [item.strip() for item in value.split(\",\")]\n\n                    if field in self._bool_variables:\n                        value = bool(value)\n\n                    params[field] = value\n\n            if params.get(\"gmail_user_id\"):\n                params[\"user_id\"] = params.pop(\"gmail_user_id\")\n\n            result = toolset.execute_action(\n                action=enum_name,\n                params=params,\n            )\n            if not result.get(\"successful\"):\n                message_str = result.get(\"data\", {}).get(\"message\", \"{}\")\n                try:\n                    error_data = json.loads(message_str).get(\"error\", {})\n                except json.JSONDecodeError:\n                    error_data = {\"error\": \"Failed to get exact error details\"}\n                return {\n                    \"code\": error_data.get(\"code\"),\n                    \"message\": error_data.get(\"message\"),\n                    \"errors\": error_data.get(\"errors\", []),\n                    \"status\": error_data.get(\"status\"),\n                }\n\n            result_data = result.get(\"data\", {})\n            actions_data = self._actions_data.get(action_key, {})\n            # If 'get_result_field' is True and 'result_field' is specified, extract the data\n            # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.\n            if actions_data.get(\"get_result_field\") and actions_data.get(\"result_field\"):\n                result_data = result_data.get(actions_data.get(\"result_field\"), result.get(\"data\", []))\n            if len(result_data) != 1 and not actions_data.get(\"result_field\") and actions_data.get(\"get_result_field\"):\n                msg = f\"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}\"\n                raise ValueError(msg)\n            return result_data  # noqa: TRY300\n        except Exception as e:\n            logger.error(f\"Error executing action: {e}\")\n            display_name = self.action[0][\"name\"] if isinstance(self.action, list) and self.action else str(self.action)\n            msg = f\"Failed to execute {display_name}: {e!s}\"\n            raise ValueError(msg) from e\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        return super().update_build_config(build_config, field_value, field_name)\n\n    def set_default_tools(self):\n        self._default_tools = {\n            \"GMAIL_SEND_EMAIL\",\n            \"GMAIL_FETCH_EMAILS\",\n        }\n"
               },
               "entity_id": {
                 "_input_type": "MessageTextInput",
@@ -1531,67 +1701,1202 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
+                "tool_mode": true,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "default"
               },
-              "tool_name": {
-                "_input_type": "ConnectionInput",
+              "file_name": {
+                "_input_type": "MessageTextInput",
                 "advanced": false,
-                "button_metadata": {
-                  "icon": "unplug",
-                  "variant": "destructive"
-                },
-                "connection_link": "",
-                "display_name": "Tool Name",
+                "display_name": "File name",
                 "dynamic": false,
-                "info": "The name of the tool to use",
-                "name": "tool_name",
-                "options": [],
-                "placeholder": "Select a tool...",
+                "info": "File name of the attachment file",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "file_name",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "format": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Format",
+                "dynamic": false,
+                "info": "The format to return the message in. Possible values: minimal, full, raw, metadata",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "format",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "gmail_user_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "User ID",
+                "dynamic": false,
+                "info": "The user's email address or 'me' for the authenticated user",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "gmail_user_id",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "include_spam_trash": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include messages from Spam/Trash",
+                "dynamic": false,
+                "info": "Include messages from SPAM and TRASH in the results",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_spam_trash",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "is_html": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Is HTML",
+                "dynamic": false,
+                "info": "Specify whether the email body contains HTML content (true/false)",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "is_html",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "label_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Label ID",
+                "dynamic": false,
+                "info": "The ID of the Gmail label",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "label_id",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "label_ids": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Label Ids",
+                "dynamic": false,
+                "info": "Comma-separated list of label IDs to filter messages",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "label_ids",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "label_list_visibility": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Label List Visibility",
+                "dynamic": false,
+                "info": "The visibility of the label in the label list in the Gmail web interface",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "label_list_visibility",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "label_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Label Name",
+                "dynamic": false,
+                "info": "Name of the Gmail label to create, modify, or filter by",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "label_name",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_results": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "display_name": "Max Results",
+                "dynamic": false,
+                "info": "Maximum number of emails to be returned",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_results",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "message_body": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Message Body",
+                "dynamic": false,
+                "info": "The body content of the message to be sent",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "message_body",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "message_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Message ID",
+                "dynamic": false,
+                "info": "The ID of the specific email message",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "message_id",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "message_list_visibility": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Message List Visibility",
+                "dynamic": false,
+                "info": "The visibility of the label in the message list in the Gmail web interface",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "message_list_visibility",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "page_token": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Page Token",
+                "dynamic": false,
+                "info": "Token for retrieving the next page of results",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "page_token",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "person_fields": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Person fields",
+                "dynamic": false,
+                "info": "Fields to return for the person. Multiple fields can be specified by separating them with commas",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "person_fields",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Query",
+                "dynamic": false,
+                "info": "Search query to filter emails (e.g., 'from:someone@email.com' or 'subject:hello')",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "query",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "recipient_email": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Recipient Email",
+                "dynamic": false,
+                "info": "Email address of the recipient",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "recipient_email",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "resource_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Resource Name",
+                "dynamic": false,
+                "info": "The resource name of the person to provide information about",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "resource_name",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "subject": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Subject",
+                "dynamic": false,
+                "info": "Subject of the email",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "subject",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "thread_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Thread ID",
+                "dynamic": false,
+                "info": "The ID of the email thread",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "thread_id",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "tools_metadata": {
+                "_input_type": "ToolsInput",
+                "advanced": false,
+                "display_name": "Actions",
+                "dynamic": false,
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "search_category": [],
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "connect",
-                "value": ""
+                "type": "tools",
+                "value": [
+                  {
+                    "args": {
+                      "attachment": {
+                        "default": null,
+                        "description": "Path of File to be attached with the mail, If attachment to be sent.",
+                        "examples": [],
+                        "title": "Attachment",
+                        "type": "string"
+                      },
+                      "bcc": {
+                        "default": [],
+                        "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Bcc",
+                        "type": "array"
+                      },
+                      "body": {
+                        "description": "Body content of the email. Can be plain text or HTML. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "<h1>Hello</h1><p>This is an HTML email.</p>"
+                        ],
+                        "title": "Body",
+                        "type": "string"
+                      },
+                      "cc": {
+                        "default": [],
+                        "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Cc",
+                        "type": "array"
+                      },
+                      "extra_recipients": {
+                        "default": [],
+                        "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Extra Recipients",
+                        "type": "array"
+                      },
+                      "is_html": {
+                        "default": false,
+                        "description": "Set to True if the body content is HTML. Please provide a value of type boolean.",
+                        "examples": [],
+                        "title": "Is Html",
+                        "type": "boolean"
+                      },
+                      "recipient_email": {
+                        "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "john@doe.com"
+                        ],
+                        "title": "Recipient Email",
+                        "type": "string"
+                      },
+                      "subject": {
+                        "description": "Subject of the email. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "meeting"
+                        ],
+                        "title": "Subject",
+                        "type": "string"
+                      },
+                      "thread_id": {
+                        "default": null,
+                        "description": "The ID of the thread to which the email will be added. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Thread Id",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Create a draft email using gmail's api.",
+                    "display_description": "Create a draft email using gmail's api.",
+                    "display_name": "Create Draft Email",
+                    "name": "gmail_create_email_draft",
+                    "readonly": true,
+                    "status": true,
+                    "tags": [
+                      "GMAIL_CREATE_EMAIL_DRAFT"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "label_list_visibility": {
+                        "default": "labelShow",
+                        "description": "The visibility of the label in the label list in the Gmail web interface. Possible values: 'labelShow' to show the label in the label list, 'labelShowIfUnread' to show the label if there are any unread messages with that label, 'labelHide' to not show the label in the label list. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Label List Visibility",
+                        "type": "string"
+                      },
+                      "label_name": {
+                        "description": "The name of the label to create. Please provide a value of type string. This parameter is required.",
+                        "examples": [],
+                        "title": "Label Name",
+                        "type": "string"
+                      },
+                      "message_list_visibility": {
+                        "default": "show",
+                        "description": "The visibility of the label in the message list in the Gmail web interface. Possible values: 'show' to show the label in the message list, 'hide' to not show the label in the message list. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Message List Visibility",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Action to create a new label in gmail.",
+                    "display_description": "Action to create a new label in gmail.",
+                    "display_name": "Create Email Label",
+                    "name": "gmail_create_label",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_CREATE_LABEL"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "include_payload": {
+                        "default": true,
+                        "description": "Include the payload of the message in the results. Please provide a value of type boolean.",
+                        "examples": [],
+                        "title": "Include Payload",
+                        "type": "boolean"
+                      },
+                      "include_spam_trash": {
+                        "default": false,
+                        "description": "Include messages from SPAM and TRASH in the results. Please provide a value of type boolean.",
+                        "examples": [],
+                        "title": "Include Spam Trash",
+                        "type": "boolean"
+                      },
+                      "label_ids": {
+                        "default": null,
+                        "description": "Filter messages by their label IDs. Labels identify the status or category of messages. Some of the in-built labels include 'INBOX', 'SPAM', 'TRASH', 'UNREAD', 'STARRED', 'IMPORTANT', 'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', and 'CATEGORY_FORUMS'. The 'label_ids' for custom labels can be found in the response of the 'listLabels' action. Note: The label_ids is a list of label IDs to filter the messages by.",
+                        "examples": [],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Label Ids",
+                        "type": "array"
+                      },
+                      "max_results": {
+                        "default": 1,
+                        "description": "Maximum number of messages to return. Please provide a value of type integer.",
+                        "examples": [],
+                        "title": "Max Results",
+                        "type": "integer"
+                      },
+                      "page_token": {
+                        "default": null,
+                        "description": "Page token to retrieve a specific page of results in the list. The page token is returned in the response of this action if there are more results to be fetched. If not provided, the first page of results is returned. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Page Token",
+                        "type": "string"
+                      },
+                      "query": {
+                        "default": null,
+                        "description": "Only return messages matching the specified query. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Query",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Action to fetch all emails from gmail.",
+                    "display_description": "Action to fetch all emails from gmail.",
+                    "display_name": "Fetch Emails",
+                    "name": "gmail_fetch_emails",
+                    "readonly": true,
+                    "status": true,
+                    "tags": [
+                      "GMAIL_FETCH_EMAILS"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "format": {
+                        "default": "full",
+                        "description": "The format to return the message in. Possible values: minimal, full, raw, metadata. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Format",
+                        "type": "string"
+                      },
+                      "message_id": {
+                        "description": "ID of the message to fetch, you can find the 'message_id' in the response of the 'fetchEmails' action. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "xsdfe3264vrfw"
+                        ],
+                        "title": "Message Id",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Fetch messages by message id from gmail.",
+                    "display_description": "Fetch messages by message id from gmail.",
+                    "display_name": "Get Email By ID",
+                    "name": "gmail_fetch_message_by_message_id",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "page_token": {
+                        "default": "",
+                        "description": "Page token to retrieve a specific page of results in the list. The next_page_token is returned in the response of this action (i.e 'fetchMessageByThreadId') if there are more results to be fetched. If not provided, the first page of results is returned. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Page Token",
+                        "type": "string"
+                      },
+                      "thread_id": {
+                        "description": "ID of the thread containing the message to fetch, you can find the 'thread_id' in the response of the 'fetchEmails' action or 'listThreads' actions. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "xsdfe3264vrfw"
+                        ],
+                        "title": "Thread Id",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Fetch messages by thread id from gmail with pagination support. to use pagination, you can set the 'pagetoken' in the request to the value of the 'nextpagetoken' in the response of the previous action. the 'nextpagetoken' is returned in the response of this action (i.e 'fetchmessagebythreadid') if there are more results to be fetched. if not provided, the first page of results is returned.",
+                    "display_description": "Fetch messages by thread id from gmail with pagination support. to use pagination, you can set the 'pagetoken' in the request to the value of the 'nextpagetoken' in the response of the previous action. the 'nextpagetoken' is returned in the response of this action (i.e 'fetchmessagebythreadid') if there are more results to be fetched. if not provided, the first page of results is returned.",
+                    "display_name": "Get Message By Thread ID",
+                    "name": "gmail_fetch_message_by_thread_id",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_FETCH_MESSAGE_BY_THREAD_ID"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "attachment_id": {
+                        "description": "Id of the target attachment. Please provide a value of type string. This parameter is required.",
+                        "examples": [],
+                        "title": "Attachment Id",
+                        "type": "string"
+                      },
+                      "file_name": {
+                        "description": "Filename of the attachment file. Please provide a value of type string. This parameter is required.",
+                        "examples": [],
+                        "title": "File Name",
+                        "type": "string"
+                      },
+                      "message_id": {
+                        "description": "Id of the message(mail) containing the attachment. Please provide a value of type string. This parameter is required.",
+                        "examples": [],
+                        "title": "Message Id",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Get an attachment from a mail.",
+                    "display_description": "Get an attachment from a mail.",
+                    "display_name": "Get Attachment",
+                    "name": "gmail_get_attachment",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_GET_ATTACHMENT"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "other_contacts": {
+                        "default": false,
+                        "description": "Whether to get other contacts. Please provide a value of type boolean.",
+                        "examples": [],
+                        "title": "Other Contacts",
+                        "type": "boolean"
+                      },
+                      "page_size": {
+                        "default": 10,
+                        "description": "Number of results to return per page. Maximum is 1000. Please provide a value of type integer.",
+                        "examples": [],
+                        "title": "Page Size",
+                        "type": "integer"
+                      },
+                      "page_token": {
+                        "default": "",
+                        "description": "The page token to retrieve the next page of results.Set this if nextPageToken is returned in the response. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Page Token",
+                        "type": "string"
+                      },
+                      "person_fields": {
+                        "default": "emailAddresses,names,birthdays,genders",
+                        "description": "A field mask to restrict which fields on the person are returned. Multiple fields can be specified by separating them with commas.Valid values are: addresses, ageRanges, biographies, birthdays, calendarUrls, clientData, coverPhotos, emailAddresses etc. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Person Fields",
+                        "type": "string"
+                      },
+                      "resource_name": {
+                        "default": "people/me",
+                        "description": "The resource name of the person to provide information about. To get information about a google account, specify 'people/account_id'. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Resource Name",
+                        "type": "string"
+                      },
+                      "sync_token": {
+                        "default": "",
+                        "description": "A sync token, returned by a previous call, to request only changes since that call. Leave empty for initial full sync. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Sync Token",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Action to get contacts info of people.",
+                    "display_description": "Action to get contacts info of people.",
+                    "display_name": "Get Contacts",
+                    "name": "gmail_get_people",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_GET_PEOPLE"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Get the profile of the authenticated user.",
+                    "display_description": "Get the profile of the authenticated user.",
+                    "display_name": "Get User Profile",
+                    "name": "gmail_get_profile",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_GET_PROFILE"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "List all labels in the user's gmail account.",
+                    "display_description": "List all labels in the user's gmail account.",
+                    "display_name": "List Email Labels",
+                    "name": "gmail_list_labels",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_LIST_LABELS"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "max_results": {
+                        "default": 10,
+                        "description": "Maximum number of threads to return. Please provide a value of type integer.",
+                        "examples": [
+                          10,
+                          50,
+                          100
+                        ],
+                        "title": "Max Results",
+                        "type": "integer"
+                      },
+                      "page_token": {
+                        "default": "",
+                        "description": "Page token to retrieve a specific page of results in the list. The 'next_page_token' is returned in the response of this action (i.e 'listThreads') if there are more results to be fetched. If not provided, the first page of results is returned. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "Page Token",
+                        "type": "string"
+                      },
+                      "query": {
+                        "default": "",
+                        "description": "Only return threads matching the specified query. Please provide a value of type string.",
+                        "examples": [
+                          "is:unread",
+                          "from:john.doe@example.com"
+                        ],
+                        "title": "Query",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated users. Please provide a value of type string.",
+                        "examples": [
+                          "me"
+                        ],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Action to list threads in gmail. this action returns a list of threads and a page token to retrieve the next page of results. the next page token is returned in the response of this action (i.e 'listthreads') if there are more results to be fetched, which you can use in the 'pagetoken' field of the request to fetch the next page of results. if not available, the last page of results is returned.",
+                    "display_description": "Action to list threads in gmail. this action returns a list of threads and a page token to retrieve the next page of results. the next page token is returned in the response of this action (i.e 'listthreads') if there are more results to be fetched, which you can use in the 'pagetoken' field of the request to fetch the next page of results. if not available, the last page of results is returned.",
+                    "display_name": "List Email Threads",
+                    "name": "gmail_list_threads",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_LIST_THREADS"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "label_id": {
+                        "description": "The ID of the label to delete. Please provide a value of type string. This parameter is required.",
+                        "examples": [],
+                        "title": "Label Id",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Action to remove a label in gmail.",
+                    "display_description": "Action to remove a label in gmail.",
+                    "display_name": "Delete Email Label",
+                    "name": "gmail_remove_label",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_REMOVE_LABEL"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "bcc": {
+                        "default": [],
+                        "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Bcc",
+                        "type": "array"
+                      },
+                      "cc": {
+                        "default": [],
+                        "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Cc",
+                        "type": "array"
+                      },
+                      "extra_recipients": {
+                        "default": [],
+                        "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Extra Recipients",
+                        "type": "array"
+                      },
+                      "is_html": {
+                        "default": false,
+                        "description": "Set to True if the body content is HTML. Please provide a value of type boolean.",
+                        "examples": [],
+                        "title": "Is Html",
+                        "type": "boolean"
+                      },
+                      "message_body": {
+                        "description": "Body of the reply message. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "Dear Sir, Nice talking to you. Yours respectfully, John"
+                        ],
+                        "title": "Message Body",
+                        "type": "string"
+                      },
+                      "recipient_email": {
+                        "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "John@doe.com"
+                        ],
+                        "title": "Recipient Email",
+                        "type": "string"
+                      },
+                      "thread_id": {
+                        "description": "ID of the thread to reply to. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "x53r3vdevff"
+                        ],
+                        "title": "Thread Id",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Action to reply to an email thread in gmail.",
+                    "display_description": "Action to reply to an email thread in gmail.",
+                    "display_name": "Reply To Thread",
+                    "name": "gmail_reply_to_thread",
+                    "readonly": true,
+                    "status": false,
+                    "tags": [
+                      "GMAIL_REPLY_TO_THREAD"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "attachment": {
+                        "default": null,
+                        "description": "Path of File to be attached with the mail, If attachment to be sent.",
+                        "examples": [],
+                        "title": "Attachment",
+                        "type": "string"
+                      },
+                      "bcc": {
+                        "default": [],
+                        "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Bcc",
+                        "type": "array"
+                      },
+                      "body": {
+                        "description": "Body content of the email. Can be plain text or HTML. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "<h1>Hello</h1><p>This is an HTML email.</p>"
+                        ],
+                        "title": "Body",
+                        "type": "string"
+                      },
+                      "cc": {
+                        "default": [],
+                        "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Cc",
+                        "type": "array"
+                      },
+                      "extra_recipients": {
+                        "default": [],
+                        "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Extra Recipients",
+                        "type": "array"
+                      },
+                      "is_html": {
+                        "default": false,
+                        "description": "Set to True if the body content is HTML. Please provide a value of type boolean.",
+                        "examples": [],
+                        "title": "Is Html",
+                        "type": "boolean"
+                      },
+                      "recipient_email": {
+                        "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
+                        "examples": [
+                          "john@doe.com"
+                        ],
+                        "title": "Recipient Email",
+                        "type": "string"
+                      },
+                      "subject": {
+                        "default": null,
+                        "description": "Subject of the email. Please provide a value of type string.",
+                        "examples": [
+                          "Job Application"
+                        ],
+                        "title": "Subject",
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "default": "me",
+                        "description": "The user's email address or 'me' for the authenticated user. Please provide a value of type string.",
+                        "examples": [],
+                        "title": "User Id",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Send an email using gmail's api.",
+                    "display_description": "Send an email using gmail's api.",
+                    "display_name": "Send Email",
+                    "name": "gmail_send_email",
+                    "readonly": true,
+                    "status": true,
+                    "tags": [
+                      "GMAIL_SEND_EMAIL"
+                    ]
+                  }
+                ]
               }
             },
-            "tool_mode": false
+            "tool_mode": true
           },
           "showNode": true,
-          "type": "ComposioAPI"
+          "type": "GmailAPI"
         },
         "dragging": false,
-        "id": "ComposioAPI-4heel",
+        "id": "GmailAPI-J65iP",
         "measured": {
-          "height": 332,
+          "height": 306,
           "width": 320
         },
         "position": {
-          "x": -188.38126171451378,
-          "y": -74.76352834864377
+          "x": -146.81342289160176,
+          "y": 45.96007690732199
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 782.0226980413704,
-      "y": 124.34564913657198,
-      "zoom": 0.9609155689915785
+      "x": 666.2832733402806,
+      "y": 164.46690526987453,
+      "zoom": 0.8601616313620086
     }
   },
   "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
   "endpoint_name": null,
-  "id": "580794d2-0d2f-4dc3-bff0-c58dd62264ec",
+  "id": "b3651cce-bb42-43ed-8587-897ba8bb12dc",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.4.0",
   "name": "Gmail Agent",
   "tags": [
     "agents"

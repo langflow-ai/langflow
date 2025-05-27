@@ -507,6 +507,7 @@ This component implements a Vector Store using GridGain with data ingestion and 
 | search_results | List[Data]         | Results of the similarity search as a list of Data objects |
 </details>
 
+
 ## Graph RAG
 
 This component performs Graph RAG (Retrieval Augmented Generation) traversal in a vector store, enabling graph-based document retrieval.
