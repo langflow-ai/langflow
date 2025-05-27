@@ -251,7 +251,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         """Test splitting text with URL loader."""
         component = SplitTextComponent()
         url = ["https://en.wikipedia.org/wiki/London", "https://en.wikipedia.org/wiki/Paris"]
-        data_frame = URLComponent(urls=url, format="Text").as_dataframe()
+        data_frame = URLComponent(urls=url, format="Text").fetch_content()
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 2, f"Expected DataFrame with 2 rows, got {len(data_frame)}"
         component.set_attributes(
