@@ -20,6 +20,7 @@ export const getNodesWithDefaultValue = (nodes: AllNodeType[]) => {
       if (newNode?.data?.node?.template) {
         newNode.data.node.template = templateKeys.reduce((acc, key) => {
           acc[key] = cloneDeep(node?.data?.node?.template[key]);
+          acc[key].advanced = true;
           return acc;
         }, {});
       }
