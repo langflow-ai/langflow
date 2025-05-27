@@ -61,7 +61,7 @@ docker run -it --rm \
 
 ### Langflow service
 
-The `langflow`service serves both the backend API and frontend UI of the Langflow web application.
+The `langflow` service serves both the backend API and frontend UI of the Langflow web application.
 
 The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port `7860`. It depends on the `postgres` service.
 
@@ -96,10 +96,27 @@ Volumes:
 
 If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
 
-### Build a Langflow Docker image with all `--extra` dependencies included
+### Build a Langflow Docker image with all optional dependencies
 
-The Langflow repository includes a `langflow-all` [Dockerfile](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile) for building a Langflow image containing all dependencies flagged as `--extra` by the `uv sync` command.
+The `langflow-all` image is available from [Dockerhub](https://hub.docker.com/r/langflowai/langflow-all) or as a [Dockerfile](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile) in the Langflow repository.
+
 Use this image to include `nv-ingest` or `postgresql` dependencies without having to build a custom container. Additional extra dependencies are found in [uv.lock](https://github.com/langflow-ai/langflow/blob/main/uv.lock#L4851).
+
+#### Pull Langflow-all image from Dockerhub
+
+To pull the `langflow-all` image from Dockerhub and run it, run this command:
+```bash
+docker run -p 7860:7860 langflowai/langflow-all:latest
+```
+
+The `langflow-nightly-all` image is also available. It is built from `main` and is more up-to-date, but potentially less stable.
+
+To pull the `langflow-nightly-all` image from Dockerhub and run it, run this command:
+```bash
+docker run -p 7860:7860 langflowai/langflow-all-nightly:latest
+```
+
+#### Build langflow-all image
 
 To build the `langflow-all` image, do the following:
 
@@ -113,13 +130,7 @@ docker build -t langflow-custom:latest -f docker/build_and_push_with_extras.Dock
 docker run -p 7860:7860 langflow-custom:latest
 ```
 
-3. Langflow with all dependencies installed is now available at `http://0.0.0.0:7860`.
-
-The `langflow-all` image is also available from [Dockerhub](https://hub.docker.com/r/langflowai/langflow).
-To pull the image from Dockerhub and run it, run this command:
-```bash
-docker run -p 7860:7860 langflowai/langflow-all:latest
-```
+3. Langflow with all dependencies installed is now available at `http://localhost:7860`.
 
 ## Package your flow as a Docker image
 
