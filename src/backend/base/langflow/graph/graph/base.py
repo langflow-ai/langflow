@@ -1900,13 +1900,12 @@ class Graph:
         return vertex_instance
 
     def assert_streaming_sequence(self) -> None:
-        for i in self.edges:
-            source = self.get_vertex(i.source_id)
-            if "stream" in source.params and source.params["stream"] is True:
-                target = self.get_vertex(i.target_id)
-                if target.vertex_type != "ChatOutput":
+        for vertex in self.vertices:
+            if vertex.params.get("stream") is True:
+                successors = self.get_all_successors(vertex)
+                if not any(s.vertex_type == "ChatOutput" for s in successors):
                     msg = (
-                        "Error: A 'streaming' vertex cannot be followed by a non-'chat output' vertex."
+                        "Error: A 'streaming' vertex must lead to a 'chat output' component. "
                         "Disable streaming to run the flow."
                     )
                     raise Exception(msg)  # noqa: TRY002
