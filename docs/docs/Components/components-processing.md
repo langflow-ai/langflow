@@ -635,7 +635,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 </details>
 
-## Combine data
+### Combine data
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
@@ -737,7 +737,7 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 </details>
 
 
-## Filter data
+### Filter data
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
@@ -764,7 +764,7 @@ This component filters a [Data](/concepts-objects#data-object) object based on a
 
 </details>
 
-## Filter values
+### Filter values
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
