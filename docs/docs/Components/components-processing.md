@@ -42,48 +42,6 @@ The component iterates through the input list of data objects, merging them into
 
 </details>
 
-## Combine text
-
-This component concatenates two text sources into a single text chunk using a specified delimiter.
-
-1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
-This example uses two **Text Input** components.
-
-![Combine text component](/img/component-combine-text.png)
-
-2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
-3. In the **Combine Text** component, enter an optional **Delimiter** value.
-The delimiter character separates the combined texts.
-This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
-4. Connect a **Chat Output** component to view the text combination.
-5. Click **Playground**, and then click **Run Flow**.
-The combined text appears in the **Playground**.
-```text
-This is the first text. Let's combine text!
-end first text
-start second text
-Here's the second part. We'll see how combining text works.
-```
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| first_text | First Text | The first text input to concatenate. |
-| second_text | Second Text | The second text input to concatenate. |
-| delimiter | Delimiter | A string used to separate the two text inputs. The default is a space. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| message | Message | A Message object containing the combined text. |
-
-</details>
-
 ## DataFrame operations
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
@@ -747,6 +705,53 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | List of Input objects, each with added metadata |
+
+</details>
+
+### Combine text
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development.
+Instead, use the [Combine data](#combine-data) component.
+:::
+
+This component concatenates two text sources into a single text chunk using a specified delimiter.
+
+1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
+This example uses two **Text Input** components.
+
+![Combine text component](/img/component-combine-text.png)
+
+2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
+3. In the **Combine Text** component, enter an optional **Delimiter** value.
+The delimiter character separates the combined texts.
+This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
+4. Connect a **Chat Output** component to view the text combination.
+5. Click **Playground**, and then click **Run Flow**.
+The combined text appears in the **Playground**.
+```text
+This is the first text. Let's combine text!
+end first text
+start second text
+Here's the second part. We'll see how combining text works.
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| first_text | First Text | The first text input to concatenate. |
+| second_text | Second Text | The second text input to concatenate. |
+| delimiter | Delimiter | A string used to separate the two text inputs. The default is a space. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| message | Message | A Message object containing the combined text. |
 
 </details>
 
