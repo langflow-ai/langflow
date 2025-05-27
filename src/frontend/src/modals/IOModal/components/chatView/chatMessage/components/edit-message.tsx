@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 
 type MarkdownFieldProps = {
   chat: any;

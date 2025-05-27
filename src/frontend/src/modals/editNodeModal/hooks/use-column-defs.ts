@@ -26,7 +26,7 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default",
       },
       {
         headerName: "Description",
@@ -36,7 +36,7 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 2,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default",
       },
       {
         headerName: "Value",
@@ -61,24 +61,26 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default",
       },
     ];
     if (!hideVisibility) {
       colDefs.push({
-        headerName: "Show",
+        headerName: isTweaks ? "Enable Input" : "Show",
         field: "advanced",
         cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
             nodeId,
             parameterId: params.data.key,
+            isTweaks,
           };
         },
         editable: false,
-        maxWidth: 80,
+        maxWidth: !isTweaks ? 80 : 120,
+        minWidth: !isTweaks ? 80 : 120,
         resizable: false,
-        cellClass: "no-border",
+        cellClass: "no-border cursor-default",
       });
     }
     return colDefs;

@@ -27,17 +27,11 @@ test(
       .first()
       .click();
 
-    await page.waitForSelector(
-      '[data-testid="popover-anchor-input-openai_api_base-edit"]',
-      {
-        timeout: 1000,
-      },
-    );
+    await page.waitForSelector('[data-testid="showstream"]', {
+      timeout: 1000,
+    });
 
-    await page
-      .getByTestId("popover-anchor-input-openai_api_base-edit")
-      .first()
-      .fill("teste");
+    await page.getByTestId("showstream").first().click();
 
     await page.getByText("Close").last().click();
 
@@ -50,6 +44,13 @@ test(
     const newValue = clipboardContent2;
     expect(oldValue).not.toBe(newValue);
     expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.getByText("Basic Prompting").first().click();
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
+    expect(
+      await page.getByText("Input Schema (1)", { exact: true }).isVisible(),
+    );
   },
 );
 
@@ -131,5 +132,5 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
-  expect(await page.getByText("Tweaks (2)", { exact: true }).isVisible());
+  expect(await page.getByText("Input Schema (2)", { exact: true }).isVisible());
 });

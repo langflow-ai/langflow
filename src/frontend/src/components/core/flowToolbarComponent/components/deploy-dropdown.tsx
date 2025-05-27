@@ -12,7 +12,7 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
-import ApiModal from "@/modals/apiModal/new-api-modal";
+import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
@@ -87,7 +87,7 @@ export default function PublishDropdown() {
           <Button
             variant="ghost"
             size="md"
-            className="!px-2.5 font-medium"
+            className="!px-2.5 font-normal"
             data-testid="publish-button"
           >
             Share
