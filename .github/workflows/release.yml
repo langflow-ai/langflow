@@ -24,11 +24,6 @@ on:
         required: true
         type: boolean
         default: false
-      build_docker_main_all:
-        description: "Build Docker Image for Langflow with all optional dependencies"
-        required: true
-        type: boolean
-        default: false
       build_docker_ep:
         description: "Build Docker Image for Langflow with Entrypoint"
         required: false
