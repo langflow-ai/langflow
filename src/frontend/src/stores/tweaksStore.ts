@@ -1,7 +1,6 @@
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
 import { AllNodeType, NodeDataType } from "@/types/flow";
-import { customStringify } from "@/utils/reactflowUtils";
 import { create } from "zustand";
 import { TweaksStoreType } from "../types/zustand/tweaks";
 import useFlowStore from "./flowStore";
@@ -46,19 +45,13 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   },
   updateTweaks: () => {
     const nodes = get().nodes;
-    const originalNodes = useFlowStore.getState().nodes;
     const tweak = {};
     nodes.forEach((node) => {
-      const originalNodeTemplate = originalNodes?.find((n) => n.id === node.id)
-        ?.data?.node?.template;
       const nodeTemplate = node.data?.node?.template;
-      if (originalNodeTemplate && nodeTemplate && node.type === "genericNode") {
+      if (nodeTemplate && node.type === "genericNode") {
         const currentTweak = {};
         Object.keys(nodeTemplate).forEach((name) => {
-          if (
-            customStringify(nodeTemplate[name]) !==
-            customStringify(originalNodeTemplate[name])
-          ) {
+          if (!nodeTemplate[name].advanced) {
             currentTweak[name] = getChangesType(
               nodeTemplate[name].value,
               nodeTemplate[name],
