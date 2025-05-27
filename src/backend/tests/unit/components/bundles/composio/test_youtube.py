@@ -99,7 +99,6 @@ class TestYoutubeComponent(ComponentTestBaseWithoutClient):
             # Based on the component's actual behavior, it returns the result_field directly
             assert result == "mocked response"
 
-    
     def test_execute_action_invalid_action(self, component_class, default_kwargs):
         # Setup component
         component = component_class(**default_kwargs)
@@ -165,4 +164,4 @@ class TestYoutubeComponent(ComponentTestBaseWithoutClient):
         # Test with valid API key
         component.api_key = "test_key"
         result = component.update_build_config(build_config, "test_key", "api_key")
-        assert len(result["action"]["options"]) > 0  
+        assert len(result["action"]["options"]) > 0
