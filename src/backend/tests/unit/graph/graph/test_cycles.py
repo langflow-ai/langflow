@@ -4,7 +4,7 @@ import pytest
 from langflow.components.inputs import ChatInput
 from langflow.components.inputs.text import TextInputComponent
 from langflow.components.logic.conditional_router import ConditionalRouterComponent
-from langflow.components.models import OpenAIModelComponent
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput, TextOutputComponent
 from langflow.components.prompts import PromptComponent
 from langflow.custom import Component

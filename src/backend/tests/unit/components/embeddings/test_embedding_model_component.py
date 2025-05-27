@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from langflow.components.embeddings.embedding_model import EmbeddingModelComponent
+from langflow.components.models.embedding_model import EmbeddingModelComponent
 
 from tests.base import ComponentTestBaseWithClient
 
