@@ -298,7 +298,8 @@ def is_port_in_use(port, host="localhost"):
     Returns:
         bool: True if the port is in use, False otherwise.
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    family = socket.AF_INET6 if ':' in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as s:
         return s.connect_ex((host, port)) == 0
 
 
