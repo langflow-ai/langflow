@@ -142,7 +142,7 @@ export default function ApiModal({
                   name="SlidersHorizontal"
                   className="h-3.5 w-3.5"
                 />
-                <span>Tweaks ({Object.keys(tweaks)?.length}) </span>
+                <span>Input Schema ({Object.keys(tweaks)?.length}) </span>
               </Button>
               <Separator orientation="vertical" className="ml-2 h-8" />
             </div>
@@ -183,7 +183,7 @@ export default function ApiModal({
           }
         >
           <IconComponent name="SlidersHorizontal" className="text-f h-6 w-6" />
-          <span className="pl-2">Tweaks</span>
+          <span className="pl-2">Input Schema</span>
         </BaseModal.Header>
         <BaseModal.Content overflowHidden className="flex flex-col gap-4">
           {true && (
