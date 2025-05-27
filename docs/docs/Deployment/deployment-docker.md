@@ -116,18 +116,18 @@ To pull the `langflow-nightly-all` image from Dockerhub and run it, run this com
 docker run -p 7860:7860 langflowai/langflow-all-nightly:latest
 ```
 
-#### Build langflow-all image
+#### Build langflow-all image locally
 
 To build the `langflow-all` image, do the following:
 
 1. Build the image from the `langflow-all` [Dockerfile](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile):
 ```
-docker build -t langflow-custom:latest -f docker/build_and_push_with_extras.Dockerfile .
+docker build -t langflow-all:latest -f docker/build_and_push_with_extras.Dockerfile .
 ```
 
 2. Run the container from the image:
 ```
-docker run -p 7860:7860 langflow-custom:latest
+docker run -p 7860:7860 langflow-all:latest
 ```
 
 3. Langflow with all dependencies installed is now available at `http://localhost:7860`.
