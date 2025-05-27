@@ -10,10 +10,15 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
-import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
+import {
+  ENABLE_NVIDIA_PROJECT_R2X,
+  ENABLE_PUBLISH,
+  ENABLE_WIDGET,
+} from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal/new-api-modal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
+import NvidiaR2xModal from "@/modals/nvidiaR2xModal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -39,6 +44,7 @@ export default function PublishDropdown() {
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openApiModal, setOpenApiModal] = useState(false);
+  const [openNvidiaModal, setOpenNvidiaModal] = useState(false);
 
   const handlePublishedSwitch = async (checked: boolean) => {
     mutateAsync(
@@ -141,6 +147,23 @@ export default function PublishDropdown() {
               </div>
             </DropdownMenuItem>
           </CustomLink>
+          {ENABLE_NVIDIA_PROJECT_R2X && (
+            <DropdownMenuItem
+              className="deploy-dropdown-item group"
+              onClick={() => setOpenNvidiaModal(true)}
+            >
+              <div
+                className="group-hover:bg-accent"
+                data-testid="api-access-item"
+              >
+                <IconComponent
+                  name="Mic"
+                  className={`${groupStyle} icon-size mr-2`}
+                />
+                <span>NVIDIA Project R2X</span>
+              </div>
+            </DropdownMenuItem>
+          )}
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
@@ -220,6 +243,7 @@ export default function PublishDropdown() {
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
         <></>
       </ApiModal>
+      <NvidiaR2xModal open={openNvidiaModal} setOpen={setOpenNvidiaModal} />
       <EmbedModal
         open={openEmbedModal}
         setOpen={setOpenEmbedModal}
