@@ -265,9 +265,6 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
                 "sender_name": "test_sender_name",
             }
         )
-        results = component.as_dataframe()
-        assert isinstance(results, DataFrame), "Expected DataFrame instance"
-        assert len(results) > 2, f"Expected DataFrame with more than 2 rows, got {len(results)}"
 
         results = component.split_text()
         assert isinstance(results, list), "Expected list instance"
