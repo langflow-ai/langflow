@@ -149,6 +149,8 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
 
 def scape_json_parse(json_string: str) -> dict:
+    if json_string is None:
+        return {}
     if isinstance(json_string, dict):
         return json_string
     parsed_string = json_string.replace("œ", '"')
@@ -492,7 +494,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
-                logger.info(f"Loaded starter project {file}")
+                logger.debug(f"Loaded starter project {file}")
                 break  # Break if load is successful
             except orjson.JSONDecodeError as e:
                 attempt += 1
@@ -601,7 +603,7 @@ async def update_project_file(project_path: anyio.Path, project: dict, updated_p
     project["data"] = updated_project_data
     async with async_open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    logger.info(f"Updated starter project {project['name']} file")
+    logger.debug(f"Updated starter project {project['name']} file")
 
 
 def update_existing_project(

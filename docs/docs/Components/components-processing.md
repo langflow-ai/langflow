@@ -42,48 +42,6 @@ The component iterates through the input list of data objects, merging them into
 
 </details>
 
-## Combine text
-
-This component concatenates two text sources into a single text chunk using a specified delimiter.
-
-1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
-This example uses two **Text Input** components.
-
-![Combine text component](/img/component-combine-text.png)
-
-2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
-3. In the **Combine Text** component, enter an optional **Delimiter** value.
-The delimiter character separates the combined texts.
-This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
-4. Connect a **Chat Output** component to view the text combination.
-5. Click **Playground**, and then click **Run Flow**.
-The combined text appears in the **Playground**.
-```text
-This is the first text. Let's combine text!
-end first text
-start second text
-Here's the second part. We'll see how combining text works.
-```
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| first_text | First Text | The first text input to concatenate. |
-| second_text | Second Text | The second text input to concatenate. |
-| delimiter | Delimiter | A string used to separate the two text inputs. The default is a space. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| message | Message | A Message object containing the combined text. |
-
-</details>
-
 ## DataFrame operations
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
@@ -132,17 +90,17 @@ John Smith
 
 This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
 
-| Operation | Description | Required Inputs |
-|-----------|-------------|-----------------|
-| Add Column | Adds a new column with a constant value | new_column_name, new_column_value |
-| Drop Column | Removes a specified column | column_name |
-| Filter | Filters rows based on column value | column_name, filter_value |
-| Head | Returns first n rows | num_rows |
-| Rename Column | Renames an existing column | column_name, new_column_name |
-| Replace Value | Replaces values in a column | column_name, replace_value, replacement_value |
-| Select Columns | Selects specific columns | columns_to_select |
-| Sort | Sorts DataFrame by column | column_name, ascending |
-| Tail | Returns last n rows | num_rows |
+| Operation | Required Inputs | Info |
+|-----------|----------------|-------------|
+| Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
+| Drop Column | column_name | Removes a specified column. |
+| Filter | column_name, filter_value | Filters rows based on column value. |
+| Head | num_rows | Returns first `n` rows. |
+| Rename Column | column_name, new_column_name | Renames an existing column. |
+| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
+| Select Columns | columns_to_select | Selects specific columns. |
+| Sort | column_name, ascending | Sorts DataFrame by column. |
+| Tail | num_rows | Returns last `n` rows. |
 
 <details>
 <summary>Parameters</summary>
@@ -168,6 +126,95 @@ This component can perform the following operations on Pandas [DataFrame](https:
 | Name | Display Name | Info |
 |------|--------------|------|
 | output | DataFrame | The resulting DataFrame after the operation. |
+
+</details>
+
+## Data operations
+
+This component performs operations on [Data](/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
+
+1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data Operations** component's input.
+All operations in the component require at least one [Data](/concepts-objects#data-object) input.
+2. In the **Operations** field, select the operation you want to perform.
+For example, send this request to the **Webhook** component.
+Replace `YOUR_FLOW_ID` with your flow ID.
+```bash
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+  "id": 1,
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz",
+  "address": {
+    "street": "Kulas Light",
+    "suite": "Apt. 556",
+    "city": "Gwenborough",
+    "zipcode": "92998-3874",
+    "geo": {
+      "lat": "-37.3159",
+      "lng": "81.1496"
+    }
+  },
+  "phone": "1-770-736-8031 x56442",
+  "website": "hildegard.org",
+  "company": {
+    "name": "Romaguera-Crona",
+    "catchPhrase": "Multi-layered client-server neural-net",
+    "bs": "harness real-time e-markets"
+  }
+}'
+```
+
+3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
+To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
+![A webhook and data operations component](/img/component-data-operations-select-key.png)
+4. Filter by `name`, `username`, and `email` to select the values from the request.
+```json
+{
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz"
+}
+```
+
+### Operations
+
+The component supports the following operations.
+All operations in the **Data operations** component require at least one [Data](/concepts-objects#data-object) input.
+
+| Operation | Required Inputs | Info |
+|-----------|----------------|-------------|
+| Select Keys | `select_keys_input` | Selects specific keys from the data. |
+| Literal Eval | None | Evaluates string values as Python literals. |
+| Combine | None | Combines multiple data objects into one. |
+| Filter Values | `filter_key`, `filter_values`, `operator` | Filters data based on key-value pair. |
+| Append or Update | `append_update_data` | Adds or updates key-value pairs. |
+| Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
+| Rename Keys | `rename_keys_input` | Renames keys in the data. |
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The [Data](/concepts-objects#data-object) object to operate on. |
+| operations | Operations | The operation to perform on the data. |
+| select_keys_input | Select Keys | A list of keys to select from the data. |
+| filter_key | Filter Key | The key to filter by. |
+| operator | Comparison Operator | The operator to apply for comparing values. |
+| filter_values | Filter Values | A list of values to filter by. |
+| append_update_data | Append or Update | The data to append or update the existing data with. |
+| remove_keys_input | Remove Keys | A list of keys to remove from the data. |
+| rename_keys_input | Rename Keys | A list of keys to rename in the data. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_output | Data | The resulting Data object after the operation. |
 
 </details>
 
@@ -660,6 +707,53 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | List of Input objects, each with added metadata |
+
+</details>
+
+### Combine text
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development.
+Instead, use the [Combine data](#combine-data) component.
+:::
+
+This component concatenates two text sources into a single text chunk using a specified delimiter.
+
+1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
+This example uses two **Text Input** components.
+
+![Combine text component](/img/component-combine-text.png)
+
+2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
+3. In the **Combine Text** component, enter an optional **Delimiter** value.
+The delimiter character separates the combined texts.
+This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
+4. Connect a **Chat Output** component to view the text combination.
+5. Click **Playground**, and then click **Run Flow**.
+The combined text appears in the **Playground**.
+```text
+This is the first text. Let's combine text!
+end first text
+start second text
+Here's the second part. We'll see how combining text works.
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| first_text | First Text | The first text input to concatenate. |
+| second_text | Second Text | The second text input to concatenate. |
+| delimiter | Delimiter | A string used to separate the two text inputs. The default is a space. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| message | Message | A Message object containing the combined text. |
 
 </details>
 
