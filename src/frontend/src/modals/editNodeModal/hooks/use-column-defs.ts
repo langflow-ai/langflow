@@ -66,17 +66,19 @@ const useColumnDefs = (
     ];
     if (!hideVisibility) {
       colDefs.push({
-        headerName: "Show",
+        headerName: isTweaks ? "Enable Input" : "Show",
         field: "advanced",
         cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
             nodeId,
             parameterId: params.data.key,
+            isTweaks,
           };
         },
         editable: false,
-        maxWidth: 80,
+        maxWidth: !isTweaks ? 80 : 120,
+        minWidth: !isTweaks ? 80 : 120,
         resizable: false,
         cellClass: "no-border",
       });
