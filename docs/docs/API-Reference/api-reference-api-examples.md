@@ -40,7 +40,6 @@ To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) e
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/" \
-  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
 
@@ -58,8 +57,8 @@ curl -X GET \
 ```
   </TabItem>
 </Tabs>
-Export the `project-id` as an environment variable.
-Export the `project-id` as an environment variable.
+
+- Export the `project-id` as an environment variable.
 ```bash
 export project_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
