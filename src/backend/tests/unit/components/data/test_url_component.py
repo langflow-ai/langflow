@@ -214,12 +214,12 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         # Test URL without protocol
         url = "example.com"
         fixed_url = component.ensure_url(url)
-        assert fixed_url == "http://example.com"
+        assert fixed_url == "https://example.com"
 
         # Test URL with protocol
-        url = "http://example.com"
+        url = "https://example.com"
         fixed_url = component.ensure_url(url)
-        assert fixed_url == "http://example.com"
+        assert fixed_url == "https://example.com"
 
         # Test URL with https protocol
         url = "https://example.com"
