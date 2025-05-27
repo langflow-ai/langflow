@@ -1,6 +1,5 @@
 import pytest
-from langflow.components.io import ChatInput
-from langflow.components.io import ChatOutput
+from langflow.components.io import ChatInput, ChatOutput
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.state.model import create_state_model

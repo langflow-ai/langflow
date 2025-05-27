@@ -1,9 +1,8 @@
 import re
 
 import pytest
-from langflow.components.io import ChatInput
+from langflow.components.io import ChatInput, ChatOutput
 from langflow.components.models import OpenAIModelComponent
-from langflow.components.io import ChatOutput
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 
