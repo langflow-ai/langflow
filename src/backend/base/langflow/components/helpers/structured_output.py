@@ -121,11 +121,6 @@ class StructuredOutputComponent(Component):
             display_name="Structured Output",
             method="build_structured_output",
         ),
-        Output(
-            name="structured_output_dataframe",
-            display_name="DataFrame",
-            method="as_dataframe",
-        ),
     ]
 
     def build_structured_output_base(self) -> Data:
@@ -175,9 +170,3 @@ class StructuredOutputComponent(Component):
         output = self.build_structured_output_base()
 
         return Data(text_key="results", data={"results": output})
-
-    def as_dataframe(self) -> DataFrame:
-        output = self.build_structured_output_base()
-        if isinstance(output, list):
-            return DataFrame(data=output)
-        return DataFrame(data=[output])
