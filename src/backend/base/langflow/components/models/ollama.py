@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 from urllib.parse import urljoin
 
@@ -5,7 +6,7 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.ollama_constants import OLLAMA_TOOL_MODELS_BASE, URL_LIST
+from langflow.base.models.ollama_constants import URL_LIST
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
@@ -25,6 +26,7 @@ class ChatOllamaComponent(LCModelComponent):
     JSON_NAME_KEY = "name"
     JSON_CAPABILITIES_KEY = "capabilities"
     DESIRED_CAPABILITY = "completion"
+    TOOL_CALLING_CAPABILITY = "tools"
 
     inputs = [
         MessageTextInput(
@@ -129,7 +131,7 @@ class ChatOllamaComponent(LCModelComponent):
             name="tool_model_enabled",
             display_name="Tool Model Enabled",
             info="Whether to enable tool calling in the model.",
-            value=False,
+            value=True,
             real_time_refresh=True,
         ),
         MessageTextInput(
@@ -219,20 +221,27 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(
-            build_config["base_url"].get("value", "")
-        ):
-            # Check if any URL in the list is valid
-            valid_url = ""
-            for url in URL_LIST:
-                if await self.is_valid_ollama_url(url):
-                    valid_url = url
-                    break
-            if valid_url != "":
-                build_config["base_url"]["value"] = valid_url
+        if field_name in {"base_url", "model_name"}:
+            if build_config["base_url"].get("load_from_db", False):
+                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
             else:
-                msg = "No valid Ollama URL found."
-                raise ValueError(msg)
+                base_url_value = build_config["base_url"].get("value", "")
+
+            if not await self.is_valid_ollama_url(base_url_value):
+                # Check if any URL in the list is valid
+                valid_url = ""
+                check_urls = URL_LIST
+                if self.base_url:
+                    check_urls = [self.base_url, *URL_LIST]
+                for url in check_urls:
+                    if await self.is_valid_ollama_url(url):
+                        valid_url = url
+                        break
+                if valid_url != "":
+                    build_config["base_url"]["value"] = valid_url
+                else:
+                    msg = "No valid Ollama URL found."
+                    raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
@@ -286,7 +295,9 @@ class ChatOllamaComponent(LCModelComponent):
                 # Fetch available models
                 tags_response = await client.get(tags_url)
                 tags_response.raise_for_status()
-                models = await tags_response.json()
+                models = tags_response.json()
+                if asyncio.iscoroutine(models):
+                    models = await models
                 logger.debug(f"Available models: {models}")
 
                 # Filter models that are NOT embedding models
@@ -298,21 +309,19 @@ class ChatOllamaComponent(LCModelComponent):
                     payload = {"model": model_name}
                     show_response = await client.post(show_url, json=payload)
                     show_response.raise_for_status()
-                    json_data = await show_response.json()
+                    json_data = show_response.json()
+                    if asyncio.iscoroutine(json_data):
+                        json_data = await json_data
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
                     logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
 
-                    if self.DESIRED_CAPABILITY in capabilities:
+                    if self.DESIRED_CAPABILITY in capabilities and (
+                        not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
+                    ):
                         model_ids.append(model_name)
 
         except (httpx.RequestError, ValueError) as e:
             msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e
 
-        return (
-            model_ids if not tool_model_enabled else [model for model in model_ids if self.supports_tool_calling(model)]
-        )
-
-    def supports_tool_calling(self, model: str) -> bool:
-        """Check if model name is in the base of any models example llama3.3 can have 1b and 2b."""
-        return any(model.startswith(f"{tool_model}") for tool_model in OLLAMA_TOOL_MODELS_BASE)
+        return model_ids
