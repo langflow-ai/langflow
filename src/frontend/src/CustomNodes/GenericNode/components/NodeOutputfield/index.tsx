@@ -138,10 +138,10 @@ const InspectButton = memo(
           className={cn(
             "icon-size",
             isToolMode
-              ? displayOutputPreview && !unknownOutput
+              ? displayOutputPreview && !unknownOutput && !disabled
                 ? "text-background hover:text-secondary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-80"
-              : displayOutputPreview && !unknownOutput
+              : displayOutputPreview && !unknownOutput && !disabled
                 ? "text-foreground hover:text-primary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-60",
             errorOutput ? "text-destructive" : "",
@@ -177,7 +177,6 @@ function NodeOutputField({
   const updateNodeInternals = useUpdateNodeInternals();
 
   // Use selective store subscriptions
-  const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -316,11 +315,9 @@ function NodeOutputField({
       return (
         <HandleRenderComponent
           left={true}
-          nodes={nodes}
           tooltipTitle={tooltipTitle}
           id={id}
           title={title}
-          edges={edges}
           nodeId={data.id}
           myData={myData}
           colors={colors}
@@ -332,11 +329,9 @@ function NodeOutputField({
       );
     }
   }, [
-    nodes,
     tooltipTitle,
     id,
     title,
-    edges,
     data.id,
     myData,
     colors,
@@ -350,11 +345,9 @@ function NodeOutputField({
     () => (
       <HandleRenderComponent
         left={false}
-        nodes={nodes}
         tooltipTitle={tooltipTitle}
         id={id}
         title={title}
-        edges={edges}
         nodeId={data.id}
         myData={myData}
         colors={colors}
@@ -365,11 +358,9 @@ function NodeOutputField({
       />
     ),
     [
-      nodes,
       tooltipTitle,
       id,
       title,
-      edges,
       data.id,
       myData,
       colors,
@@ -390,7 +381,7 @@ function NodeOutputField({
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary",
       )}
