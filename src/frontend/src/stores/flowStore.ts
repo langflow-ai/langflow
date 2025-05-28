@@ -7,9 +7,11 @@ import {
   trackFlowBuild,
 } from "@/customization/utils/analytics";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import { FLOW_TYPES } from "@/utils/styleUtils";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
+  MarkerType,
   Node,
   NodeChange,
   addEdge,
@@ -50,7 +52,6 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
-import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTweaksStore } from "./tweaksStore";
@@ -546,39 +547,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
-    const dark = useDarkStore.getState().dark;
-    // const commonMarkerProps = {
-    //   type: MarkerType.ArrowClosed,
-    //   width: 20,
-    //   height: 20,
-    //   color: dark ? "#555555" : "#000000",
-    // };
-
-    // const inputTypes = INPUT_TYPES;
-    // const outputTypes = OUTPUT_TYPES;
-
-    // const findNode = useFlowStore
-    //   .getState()
-    //   .nodes.find(
-    //     (node) => node.id === connection.source || node.id === connection.target
-    //   );
-
-    // const sourceType = findNode?.data?.type;
-    // let isIoIn = false;
-    // let isIoOut = false;
-    // if (sourceType) {
-    //   isIoIn = inputTypes.has(sourceType);
-    //   isIoOut = outputTypes.has(sourceType);
-    // }
-
     let newEdges: EdgeType[] = [];
+    const targetHandle = scapeJSONParse(connection.targetHandle!);
+    const sourceHandle = scapeJSONParse(connection.sourceHandle!);
+    const outputType = sourceHandle?.output_types?.[0];
+
+    const commonMarkerProps = {
+      type: MarkerType.ArrowClosed,
+      width: 15,
+      height: 15,
+    };
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
         {
           ...connection,
+          markerEnd: FLOW_TYPES.includes(sourceHandle?.output_types?.[0] ?? "")
+            ? commonMarkerProps
+            : undefined,
+
           data: {
-            targetHandle: scapeJSONParse(connection.targetHandle!),
-            sourceHandle: scapeJSONParse(connection.sourceHandle!),
+            targetHandle,
+            sourceHandle,
           },
         },
         oldEdges,
@@ -878,8 +867,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
+      const sourceHandle = scapeJSONParse(edge.sourceHandle!);
+      const targetHandle = scapeJSONParse(edge.targetHandle!);
+      const strokeDasharray = !FLOW_TYPES.includes(
+        sourceHandle?.output_types?.[0] ?? "",
+      );
+
       if (
         edge.data?.sourceHandle &&
+        !strokeDasharray &&
         ids.includes(edge.data.sourceHandle.id ?? "")
       ) {
         edge.animated = running;

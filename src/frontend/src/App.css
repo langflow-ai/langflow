@@ -146,25 +146,16 @@ body {
   transition-duration: 150ms;
   stroke-width: 2px !important;
 }
+
+.react-flow__arrowhead > polyline {
+  stroke: var(--connection) !important;
+  fill: var(--connection) !important;
+}
+
 .react-flow__connection path {
   transition: color;
   stroke: var(--connection) !important;
   transition-duration: 150ms;
-  stroke-width: 2px !important;
-}
-
-.react-flow__edge.running .react-flow__edge-path {
-  stroke: hsl(var(--foreground)) !important;
-  stroke-width: 2px !important;
-}
-
-.react-flow__edge.not-running .react-flow__edge-path {
-  stroke: hsl(var(--foreground)) !important;
-  stroke-width: 1px !important;
-}
-
-.react-flow__edge.ran .react-flow__edge-path {
-  stroke: hsl(var(--foreground)) !important;
   stroke-width: 2px !important;
 }
 

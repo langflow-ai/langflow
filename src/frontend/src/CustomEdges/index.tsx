@@ -1,5 +1,6 @@
 import useFlowStore from "@/stores/flowStore";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { FLOW_TYPES } from "@/utils/styleUtils";
 import { BaseEdge, EdgeProps, getBezierPath, Position } from "@xyflow/react";
 
 export function DefaultEdge({
@@ -19,6 +20,7 @@ export function DefaultEdge({
   const targetNode = getNode(target);
 
   const targetHandleObject = scapeJSONParse(targetHandleId!);
+  const sourceHandleObject = scapeJSONParse(sourceHandleId!);
 
   const sourceXNew =
     (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0) + 7;
@@ -67,12 +69,18 @@ export function DefaultEdge({
     ...domSafeProps
   } = props;
 
+  const strokeDasharray = !FLOW_TYPES.includes(
+    sourceHandleObject?.output_types?.[0] ?? "",
+  );
+
   return (
     <BaseEdge
       path={targetHandleObject.output_types ? edgePathLoop : edgePath}
-      strokeDasharray={targetHandleObject.output_types ? "5 5" : "0"}
+      strokeDasharray={
+        targetHandleObject.output_types || strokeDasharray ? "10 5" : "0"
+      }
       {...domSafeProps}
-      data-animated={animated ? "true" : "false"}
+      data-animated={animated && !strokeDasharray ? "true" : "false"}
       data-selectable={selectable ? "true" : "false"}
       data-deletable={deletable ? "true" : "false"}
       data-selected={selected ? "true" : "false"}

@@ -184,6 +184,8 @@ export const nodeColorsName: { [char: string]: string } = {
   DataFrame: "pink",
 };
 
+export const FLOW_TYPES = ["Data", "DataFrame", "Message"];
+
 export const FILE_ICONS = {
   json: {
     icon: "FileJson",
