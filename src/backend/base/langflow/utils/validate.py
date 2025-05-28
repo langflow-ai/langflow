@@ -244,7 +244,6 @@ def create_class(code, class_name):
     code_hash = _get_code_hash(normalized_code + class_name)
     cached_constructor = _CLASS_CONSTRUCTOR_CACHE.get(code_hash)
     if cached_constructor is not CACHE_MISS:
-        logger.debug(f"Using cached class constructor for {class_name}")
         # Record cache hit for monitoring
         try:
             from langflow.utils.cache_monitor import record_cache_hit
@@ -280,7 +279,6 @@ def create_class(code, class_name):
 
             # Cache the result using native cache implementation
             _CLASS_CONSTRUCTOR_CACHE.set(code_hash, class_constructor)
-            logger.debug(f"Cached new class constructor for {class_name}")
 
         except SyntaxError as e:
             msg = f"Syntax error in code: {e!s}"
