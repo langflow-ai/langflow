@@ -55,7 +55,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("openai");
 
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("languagemodelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 200 },
       });
