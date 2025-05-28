@@ -47,7 +47,7 @@ import { LangflowClient } from "@datastax/langflow-client";
 ```
 
 2. Initialize a client object to interact with your server.
-The `osLangflowClient` object allows you to interact with the Langflow API.
+The `LangflowClient` object allows you to interact with the Langflow API.
 
 Replace `BASE_URL` and `API_KEY` with values from your deployment.
 The default Langflow base URL is `http://localhost:7860`.
@@ -56,26 +56,16 @@ To create an API key, see [API keys](/configuration-api-keys).
 ```typescript
 const baseUrl = "BASE_URL";
 const apiKey = "API_KEY";
-const osLangflowClient = new LangflowClient({ baseUrl, apiKey });
+const client = new LangflowClient({ baseUrl, apiKey });
 ```
 
 ## Run a flow with the Langflow TypeScript client
 
-With your Langflow client initialized, submit a message to your Langflow server and receive a response.
-
-1. Create a reference to your flow with the `flowID` retrieved from Langflow.
-```typescript
-const flow = client.flow(flowId);
-```
-
-2. Run the referenced flow and pass text to it as `input`.
-```typescript
-const response = await flow.run(input);
-```
-
-3. This example uses the minimum values for sending a message and running your flow on a Langflow server, with no API keys.
+1. With your Langflow client initialized, submit a message to your Langflow server and receive a response.
+This example uses the minimum values for sending a message and running your flow on a Langflow server, with no API keys.
 Replace `baseUrl` and `flowId` with values from your deployment.
 The `input` string is the message you're sending to your flow.
+
 <Tabs>
 <TabItem value="TypeScript" label="TypeScript" default>
 
@@ -87,9 +77,10 @@ const client = new LangflowClient({ baseUrl });
 
 async function runFlow() {
     const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
+    const flow = client.flow(flowId);
     const input = "Is anyone there?";
 
-    const response = await client.flow(flowId).run(input);
+    const response = await flow.run(input);
     console.log(response);
 }
 
@@ -111,11 +102,11 @@ FlowResponse {
 
 </details>
 
-4. This confirms your client is connecting to Langflow.
+This confirms your client is connecting to Langflow.
 * The `sessionID` value is a unique identifier for the client-server session. For more information, see [Session ID](/session-id).
 * The `outputs` array contains the results of your flow execution.
 
-5. To get the full response objects from your server, change the `console.log` code to stringify the returned JSON object:
+2. To get the full response objects from your server, change the `console.log` code to stringify the returned JSON object:
 
 ```typescript
 console.log(JSON.stringify(response, null, 2));
@@ -123,7 +114,7 @@ console.log(JSON.stringify(response, null, 2));
 
 The exact structure of the returned `inputs` and `outputs` depends on how your flow is configured in Langflow.
 
-6. To get the first chat message returned from the chat output component, change `console.log` to use the `chatOutputText` convenience function.
+3. To get the first chat message returned from the chat output component, change `console.log` to use the `chatOutputText` convenience function.
 
 ```typescript
 console.log(response.chatOutputText());
@@ -262,8 +253,6 @@ runFlow().catch(console.error);
 
 </details>
 
-
-
 ## Retrieve logs from Langflow
 
 To retrieve Langflow logs, you must enable log retrieval on your Langflow server by including these values in your server's `.env` file:
@@ -276,11 +265,4 @@ LANGFLOW_LOG_LEVEL=DEBUG
 
 For more information, see [API examples](/api-reference-api-examples#logs).
 
-```ts
-import { LangflowClient } from "@datastax/langflow-client";
 
-const baseUrl = "http://127.0.0.1:7860";
-const client = new LangflowClient({ baseUrl });
-
-const logs = await client.logs.fetch();
-```
