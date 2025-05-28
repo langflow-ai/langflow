@@ -113,7 +113,6 @@ import { XAIIcon } from "@/icons/xAI";
 import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 
-
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
   "AI/ML": AIMLIcon,
