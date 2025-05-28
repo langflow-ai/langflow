@@ -111,12 +111,15 @@ class ArizePhoenixTracer(BaseTracer):
         # Phoenix Config
         phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
         phoenix_collector_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "https://app.phoenix.arize.com")
-        enable_phoenix_tracing = bool(phoenix_api_key)
+        is_local_phoenix = "localhost" in phoenix_collector_endpoint or "127.0.0.1" in phoenix_collector_endpoint
+        enable_phoenix_tracing = bool(phoenix_api_key) or is_local_phoenix
         phoenix_endpoint = f"{phoenix_collector_endpoint}/v1/traces"
-        phoenix_headers = {
-            "api_key": phoenix_api_key,
-            "authorization": f"Bearer {phoenix_api_key}",
-        }
+        phoenix_headers = (
+            {
+                "api_key": phoenix_api_key,
+                "authorization": f"Bearer {phoenix_api_key}",
+            } if phoenix_api_key else {}
+        )
 
         if not (enable_arize_tracing or enable_phoenix_tracing):
             return False
