@@ -1,6 +1,7 @@
 from .alter_metadata import AlterMetadataComponent
 from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
+from .data_operations import DataOperationsComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
@@ -11,6 +12,7 @@ from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
 from .parser import ParserComponent
+from .python_repl_core import PythonREPLComponent
 from .regex import RegexExtractorComponent
 from .select_data import SelectDataComponent
 from .split_text import SplitTextComponent
@@ -21,6 +23,7 @@ __all__ = [
     "CombineTextComponent",
     "CreateDataComponent",
     "DataFilterComponent",
+    "DataOperationsComponent",
     "ExtractDataKeyComponent",
     "JSONCleaner",
     "LLMRouterComponent",
@@ -31,6 +34,7 @@ __all__ = [
     "ParseDataFrameComponent",
     "ParseJSONDataComponent",
     "ParserComponent",
+    "PythonREPLComponent",
     "RegexExtractorComponent",
     "SelectDataComponent",
     "SplitTextComponent",

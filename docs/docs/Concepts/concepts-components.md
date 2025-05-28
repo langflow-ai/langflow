@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 
 # Langflow components overview
 
-A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
+A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
 
 To add a component to a flow, drag it from the **Component** menu to the **Workspace**.
 
@@ -21,13 +21,13 @@ Each component is unique, but all have a menu bar at the top that looks somethin
 
 Use the component controls to do the following:
 
-- **Code** — Modify the component's Python code and save your changes.
-- **Controls** — Adjust all component parameters.
-- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
+- **Code** — Modify the component's Python code and save your changes.
+- **Controls** — Adjust all component parameters.
+- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
 
-Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To view a component’s output and logs, click the <Icon name="TextSearch" aria-label="Search and filter" /> icon.
+To view a component's output and logs, click the <Icon name="TextSearch" aria-label="Inspect icon" /> icon.
 
 To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
 
@@ -47,15 +47,14 @@ The following table lists the handle colors and their corresponding data types:
 
 | Data type | Handle color | Handle |
 |-----------|--------------|----------|
-| BaseLanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
 | Data | Red | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#dc2626' }} /> |
-| Document | Lime | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#65a30d' }} /> |
+| DataFrame | Pink | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#ec4899' }} /> |
 | Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#10b981' }} /> |
 | LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
+| Memory | Orange | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#f97316' }} /> |
 | Message | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
-| Prompt | Violet | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#7c3aed' }} /> |
-| str | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
-| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
+| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
+| Tool | Cyan | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#06b6d4' }} /> |
 | unknown | Gray | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#9CA3AF' }} /> |
 
 ## Component code
@@ -63,6 +62,9 @@ The following table lists the handle colors and their corresponding data types:
 A component inherits from a base `Component` class that defines its interface and behavior.
 
 For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
+
+<details>
+<summary>Recursive character text splitter code</summary>
 
 ```python
 from typing import Any
@@ -126,6 +128,8 @@ class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
 
 ```
 
+</details>
+
 Components include definitions for inputs and outputs, which are represented in the UI with color-coded ports.
 
 **Input Definition:** Each input (like `IntInput` or `DataInput`) specifies an input's type, name, and display properties, which appear as configurable fields in the component's UI panel.
@@ -144,15 +148,15 @@ When used in a flow, this component:
 
 After a component runs, **Freeze** locks the component's previous output state to prevent it from re-running.
 
-If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze**.
+If you're expecting consistent output from a component and don't need to re-run it, click **Freeze**.
 
 Enabling **Freeze** freezes all components upstream of the selected component.
 
 ## Additional component options
 
-Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To modify a component's name or description, double-click in the **Name** or **Description** fields. Component descriptions accept Markdown syntax.
+To modify a component's name or description, click the <Icon name="PencilLine" aria-label="Pencil line"/> icon. Component descriptions accept Markdown syntax.
 
 ### Component shortcuts
 
@@ -160,43 +164,44 @@ The following keyboard shortcuts are available when a component is selected.
 
 | Menu item | Windows shortcut | Mac shortcut | Description |
 |-----------|-----------------|--------------|-------------|
-| Code | Space | Space | Opens the code editor for the component. |
-| Advanced Settings | Ctrl + Shift + A | ⌘ + Shift + A | Opens advanced settings for the component. |
-| Save Changes | Ctrl + S | ⌘ + S | Saves changes to the current flow. |
-| Save Component | Ctrl + Alt + S | ⌘ + Alt + S | Saves the current component to Saved components. |
-| Duplicate | Ctrl + D | ⌘ + D | Creates a duplicate of the component. |
-| Copy | Ctrl + C | ⌘ + C | Copies the selected component. |
-| Cut | Ctrl + X | ⌘ + X | Cuts the selected component. |
-| Paste | Ctrl + V | ⌘ + V | Pastes the copied/cut component. |
-| Docs | Ctrl + Shift + D | ⌘ + Shift + D | Opens related documentation. |
-| Minimize | Ctrl + . | ⌘ + . | Minimizes the current component. |
-| Freeze| Ctrl + Shift + F | ⌘ + Shift + F | Freezes component state and upstream components. |
-| Download | Ctrl + J | ⌘ + J | Downloads the component as JSON. |
-| Delete | Backspace | Backspace | Deletes the component. |
-| Group | Ctrl + G | ⌘ + G | Groups selected components. |
-| Undo | Ctrl + Z | ⌘ + Z | Undoes the last action. |
-| Redo | Ctrl + Y | ⌘ + Y | Redoes the last undone action. |
-| Redo (alternative) | Ctrl + Shift + Z | ⌘ + Shift + Z | Alternative shortcut for redo. |
-| Share Component | Ctrl + Shift + S | ⌘ + Shift + S | Shares the component. |
-| Share Flow | Ctrl + Shift + B | ⌘ + Shift + B | Shares the entire flow. |
-| Toggle Sidebar | Ctrl + B | ⌘ + B | Shows/hides the sidebar. |
-| Search Components | / | / | Focuses the component search bar. |
-| Tool Mode | Ctrl + Shift + M | ⌘ + Shift + M | Toggles tool mode. |
-| Update | Ctrl + U | ⌘ + U | Updates the component. |
-| Open Playground | Ctrl + K | ⌘ + K | Opens the playground. |
-| Output Inspection | O | O | Opens output inspection. |
-| Play | P | P | Plays/executes the flow. |
-| API | R | R | Opens the API view. |
+| Code | <kbd>Space</kbd> | <kbd>Space</kbd> | Opens the code editor for the component. |
+| Advanced Settings | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> | Opens advanced settings for the component. |
+| Save Changes | <kbd>Ctrl</kbd> + <kbd>S</kbd> | <kbd>⌘</kbd> + <kbd>S</kbd> | Saves changes to the current flow. |
+| Save Component | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | <kbd>⌘</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | Saves the current component to Saved components. |
+| Duplicate | <kbd>Ctrl</kbd> + <kbd>D</kbd> | <kbd>⌘</kbd> + <kbd>D</kbd> | Creates a duplicate of the component. |
+| Copy | <kbd>Ctrl</kbd> + <kbd>C</kbd> | <kbd>⌘</kbd> + <kbd>C</kbd> | Copies the selected component. |
+| Cut | <kbd>Ctrl</kbd> + <kbd>X</kbd> | <kbd>⌘</kbd> + <kbd>X</kbd> | Cuts the selected component. |
+| Paste | <kbd>Ctrl</kbd> + <kbd>V</kbd> | <kbd>⌘</kbd> + <kbd>V</kbd> | Pastes the copied/cut component. |
+| Docs | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | Opens related documentation. |
+| Minimize | <kbd>Ctrl</kbd> + <kbd>.</kbd> | <kbd>⌘</kbd> + <kbd>.</kbd> | Minimizes the current component. |
+| Freeze| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Freezes component state and upstream components. |
+| Download | <kbd>Ctrl</kbd> + <kbd>J</kbd> | <kbd>⌘</kbd> + <kbd>J</kbd> | Downloads the component as JSON. |
+| Delete | <kbd>Backspace</kbd> | <kbd>Backspace</kbd> | Deletes the component. |
+| Group | <kbd>Ctrl</kbd> + <kbd>G</kbd> | <kbd>⌘</kbd> + <kbd>G</kbd> | Groups selected components. |
+| Undo | <kbd>Ctrl</kbd> + <kbd>Z</kbd> | <kbd>⌘</kbd> + <kbd>Z</kbd> | Undoes the last action. |
+| Redo | <kbd>Ctrl</kbd> + <kbd>Y</kbd> | <kbd>⌘</kbd> + <kbd>Y</kbd> | Redoes the last undone action. |
+| Redo (alternative) | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | Alternative shortcut for redo. |
+| Share Component | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Shares the component. |
+| Share Flow | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> | Shares the entire flow. |
+| Toggle Sidebar | <kbd>Ctrl</kbd> + <kbd>B</kbd> | <kbd>⌘</kbd> + <kbd>B</kbd> | Shows/hides the sidebar. |
+| Search Components | <kbd>/</kbd> | <kbd>/</kbd> | Focuses the component search bar. |
+| Tool Mode | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | Toggles tool mode. |
+| Update | <kbd>Ctrl</kbd> + <kbd>U</kbd> | <kbd>⌘</kbd> + <kbd>U</kbd> | Updates the component. |
+| Open Playground | <kbd>Ctrl</kbd> + <kbd>K</kbd> | <kbd>⌘</kbd> + <kbd>K</kbd> | Opens the playground. |
+| Output Inspection | <kbd>O</kbd> | <kbd>O</kbd> | Opens output inspection. |
+| Play | <kbd>P</kbd> | <kbd>P</kbd> | Plays/executes the flow. |
+| API | <kbd>R</kbd> | <kbd>R</kbd> | Opens the API view. |
 
 ## Group components in the workspace
 
 Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components, for example RAG with a vector database, and saving space.
 
-1. Hold **Shift** and drag to select components.
-2. Select **Group**.
+1. Hold <kbd>Shift</kbd> and drag to select components.
+
 The components merge into a single component.
-3. Double-click the name and description to change them.
-4. Save your grouped component to the sidebar for later use.
+
+2. To modify the name and description of the single grouped component, in the grouped component, click the <Icon name="PencilLine" aria-label="Pencil line"/> icon.
+3. Save your grouped component to the sidebar for later use.
 
 ## Component version
 
@@ -205,16 +210,39 @@ A component's initial state is stored in a database. As soon as you drag a compo
 A component keeps the version number it is initialized to the workspace with. If a component is at version `1.0` when it is dragged to the workspace, it will stay at version `1.0` until you update it.
 
 Langflow notifies you when a component's workspace version is behind the database version and an update is available.
-Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+
+### Review and update components
+
+When a component's workspace version is behind the database version and an update is available, the component displays a notification.
+If there are potentially breaking changes in the component updates, Langflow notifies you with an additional dialog.
+
+Breaking changes modify component inputs and outputs, and may break your flows or require you to re-connect component edges.
+
+An **Update ready** notification on a component indicates the component update contains no breaking changes. To update a single component, click **Update**.
+
+An **Update available** notification indicates the component update contains potentially breaking changes.
+
+1. To review all components with pending updates, in the component or in the dialog, click **Review**.
+The **Update components** pane appears.
+This pane lists components in your flow with breaking changes, and includes an option to save a flow snapshot before updating.
+2. To save your flow before updating individual components, enable the **Create backup flow before updating** option.
+3. To update individual components, select them in the list, and then click **Update Component**.
+Your components are updated to the current version.
+If you created a backup flow, it's available in the same project folder as the original flow, with `(backup)` added to its name.
 
 ## Components sidebar
 
 Components are listed in the sidebar by component type.
 
-Component **bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
-
-The sidebar includes a component **Search** bar, and includes flags for showing or hiding **Beta** and **Legacy** components.
+**Bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
 
 **Beta** components are still being tested and are not suitable for production workloads.
 
-**Legacy** components are available to use but no longer supported.
+**Legacy** components are available for use but are no longer supported. By default, legacy components are hidden in the sidebar.
+
+The sidebar includes a component **Search** bar with options for showing or hiding **Beta** and **Legacy** components.
+To change the sidebar's behavior, click the <Icon name="SlidersHorizontal" aria-hidden="true" />, and then show or hide **Legacy** or **Beta** components.
+
+
+
+

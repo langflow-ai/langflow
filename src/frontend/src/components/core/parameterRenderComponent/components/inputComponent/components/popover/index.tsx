@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
+import { uniqueId } from "lodash";
 import { X } from "lucide-react";
 import { ReactNode, useMemo, useState } from "react";
 
@@ -137,7 +138,7 @@ const getInputClassName = (
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
-    selectedOptions?.length >= 0 && "cursor-default",
+    selectedOptions?.length > 0 && "cursor-default",
   );
 };
 
@@ -269,7 +270,7 @@ const CustomInputPopover = ({
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
-              id={id}
+              id={id + uniqueId()}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               onBlur={() => {

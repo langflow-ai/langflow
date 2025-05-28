@@ -93,16 +93,14 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
+    let outdatedComponents = await page.getByTestId("update-button").count();
 
     while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForSelector('[data-testid="icon-AlertTriangle"]', {
+      await page.getByTestId("update-button").first().click();
+      await page.waitForSelector('[data-testid="update-button"]', {
         timeout: 1000,
       });
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+      outdatedComponents = await page.getByTestId("update-button").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
@@ -157,10 +155,6 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.waitForSelector(
       '[data-testid="output-inspection-message-chatoutput"]',
       {
@@ -184,10 +178,6 @@ test(
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
     await page.waitForSelector(
       '[data-testid="output-inspection-message-chatoutput"]',
@@ -242,10 +232,6 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.waitForSelector(
       '[data-testid="output-inspection-message-chatoutput"]',
       {
@@ -276,10 +262,6 @@ test(
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
-    });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
     });
 
     await page.waitForSelector(

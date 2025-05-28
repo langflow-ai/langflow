@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import openai
 import pytest
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_openai import ChatOpenAI
 from langflow.components.helpers.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
@@ -415,6 +414,12 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     )
     def test_with_real_nvidia_model_simple_schema(self):
         # Create a real NVIDIA model
+        try:
+            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
+
         llm = ChatNVIDIA(model="meta/llama-3.2-3b-instruct", temperature=0, max_tokens=10)
 
         # Create a component with a simple schema

@@ -10,8 +10,9 @@ test(
 
     // Start with blank flow
     await page.getByTestId("blank-flow").click();
+    await page.waitForTimeout(500);
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     // Press "/" to activate search

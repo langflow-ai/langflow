@@ -46,17 +46,13 @@ export default function DurationDisplay({
   return (
     <div
       data-testid="duration-display"
-      className={`inline-flex items-center justify-between gap-1 rounded-[3px] px-2 text-sm ${
+      className={`inline-flex items-center justify-between gap-1.5 rounded-[3px] px-2 text-sm ${
         duration !== undefined
-          ? "bg-accent-emerald text-accent-emerald-foreground"
-          : "bg-muted text-muted-foreground"
+          ? "text-accent-emerald-foreground"
+          : "text-muted-foreground"
       }`}
     >
-      {duration === undefined ? (
-        <Loading className="h-4 w-4" />
-      ) : (
-        <ForwardedIconComponent name="check" className="h-4 w-4" />
-      )}
+      {duration === undefined && <Loading className="h-3 w-3" />}
       <div className="w-fit">
         <AnimatedNumber
           value={secondsValue}
@@ -65,7 +61,7 @@ export default function DurationDisplay({
             bounce: 0,
             duration: 300,
           }}
-          className="text-[11px] font-bold tabular-nums"
+          className="font-mono text-xxs font-bold tabular-nums"
         />
       </div>
     </div>

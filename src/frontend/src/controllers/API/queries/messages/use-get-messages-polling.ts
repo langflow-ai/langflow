@@ -34,20 +34,12 @@ const MessagesPollingManager = {
   activePolls: new Map<string, PollingItem>(),
 
   enqueuePolling(id: string, pollingItem: PollingItem) {
-    if (!this.pollingQueue.has(id)) {
-      this.pollingQueue.set(id, []);
-    }
-    this.pollingQueue.set(
-      id,
-      (this.pollingQueue.get(id) || []).filter(
-        (item) => item.timestamp !== pollingItem.timestamp,
-      ),
-    );
-    this.pollingQueue.get(id)?.push(pollingItem);
+    this.stopAll();
 
-    if (!this.activePolls.has(id)) {
-      this.startNextPolling(id);
-    }
+    this.pollingQueue.clear();
+    this.pollingQueue.set(id, [pollingItem]);
+
+    this.startNextPolling(id);
   },
 
   startNextPolling(id: string) {
@@ -67,12 +59,7 @@ const MessagesPollingManager = {
     if (activePoll) {
       clearInterval(activePoll.interval);
       this.activePolls.delete(id);
-      const queue = this.pollingQueue.get(id) || [];
-      this.pollingQueue.set(
-        id,
-        queue.filter((item) => item.timestamp !== activePoll.timestamp),
-      );
-      this.startNextPolling(id);
+      this.pollingQueue.delete(id);
     }
   },
 
@@ -83,11 +70,7 @@ const MessagesPollingManager = {
   },
 
   removeFromQueue(id: string, timestamp: number) {
-    const queue = this.pollingQueue.get(id) || [];
-    this.pollingQueue.set(
-      id,
-      queue.filter((item) => item.timestamp !== timestamp),
-    );
+    this.pollingQueue.delete(id);
   },
 };
 
@@ -146,6 +129,10 @@ export const useGetMessagesPollingMutation = (
       return Promise.reject("Request already in progress");
     }
 
+    if (MessagesPollingManager.activePolls.has(requestId)) {
+      MessagesPollingManager.stopPoll(requestId);
+    }
+
     if (
       requestIdRef.current === requestId &&
       MessagesPollingManager.activePolls.has(requestId)
@@ -189,11 +176,15 @@ export const useGetMessagesPollingMutation = (
     return () => {
       if (requestIdRef.current) {
         MessagesPollingManager.stopPoll(requestIdRef.current);
+        MessagesPollingManager.removeFromQueue(
+          requestIdRef.current,
+          Date.now(),
+        );
+        requestIdRef.current = null;
       }
     };
   }, []);
 
-  // Cast the mutation to the correct type
   const mutation = mutate(
     ["useGetMessagesMutation"],
     (payload: MessagesQueryParams) =>

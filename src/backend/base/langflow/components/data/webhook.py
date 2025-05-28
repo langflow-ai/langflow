@@ -43,7 +43,8 @@ class WebhookComponent(Component):
             self.status = "No data provided."
             return Data(data={})
         try:
-            body = json.loads(self.data or "{}")
+            my_data = self.data.replace('"\n"', '"\\n"')
+            body = json.loads(my_data or "{}")
         except json.JSONDecodeError:
             body = {"payload": self.data}
             message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"

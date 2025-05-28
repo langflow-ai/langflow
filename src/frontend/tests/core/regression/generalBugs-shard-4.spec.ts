@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "should be able to move flow from folder, rename it and be displayed on correct folder",
@@ -25,21 +26,19 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").click();
-    await page.getByPlaceholder("Flow name").fill(randomName);
-    await page.getByText("Save").last().click();
+    await renameFlow(page, { flowName: randomName });
+
     await page.getByTestId("icon-ChevronLeft").last().click();
 
-    await page.getByTestId("add-folder-button").click();
+    await page.getByTestId("add-project-button").click();
 
-    let countFolders = await page.getByText("New Folder").count();
+    let countFolders = await page.getByText("New Project").count();
 
     while (countFolders > 1) {
-      await page.getByText("New Folder").first().hover();
+      await page.getByText("New Project").first().hover();
 
       await page.getByTestId("more-options-button").first().click();
-      await page.getByTestId("btn-delete-folder").click();
+      await page.getByTestId("btn-delete-project").click();
       await page.getByText("Delete").last().click();
       countFolders--;
       await page.waitForTimeout(1000);
@@ -47,7 +46,7 @@ test(
 
     // Get the bounding boxes of the elements
     const sourceElement = await page.getByTestId(`card-${randomName}`).first();
-    const targetElement = await page.getByText("New Folder").last();
+    const targetElement = await page.getByText("New Project").last();
 
     const sourceBox = await sourceElement.boundingBox();
     const targetBox = await targetElement.boundingBox();
@@ -66,21 +65,19 @@ test(
 
     await page.waitForTimeout(3000);
 
-    await page.getByText("New Folder").last().click();
+    await page.getByText("New Project").last().click();
 
     expect(await page.getByTestId(`card-${randomName}`).first().isVisible());
 
     await page.getByTestId(`card-${randomName}`).first().click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").click();
-    await page.getByPlaceholder("Flow name").fill(secondRandomName);
-    await page.getByText("Save").last().click();
+    await renameFlow(page, { flowName: secondRandomName });
+
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await page.waitForTimeout(3000);
 
-    await page.getByText("New Folder").last().click();
+    await page.getByText("New Project").last().click();
     expect(
       await page.getByTestId(`card-${secondRandomName}`).first().isVisible(),
     );
@@ -89,7 +86,7 @@ test(
     const secondSourceElement = await page
       .getByTestId(`card-${secondRandomName}`)
       .first();
-    const secondTargetElement = await page.getByText("New Folder").last();
+    const secondTargetElement = await page.getByText("New Project").last();
 
     const secondSourceBox = await secondSourceElement.boundingBox();
     const secondTargetBox = await secondTargetElement.boundingBox();
@@ -108,7 +105,7 @@ test(
 
     await page.waitForTimeout(3000);
 
-    await page.getByText("My Projects").last().click();
+    await page.getByText("Starter Project").last().click();
 
     expect(
       await page.getByTestId(`card-${secondRandomName}`).first().isVisible(),

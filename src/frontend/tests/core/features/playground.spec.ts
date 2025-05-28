@@ -71,7 +71,7 @@ test(
     await page.getByTestId("handle-textoutput-shownode-message-right").click();
     await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

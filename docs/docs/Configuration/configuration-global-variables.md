@@ -8,7 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 Global variables let you store and reuse generic input values and credentials across your projects.
-You can use a global variable in any text input field that displays the <Icon name="Globe" aria-label="Globe" /> icon.
+You can use a global variable in any text input field that displays the <Icon name="Globe" aria-hidden="true"/> **Globe** icon.
 
 Langflow stores global variables in its internal database, and encrypts the values using a secret key.
 
@@ -39,7 +39,7 @@ To create a new global variable, follow these steps.
 
 8. Click **Save Variable**.
 
-You can now select your global variable from any text input field that displays the <Icon name="Globe" aria-label="Globe" /> icon.
+You can now select your global variable from any text input field that displays the <Icon name="Globe" aria-hidden="true"/> **Globe** icon.
 
 ## Edit a global variable
 
@@ -65,7 +65,7 @@ Deleting a global variable permanently deletes any references to it from your ex
 
 3. Click the checkbox next to the global variable that you want to delete.
 
-4. Click the Trash icon.
+4. Click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 The global variable, and any existing references to it, are deleted.
 

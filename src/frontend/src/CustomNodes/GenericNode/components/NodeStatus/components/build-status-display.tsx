@@ -30,9 +30,11 @@ const ValidationDetails = ({
   validationStatus,
 }) => (
   <div className="max-h-100 px-1 py-2.5">
-    <div className="flex max-h-80 flex-col gap-2 overflow-auto">
+    <div className="flex max-h-80 flex-col gap-2">
       {validationString && (
-        <div className="text-sm text-foreground">{validationString}</div>
+        <div className="break-words text-sm text-foreground">
+          {validationString}
+        </div>
       )}
       {lastRunTime && (
         <TimeStamp prefix={RUN_TIMESTAMP_PREFIX} time={lastRunTime} />

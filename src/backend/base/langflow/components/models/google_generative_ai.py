@@ -50,7 +50,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="temperature",
             display_name="Temperature",
             value=0.1,
-            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
             info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
         ),
         IntInput(

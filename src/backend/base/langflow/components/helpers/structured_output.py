@@ -92,19 +92,9 @@ class StructuredOutputComponent(Component):
                     "display_name": "Type",
                     "type": "str",
                     "edit_mode": EditMode.INLINE,
-                    "description": (
-                        "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
-                    ),
-                    "options": ["str", "int", "float", "bool", "list", "dict"],
+                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
-                },
-                {
-                    "name": "multiple",
-                    "display_name": "Multiple",
-                    "type": "boolean",
-                    "description": "Set to True if this output field should be a list of the specified type.",
-                    "default": "False",
-                    "edit_mode": EditMode.INLINE,
                 },
             ],
             value=[
@@ -120,7 +110,7 @@ class StructuredOutputComponent(Component):
             name="multiple",
             advanced=True,
             display_name="Generate Multiple",
-            info="[Deplrecated] Always set to True",
+            info="[Deprecated] Always set to True",
             value=True,
         ),
     ]

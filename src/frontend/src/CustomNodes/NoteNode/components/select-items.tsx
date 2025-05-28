@@ -1,6 +1,8 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { SelectItem } from "@/components/ui/select";
-import { SelectContentWithoutPortal } from "@/components/ui/select-custom";
+import {
+  SelectContentWithoutPortal,
+  SelectItem,
+} from "@/components/ui/select-custom";
 import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
 import { NoteDataType } from "@/types/flow";
 

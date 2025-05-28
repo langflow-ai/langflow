@@ -122,7 +122,7 @@ def test_component_inputs_toolkit():
     component = AllInputsComponent()
     component_toolkit = ComponentToolkit(component=component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "AllInputsComponent-build_output"
+    assert component_tool.name == "build_output"
     assert issubclass(component_tool.args_schema, BaseModel)
     properties = component_tool.args_schema.model_json_schema()["properties"]
 

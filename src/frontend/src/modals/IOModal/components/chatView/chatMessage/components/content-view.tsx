@@ -4,7 +4,7 @@ import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 import LogoIcon from "./chat-logo-icon";
 
 export const ErrorView = ({
@@ -52,7 +52,7 @@ export const ErrorView = ({
               {blocks.map((block, blockIndex) => (
                 <div
                   key={blockIndex}
-                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground"
+                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-sm text-foreground"
                 >
                   {block.contents.map((content, contentIndex) => {
                     if (content.type === "error") {

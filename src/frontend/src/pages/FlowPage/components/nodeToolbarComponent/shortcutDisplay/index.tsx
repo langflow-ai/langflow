@@ -18,7 +18,7 @@ export default function ShortcutDisplay({
           {display_name && <span> {display_name} </span>}
           <span
             className={cn(
-              "flex h-[16px] w-[16px] items-center justify-center rounded-sm bg-muted text-muted-foreground",
+              "flex h-4 w-4 items-center justify-center rounded-sm bg-muted text-muted-foreground",
               display_name && "ml-3",
             )}
           >
@@ -26,7 +26,7 @@ export default function ShortcutDisplay({
           </span>
         </div>
       ) : (
-        <div className="flex content-center items-center justify-center self-center text-[12px]">
+        <div className="flex content-center items-center justify-center self-center text-xs">
           <span> {display_name} </span>
           <span
             className={`ml-3 flex items-center rounded-sm bg-primary-hover px-1.5 py-[0.1em] text-muted`}

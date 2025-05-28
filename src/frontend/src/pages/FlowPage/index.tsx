@@ -43,8 +43,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
-
   const updatedAt = currentSavedFlow?.updated_at;
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
@@ -102,7 +100,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Set flow tab id
   useEffect(() => {
     const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "") {
+      if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
@@ -112,19 +110,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
         const isAnExistingFlowId = isAnExistingFlow.id;
 
-        flowToCanvas
-          ? setCurrentFlow(flowToCanvas)
-          : getFlowToAddToCanvas(isAnExistingFlowId);
+        await getFlowToAddToCanvas(isAnExistingFlowId);
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId, flowToCanvas]);
+  }, [id, flows, currentFlowId, types]);
 
   useEffect(() => {
     setOnFlowPage(true);
 
     return () => {
       setOnFlowPage(false);
+      console.log("unmounting");
       setCurrentFlow(undefined);
     };
   }, [id]);
@@ -172,17 +169,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </SidebarProvider>
           </div>
         )}
-        {/* {ENABLE_BRANDING && version && (
-          <a
-            target={"_blank"}
-            href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
-            className="langflow-page-icon"
-          >
-            <div className="mt-1">Langflow 🤝 DataStax</div>
-
-            <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
-          </a>
-        )} */}
       </div>
       {blocker.state === "blocked" && (
         <>

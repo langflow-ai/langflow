@@ -11,12 +11,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page.waitForSelector('[data-testid="toolsDuckDuckGo Search"]', {
+    await page.waitForSelector('[data-testid="searchDuckDuckGo Search"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("toolsDuckDuckGo Search")
+      .getByTestId("searchDuckDuckGo Search")
       .hover()
       .then(async () => {
         await page
@@ -32,8 +32,6 @@ test(
 
     await page.getByTestId("button_run_duckduckgo search").click();
 
-    await page.getByTestId("fit_view").click();
-
     const result = await Promise.race([
       page.waitForSelector("text=built successfully", { timeout: 30000 }),
       page.waitForSelector("text=ratelimit", { timeout: 30000 }),
@@ -46,7 +44,7 @@ test(
         ) ?? false;
 
       await page
-        .getByTestId("output-inspection-data-duckduckgosearchcomponent")
+        .getByTestId("output-inspection-dataframe-duckduckgosearchcomponent")
         .first()
         .click();
 

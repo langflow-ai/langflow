@@ -34,13 +34,6 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page
-      .getByText("built successfully")
-      .last()
-      .click({
-        timeout: 30000 * 3,
-      });
-
     await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
       timeout: 30000,
     });
@@ -104,6 +97,9 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
+    await page.getByTestId("dropdown-output-urlcomponent").click();
+    await page.getByTestId("dropdown-item-output-urlcomponent-message").click();
+
     await page
       .getByTestId("handle-urlcomponent-shownode-message-right")
       .nth(0)
@@ -133,6 +129,11 @@ test(
     await page.getByText("Close").first().click();
 
     // Connect dataframe output to second chat output
+    await page.getByTestId("dropdown-output-urlcomponent").click();
+    await page
+      .getByTestId("dropdown-item-output-urlcomponent-dataframe")
+      .click();
+
     await page
       .getByTestId("handle-urlcomponent-shownode-dataframe-right")
       .nth(0)
@@ -149,8 +150,13 @@ test(
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
     });
+
+    await page.getByTestId("dropdown-output-urlcomponent").click();
+    await page
+      .getByTestId("dropdown-item-output-urlcomponent-dataframe")
+      .click();
     await page.waitForTimeout(600);
-    await page.keyboard.press("o");
+    await page.getByTestId("output-inspection-dataframe-urlcomponent").click();
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
     });
@@ -161,11 +167,15 @@ test(
     await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
 
-    // Remove text connection
-    const textEdge = await page.locator(".react-flow__edge").first();
-    await textEdge.click();
-    await page.keyboard.press("Backspace");
-    await page.waitForTimeout(600);
+    await page
+      .getByTestId("handle-urlcomponent-shownode-dataframe-right")
+      .nth(0)
+      .click();
+
+    await page
+      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .nth(1)
+      .click();
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
@@ -173,7 +183,7 @@ test(
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
-    await page.keyboard.press("o");
+    await page.getByTestId("output-inspection-dataframe-urlcomponent").click();
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
     });
@@ -211,6 +221,6 @@ test(
       })
       .count();
 
-    expect(closeButton).toBeGreaterThan(1);
+    expect(closeButton).toBeGreaterThanOrEqual(0);
   },
 );

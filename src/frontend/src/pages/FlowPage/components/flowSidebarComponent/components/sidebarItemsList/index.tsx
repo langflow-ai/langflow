@@ -1,14 +1,17 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import useFlowStore from "@/stores/flowStore";
+import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import { removeCountFromString } from "@/utils/utils";
+import { useMemo } from "react";
 import { disableItem } from "../../helpers/disable-item";
 import { getDisabledTooltip } from "../../helpers/get-disabled-tooltip";
+import { UniqueInputsComponents } from "../../types";
 import SidebarDraggableComponent from "../sidebarDraggableComponent";
 
 const SidebarItemsList = ({
   item,
   dataFilter,
   nodeColors,
-  uniqueInputsComponents,
   onDragStart,
   sensitiveSort,
 }) => {
@@ -36,6 +39,18 @@ const SidebarItemsList = ({
         .map((SBItemName, idx) => {
           const currentItem = dataFilter[item.name][SBItemName];
 
+          if (SBItemName === "ChatInput" || SBItemName === "Webhook") {
+            return (
+              <UniqueInputsDraggableComponent
+                item={item}
+                currentItem={currentItem}
+                SBItemName={SBItemName}
+                idx={idx}
+                onDragStart={onDragStart}
+                nodeColors={nodeColors}
+              />
+            );
+          }
           return (
             <ShadTooltip
               content={currentItem.display_name}
@@ -59,11 +74,8 @@ const SidebarItemsList = ({
                 official={currentItem.official === false ? false : true}
                 beta={currentItem.beta ?? false}
                 legacy={currentItem.legacy ?? false}
-                disabled={disableItem(SBItemName, uniqueInputsComponents)}
-                disabledTooltip={getDisabledTooltip(
-                  SBItemName,
-                  uniqueInputsComponents,
-                )}
+                disabled={false}
+                disabledTooltip={""}
               />
             </ShadTooltip>
           );
@@ -73,3 +85,47 @@ const SidebarItemsList = ({
 };
 
 export default SidebarItemsList;
+
+const UniqueInputsDraggableComponent = ({
+  item,
+  currentItem,
+  SBItemName,
+  idx,
+  onDragStart,
+  nodeColors,
+}) => {
+  const nodes = useFlowStore((state) => state.nodes);
+  const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
+  const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
+  const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
+    return {
+      chatInput: chatInputAdded,
+      webhookInput: webhookInputAdded,
+    };
+  }, [chatInputAdded, webhookInputAdded]);
+
+  return (
+    <ShadTooltip content={currentItem.display_name} side="right" key={idx}>
+      <SidebarDraggableComponent
+        sectionName={item.name}
+        apiClass={currentItem}
+        icon={currentItem.icon ?? item.icon ?? "Unknown"}
+        onDragStart={(event) =>
+          onDragStart(event, {
+            type: removeCountFromString(SBItemName),
+            node: currentItem,
+          })
+        }
+        color={nodeColors[item.name]}
+        itemName={SBItemName}
+        error={!!currentItem.error}
+        display_name={currentItem.display_name}
+        official={currentItem.official === false ? false : true}
+        beta={currentItem.beta ?? false}
+        legacy={currentItem.legacy ?? false}
+        disabled={disableItem(SBItemName, uniqueInputsComponents)}
+        disabledTooltip={getDisabledTooltip(SBItemName, uniqueInputsComponents)}
+      />
+    </ShadTooltip>
+  );
+};

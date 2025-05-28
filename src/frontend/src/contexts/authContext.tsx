@@ -7,6 +7,7 @@ import {
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
+import { setLocalStorage } from "@/utils/local-storage-util";
 import { createContext, useEffect, useState } from "react";
 import { Cookies } from "react-cookie";
 import { useStoreStore } from "../stores/storeStore";
@@ -81,7 +82,10 @@ export function AuthProvider({ children }): React.ReactElement {
     autoLogin: string,
     refreshToken?: string,
   ) {
+    cookies.set(LANGFLOW_ACCESS_TOKEN, newAccessToken, { path: "/" });
     cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });
+    setLocalStorage(LANGFLOW_ACCESS_TOKEN, newAccessToken);
+
     if (refreshToken) {
       cookies.set(LANGFLOW_REFRESH_TOKEN, refreshToken, { path: "/" });
     }

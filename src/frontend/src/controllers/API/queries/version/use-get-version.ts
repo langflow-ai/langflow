@@ -1,3 +1,4 @@
+import { customRefreshLatestVersion } from "@/customization/utils/custom-refresh-latest-version";
 import { useDarkStore } from "@/stores/darkStore";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -7,6 +8,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface versionQueryResponse {
   version: string;
   package: string;
+  main_version: string;
 }
 
 export const useGetVersionQuery: useQueryFunctionType<
@@ -23,6 +25,9 @@ export const useGetVersionQuery: useQueryFunctionType<
     const { data } = await getVersionFn();
     const refreshVersion = useDarkStore.getState().refreshVersion;
     refreshVersion(data.version);
+
+    customRefreshLatestVersion(data.main_version);
+
     return data;
   };
 

@@ -17,7 +17,7 @@ export const usePostUploadFolders: useMutationFunctionType<
     payload: IPostAddUploadFolders,
   ): Promise<void> => {
     const res = await api.post(
-      `${getURL("FOLDERS")}/upload/`,
+      `${getURL("PROJECTS")}/upload/`,
       payload.formData,
     );
     return res.data;
