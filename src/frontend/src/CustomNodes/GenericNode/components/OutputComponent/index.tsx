@@ -24,7 +24,7 @@ export default function OutputComponent({
   handleSelectOutput,
   outputName,
 }: outputComponentType) {
-  // Get the node type from the flow store
+  // Get the node type from the flow store (fallback for existing components)
   const nodeType = useFlowStore(
     (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type,
   );
@@ -57,11 +57,16 @@ export default function OutputComponent({
   // Don't show dropdown if:
   // 1. There's only one output
   // 2. Any output has allows_loop (loop component)
-  // 3. Component is ConditionalRouter (if-else component)
+  // 3. Any output has group_outputs flag
+  // 4. Component is ConditionalRouter (fallback for existing components)
   const hasLoopOutput = outputs?.some?.((output) => output.allows_loop);
-  const isConditionalRouter = nodeType === "ConditionalRouter";
+  const hasGroupOutputs = outputs?.some?.((output) => output.group_outputs);
+  const isConditionalRouter = nodeType === "ConditionalRouter"; // Keep as fallback
   const shouldShowDropdown =
-    outputs.length > 1 && !hasLoopOutput && !isConditionalRouter;
+    outputs.length > 1 &&
+    !hasLoopOutput &&
+    !hasGroupOutputs &&
+    !isConditionalRouter;
 
   return (
     <div>

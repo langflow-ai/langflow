@@ -25,10 +25,12 @@ export default function NodeOutputs({
   selectedOutput: any;
   handleSelectOutput: any;
 }) {
-  // Check if any output has allows_loop or if it's a ConditionalRouter component
+  // Check if any output has allows_loop, group_outputs flag, or if it's a ConditionalRouter component
   const hasLoopOutput = outputs.some((output) => output.allows_loop);
-  const isConditionalRouter = data.type === "ConditionalRouter";
-  const shouldShowAllOutputs = hasLoopOutput || isConditionalRouter;
+  const hasGroupOutputs = outputs.some((output) => output.group_outputs);
+  const isConditionalRouter = data.type === "ConditionalRouter"; // Keep as fallback for existing components
+  const shouldShowAllOutputs =
+    hasLoopOutput || hasGroupOutputs || isConditionalRouter;
 
   // For components that should show all outputs
   if (shouldShowAllOutputs) {
