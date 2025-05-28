@@ -63,6 +63,7 @@ class MCPToolsComponent(Component):
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
+    prompts: list = []
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
     _prompt_cache: dict = {}  # Cache for prompts
@@ -76,13 +77,14 @@ class MCPToolsComponent(Component):
         "tool_placeholder",
         "tool_mode",
         "tool",
+        "prompt",
         "headers_input",
     ]
 
     display_name = "MCP Connection"
     description = "Connect to an MCP server to use its tools."
     icon = "Mcp"
-    name = "MCPTools"
+    name = "MCPToolsprompts"
 
     inputs = [
         TabInput(
@@ -144,13 +146,23 @@ class MCPToolsComponent(Component):
             advanced=True,
         ),
         DropdownInput(
+            name="prompt",
+            display_name="Prompt",
+            options=[],
+            value="",
+            info="Select the prompt to execute",
+            show=True,
+            required=False,
+            real_time_refresh=True,
+        ),
+        DropdownInput(
             name="tool",
             display_name="Tool",
             options=[],
             value="",
             info="Select the tool to execute",
             show=True,
-            required=True,
+            required=False,
             real_time_refresh=True,
         ),
         MessageTextInput(
@@ -253,6 +265,7 @@ class MCPToolsComponent(Component):
             if field_name == "mode":
                 self.remove_non_default_keys(build_config)
                 build_config["tool"]["options"] = []
+                build_config["prompt"]["options"] = []
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
                     build_config["env"]["show"] = True
@@ -267,15 +280,18 @@ class MCPToolsComponent(Component):
                     return build_config
             if field_name in ("command", "sse_url", "mode"):
                 try:
-                    await self.update_tools(
+                    await self.update_tools_and_prompts(
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
                         env=build_config["env"]["value"],
                         headers=build_config["headers_input"]["value"],
                     )
+                    print(f"build_config {build_config}")
                     if "tool" in build_config:
                         build_config["tool"]["options"] = self.tool_names
+                    if "prompt" in build_config:
+                        build_config["prompt"]["options"] = self.prompts
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
@@ -284,7 +300,7 @@ class MCPToolsComponent(Component):
                     return build_config
             elif field_name == "tool":
                 if len(self.tools) == 0:
-                    await self.update_tools(
+                    await self.update_tools_and_prompts(
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
                         url=build_config["sse_url"]["value"],
@@ -355,7 +371,7 @@ class MCPToolsComponent(Component):
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
         if not self.tools:
-            await self.update_tools(
+            await self.update_tools_and_prompts(
                 mode=build_config["mode"]["value"],
                 command=build_config["command"]["value"],
                 url=build_config["sse_url"]["value"],
@@ -412,15 +428,19 @@ class MCPToolsComponent(Component):
             raise ValueError(msg) from e
 
     async def build_prompt_output(self) -> Message:
-        if self.prompt_name != "":
-            prompt = self._prompt_cache[self.prompt_name]
+        await self.update_tools_and_prompts()
+        print(f"self.prompt {self.prompt}")
+        if self.prompt and self.prompt != "":
+            print(f"self._prompt_cache {self._prompt_cache}")
+            prompt = self._prompt_cache[self.prompt]
+            print(f"prompt {prompt}")
             return Message(text=prompt)
         return Message(error=True, text="You must select a prompt")
 
     async def build_tool_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
-            await self.update_tools()
+            await self.update_tools_and_prompts()
             if self.tool != "":
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
@@ -445,7 +465,7 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-    async def update_tools(
+    async def update_tools_and_prompts(
         self,
         mode: str | None = None,
         command: str | None = None,
@@ -472,38 +492,51 @@ class MCPToolsComponent(Component):
                 if not self.stdio_client.session:
                     try:
                         self.tools = await self.stdio_client.connect_to_server(command, env)
-                        prompts = await self.stdio_client.session.list_prompts()
-                        print(f"prompts: {prompts}")
-                        for prompt in prompts:
-                            print(f"prompt: {prompt}")
-                            # self._prompt_cache[prompt[1].name] = prompt
                     except ValueError as e:
                         msg = f"Error connecting to MCP server: {e}"
                         logger.exception(msg)
                         raise ValueError(msg) from e
-            elif mode == "SSE" and not self.sse_client.session:
+                client = self.stdio_client
+            elif mode == "SSE":
+                if not self.sse_client.session:
+                    try:
+                        self.tools = await self.sse_client.connect_to_server(url, headers)
+                    except ValueError as e:
+                        logger.error(f"SSE URL validation error: {e}")
+                        msg = f"Invalid SSE URL configuration: {e}. Please check your SSE URL and port."
+                        raise ValueError(msg) from e
+                    except ConnectionError as e:
+                        logger.error(f"SSE connection error: {e}")
+                        msg = (
+                            f"Could not connect to SSE endpoint: {e}. "
+                            "Please verify:\n"
+                            "1. your sse mcp server is running\n"
+                            "2. The SSE URL and port are correct\n"
+                            "3. There are no network issues preventing the connection"
+                        )
+                        raise ValueError(msg) from e
+                    except Exception as e:
+                        logger.error(f"Unexpected SSE error: {e}")
+                        msg = f"Unexpected error connecting to SSE endpoint: {e}"
+                        raise ValueError(msg) from e
+                client = self.sse_client
+            else:
+                logger.warning("Unknown mode, cannot fetch tools or prompts")
+                return []
+
+            # Fetch prompts if supported
+            self.prompts = []
+            if hasattr(client, "session") and client.session and hasattr(client.session, "list_prompts"):
                 try:
-                    self.tools = await self.sse_client.connect_to_server(url, headers)
-                except ValueError as e:
-                    # URL validation error
-                    logger.error(f"SSE URL validation error: {e}")
-                    msg = f"Invalid SSE URL configuration: {e}. Please check your Langflow deployment URL and port."
-                    raise ValueError(msg) from e
-                except ConnectionError as e:
-                    # Connection failed after retries
-                    logger.error(f"SSE connection error: {e}")
-                    msg = (
-                        f"Could not connect to Langflow SSE endpoint: {e}. "
-                        "Please verify:\n"
-                        "1. Langflow server is running\n"
-                        "2. The SSE URL matches your Langflow deployment port\n"
-                        "3. There are no network issues preventing the connection"
-                    )
-                    raise ValueError(msg) from e
+                    response = await client.session.list_prompts()
+                    prompt_list = response.prompts
+                    prompts = []
+                    for prompt in prompt_list:
+                        prompts.append(prompt.name)
+                        self._prompt_cache[prompt.name] = prompt
+                    self.prompts = prompts
                 except Exception as e:
-                    logger.error(f"Unexpected SSE error: {e}")
-                    msg = f"Unexpected error connecting to SSE endpoint: {e}"
-                    raise ValueError(msg) from e
+                    logger.warning(f"Could not fetch prompts: {e}")
 
             if not self.tools:
                 logger.warning("No tools returned from server")
@@ -521,7 +554,6 @@ class MCPToolsComponent(Component):
                         logger.warning(f"Empty schema for tool '{tool.name}', skipping")
                         continue
 
-                    client = self.stdio_client if self.mode == "Stdio" else self.sse_client
                     if not client or not client.session:
                         msg = f"Invalid client session for tool '{tool.name}'"
                         raise ValueError(msg)
@@ -545,7 +577,6 @@ class MCPToolsComponent(Component):
             self.tool_names = [tool.name for tool in self.tools if hasattr(tool, "name")]
 
         except ValueError as e:
-            # Re-raise validation errors with clear messages
             raise ValueError(str(e)) from e
         except Exception as e:
             logger.exception("Error updating tools")
@@ -553,11 +584,10 @@ class MCPToolsComponent(Component):
             raise ValueError(msg) from e
         else:
             return tool_list
-
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         # if not self.tools:
         if self.mode == "SSE" and self.sse_url is None:
             msg = "SSE URL is not set"
             raise ValueError(msg)
-        return await self.update_tools()
+        return await self.update_tools_and_prompts()
