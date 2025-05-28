@@ -2,6 +2,18 @@ from .model_metadata import create_model_metadata
 
 ANTHROPIC_MODELS_DETAILED = {
     # Tool calling supported models
+    "claude-opus-4-20250514": create_model_metadata(
+        provider="Anthropic",
+        name="claude-opus-4-20250514",
+        icon="Anthropic",
+        tool_calling=True
+    ),
+    "claude-sonnet-4-20250514": create_model_metadata(
+        provider="Anthropic",
+        name="claude-sonnet-4-20250514",
+        icon="Anthropic",
+        tool_calling=True
+    ),
     "claude-3-7-sonnet-latest": create_model_metadata(
         provider="Anthropic",
         name="claude-3-7-sonnet-latest",
