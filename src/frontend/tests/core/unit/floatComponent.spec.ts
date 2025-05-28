@@ -19,7 +19,7 @@ test(
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("languagemodelsNVIDIA")
       .hover()
       .then(async () => {
         // Wait for the API request to complete after clicking the add button
