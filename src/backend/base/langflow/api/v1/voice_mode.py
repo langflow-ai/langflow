@@ -754,7 +754,9 @@ async def flow_as_tool_websocket(
             logger.error(f"Failed to load flow: {e}")
             return
 
-        url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
+        litellm_url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
+        litellm_model = os.getenv("LANGFLOW_LITELLM_REALTIME_MODEL")
+        url = f"{litellm_url}?model={litellm_model}"
         headers = {
             "api-key": openai_key,
             "OpenAI-Beta": "realtime=v1",
@@ -1203,7 +1205,9 @@ async def flow_tts_websocket(
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
-        url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
+        litellm_url = os.getenv("LANGFLOW_LITELLM_REALTIME_URL")
+        litellm_model = os.getenv("LANGFLOW_LITELLM_REALTIME_MODEL")
+        url = f"{litellm_url}?model={litellm_model}"
         headers = {
             "api-key": openai_key,
             "OpenAI-Beta": "realtime=v1",
