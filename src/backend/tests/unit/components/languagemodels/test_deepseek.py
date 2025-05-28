@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from langflow.components.models import DeepSeekModelComponent
+from langflow.components.languagemodels import DeepSeekModelComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 

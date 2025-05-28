@@ -16,12 +16,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForSelector('[data-testid="modelsOllama"]', {
+    await page.waitForSelector('[data-testid="languagemodelsOllama"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsOllama")
+      .getByTestId("languagemodelsOllama")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
