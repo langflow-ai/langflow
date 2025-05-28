@@ -22,12 +22,14 @@ class SentenceTransformerEmbeddings(LCEmbeddingsModel):
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError as e:
-            raise ImportError("Please install sentence-transformers to use this component.") from e
+            msg = "Please install sentence-transformers to use this component."
+            raise ImportError(msg) from e
 
         try:
             model = SentenceTransformer(self.model_name)
         except Exception as e:
-            raise ValueError(f"Failed to load SentenceTransformer model: {e}") from e
+            msg = f"Failed to load SentenceTransformer model: {e}"
+            raise ValueError(msg) from e
 
         class LangflowEmbeddingWrapper:
             def embed_documents(self, texts: list[str]) -> list[list[float]]:
