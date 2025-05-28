@@ -1,4 +1,4 @@
-from langchain_community.vectorstores import PGVector
+from langchain_postgres import PGVector
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
@@ -46,13 +46,13 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
                 embedding=self.embedding,
                 documents=documents,
                 collection_name=self.collection_name,
-                connection_string=connection_string_parsed,
+                connection=connection_string_parsed,
             )
         else:
             pgvector = PGVector.from_existing_index(
                 embedding=self.embedding,
                 collection_name=self.collection_name,
-                connection_string=connection_string_parsed,
+                connection=connection_string_parsed,
             )
 
         return pgvector

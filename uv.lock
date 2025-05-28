@@ -4578,6 +4578,23 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-postgres"
+version = "0.0.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "numpy" },
+    { name = "pgvector" },
+    { name = "psycopg" },
+    { name = "psycopg-pool" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/20/dc09b62dfe97822841e9c3310e2faa265150ee3783902c251b0d083f8e8c/langchain_postgres-0.0.13.tar.gz", hash = "sha256:3a23f95aaeca9bf03af63cf6b9ef1381b6d2a83605179d307a6606b05e335ab1", size = 21455 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/ef/68293f413e2bf289ac17aaab84691ebaccb077709e23cfeaf9f3ee9d05e8/langchain_postgres-0.0.13-py3-none-any.whl", hash = "sha256:91cb4e62862b1a1f36cdf8462e34990bc112d5824dfb738cab9ca6577cb27cee", size = 21901 },
+]
+
+[[package]]
 name = "langchain-sambanova"
 version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4706,6 +4723,7 @@ dependencies = [
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-pinecone" },
+    { name = "langchain-postgres" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
     { name = "langflow-base" },
@@ -4898,6 +4916,7 @@ requires-dist = [
     { name = "langchain-ollama", specifier = "==0.2.1" },
     { name = "langchain-openai", specifier = "==0.2.12" },
     { name = "langchain-pinecone", specifier = "==0.2.2" },
+    { name = "langchain-postgres", specifier = "==0.0.13" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
@@ -7822,6 +7841,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/46/62/2d36820f3bef9e3737f5c899c8bba6c6de6af513ed977150607e8a86b26d/psycopg-3.2.8.tar.gz", hash = "sha256:cc995d836841e400c4f615d8dea351dc39697ad29df84d428f9c38c8040222f8", size = 158089, upload-time = "2025-05-11T17:20:56.47Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/3f/eda96f7010c7d6bc4e10fdbcaa66d3d0d38f1619591fb1abe0f822dea2ec/psycopg-3.2.8-py3-none-any.whl", hash = "sha256:0e960f1977d77de7f1ace4b54590f686b52c2f9ab1f61fff4141887fc711d9e7", size = 202705, upload-time = "2025-05-11T17:15:45.071Z" },
+]
+
+[[package]]
+name = "psycopg-pool"
+version = "3.2.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/13/1e7850bb2c69a63267c3dbf37387d3f71a00fd0e2fa55c5db14d64ba1af4/psycopg_pool-3.2.6.tar.gz", hash = "sha256:0f92a7817719517212fbfe2fd58b8c35c1850cdd2a80d36b581ba2085d9148e5", size = 29770 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/47/fd/4feb52a55c1a4bd748f2acaed1903ab54a723c47f6d0242780f4d97104d4/psycopg_pool-3.2.6-py3-none-any.whl", hash = "sha256:5887318a9f6af906d041a0b1dc1c60f8f0dda8340c2572b74e10907b51ed5da7", size = 38252 },
 ]
 
 [[package]]

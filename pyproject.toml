@@ -84,6 +84,7 @@ dependencies = [
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",
     "langchain-pinecone==0.2.2",
+    "langchain-postgres==0.0.13",
     "langchain-mistralai==0.2.3",
     "langchain-chroma==0.1.4",
     "langchain-aws==0.2.7",
