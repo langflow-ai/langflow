@@ -51,6 +51,7 @@ dependencies = [
     "elasticsearch==8.16.0",
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
+    "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm==1.60.2",
     "chromadb==0.5.23",
