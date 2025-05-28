@@ -19,7 +19,7 @@ You can drag and drop Langflow JSON files directly from your file system into th
 
 ## Export Flow
 
-The option to export a flow is available in the same menu as shown above. Once exported as JSON, you can import your flow into another Langflow instance.
+To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**
 
 ## Langflow JSON file contents
 
