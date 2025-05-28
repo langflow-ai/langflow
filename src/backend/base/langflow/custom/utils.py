@@ -546,7 +546,7 @@ def build_custom_components(components_paths: list[str]):
         custom_component_dict = build_custom_component_list_from_path(path_str)
         if custom_component_dict:
             category = next(iter(custom_component_dict))
-            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            logger.debug(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
@@ -571,7 +571,7 @@ async def abuild_custom_components(components_paths: list[str]):
         custom_component_dict = await abuild_custom_component_list_from_path(path_str)
         if custom_component_dict:
             category = next(iter(custom_component_dict))
-            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            logger.debug(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
