@@ -56,21 +56,14 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
 
-        # Skip updating if tool_mode is True
-        if node_data.get("tool_mode", False) or node_data.get("key") == "Agent":
-            continue
-
-        # Skip nodes with outputs of the specified format
-        # NOTE: to account for the fact that the Simple Agent has dynamic outputs
-        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
-            continue
-
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
-            if "outputs" in latest_node:
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
+            if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 node_data["outputs"] = latest_node["outputs"]
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
@@ -146,13 +139,18 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
-                    if field_name not in latest_template:
+                    is_tool_mode_and_field_is_tools_metadata = (
+                        node_data.get("tool_mode", False) and field_name == "tools_metadata"
+                    )
+                    if field_name not in latest_template and not is_tool_mode_and_field_is_tools_metadata:
                         node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
 
 
 def scape_json_parse(json_string: str) -> dict:
+    if json_string is None:
+        return {}
     if isinstance(json_string, dict):
         return json_string
     parsed_string = json_string.replace("œ", '"')
@@ -496,7 +494,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
-                logger.info(f"Loaded starter project {file}")
+                logger.debug(f"Loaded starter project {file}")
                 break  # Break if load is successful
             except orjson.JSONDecodeError as e:
                 attempt += 1
@@ -605,7 +603,7 @@ async def update_project_file(project_path: anyio.Path, project: dict, updated_p
     project["data"] = updated_project_data
     async with async_open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    logger.info(f"Updated starter project {project['name']} file")
+    logger.debug(f"Updated starter project {project['name']} file")
 
 
 def update_existing_project(

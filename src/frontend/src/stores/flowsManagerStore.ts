@@ -130,19 +130,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setSelectedFlowsComponentsCards: (selectedFlowsComponentsCards: string[]) => {
     set({ selectedFlowsComponentsCards });
   },
-  flowToCanvas: null,
-  setFlowToCanvas: async (flowToCanvas: FlowType | null) => {
-    await new Promise<void>((resolve) => {
-      set({ flowToCanvas });
-      resolve();
-    });
-  },
   resetStore: () => {
     set({
       flows: [],
       currentFlow: undefined,
       currentFlowId: "",
-      flowToCanvas: null,
       searchFlowsComponents: "",
       selectedFlowsComponentsCards: [],
     });

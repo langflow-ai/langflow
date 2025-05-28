@@ -13,15 +13,15 @@ This flow creates a summarizing "for each" loop with the [Loop](/components-logi
 
 The component iterates over a list of [Data](/concepts-objects#data-object) objects until it's completed, and then the **Done** loop aggregates the results.
 
-The **File** component loads text files from your local machine, and then the **Parse Data** component parses them into a list of structured `Data` objects.
+The **File** component loads text files from your local machine, and then the **Parser** component parses them into a list of structured `Data` objects.
 The **Loop** component passes each `Data` object to a **Prompt** to be summarized.
 
 When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**.
-This is represented in Langflow by connecting the Parse Data component's **Data List** output to the Loop component's `Data` loop input.
+This is represented in Langflow by connecting the Parser component's **Data List** output to the Loop component's `Data` loop input.
 
 ![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
 
-The output will look similar to this:
+The output is similar to this:
 ```text
 Document Summary
 Total Pages Processed
@@ -83,24 +83,29 @@ AI
 A new message has been received and added to the Urgent queue. Please review it at your earliest convenience.
 ```
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
-| input_text     | String   | The primary text input for the operation.                         |
-| match_text     | String   | The text input to compare against.                                |
-| operator       | Dropdown | The operator to compare texts. Options: "equals", "not equals", "contains", "starts with", "ends with", "regex". Default: "equals". |
-| case_sensitive | Boolean  | If true, the comparison is case sensitive. This setting is ignored for regex comparison. Default: false. |
-| message        | Message  | The message to pass through either route.                         |
-| max_iterations | Integer  | The maximum number of iterations for the conditional router. Default: 10. |
-| default_route  | Dropdown | The default route to take when max iterations are reached. Options: "true_result" or "false_result". Default: "false_result". |
+| input_text     | String   | The primary text input for the operation. |
+| match_text     | String   | The text to compare against. |
+| operator       | Dropdown | The operator used to compare texts. Options include equals, not equals, contains, starts with, ends with, and regex. The default is equals. |
+| case_sensitive | Boolean  | When set to true, the comparison is case sensitive. This setting does not apply to regex comparison. The default is false. |
+| message        | Message  | The message to pass through either route. |
+| max_iterations | Integer  | The maximum number of iterations allowed for the conditional router. The default is 10. |
+| default_route  | Dropdown | The route to take when max iterations are reached. Options include true_result or false_result. The default is false_result. |
 
-### Outputs
+**Outputs**
 
 | Name         | Type    | Description                                |
 |--------------|---------|--------------------------------------------|
-| true_result  | Message | The output when the condition is true.     |
-| false_result | Message | The output when the condition is false.    |
+| true_result  | Message | The output produced when the condition is true. |
+| false_result | Message | The output produced when the condition is false. |
+
+</details>
 
 ### Operator Behavior
 
@@ -119,20 +124,28 @@ All options respect the `case_sensitive` setting except **regex**.
 
 This component listens for a notification and retrieves its associated state.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Type   | Description                                    |
 |------|--------|------------------------------------------------|
-| name | String | The name of the notification to listen for.    |
+| name | String | The name of the notification to listen for. |
 
-### Outputs
+**Outputs**
 
 | Name   | Type | Description                                |
 |--------|------|--------------------------------------------|
 | output | Data | The state associated with the notification. |
 
+</details>
 
 ## Loop
+
+:::tip
+For another **Loop** component example, see the **Research Translation Loop** template.
+:::
 
 This component iterates over a list of [Data](/concepts-objects#data-object) objects, outputting one item at a time and aggregating results from loop inputs.
 
@@ -152,53 +165,68 @@ In this example, the data is loaded into **Chroma DB**.
 
 Follow along with this step-by-step video guide for creating this flow and adding agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Type      | Description                                          |
 |------|-----------|------------------------------------------------------|
-| data | Data/List | The initial list of Data objects to iterate over.    |
+| data | Data/List | The initial list of Data objects to process. |
 
-### Outputs
+**Outputs**
 
 | Name | Type    | Description                                           |
 |------|---------|-------------------------------------------------------|
-| item | Data    | Outputs one item at a time from the data list.        |
-| done | Data    | Triggered when iteration complete, returns aggregated results. |
+| item | Data    | The current item being processed from the data list. |
+| done | Data    | The aggregated results after all items are processed. |
+
+</details>
 
 ## Notify
 
 This component generates a notification for the Listen component to use.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name   | Type    | Description                                                       |
 |--------|---------|-------------------------------------------------------------------|
-| name   | String  | The name of the notification.                                     |
-| data   | Data    | The data to store in the notification.                            |
-| append | Boolean | If true, the record will be appended to the existing notification.|
+| name   | String  | The name of the notification. |
+| data   | Data    | The data to store in the notification. |
+| append | Boolean | When set to true, the record is added to the existing notification. |
 
-### Outputs
+**Outputs**
 
 | Name   | Type | Description                             |
 |--------|------|-----------------------------------------|
-| output | Data | The data stored in the notification.    |
+| output | Data | The data stored in the notification. |
 
-## Pass message
+</details>
+
+## Pass
 
 This component forwards the input message, unchanged.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_message | Input Message | The message to be passed forward. |
-| ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
+| input_message | Input Message | The message to forward. |
+| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
 
-### Outputs
+**Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| output_message | Output Message | The forwarded input message. |
+| output_message | Output Message | The forwarded message from the input. |
+
+</details>
 
 ## Run flow
 
@@ -218,7 +246,10 @@ Your flow should now look like this:
 ![Run Flow component](/img/component-run-flow.png)
 5. Run the flow. The Agent uses the Run Flow component as a tool to run the selected sub-flow.
 
-### Inputs
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
 
 | Name              | Type     | Description                                                    |
 |-------------------|----------|----------------------------------------------------------------|
@@ -226,15 +257,17 @@ Your flow should now look like this:
 | flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior.         |
 | dynamic inputs  | Various  | Additional inputs that are generated based on the selected flow.     |
 
-### Outputs
+**Outputs**
 
 | Name         | Type        | Description                                                   |
 |--------------|-------------|---------------------------------------------------------------|
 | run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs are generated from running the flow.                   |
 
+</details>
+
 ## Legacy components
 
-Legacy components are available to use but no longer supported.
+**Legacy** components are available for use but are no longer supported.
 
 ### Data Conditional Router
 

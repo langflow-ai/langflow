@@ -1,10 +1,12 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import { FlowStoreType } from "@/types/zustand/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
@@ -21,27 +23,26 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { VertexBuildTypeAPI } from "../../types/api";
+import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import { checkHasToolMode } from "../../utils/reactflowUtils";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
-import { OutputParameter } from "./components/NodeOutputParameter";
-import NodeStatus from "./components/NodeStatus";
+import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
-const MemoizedOutputParameter = memo(OutputParameter);
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
 const MemoizedNodeName = memo(NodeName);
-const MemoizedNodeStatus = memo(NodeStatus);
+const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
+const MemoizedNodeOutputs = memo(NodeOutputs);
 
 const HiddenOutputsButton = memo(
   ({
@@ -89,6 +90,7 @@ function GenericNode({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const edges = useFlowStore((state) => state.edges);
+  const setEdges = useFlowStore((state) => state.setEdges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
@@ -103,10 +105,10 @@ function GenericNode({
 
   const showNode = data.showNode ?? true;
 
-  const getValidationStatus = (data) => {
+  const getValidationStatus = useCallback((data) => {
     setValidationStatus(data);
     return null;
-  };
+  }, []);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
@@ -118,6 +120,7 @@ function GenericNode({
       state.componentsToUpdate.find((component) => component.id === data.id),
     ),
   );
+
   const {
     outdated: isOutdated,
     breakingChange: hasBreakingChange,
@@ -134,6 +137,10 @@ function GenericNode({
     setNode,
     updateNodeInternals,
   );
+
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [data.node.template]);
 
   if (!data.node!.template) {
     setErrorData({
@@ -223,11 +230,6 @@ function GenericNode({
     [data.node?.outputs, data.node?.tool_mode],
   );
 
-  const hasToolMode = useMemo(
-    () => checkHasToolMode(data.node?.template ?? {}),
-    [data.node?.template],
-  );
-
   const hasOutputs = useMemo(
     () => data.node?.outputs && data.node.outputs.length > 0,
     [data.node?.outputs],
@@ -245,38 +247,65 @@ function GenericNode({
     callback: toggleEditNameDescription,
   });
 
-  const renderOutputs = useCallback(
-    (outputs, key?: string) => {
-      return outputs?.map((output, idx) => (
-        <MemoizedOutputParameter
-          key={`${key}-${output.name}-${idx}`}
-          output={output}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={idx === outputs.length - 1}
-          data={data}
-          types={types}
-          selected={selected}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          hidden={key === "hidden"}
-        />
-      ));
-    },
-    [data, types, selected, showNode, isToolMode, showHiddenOutputs],
+  const { shownOutputs, hiddenOutputs } = useMemo(() => {
+    const shownOutputs: typeof data.node.outputs = [];
+    const hiddenOutputs: typeof data.node.outputs = [];
+    (data.node?.outputs ?? []).forEach((output) => {
+      if (output.hidden) {
+        hiddenOutputs.push(output);
+      } else {
+        shownOutputs.push(output);
+      }
+    });
+    return { shownOutputs, hiddenOutputs };
+  }, [data.node?.outputs]);
+
+  const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
+    null,
   );
 
-  const { shownOutputs, hiddenOutputs } = useMemo(
-    () => ({
-      shownOutputs:
-        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
-      hiddenOutputs:
-        data.node?.outputs?.filter((output) => output.hidden) ?? [],
-    }),
-    [data.node?.outputs],
+  const handleSelectOutput = useCallback(
+    (output) => {
+      setSelectedOutput(output);
+      // Remove any edges connected to this output handle
+      const sourceHandleId = scapedJSONStringfy({
+        output_types: [output.selected ?? output.types[0]],
+        id: data.id,
+        dataType: data.type,
+        name: output.name,
+      });
+
+      setEdges((eds) =>
+        eds.filter((edge) => edge.sourceHandle !== sourceHandleId),
+      );
+
+      setNode(data.id, (oldNode) => {
+        const newNode = cloneDeep(oldNode);
+        if (newNode.data.node?.outputs) {
+          // First, clear any previous selections
+          newNode.data.node.outputs.forEach((out) => {
+            if (out.selected) {
+              out.selected = undefined;
+            }
+          });
+
+          // Then set the new selection
+          const outputIndex = newNode.data.node.outputs.findIndex(
+            (o) => o.name === output.name,
+          );
+          if (outputIndex !== -1) {
+            const outputTypes = output.types || [];
+            const defaultType =
+              outputTypes.length > 0 ? outputTypes[0] : undefined;
+            newNode.data.node.outputs[outputIndex].selected =
+              output.selected ?? defaultType;
+          }
+        }
+        return newNode;
+      });
+      updateNodeInternals(data.id);
+    },
+    [data.id, setNode, setEdges, updateNodeInternals],
   );
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
@@ -324,7 +353,7 @@ function GenericNode({
             openAdvancedModal={false}
             onCloseAdvancedModal={() => {}}
             updateNode={() => handleUpdateCode()}
-            isOutdated={isOutdated && dismissAll}
+            isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
           />
@@ -390,109 +419,14 @@ function GenericNode({
     }
   }, [hiddenOutputs]);
 
-  const renderNodeIcon = useCallback(() => {
-    return (
-      <MemoizedNodeIcon
-        dataType={data.type}
-        showNode={showNode}
-        icon={data.node?.icon}
-        isGroup={!!data.node?.flow}
-        hasToolMode={hasToolMode ?? false}
-      />
-    );
-  }, [data.type, showNode, data.node?.icon, data.node?.flow, hasToolMode]);
-
-  const renderNodeName = useCallback(() => {
-    return (
-      <MemoizedNodeName
-        display_name={data.node?.display_name}
-        nodeId={data.id}
-        selected={selected}
-        showNode={showNode}
-        validationStatus={validationStatus}
-        isOutdated={isOutdated}
-        beta={data.node?.beta || false}
-        editNameDescription={editNameDescription}
-        toggleEditNameDescription={toggleEditNameDescription}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
-      />
-    );
-  }, [
-    data.node?.display_name,
-    data.id,
-    selected,
-    showNode,
-    validationStatus,
-    isOutdated,
-    data.node?.beta,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
-
-  const renderNodeStatus = useCallback(() => {
-    return (
-      <MemoizedNodeStatus
-        data={data}
-        frozen={data.node?.frozen}
-        showNode={showNode}
-        display_name={data.node?.display_name!}
-        nodeId={data.id}
-        selected={selected}
-        setBorderColor={setBorderColor}
-        buildStatus={buildStatus}
-        dismissAll={dismissAll}
-        isOutdated={isOutdated}
-        isUserEdited={isUserEdited}
-        isBreakingChange={hasBreakingChange}
-        getValidationStatus={getValidationStatus}
-      />
-    );
-  }, [
-    data,
-    showNode,
-    selected,
-    buildStatus,
-    isOutdated,
-    isUserEdited,
-    getValidationStatus,
-    dismissAll,
-    handleUpdateCode,
-  ]);
-
-  const renderDescription = useCallback(() => {
-    return (
-      <MemoizedNodeDescription
-        description={data.node?.description}
-        mdClassName={"dark:prose-invert"}
-        nodeId={data.id}
-        selected={selected}
-        editNameDescription={editNameDescription}
-        setEditNameDescription={set}
-        setHasChangedNodeDescription={setHasChangedNodeDescription}
-      />
-    );
-  }, [
-    data.node?.description,
-    data.id,
-    selected,
-    editNameDescription,
-    toggleEditNameDescription,
-    setHasChangedNodeDescription,
-  ]);
-
-  const renderInputParameters = useCallback(() => {
-    return (
-      <MemoizedRenderInputParameters
-        data={data}
-        types={types}
-        isToolMode={isToolMode}
-        showNode={showNode}
-        shownOutputs={shownOutputs}
-        showHiddenOutputs={showHiddenOutputs}
-      />
-    );
-  }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
+  const memoizedOnUpdateNode = useCallback(
+    () => handleUpdateCode(true),
+    [handleUpdateCode],
+  );
+  const memoizedSetDismissAll = useCallback(
+    () => addDismissedNodes([data.id]),
+    [addDismissedNodes, data.id],
+  );
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
@@ -504,12 +438,14 @@ function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
-        <UpdateComponentModal
-          open={openUpdateModal}
-          setOpen={setOpenUpdateModal}
-          onUpdateNode={() => handleUpdateCode(true)}
-          components={componentUpdate ? [componentUpdate] : []}
-        />
+        {openUpdateModal && (
+          <UpdateComponentModal
+            open={openUpdateModal}
+            setOpen={setOpenUpdateModal}
+            onUpdateNode={memoizedOnUpdateNode}
+            components={componentUpdate ? [componentUpdate] : []}
+          />
+        )}
         {memoizedNodeToolbarComponent}
         {shouldShowUpdateComponent && (
           <NodeUpdateComponent
@@ -517,51 +453,111 @@ function GenericNode({
             showNode={showNode}
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
-            setDismissAll={() => addDismissedNodes([data.id])}
+            setDismissAll={memoizedSetDismissAll}
           />
         )}
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap p-4 leading-5",
+            "grid text-wrap leading-5",
             showNode ? "border-b" : "relative",
-            hasDescription && "gap-3",
           )}
         >
           <div
             data-testid={"div-generic-node"}
-            className={
-              !showNode
-                ? ""
-                : "generic-node-div-title justify-between rounded-t-lg"
-            }
+            className={cn(
+              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
+            )}
           >
             <div
-              className={"generic-node-title-arrangement"}
+              className="flex-max-width items-center overflow-hidden"
               data-testid="generic-node-title-arrangement"
             >
-              {renderNodeIcon()}
-              <div className="generic-node-tooltip-div truncate">
-                {renderNodeName()}
+              <MemoizedNodeIcon
+                dataType={data.type}
+                icon={data.node?.icon}
+                isGroup={!!data.node?.flow}
+              />
+              <div className="ml-3 flex flex-1 overflow-hidden">
+                <MemoizedNodeName
+                  display_name={data.node?.display_name}
+                  nodeId={data.id}
+                  selected={selected}
+                  showNode={showNode}
+                  beta={data.node?.beta || false}
+                  editNameDescription={editNameDescription}
+                  toggleEditNameDescription={toggleEditNameDescription}
+                  setHasChangedNodeDescription={setHasChangedNodeDescription}
+                />
               </div>
             </div>
-            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
-              {!showNode && (
-                <>
-                  {renderInputParameters()}
-                  {shownOutputs.length > 0 &&
-                    renderOutputs(shownOutputs, "render-outputs")}
-                </>
-              )}
-            </div>
-            {renderNodeStatus()}
+            {!showNode && (
+              <>
+                <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
+                  <MemoizedRenderInputParameters
+                    data={data}
+                    types={types}
+                    isToolMode={isToolMode}
+                    showNode={showNode}
+                    shownOutputs={shownOutputs}
+                    showHiddenOutputs={showHiddenOutputs}
+                  />
+                  <MemoizedNodeOutputs
+                    outputs={shownOutputs ?? []}
+                    keyPrefix="render-outputs"
+                    data={data}
+                    types={types}
+                    selected={selected ?? false}
+                    showNode={showNode}
+                    isToolMode={isToolMode}
+                    showHiddenOutputs={showHiddenOutputs}
+                    selectedOutput={selectedOutput}
+                    handleSelectOutput={handleSelectOutput}
+                  />
+                </div>
+              </>
+            )}
+            <MemoizedNodeStatus
+              data={data}
+              frozen={data.node?.frozen}
+              showNode={showNode}
+              display_name={data.node?.display_name!}
+              nodeId={data.id}
+              selected={selected}
+              setBorderColor={setBorderColor}
+              buildStatus={buildStatus}
+              dismissAll={dismissAll}
+              isOutdated={isOutdated}
+              isUserEdited={isUserEdited}
+              isBreakingChange={hasBreakingChange}
+              getValidationStatus={getValidationStatus}
+            />
           </div>
-          {showNode && <div>{renderDescription()}</div>}
+          {showNode && (hasDescription || editNameDescription) && (
+            <div className="px-4 pb-3">
+              <MemoizedNodeDescription
+                description={data.node?.description}
+                mdClassName={"dark:prose-invert"}
+                nodeId={data.id}
+                selected={selected}
+                editNameDescription={editNameDescription}
+                setEditNameDescription={set}
+                setHasChangedNodeDescription={setHasChangedNodeDescription}
+              />
+            </div>
+          )}
         </div>
         {showNode && (
           <div className="nopan nodelete nodrag noflow relative cursor-auto">
             <>
-              {renderInputParameters()}
+              <MemoizedRenderInputParameters
+                data={data}
+                types={types}
+                isToolMode={isToolMode}
+                showNode={showNode}
+                shownOutputs={shownOutputs}
+                showHiddenOutputs={showHiddenOutputs}
+              />{" "}
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
@@ -570,15 +566,36 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {!showHiddenOutputs &&
-                shownOutputs &&
-                renderOutputs(shownOutputs, "shown")}
-
+              {!showHiddenOutputs && shownOutputs && (
+                <MemoizedNodeOutputs
+                  outputs={showHiddenOutputs ? hiddenOutputs : shownOutputs}
+                  keyPrefix="shown"
+                  data={data}
+                  types={types}
+                  selected={selected ?? false}
+                  showNode={showNode}
+                  isToolMode={isToolMode}
+                  showHiddenOutputs={showHiddenOutputs}
+                  selectedOutput={selectedOutput}
+                  handleSelectOutput={handleSelectOutput}
+                />
+              )}
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
                 <div className="block">
-                  {renderOutputs(data.node!.outputs, "hidden")}
+                  <MemoizedNodeOutputs
+                    outputs={data.node!.outputs}
+                    keyPrefix="hidden"
+                    data={data}
+                    types={types}
+                    selected={selected ?? false}
+                    showNode={showNode}
+                    isToolMode={isToolMode}
+                    showHiddenOutputs={showHiddenOutputs}
+                    selectedOutput={selectedOutput}
+                    handleSelectOutput={handleSelectOutput}
+                  />
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (

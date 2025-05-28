@@ -9,17 +9,17 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="dataURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("dataURL")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-api-request").click();
+        await page.getByTestId("add-component-button-url").click();
       });
 
     await page.waitForSelector(
@@ -44,7 +44,7 @@ test(
 
     await page.getByTestId("button_open_actions").click();
 
-    await page.waitForSelector("text=API Request", { timeout: 30000 });
+    await page.waitForSelector("text=URL", { timeout: 30000 });
 
     const rowsCount = await page.getByRole("gridcell").count();
 
@@ -74,7 +74,49 @@ test(
       await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
     ).toBe(false);
 
+    await page.locator('input[data-ref="eInput"]').nth(0).click();
+
+    await page.waitForTimeout(500);
+
+    await page.getByRole("gridcell").nth(0).click();
+
+    await page.waitForTimeout(500);
+
+    expect(
+      await page.locator('[data-testid="sidebar_header_name"]').isHidden(),
+    ).toBe(true);
+
+    expect(
+      await page
+        .locator('[data-testid="sidebar_header_description"]')
+        .isHidden(),
+    ).toBe(true);
+
+    expect(
+      await page.locator('[data-testid="input_update_name"]').isVisible(),
+    ).toBe(true);
+
+    expect(
+      await page
+        .locator('[data-testid="input_update_description"]')
+        .isVisible(),
+    ).toBe(true);
+
+    await page.locator('[data-testid="input_update_name"]').fill("test name");
+
+    await page.waitForTimeout(500);
+
+    await page
+      .locator('[data-testid="input_update_description"]')
+      .fill("test description");
+
+    await page.waitForTimeout(500);
+
     await page.getByText("Close").last().click();
+
+    await page.waitForTimeout(500);
+
+    expect(await page.getByTestId("tool_test_name").isVisible()).toBe(true);
 
     await page.waitForSelector(
       '[data-testid="generic-node-title-arrangement"]',
@@ -93,44 +135,76 @@ test(
         .isVisible(),
     ).toBe(true);
 
-    await page.getByTestId("div-tools_tools_metadata").click();
+    await page.getByTestId("button_open_actions").click();
 
     await page.waitForTimeout(500);
 
     expect(
       await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(false);
+    ).toBe(true);
+
+    expect(
+      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
+    ).toBe(true);
+
+    await page.locator('input[data-ref="eInput"]').nth(4).click();
+
+    await page.waitForTimeout(500);
 
     expect(
       await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
     ).toBe(false);
 
-    await page.locator('input[data-ref="eInput"]').nth(3).click();
+    await page.getByRole("gridcell").nth(0).click();
 
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
-
-    await page.getByRole("gridcell").nth(0).click();
-
-    expect(
-      await page.locator('[data-testid="sidebar_header_name"]').isVisible(),
+      await page.locator('[data-testid="sidebar_header_name"]').isHidden(),
     ).toBe(true);
 
     expect(
       await page
         .locator('[data-testid="sidebar_header_description"]')
+        .isHidden(),
+    ).toBe(true);
+
+    expect(
+      await page.locator('[data-testid="input_update_name"]').isVisible(),
+    ).toBe(true);
+
+    expect(
+      await page
+        .locator('[data-testid="input_update_description"]')
         .isVisible(),
     ).toBe(true);
+
+    expect(
+      await page.locator('[data-testid="input_update_name"]').inputValue(),
+    ).toBe("test_name");
+
+    expect(
+      await page
+        .locator('[data-testid="input_update_description"]')
+        .inputValue(),
+    ).toBe("test description");
+
+    await page.locator('[data-testid="input_update_name"]').fill("");
+
+    await page.waitForTimeout(500);
+
+    await page.locator('[data-testid="input_update_description"]').fill("");
 
     await page.waitForTimeout(500);
 
     await page.getByText("Close").last().click();
 
     expect(
-      await page.locator('[data-testid="tool_make_requests"]').isVisible(),
+      await page.locator('[data-testid="tool_fetch_content"]').isVisible(),
+    ).toBe(true);
+
+    expect(
+      await page.locator('[data-testid="tool_as_dataframe"]').isVisible(),
     ).toBe(true);
   },
 );

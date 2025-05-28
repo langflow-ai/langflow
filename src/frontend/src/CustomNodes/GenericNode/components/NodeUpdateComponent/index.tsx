@@ -53,7 +53,7 @@ export default function NodeUpdateComponent({
           handleUpdateCode();
         }}
         loading={loadingUpdate}
-        data-testid="update-button"
+        data-testid={hasBreakingChange ? "review-button" : "update-button"}
       >
         {hasBreakingChange ? "Review" : "Update"}
       </Button>
