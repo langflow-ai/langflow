@@ -91,7 +91,7 @@ class ComposioBaseComponent(Component):
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""
-        if not self._display_to_key_map:
+        if not self._display_to_key_map or not self._key_to_display_map:
             self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
             self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
             self._sanitized_names = {
@@ -182,8 +182,13 @@ class ComposioBaseComponent(Component):
         # Build the action maps before using them
         self._build_action_maps()
 
+        # Update the action options
         build_config["action"]["options"] = [
-            {"name": self.sanitize_action_name(action)} for action in self._actions_data
+            {
+                "name": self.sanitize_action_name(action),
+                "metadata": action,
+            }
+            for action in self._actions_data
         ]
 
         try:
@@ -273,18 +278,23 @@ class ComposioBaseComponent(Component):
 
     def configure_tools(self, toolset: ComposioToolSet) -> list[Tool]:
         tools = toolset.get_tools(actions=self._actions_data.keys())
+        logger.info(f"Tools: {tools}")
         configured_tools = []
         for tool in tools:
             # Set the sanitized name
-            tool.name = self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
+            display_name = self._actions_data.get(tool.name, {}).get(
+                "display_name", self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
+            )
             # Set the tags
             tool.tags = [tool.name]
+            tool.metadata = {"display_name": display_name, "display_description": tool.description, "readonly": True}
             configured_tools.append(tool)
         return configured_tools
 
     async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
         toolset = self._build_wrapper()
+        self.set_default_tools()
         return self.configure_tools(toolset)
 
     @property
@@ -296,3 +306,7 @@ class ComposioBaseComponent(Component):
     @abstractmethod
     def execute_action(self) -> list[dict]:
         """Execute action and return response as Message."""
+
+    @abstractmethod
+    def set_default_tools(self):
+        """Set the default tools."""
