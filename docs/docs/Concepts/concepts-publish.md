@@ -9,11 +9,13 @@ Langflow provides several ways to publish and integrate your flows into external
 
 ## API access
 
-The **API access** pane presents code templates for integrating your flow into external applications.
+To access the **API access** pane, click **Share**, and then click **API access**.
 
 ![](/img/api-pane.png)
 
 <Tabs>
+
+The **API access** pane presents code templates for integrating your flow into external applications.
 
 <TabItem value="Python" label="Python">
 
@@ -55,28 +57,15 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 </TabItem>
 </Tabs>
 
-### Temporary overrides
+### Input schema
 
-The **Temporary overrides** tab displays the available parameters for your flow.
-Modifying the parameters changes the code parameters across all windows.
+The **Input schema** tab displays the available input parameters for your flow.
+Modifying the parameters changes the code parameters across all of the code examples.
 For example, changing the **Chat Input** component's `input_value` changes that value across all API calls to the `/run` endpoint of this flow.
 
-### Send files to your flow with the API
+## Export
 
-For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files-v1).
-
-### Webhook cURL
-
-When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
-
-```bash
-curl -X POST \
-  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
-  -H 'Content-Type: application/json'\
-  -d '{"any": "data"}'
-```
-
-To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
+## MCP server
 
 ## Embed into site
 
@@ -205,4 +194,3 @@ The **Shareable playground** exposes your Langflow application's **Playground** 
 You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
 If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
-
