@@ -859,7 +859,7 @@
                 "dynamic": false,
                 "info": "The body to send with the request as a dictionary (for POST, PATCH, PUT).",
                 "input_types": [
-                  "Data"
+                  "List[Data]"
                 ],
                 "is_list": true,
                 "list_add_label": "Add More",
@@ -973,7 +973,7 @@
                 "dynamic": false,
                 "info": "The headers to send with the request",
                 "input_types": [
-                  "Data"
+                  "List[Data]"
                 ],
                 "is_list": true,
                 "list_add_label": "Add More",
