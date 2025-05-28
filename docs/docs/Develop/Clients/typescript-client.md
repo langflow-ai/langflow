@@ -50,7 +50,8 @@ import { LangflowClient } from "@datastax/langflow-client";
 The `osLangflowClient` object allows you to interact with the Langflow API.
 
 Replace `BASE_URL` and `API_KEY` with values from your deployment.
-The default Langflow base URL is `http://localhost:7860`.To create an API key, see [API keys](/configuration-api-keys).
+The default Langflow base URL is `http://localhost:7860`.
+To create an API key, see [API keys](/configuration-api-keys).
 
 ```typescript
 const baseUrl = "BASE_URL";
@@ -96,7 +97,10 @@ runFlow().catch(console.error);
 ```
 
 </TabItem>
-<TabItem value="Response" label="Response">
+</Tabs>
+
+<details open>
+<summary>Response</summary>
 
 ```
 FlowResponse {
@@ -105,8 +109,7 @@ FlowResponse {
 }
 ```
 
-</TabItem>
-</Tabs>
+</details>
 
 4. This confirms your client is connecting to Langflow.
 * The `sessionID` value is a unique identifier for the client-server session. For more information, see [Session ID](/session-id).
@@ -154,7 +157,7 @@ for await (const event of response) {
 ```
 4. Run the completed TypeScript application to call your server with `tweaks` and `session_id`, and stream the response back.
 Replace `baseUrl` and `flowId` with values from your deployment.
-<Tabs>
+
 <TabItem value="TypeScript" label="TypeScript" default>
 
 ```tsx
@@ -181,9 +184,10 @@ async function runFlow() {
 }
 runFlow().catch(console.error);
 ```
-
 </TabItem>
-<TabItem value="Response" label="Response">
+
+<details>
+<summary>Response</summary>
 
 ```text
 {
@@ -255,5 +259,28 @@ runFlow().catch(console.error);
   data: { result: { session_id: 'test-session', outputs: [Array] } }
 }
 ```
-</TabItem>
-</Tabs>
+
+</details>
+
+
+
+## Retrieve logs from Langflow
+
+To retrieve Langflow logs, you must enable log retrieval on your Langflow server by including these values in your server's `.env` file:
+
+```text
+LANGFLOW_ENABLE_LOG_RETRIEVAL=true
+LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
+LANGFLOW_LOG_LEVEL=DEBUG
+```
+
+For more information, see [API examples](/api-reference-api-examples#logs).
+
+```ts
+import { LangflowClient } from "@datastax/langflow-client";
+
+const baseUrl = "http://127.0.0.1:7860";
+const client = new LangflowClient({ baseUrl });
+
+const logs = await client.logs.fetch();
+```
