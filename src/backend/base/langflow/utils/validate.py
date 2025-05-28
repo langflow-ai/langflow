@@ -12,11 +12,16 @@ from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+from langflow.services.cache.service import ThreadingInMemoryCache
+from langflow.services.cache.utils import CACHE_MISS
 
-# Global cache for compiled class constructors
-# Using a simple dict instead of LRU cache to have more control over memory management
-_CLASS_CONSTRUCTOR_CACHE: dict[str, type] = {}
-_CACHE_MAX_SIZE = int(os.getenv("LANGFLOW_CLASS_CACHE_SIZE", "1000"))  # Configurable via env var
+# Class constructor cache using Langflow's native ThreadingInMemoryCache
+# This provides LRU eviction with TTL expiration and proper thread safety
+_CACHE_MAX_SIZE = int(os.getenv("LANGFLOW_CLASS_CACHE_SIZE", "1000"))
+_CACHE_TTL_SECONDS = int(os.getenv("LANGFLOW_CLASS_CACHE_TTL", "3600"))  # 1 hour default
+
+# Use Langflow's native cache implementation - it already handles thread safety with RLock
+_CLASS_CONSTRUCTOR_CACHE = ThreadingInMemoryCache(max_size=_CACHE_MAX_SIZE, expiration_time=_CACHE_TTL_SECONDS)
 
 
 def _get_code_hash(code: str) -> str:
@@ -31,27 +36,12 @@ def _get_code_hash(code: str) -> str:
     return hashlib.sha256(code.encode()).hexdigest()
 
 
-def _cleanup_cache_if_needed() -> None:
-    """Clean up the cache if it exceeds the maximum size.
-
-    Removes the oldest 20% of entries when cache is full, with a minimum of 1 entry.
-    """
-    if len(_CLASS_CONSTRUCTOR_CACHE) >= _CACHE_MAX_SIZE:
-        # Calculate number of entries to remove (at least 1, maximum 20% of cache size)
-        entries_to_remove = max(1, int(_CACHE_MAX_SIZE * 0.2))
-        # Remove oldest entries (FIFO eviction)
-        keys_to_remove = list(_CLASS_CONSTRUCTOR_CACHE.keys())[:entries_to_remove]
-        for key in keys_to_remove:
-            _CLASS_CONSTRUCTOR_CACHE.pop(key, None)
-        logger.debug(f"Cleaned up {len(keys_to_remove)} entries from class constructor cache")
-
-
 def clear_class_constructor_cache() -> None:
     """Clear the entire class constructor cache.
 
     This can be useful for testing or memory management.
+    Thread-safe operation using native cache implementation.
     """
-    global _CLASS_CONSTRUCTOR_CACHE  # noqa: PLW0602
     _CLASS_CONSTRUCTOR_CACHE.clear()
     logger.debug("Cleared class constructor cache")
 
@@ -60,11 +50,13 @@ def get_cache_stats() -> dict[str, int]:
     """Get statistics about the class constructor cache.
 
     Returns:
-        Dictionary with cache size and maximum size
+        Dictionary with cache size and configuration info
+    Thread-safe operation using native cache implementation.
     """
     return {
         "cache_size": len(_CLASS_CONSTRUCTOR_CACHE),
         "max_size": _CACHE_MAX_SIZE,
+        "ttl_seconds": _CACHE_TTL_SECONDS,
     }
 
 
@@ -250,7 +242,8 @@ def create_class(code, class_name):
 
     # Check cache first
     code_hash = _get_code_hash(normalized_code + class_name)
-    if code_hash in _CLASS_CONSTRUCTOR_CACHE:
+    cached_constructor = _CLASS_CONSTRUCTOR_CACHE.get(code_hash)
+    if cached_constructor is not CACHE_MISS:
         logger.debug(f"Using cached class constructor for {class_name}")
         # Record cache hit for monitoring
         try:
@@ -259,7 +252,7 @@ def create_class(code, class_name):
             record_cache_hit()
         except ImportError:
             pass  # Monitoring is optional
-        return _CLASS_CONSTRUCTOR_CACHE[code_hash]
+        return cached_constructor
 
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
@@ -285,9 +278,8 @@ def create_class(code, class_name):
 
             class_constructor = build_class_constructor(compiled_class, exec_globals, class_name)
 
-            # Cache the result
-            _cleanup_cache_if_needed()
-            _CLASS_CONSTRUCTOR_CACHE[code_hash] = class_constructor
+            # Cache the result using native cache implementation
+            _CLASS_CONSTRUCTOR_CACHE.set(code_hash, class_constructor)
             logger.debug(f"Cached new class constructor for {class_name}")
 
         except SyntaxError as e:
