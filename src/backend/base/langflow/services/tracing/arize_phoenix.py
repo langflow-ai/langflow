@@ -118,7 +118,9 @@ class ArizePhoenixTracer(BaseTracer):
             {
                 "api_key": phoenix_api_key,
                 "authorization": f"Bearer {phoenix_api_key}",
-            } if phoenix_api_key else {}
+            }
+            if phoenix_api_key
+            else {}
         )
 
         if not (enable_arize_tracing or enable_phoenix_tracing):
