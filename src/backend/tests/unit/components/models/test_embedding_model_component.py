@@ -41,7 +41,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         assert updated_config["api_key"]["display_name"] == "OpenAI API Key"
         assert updated_config["api_base"]["display_name"] == "OpenAI API Base URL"
 
-    @patch("langflow.components.embeddings.embedding_model.OpenAIEmbeddings")
+    @patch("langflow.components.models.embedding_model.OpenAIEmbeddings")
     async def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
         # Setup mock
         mock_instance = MagicMock()
