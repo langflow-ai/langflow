@@ -260,24 +260,48 @@ function GenericNode({
     return { shownOutputs, hiddenOutputs };
   }, [data.node?.outputs]);
 
+  // Initialize selectedOutput from persisted data
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    null,
+    () => {
+      // Find the output that has a selected property
+      const outputWithSelection = data.node?.outputs?.find(
+        (output) => output.selected,
+      );
+      return outputWithSelection || null;
+    },
   );
 
   const handleSelectOutput = useCallback(
     (output) => {
       setSelectedOutput(output);
-      // Remove any edges connected to this output handle
-      const sourceHandleId = scapedJSONStringfy({
-        output_types: [output.selected ?? output.types[0]],
-        id: data.id,
-        dataType: data.type,
-        name: output.name,
-      });
 
-      setEdges((eds) =>
-        eds.filter((edge) => edge.sourceHandle !== sourceHandleId),
-      );
+      // Update existing edges to use the new selected output type
+      setEdges((eds) => {
+        return eds.map((edge) => {
+          // Check if this edge is from the current node and output
+          if (edge.source === data.id && edge.data?.sourceHandle) {
+            const sourceHandle = edge.data.sourceHandle;
+            if (sourceHandle.name === output.name) {
+              // Update the edge to use the new selected type
+              const newSourceHandle = {
+                ...sourceHandle,
+                output_types: [output.selected ?? output.types[0]],
+              };
+              const newSourceHandleId = scapedJSONStringfy(newSourceHandle);
+
+              return {
+                ...edge,
+                sourceHandle: newSourceHandleId,
+                data: {
+                  ...edge.data,
+                  sourceHandle: newSourceHandle,
+                },
+              };
+            }
+          }
+          return edge;
+        });
+      });
 
       setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);

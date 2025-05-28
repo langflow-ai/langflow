@@ -25,16 +25,22 @@ export default function NodeOutputs({
   selectedOutput: any;
   handleSelectOutput: any;
 }) {
-  const output = selectedOutput
-    ? outputs.find((output) => output.name === selectedOutput.name)
-    : outputs[0];
+  // Find the output that should be displayed
+  // If there's a selectedOutput, use it; otherwise find the output with a selected property
+  // If neither exists, use the first output
+  const getDisplayOutput = () => {
+    if (selectedOutput) {
+      return outputs.find((output) => output.name === selectedOutput.name);
+    }
+    const outputWithSelection = outputs.find((output) => output.selected);
+    return outputWithSelection || outputs[0];
+  };
 
-  if (!output) return null;
+  const displayOutput = getDisplayOutput();
 
-  const idx =
-    data.node!.outputs?.findIndex((out) => out.name === output.name) ?? 0;
+  if (!displayOutput) return null;
 
-  const isLoop = output?.allows_loop ?? false;
+  const isLoop = displayOutput?.allows_loop ?? false;
 
   const hiddenOutputs = outputs.filter((output) => output.hidden);
 
@@ -44,11 +50,12 @@ export default function NodeOutputs({
         <OutputParameter
           key={`${keyPrefix}-${output.name}-${idx}`}
           output={output}
+          outputs={outputs}
           idx={
             data.node!.outputs?.findIndex((out) => out.name === output.name) ??
             idx
           }
-          lastOutput={idx === outputs.length - 1}
+          lastOutput={idx === hiddenOutputs.length - 1}
           data={data}
           types={types}
           selected={selected}
@@ -70,6 +77,7 @@ export default function NodeOutputs({
         <OutputParameter
           key={`${keyPrefix}-${output.name}-${idx}`}
           output={output}
+          outputs={outputs}
           idx={
             data.node!.outputs?.findIndex((out) => out.name === output.name) ??
             idx
@@ -94,11 +102,13 @@ export default function NodeOutputs({
     )
   ) : (
     <OutputParameter
-      key={`${keyPrefix}-${output.name}-${idx}`}
-      output={output}
+      key={`${keyPrefix}-${displayOutput.name}`}
+      output={displayOutput}
       outputs={outputs}
       idx={
-        data.node!.outputs?.findIndex((out) => out.name === output.name) ?? idx
+        data.node!.outputs?.findIndex(
+          (out) => out.name === displayOutput.name,
+        ) ?? 0
       }
       lastOutput={true}
       data={data}
@@ -111,7 +121,7 @@ export default function NodeOutputs({
       hidden={
         keyPrefix === "hidden"
           ? showHiddenOutputs
-            ? output.hidden
+            ? displayOutput.hidden
             : true
           : false
       }
