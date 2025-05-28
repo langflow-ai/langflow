@@ -80,12 +80,7 @@ class LCVectorStoreComponent(Component):
     ]
 
     outputs = [
-        Output(
-            display_name="Search Results",
-            name="search_results",
-            method="search_documents",
-        ),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="vector_search_results"),
     ]
 
     def _validate_outputs(self) -> None:
@@ -177,7 +172,7 @@ class LCVectorStoreComponent(Component):
         self.status = search_results
         return search_results
 
-    def as_dataframe(self) -> DataFrame:
+    def vector_search_results(self) -> DataFrame:
         return DataFrame(self.search_documents())
 
     def get_retriever_kwargs(self):

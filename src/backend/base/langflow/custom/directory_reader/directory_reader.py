@@ -7,7 +7,7 @@ import anyio
 from aiofile import async_open
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom import CustomComponent
 
 MAX_DEPTH = 2
 
@@ -352,7 +352,7 @@ class DirectoryReader:
     @staticmethod
     def get_output_types_from_code(code: str) -> list:
         """Get the output types from the code."""
-        custom_component = Component(_code=code)
+        custom_component = CustomComponent(_code=code)
         types_list = custom_component._get_function_entrypoint_return_type
 
         # Get the name of types classes

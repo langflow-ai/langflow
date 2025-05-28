@@ -1295,26 +1295,8 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Search Results",
-                "method": "search_documents",
-                "name": "search_results",
-                "required_inputs": [
-                  "collection_name",
-                  "database_name",
-                  "token"
-                ],
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
                 "display_name": "DataFrame",
-                "method": "as_dataframe",
+                "method": "vector_search_results",
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
