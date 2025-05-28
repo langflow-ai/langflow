@@ -27,8 +27,8 @@ declare global {
       <div className={className}>
         <ChatScriptLoader />
         <langflow-chat
-          host_url="https://c822-73-64-93-151.ngrok-free.app"
-          flow_id="dcbed533-859f-4b99-b1f5-16fce884f28f"
+          host_url="http://localhost:7860"
+          flow_id="YOUR_FLOW_ID"
         ></langflow-chat>
       </div>
     );

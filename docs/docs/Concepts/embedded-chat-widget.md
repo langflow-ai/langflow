@@ -153,12 +153,6 @@ export default function ChatWidget({ className }) {
 import ChatWidget from '@site/src/components/ChatWidget';
 ```
 4. To add the widget to your page, include `<ChatWidget className="my-chat-widget" />`.
-For example, add it here:
-
-<ChatWidget className="my-chat-widget" />
-
-This widget won't work as-is.
-In `index.tsx`, point `host_url` at your Langflow server and `flow_id` at your flow, and you should have a working chat widget.
 
 ## Embed the chat widget with Angular
 
