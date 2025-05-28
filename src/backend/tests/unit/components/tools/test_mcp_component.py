@@ -2,7 +2,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.tools.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.components.data.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -99,7 +99,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         # Test tool options are updated
         assert "options" in updated_config["tool"]
 
-    @patch("langflow.components.tools.mcp_component.create_tool_coroutine")
+    @patch("langflow.components.data.mcp_component.create_tool_coroutine")
     async def test_build_output(self, mock_create_coroutine, component_class, default_kwargs, mock_tool):
         """Test building output with a tool."""
         component = component_class(**default_kwargs)
@@ -108,7 +108,10 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
 
         # Mock the coroutine response
         mock_response = AsyncMock()
-        mock_response.content = [MagicMock(text="Test response")]
+        mock_content_item = MagicMock()
+        mock_content_item.text = "Test response"
+        mock_content_item.model_dump.return_value = {"text": "Test response"}
+        mock_response.content = [mock_content_item]
         mock_create_coroutine.return_value = AsyncMock(return_value=mock_response)
 
         # Create a mock tool and add it to the cache
@@ -126,7 +129,8 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             mock_get_inputs.return_value = {"test_tool": [mock_input]}
             output = await component.build_output()
 
-            assert output.text == "Test response"
+            # Use iloc to access the first row's 'text' column value
+            assert output.iloc[0]["text"] == "Test response"
             # Verify the mocks were called correctly
             mock_get_inputs.assert_called_once_with(component.tools)
             mock_structured_tool.coroutine.assert_called_once_with(test_param="test value")
