@@ -1,6 +1,8 @@
 import ast
 import contextlib
+import hashlib
 import importlib
+import os
 import warnings
 from types import FunctionType
 from typing import Optional, Union
@@ -10,6 +12,60 @@ from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+
+# Global cache for compiled class constructors
+# Using a simple dict instead of LRU cache to have more control over memory management
+_CLASS_CONSTRUCTOR_CACHE: dict[str, type] = {}
+_CACHE_MAX_SIZE = int(os.getenv("LANGFLOW_CLASS_CACHE_SIZE", "1000"))  # Configurable via env var
+
+
+def _get_code_hash(code: str) -> str:
+    """Generate a hash for the given code string.
+
+    Args:
+        code: The source code to hash
+
+    Returns:
+        A SHA-256 hash of the code
+    """
+    return hashlib.sha256(code.encode()).hexdigest()
+
+
+def _cleanup_cache_if_needed() -> None:
+    """Clean up the cache if it exceeds the maximum size.
+
+    Removes the oldest 20% of entries when cache is full, with a minimum of 1 entry.
+    """
+    if len(_CLASS_CONSTRUCTOR_CACHE) >= _CACHE_MAX_SIZE:
+        # Calculate number of entries to remove (at least 1, maximum 20% of cache size)
+        entries_to_remove = max(1, int(_CACHE_MAX_SIZE * 0.2))
+        # Remove oldest entries (FIFO eviction)
+        keys_to_remove = list(_CLASS_CONSTRUCTOR_CACHE.keys())[:entries_to_remove]
+        for key in keys_to_remove:
+            _CLASS_CONSTRUCTOR_CACHE.pop(key, None)
+        logger.debug(f"Cleaned up {len(keys_to_remove)} entries from class constructor cache")
+
+
+def clear_class_constructor_cache() -> None:
+    """Clear the entire class constructor cache.
+
+    This can be useful for testing or memory management.
+    """
+    global _CLASS_CONSTRUCTOR_CACHE  # noqa: PLW0602
+    _CLASS_CONSTRUCTOR_CACHE.clear()
+    logger.debug("Cleared class constructor cache")
+
+
+def get_cache_stats() -> dict[str, int]:
+    """Get statistics about the class constructor cache.
+
+    Returns:
+        Dictionary with cache size and maximum size
+    """
+    return {
+        "cache_size": len(_CLASS_CONSTRUCTOR_CACHE),
+        "max_size": _CACHE_MAX_SIZE,
+    }
 
 
 def add_type_ignores() -> None:
@@ -182,38 +238,73 @@ def create_class(code, class_name):
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
     """
-    if not hasattr(ast, "TypeIgnore"):
-        ast.TypeIgnore = create_type_ignore_class()
-
-    code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
-    code = code.replace(
+    # Normalize the code for consistent caching
+    normalized_code = code.replace(
+        "from langflow import CustomComponent", "from langflow.custom import CustomComponent"
+    )
+    normalized_code = normalized_code.replace(
         "from langflow.interface.custom.custom_component import CustomComponent",
         "from langflow.custom import CustomComponent",
     )
+    normalized_code = DEFAULT_IMPORT_STRING + "\n" + normalized_code
 
-    code = DEFAULT_IMPORT_STRING + "\n" + code
+    # Check cache first
+    code_hash = _get_code_hash(normalized_code + class_name)
+    if code_hash in _CLASS_CONSTRUCTOR_CACHE:
+        logger.debug(f"Using cached class constructor for {class_name}")
+        # Record cache hit for monitoring
+        try:
+            from langflow.utils.cache_monitor import record_cache_hit
+
+            record_cache_hit()
+        except ImportError:
+            pass  # Monitoring is optional
+        return _CLASS_CONSTRUCTOR_CACHE[code_hash]
+
+    if not hasattr(ast, "TypeIgnore"):
+        ast.TypeIgnore = create_type_ignore_class()
+
+    # Monitor class creation time
     try:
-        module = ast.parse(code)
-        exec_globals = prepare_global_scope(module)
+        from langflow.utils.cache_monitor import monitor_class_creation
 
-        class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
+        context_manager = monitor_class_creation()
+    except ImportError:
+        # Fallback to a no-op context manager if monitoring is not available
+        import contextlib
 
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        context_manager = contextlib.nullcontext()
 
-    except SyntaxError as e:
-        msg = f"Syntax error in code: {e!s}"
-        raise ValueError(msg) from e
-    except NameError as e:
-        msg = f"Name error (possibly undefined variable): {e!s}"
-        raise ValueError(msg) from e
-    except ValidationError as e:
-        messages = [error["msg"].split(",", 1) for error in e.errors()]
-        error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
-        raise ValueError(error_message) from e
-    except Exception as e:
-        msg = f"Error creating class: {e!s}"
-        raise ValueError(msg) from e
+    with context_manager:
+        try:
+            module = ast.parse(normalized_code)
+            exec_globals = prepare_global_scope(module)
+
+            class_code = extract_class_code(module, class_name)
+            compiled_class = compile_class_code(class_code)
+
+            class_constructor = build_class_constructor(compiled_class, exec_globals, class_name)
+
+            # Cache the result
+            _cleanup_cache_if_needed()
+            _CLASS_CONSTRUCTOR_CACHE[code_hash] = class_constructor
+            logger.debug(f"Cached new class constructor for {class_name}")
+
+        except SyntaxError as e:
+            msg = f"Syntax error in code: {e!s}"
+            raise ValueError(msg) from e
+        except NameError as e:
+            msg = f"Name error (possibly undefined variable): {e!s}"
+            raise ValueError(msg) from e
+        except ValidationError as e:
+            messages = [error["msg"].split(",", 1) for error in e.errors()]
+            error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
+            raise ValueError(error_message) from e
+        except Exception as e:
+            msg = f"Error creating class: {e!s}"
+            raise ValueError(msg) from e
+
+        return class_constructor
 
 
 def create_type_ignore_class():
@@ -417,3 +508,25 @@ def extract_class_name(code: str) -> str:
     except SyntaxError as e:
         msg = f"Invalid Python code: {e!s}"
         raise ValueError(msg) from e
+
+
+# Export cache management functions for external use
+__all__ = [
+    "add_type_ignores",
+    "build_class_constructor",
+    "clear_class_constructor_cache",
+    "compile_class_code",
+    "create_class",
+    "create_function",
+    "create_type_ignore_class",
+    "eval_function",
+    "execute_function",
+    "extract_class_code",
+    "extract_class_name",
+    "extract_function_name",
+    "find_names_in_code",
+    "get_cache_stats",
+    "get_default_imports",
+    "prepare_global_scope",
+    "validate_code",
+]
