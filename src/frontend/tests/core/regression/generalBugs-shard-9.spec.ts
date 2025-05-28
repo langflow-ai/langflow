@@ -89,6 +89,10 @@ AI:
 
     await page.getByTestId("fit_view").click();
 
+    await page.getByTestId("dropdown-output-memory").click();
+
+    await page.getByTestId("dropdown-item-output-memory-message").click();
+
     //connection 1
     const elementChatMemoryOutput = await page
       .getByTestId("handle-memory-shownode-message-right")
