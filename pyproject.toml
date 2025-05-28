@@ -192,10 +192,6 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
-deploy = [
-    "celery[redis]>=5.3.6",
-    "flower>=2.0.0"
-]
 couchbase = [
     "couchbase>=4.2.1"
 ]
