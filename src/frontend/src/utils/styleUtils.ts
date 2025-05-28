@@ -233,6 +233,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
+  { display_name: "GitHub", name: "github", icon: "Github" },
   {
     display_name: "Googlecalendar",
     name: "googlecalendar",
