@@ -69,7 +69,7 @@ const flow = client.flow(flowId);
 
 2. Run the referenced flow and pass text to it as `input`.
 ```typescript
-const response = await client.flow(flowId).run(input);
+const response = await flow.run(input);
 ```
 
 3. This example uses the minimum values for sending a message and running your flow on a Langflow server, with no API keys.
@@ -175,7 +175,7 @@ async function runFlow() {
       });
 
     for await (const event of response) {
-    console.log(event);
+        console.log(event);
     }
 
 }
