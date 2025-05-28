@@ -1,5 +1,7 @@
+import ssl
 from typing import Any
 
+import httpx
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -10,7 +12,16 @@ from langflow.base.models.openai_constants import (
 )
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.inputs import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    IntInput,
+    MultilineInput,
+    SecretStrInput,
+    SliderInput,
+    StrInput,
+)
 from langflow.logging import logger
 
 
@@ -57,6 +68,15 @@ class OpenAIModelComponent(LCModelComponent):
             info="The base URL of the OpenAI API. "
             "Defaults to https://api.openai.com/v1. "
             "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+        ),
+        MultilineInput(
+            name="custom_ca_bundle",
+            display_name="Custom CA Bundle for self-signed deployments.",
+            advanced=True,
+            dynamic=True,
+            info="Leave empty unless you're using a self-signed certificate. "
+            "Paste the entire certificate including the '-----BEGIN/END CERTIFICATE-----' lines. "
+            "Not sure? Just leave it blank!",
         ),
         SecretStrInput(
             name="api_key",
@@ -108,6 +128,12 @@ class OpenAIModelComponent(LCModelComponent):
             "timeout": self.timeout,
             "temperature": self.temperature if self.temperature is not None else 0.1,
         }
+
+        if self.custom_ca_bundle:
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.load_verify_locations(cadata=self.custom_ca_bundle)
+            parameters["http_client"] = httpx.Client(verify=ssl_ctx)
+            parameters["http_async_client"] = httpx.AsyncClient(verify=ssl_ctx)
 
         logger.info(f"Model name: {self.model_name}")
         if self.model_name in OPENAI_REASONING_MODEL_NAMES:
