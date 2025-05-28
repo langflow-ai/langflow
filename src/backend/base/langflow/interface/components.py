@@ -171,11 +171,6 @@ async def get_and_cache_all_types_dict(
             # Traditional full loading
             component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
 
-        # Log custom component loading stats
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.get("components", {}).values())
-        if component_count > 0 and settings_service.settings.components_path:
-            logger.debug(f"Built {component_count} custom components from {settings_service.settings.components_path}")
-
         # merge the dicts
         component_cache.all_types_dict = {**langflow_components["components"], **component_cache.all_types_dict}
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
